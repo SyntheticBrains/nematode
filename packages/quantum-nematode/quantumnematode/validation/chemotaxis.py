@@ -1,10 +1,7 @@
-"""Chemotaxis index calculation and metrics for biological validation.
+"""Chemotaxis index calculation and trajectory metrics.
 
-This module implements the standard chemotaxis index (CI) formula from C. elegans
-literature, enabling comparison of simulated agent behavior against real worm data.
-
-The chemotaxis index measures how strongly an organism is attracted to or avoids
-a chemical stimulus:
+The simulated chemotaxis index takes the form of the C. elegans assay's index over the steps of one
+trajectory:
     CI = (N_attractant - N_control) / N_total
 
 Where:
@@ -13,6 +10,10 @@ Where:
     - N_total = total episode steps
 
 CI ranges from -1 (perfect avoidance) to +1 (perfect attraction).
+
+It is a time-in-zone fraction for one animal. A published chemotaxis index is an endpoint count: the
+share of a population of worms in the attractant zone against the control zone when the assay ends.
+The two are not the same quantity, so a simulated index is not compared with a published one.
 """
 
 import math
@@ -21,7 +22,7 @@ from enum import Enum
 
 from quantumnematode.dtypes import Position, PositionFoodHistory, PositionPath
 
-# Validation thresholds for biological plausibility
+# Bands of the simulated index, used to label a run's chemotaxis strength; not a biological match.
 CI_THRESHOLD_MINIMUM = 0.4
 CI_THRESHOLD_TARGET = 0.6
 CI_THRESHOLD_EXCELLENT = 0.75
@@ -34,12 +35,12 @@ DISTANCE_EPSILON = 1e-6
 
 
 class ValidationLevel(Enum):
-    """Validation levels for biological comparison."""
+    """A band of the simulated chemotaxis index: a label of strength, not a biological match."""
 
-    NONE = "none"  # CI < 0.4, not biologically plausible
-    MINIMUM = "minimum"  # CI >= 0.4, minimally biologically plausible
-    TARGET = "target"  # CI >= 0.6, target for good biological match
-    EXCELLENT = "excellent"  # CI >= 0.75, excellent biological match
+    NONE = "none"  # CI < 0.4
+    MINIMUM = "minimum"  # CI >= 0.4
+    TARGET = "target"  # CI >= 0.6
+    EXCELLENT = "excellent"  # CI >= 0.75
 
 
 @dataclass
@@ -66,30 +67,6 @@ class ChemotaxisMetrics:
     steps_in_attractant: int
     steps_in_control: int
     reliable: bool = True
-
-
-@dataclass
-class ValidationResult:
-    """Result of validating agent behavior against biological data.
-
-    Attributes
-    ----------
-        agent_ci: The agent's chemotaxis index
-        biological_ci_range: The expected CI range from literature (min, max)
-        biological_ci_typical: The typical/median CI from literature
-        matches_biology: Whether agent CI falls within biological range
-        validation_level: How well the agent matches (none/minimum/target/excellent)
-        literature_source: Citation for the biological data used
-        agent_metrics: Full chemotaxis metrics for the agent
-    """
-
-    agent_ci: float
-    biological_ci_range: tuple[float, float]
-    biological_ci_typical: float
-    matches_biology: bool
-    validation_level: ValidationLevel
-    literature_source: str
-    agent_metrics: ChemotaxisMetrics
 
 
 def calculate_chemotaxis_index(
