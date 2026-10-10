@@ -49,6 +49,7 @@ class LawnParams:
     satiety_per_intake: float = 0.1
     regrowth_per_step: float = 0.0
     movement_cost_per_mm: float = 0.0
+    start_on_lawn: bool = False
     start_clearance_mm: float = 2.0
     wall_clearance_mm: float = 1.0
 
@@ -109,9 +110,11 @@ class LawnField:
     ) -> LawnField:
         """Place ``params.count`` lawns inside the arena, apart from each other and the start.
 
-        Each lawn's edge lies at least ``wall_clearance_mm`` from the walls,
-        ``min_separation_mm`` from every other lawn's edge and ``start_clearance_mm`` from every
-        start position. Qualities are drawn uniformly from ``params.quality``.
+        Each lawn's edge lies at least ``wall_clearance_mm`` from the walls and
+        ``min_separation_mm`` from every other lawn's edge. With ``start_on_lawn``, the first lawn
+        is centred on the first start position, moved in from the walls if it must be, so the worm
+        begins on food; otherwise every lawn's edge lies ``start_clearance_mm`` from every start
+        position. Qualities are drawn uniformly from ``params.quality``.
 
         Raises
         ------
@@ -123,9 +126,12 @@ class LawnField:
         if hi < lo:
             msg = f"a lawn of radius {r} mm does not fit a {world_size_mm} mm arena"
             raise ValueError(msg)
+        first: list[np.ndarray] = []
+        if params.start_on_lawn and start:
+            first = [np.clip(np.asarray(start[0], dtype=float), lo, hi)]
         centres: list[np.ndarray] = []
         for _ in range(MAX_PLACEMENT_RESTARTS):
-            centres = []
+            centres = list(first)
             for _ in range(MAX_PLACEMENT_ATTEMPTS):
                 if len(centres) == params.count:
                     break
@@ -133,7 +139,7 @@ class LawnField:
                 clear_of_lawns = all(
                     np.hypot(*(candidate - c)) >= 2 * r + params.min_separation_mm for c in centres
                 )
-                clear_of_start = all(
+                clear_of_start = params.start_on_lawn or all(
                     np.hypot(candidate[0] - x, candidate[1] - y) >= r + params.start_clearance_mm
                     for x, y in start
                 )

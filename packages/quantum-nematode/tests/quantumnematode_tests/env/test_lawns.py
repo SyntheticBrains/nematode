@@ -90,6 +90,26 @@ class TestPlacement:
             )
             assert len(field.centres) == 4
 
+    def test_the_worm_can_start_on_a_lawn(self) -> None:
+        """With start_on_lawn the first lawn is centred on the start; the rest stay clear of it."""
+        params = LawnParams(count=4, radius_mm=2.5, start_on_lawn=True)
+        for seed in range(200):
+            field = LawnField.place(
+                params,
+                np.random.default_rng(seed),
+                world_size_mm=WORLD_MM,
+                start=[(10.0, 10.0)],
+            )
+            assert field.lawn_at((10.0, 10.0)) == 0
+            assert len(field.centres) == 4
+        near_wall = LawnField.place(
+            params,
+            np.random.default_rng(0),
+            world_size_mm=WORLD_MM,
+            start=[(0.5, 0.5)],
+        )
+        assert np.all(near_wall.centres[0] >= params.radius_mm + params.wall_clearance_mm)
+
     def test_an_arena_too_small_is_refused(self) -> None:
         """Lawns that cannot fit raise rather than silently placing fewer."""
         with pytest.raises(ValueError, match="too small"):

@@ -10,6 +10,9 @@ fold-change sensor, the Fick field), with point food replaced by lawns:
   cell a worm gains 0.006 of its maximum satiety per step; moving 1 mm costs 0.0039; basal decay is
   0.0027. A spot is worth staying on until it falls to about 0.35 of its density, some 52 steps
   (4.3 minutes), and roaming through a lawn without stopping slowly starves the worm.
+- **The worm starts on a lawn**, as assays place worms on food: the first lawn is centred on its
+  start. With movement costed and the worm starting off food, PPO learned to stand still and
+  starve before it found a lawn.
 - **Both states expressible**: signed speed (zero is the centre of the speed range) and turns of up
   to half a revolution per step, the reorientation a dwelling worm makes.
 - **No shaping that favours a state**: the stuck-position, anti-dithering, exploration and distance
@@ -53,6 +56,7 @@ LAWNS: dict[str, Any] = {
     "satiety_per_intake": 0.3,
     "regrowth_per_step": 0.0,
     "movement_cost_per_mm": 0.013,
+    "start_on_lawn": True,
     "start_clearance_mm": 2.0,
     "wall_clearance_mm": 1.0,
 }

@@ -87,5 +87,6 @@ environment:
       satiety_per_intake: 0.3
       regrowth_per_step: 0.0
       movement_cost_per_mm: 0.013
+      start_on_lawn: true
       start_clearance_mm: 2.0
       wall_clearance_mm: 1.0

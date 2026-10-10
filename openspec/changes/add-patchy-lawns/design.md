@@ -266,7 +266,22 @@ Its numbers, per step, in fractions of maximum satiety:
 - **Intake still does not depend on speed.** The cost is locomotion's, not a reward for slowness, and
   off a lawn it makes searching costly too.
 
-A second pilot, on seeds disjoint from the first and from the band, checks it.
+**The second pilot, 2026-10-10** (seeds 9105–9108, with the movement cost):
+
+| arm | intake per episode, final quarter | result |
+|---|---|---|
+| with `internal_state` | 0.15 | stood still from the start and starved at about 366 steps on basal decay alone |
+| without it | 0.87 | stayed at its floor's level (floor 0.88) |
+
+Neither passed the learning gate. The worm started at least 2 mm from any lawn. A random policy paid
+for every move at once and found food only after several millimetres, so PPO settled on not moving.
+The movement cost's economics are right on food, but they turned finding food into an exploration
+trap.
+
+With the user, **the worm now starts on a lawn** (`lawns.start_on_lawn`), as assays place worms on
+food. The first lawn is centred on its start, and the others are placed clear of it. Dwelling or
+leaving pays from the first step, and leaving for another lawn still crosses costly gaps. A third
+pilot, on fresh seeds, checks it.
 
 - **States last minutes.** In the reference model a dwelling bout averages about 8 minutes and a
   roaming bout about 1.6. An episode of 720 steps is an hour of worm time, room for several of each.

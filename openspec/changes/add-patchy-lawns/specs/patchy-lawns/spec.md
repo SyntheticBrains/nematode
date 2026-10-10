@@ -6,6 +6,12 @@ The continuous environment SHALL offer `foraging.food_model: lawns`, which place
 density grid of cells about a body length wide and a quality, in place of point food sources. The default,
 `points`, SHALL leave every existing behaviour byte-identical.
 
+#### Scenario: The worm can start on a lawn
+
+- **WHEN** a lawn configuration sets `start_on_lawn`
+- **THEN** the first lawn SHALL be centred on the worm's start, moved in from the walls if it must be,
+  and every other lawn SHALL keep its separation from it
+
 #### Scenario: The default is unchanged
 
 - **WHEN** a configuration omits `food_model` or sets it to `points`

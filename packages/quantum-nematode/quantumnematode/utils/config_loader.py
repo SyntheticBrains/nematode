@@ -296,6 +296,8 @@ class LawnConfig(BaseModel):
     regrowth_per_step: float = Field(default=0.0, ge=0.0)
     # Energy, in intake value, that each millimetre moved costs, from reward and satiety alike.
     movement_cost_per_mm: float = Field(default=0.0, ge=0.0)
+    # Centre the first lawn on the worm's start, so it begins on food.
+    start_on_lawn: bool = False
     start_clearance_mm: float = Field(default=2.0, ge=0.0)
     wall_clearance_mm: float = Field(default=1.0, ge=0.0)
 
@@ -321,6 +323,7 @@ class LawnConfig(BaseModel):
             satiety_per_intake=self.satiety_per_intake,
             regrowth_per_step=self.regrowth_per_step,
             movement_cost_per_mm=self.movement_cost_per_mm,
+            start_on_lawn=self.start_on_lawn,
             start_clearance_mm=self.start_clearance_mm,
             wall_clearance_mm=self.wall_clearance_mm,
         )
