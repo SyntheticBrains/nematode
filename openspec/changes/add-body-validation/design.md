@@ -19,15 +19,17 @@ for the half-step check.
 | chemical-only null, PPO | 64 | graded; does the behaviour depend on the wiring? |
 | MLP-PPO | 64 | graded; does it depend on the learner? |
 | frozen floors (wild type, null) | 64 + 64 | the bias curves' null |
-| **MLP, derivative mode** (new) | 16 | the weathervane's specificity control |
+| **MLP, derivative mode** (new), learning and frozen | 16 + 16 | the weathervane's specificity control, and its floor |
 
 **The control.** Logbook 035 trained an MLP with `chemotaxis_mode: derivative`, which has no spatial
 head-sweep, and its weathervane collapsed: the sensing arms' weathervane was sensor-driven. Through
 the body the question returns: klinotaxis sensing still uses a synthetic lateral sample, apart from
 the body's own head swing. The control is the C.1e MLP config in derivative mode, entropy 0.004,
-500 steps, 3,000 episodes, **seeds 1801–1816**, paired by seed with the MLP arm. Training takes about
-an hour on 16 workers. **If the control's learning arm does not beat its frozen floor, it is recorded
-unreadable**, and the weathervane's specificity is reported as untested, never inferred.
+500 steps, 3,000 episodes, **seeds 1801–1816**, paired by seed with the MLP arm, learning and frozen
+(32 runs, about two hours on 16 workers at C.1e's per-run cost). **If the control's learning arm does
+not beat its frozen floor on all 16 seeds' paired plateaus (80% interval above zero, C.1d's control
+gate), or a seed is missing, it is recorded unreadable**, and the weathervane's specificity is
+reported as untested, never inferred.
 
 **Out of scope: Logbook 036's thermotaxis curves.** The body has no thermal cell; that is M.9.
 
@@ -112,5 +114,7 @@ forward bouts, is recorded as such.
 - **The body checks will probably pass by construction.** That is the point of separating them.
 - **The weathervane may be the synthetic sweep's.** The control is there to say so. If it is, the
   body's turning carries klinokinesis at most, and the logbook says that plainly.
-- **Cost.** The control's training takes about an hour; evaluation is about 300 runs × 30 episodes,
-  about an hour on 16 workers, measured on a pilot of a few runs before the registration.
+- **Cost.** The control's training is 32 runs, about two hours on 16 workers, at the review
+  threshold, so it launches only after the spec review. Evaluation is 352 runs × 30 episodes, with a
+  second pass at 40 sub-steps for the 192 graded runs; its cost is measured on a pilot of a few runs
+  before the registration.

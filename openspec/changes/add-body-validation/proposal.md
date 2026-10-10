@@ -23,7 +23,7 @@ re-derived from emergent kinematics, with Wormlight's thresholds and instruments
 - **The evaluation harness captures behaviour**, so the trained runs' turning can be read by Logbook
   035's bias-curve harness.
 - **One control is trained**: a derivative-mode MLP through the body (no synthetic head-sweep), as
-  Logbook 035's specificity control.
+  Logbook 035's specificity control, learning and frozen (its floor).
 - **A registered validation**: Wormlight's pass and partial bands and 035's sign-only curve grading,
   fixed before any reading, per arm. The readings the body's generator sets by construction are graded
   as body checks, separate from the emergent behaviour readings.
@@ -43,4 +43,4 @@ re-derived from emergent kinematics, with Wormlight's thresholds and instruments
 - `validation/body_kinematics.py`: the new instruments.
 - `scripts/analysis/body_kinematics_eval.py`: behaviour capture.
 - `scripts/analysis/body_validation.py`: new; evaluation over the arms, the grades.
-- The control's config, tests, Logbook 086, tracker C.3.
+- The control's two configs and their generator, tests, Logbook 086, tracker C.3.

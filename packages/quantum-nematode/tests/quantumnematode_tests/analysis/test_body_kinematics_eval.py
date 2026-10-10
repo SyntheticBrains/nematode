@@ -62,3 +62,21 @@ def test_a_point_worm_config_is_refused(tmp_path: Path) -> None:
     assert weights is not None
     with pytest.raises(ValueError, match="does not run the kinematic body"):
         harness.evaluate(path, 7, weights, episodes=1)
+
+
+def test_an_evaluation_writes_a_capture_the_bias_harness_reads(
+    body_config: Path,
+    tmp_path: Path,
+) -> None:
+    """Scenario "An evaluation writes a behaviour capture the bias-curve harness reads"."""
+    import behavioural_chemotaxis_validation as bcv  # pyright: ignore[reportMissingImports]
+    import body_validation as bv  # pyright: ignore[reportMissingImports]
+
+    capture = harness.run_capture(body_config, 7, None, episodes=2, capture_behaviour=True)
+    assert [len(episode) for episode in capture.behaviour] == [30, 30]
+    path = bv.write_capture(tmp_path / "capture.json", 7, capture.behaviour)
+    manifest = tmp_path / "manifest.txt"
+    manifest.write_text(f"7 {path}\n")
+    loaded = bcv.load_manifest(manifest)
+    assert [len(series) for series in loaded[7]] == [30, 30]
+    assert loaded[7][0][0] == capture.behaviour[0][0]

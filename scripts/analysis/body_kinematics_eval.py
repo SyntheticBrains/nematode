@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -48,6 +48,8 @@ from quantumnematode.validation.body_kinematics import Kinematics, in_bands, mea
 
 if TYPE_CHECKING:
     from quantumnematode.brain.arch import Brain
+    from quantumnematode.env.body import BodyParams
+    from quantumnematode.report.dtypes import BehaviourStep
 
 # Evaluation episodes take run indices from here on, past any training campaign's run count, so
 # their arenas are never ones the policy trained in.
@@ -84,23 +86,35 @@ def build_brain(config_path: Path, seed: int) -> tuple[Brain, SimulationConfig, 
     return brain, config, sensing_config
 
 
-def evaluate(  # noqa: PLR0913 - a run's identity and the evaluation's settings
+@dataclass(frozen=True)
+class Capture:
+    """One run's evaluation episodes: postures per step, behaviour per step, and the geometry."""
+
+    episodes: list[list[dict[str, Any]]]
+    behaviour: list[list[BehaviourStep]]
+    world_size_mm: float
+    body: BodyParams
+
+
+def run_capture(  # noqa: PLR0913 - a run's identity and the evaluation's settings
     config_path: Path,
     seed: int,
     weights: Path | None,
     *,
     episodes: int = 10,
     substeps: int | None = None,
-    wall_margin_mm: float = 1.0,
-) -> Kinematics:
-    """Return the instruments' readings for one run over ``episodes`` frozen episodes.
+    capture_behaviour: bool = False,
+) -> Capture:
+    """Run ``episodes`` frozen episodes with posture capture, and behaviour capture if asked.
 
-    ``weights`` of ``None`` reads the seed's untrained policy.
+    ``weights`` of ``None`` runs the seed's untrained policy.
     """
     brain, config, sensing_config = build_brain(config_path, seed)
     environment_config = configure_environment(config)
     if weights is not None:
         load_weights(brain, weights)
+    if capture_behaviour:
+        sensing_config = sensing_config.model_copy(update={"capture_behaviour": True})
 
     continuous = environment_config.continuous
     if continuous is None or continuous.body_model != "kinematic":
@@ -127,6 +141,7 @@ def evaluate(  # noqa: PLR0913 - a run's identity and the evaluation's settings
         sensing_config=sensing_config,
     )
     captured: list[list[dict[str, Any]]] = []
+    behaviour: list[list[BehaviourStep]] = []
     for episode in range(episodes):
         run_seed = derive_run_seed(seed, EVALUATION_RUN_OFFSET + episode)
         set_global_seed(run_seed)
@@ -138,19 +153,42 @@ def evaluate(  # noqa: PLR0913 - a run's identity and the evaluation's settings
         env = _body_env(agent)
         log: list[dict[str, Any]] = []
         env.posture_log = log  # type: ignore[assignment]
-        agent.run_episode(reward_config, max_steps=max_steps)
+        result = agent.run_episode(reward_config, max_steps=max_steps)
         captured.append(log)
+        if capture_behaviour:
+            behaviour.append(list(result.behaviour or []))
 
     env = _body_env(agent)
-    body = env._body.params
-    return measure(
-        captured,
+    return Capture(
+        episodes=captured,
+        behaviour=behaviour,
         world_size_mm=env.continuous.world_size_mm,
-        body_length_mm=body.body_length_mm,
-        step_seconds=body.step_seconds,
-        reversal_threshold=body.reversal_threshold,
+        body=env._body.params,
+    )
+
+
+def evaluate(  # noqa: PLR0913 - a run's identity and the evaluation's settings
+    config_path: Path,
+    seed: int,
+    weights: Path | None,
+    *,
+    episodes: int = 10,
+    substeps: int | None = None,
+    wall_margin_mm: float = 1.0,
+) -> Kinematics:
+    """Return the instruments' readings for one run over ``episodes`` frozen episodes.
+
+    ``weights`` of ``None`` reads the seed's untrained policy.
+    """
+    capture = run_capture(config_path, seed, weights, episodes=episodes, substeps=substeps)
+    return measure(
+        capture.episodes,
+        world_size_mm=capture.world_size_mm,
+        body_length_mm=capture.body.body_length_mm,
+        step_seconds=capture.body.step_seconds,
+        reversal_threshold=capture.body.reversal_threshold,
         wall_margin_mm=wall_margin_mm,
-        min_wave_amplitude=body.min_wave_amplitude,
+        min_wave_amplitude=capture.body.min_wave_amplitude,
     )
 
 
