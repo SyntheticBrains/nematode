@@ -163,12 +163,18 @@ _MOTOR_CLASSES: tuple[str, ...] = ("VB", "DB", "VA", "DA")
 _DEFAULT_BPTT_CHUNK: int = 16
 
 
-def boundary_neurons(connectome: Connectome) -> tuple[frozenset[str], frozenset[str]]:
-    """Return ``(sensory, motor)``: the neurons sensation is injected into, and the readout's pool.
+def boundary_neurons(
+    connectome: Connectome,
+    *,
+    body_drive: bool = False,
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Return ``(sensory, motor)``: where sensation is injected, and what the brain reads out.
 
     The sensory side is every neuron a projection targets -- food, thermal and predator alike, so
     the set is the same on every cell. The motor side is every motor-class neuron of the four
-    classes the readout pools, matched as the readout matches them.
+    classes the readout pools, matched as the readout matches them. Under the body drive it is
+    every cell the drive reads instead: the cells with neuromuscular junctions, which include every
+    motor-class neuron the direction channel reads.
     """
     sensory = frozenset(
         _SENSOR_NEURONS_FOOD
@@ -183,6 +189,9 @@ def boundary_neurons(connectome: Connectome) -> tuple[frozenset[str], frozenset[
         if neuron.cell_class == "motor"
         and any(name.startswith(p) and name[len(p) :].isdigit() for p in _MOTOR_CLASSES)
     )
+    if body_drive:
+        junction_cells = {j.pre for j in load_emmons_2024_neuromuscular()}
+        motor = frozenset(c for c in junction_cells if c in connectome.neurons) | motor
     return sensory, motor
 
 
@@ -338,6 +347,9 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # pair can be created, so each wiring keeps its placement and tunes only its strengths. Off by
     # default, with no parameter allocated, so the off path is byte-identical.
     plastic_gaps: bool = False
+    # Read the wiring without writing it: under PPO the chemical weights stay at their initial draw
+    # while every other learnable parameter trains. Off by default, byte-identical when off.
+    freeze_wiring: bool = False
     # Motor-readout width. "pooled" maps the four motor-class means to the action (8 parameters);
     # "per_neuron" gives each of the 39 motor neurons its own weight (78). The per-neuron map is
     # initialised by expanding the pooled draw, so the RNG stream and the initial policy are the
@@ -439,6 +451,8 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
         if (refusal := _plastic_gaps_refusal(self)) is not None:
             raise ValueError(refusal)
         if (refusal := _body_drive_refusal(self)) is not None:
+            raise ValueError(refusal)
+        if (refusal := _freeze_wiring_refusal(self)) is not None:
             raise ValueError(refusal)
         if self.enforce_synapse_signs and self.synapse_signs != "atlas":
             msg = (
@@ -765,6 +779,20 @@ def _plastic_gaps_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return None
 
 
+def _freeze_wiring_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why a frozen wiring cannot run here, or ``None`` when it can."""
+    if not config.freeze_wiring:
+        return None
+    if config.learning_rule != "ppo":
+        return (
+            f"freeze_wiring requires learning_rule='ppo', got {config.learning_rule!r}: the "
+            "plastic rules exist to write the chemical weights."
+        )
+    if config.freeze_updates:
+        return "freeze_wiring is redundant under freeze_updates, which already trains nothing."
+    return None
+
+
 def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     """Refuse a dynamics configuration at construction; ``model_copy`` skips validators."""
     if (refusal := _dynamics_refusal(config)) is not None:
@@ -772,6 +800,8 @@ def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     if (refusal := _plastic_gaps_refusal(config)) is not None:
         raise ValueError(refusal)
     if (refusal := _body_drive_refusal(config)) is not None:
+        raise ValueError(refusal)
+    if (refusal := _freeze_wiring_refusal(config)) is not None:
         raise ValueError(refusal)
 
 
@@ -1012,10 +1042,12 @@ class ConnectomeTopology(nn.Module):
         input_gain: float = 1.0,
         plastic_gaps: bool = False,
         body_drive: bool = False,
+        freeze_wiring: bool = False,
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
         self.body_drive = body_drive
+        self.freeze_wiring = freeze_wiring
         self.input_gain = input_gain
         # Continuous mode: the motor readout maps the 4 motor classes to the 2-D
         # Gaussian mean (instead of 4 discrete logits) + a learnable log-std. The
@@ -1223,6 +1255,9 @@ class ConnectomeTopology(nn.Module):
         edges = int(m_chem_np.astype(bool).sum())
         self.instructed_fraction: float = float(pathway_np.sum()) / edges if edges else 0.0
         self.w_chem = nn.Parameter(torch.from_numpy(w_chem_np).to(device=device))
+        # A frozen wiring takes no gradient: outside the optimiser nothing would clear one, and it
+        # would accumulate across every update.
+        self.w_chem.requires_grad_(not freeze_wiring)
 
         # ── Gap junctions: non-learnable, symmetric, fan-in normalised ──
         # Each entry ``G[i, j]`` is divided by ``sqrt(fan_in[i] * fan_in[j])``
@@ -2832,7 +2867,9 @@ class ConnectomeTopology(nn.Module):
         Foraging-only configs allocate neither, so the optimiser sees
         byte-identical parameter sets to pre-projection builds.
         """
-        params = [self.w_chem, self.food_gains]
+        # A frozen wiring keeps the chemical weights out of the optimiser, at their initial draw.
+        params = [] if self.freeze_wiring else [self.w_chem]
+        params.append(self.food_gains)
         # Under the body drive the anatomical map replaces the readout; only its gain vector learns.
         params.append(self.body_drive_log_gain if self.body_drive else self.readout)
         if self.enable_predator_projection:
@@ -2946,7 +2983,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 preserve_autapses=config.wiring
                 in ("rewired_chemical_only", "rewired_boundary_held"),
                 hold_boundary=(
-                    boundary_neurons(connectome)
+                    boundary_neurons(connectome, body_drive=config.action_space == "body_drive")
                     if config.wiring == "rewired_boundary_held"
                     else None
                 ),
@@ -3016,6 +3053,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             input_gain=config.input_gain,
             plastic_gaps=config.plastic_gaps,
             body_drive=config.action_space == "body_drive",
+            freeze_wiring=config.freeze_wiring,
         ).to(self.device)
 
         # Learning rule: owns the critic (constructed inside the rule at this
