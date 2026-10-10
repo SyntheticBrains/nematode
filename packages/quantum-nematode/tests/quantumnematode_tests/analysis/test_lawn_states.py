@@ -157,3 +157,69 @@ def test_the_csv_has_a_row_per_run_with_its_plateau(tmp_path: Path) -> None:
     assert first["intake_plateau"] == "3.0"
     assert first["dwelling_share"] == "0.75"
     assert first["log_std_speed"] == "-3.0"
+
+
+class TestLeaving:
+    def test_an_episode_records_its_exits(self) -> None:
+        """Three samples on, then a full window off: one exit at that window."""
+        xs = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
+        on = [True, True, True, False, False, False, False]
+        steps = _steps(xs, on, [0.0] * 7)
+        classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
+        episode = ls.episode_windows(steps, classifier, intake_fraction=0.02, quality=1.0)
+        assert episode.exits == (2,)
+
+    def test_leaving_readings_pool_the_exits(self) -> None:
+        """A band of roaming before an exit, against a run that mostly dwells."""
+        d, r, off = rd.DWELLING, rd.ROAMING, rd.OFF_FOOD
+        states = np.array([d] * 42 + [r] * 15 + [d] * 3 + [off] * 4)
+        episode = ls.Episode(states=states, density=np.full(64, np.nan), exits=(60,))
+        out = ls.leaving_readings([episode])
+        assert out["exits"] == 1
+        assert out["band_roaming"] == 1.0
+        assert out["band_enrichment"] == pytest.approx(0.75)
+
+    def test_dwelling_ends_by_the_spots_density(self) -> None:
+        """Dwelling ends into roaming on a grazed spot and persists on a fresh one."""
+        d, r = rd.DWELLING, rd.ROAMING
+        episode = ls.Episode(
+            states=np.array([d, d, r, d, d]),
+            density=np.array([0.9, 0.2, 0.2, 0.9, 0.9]),
+        )
+        out = ls.dwelling_ends([episode])
+        assert out["dwell_end_grazed"] == 1.0
+        assert out["dwell_end_fresh"] == 0.0
+
+    def _runs(self, enrichment: float, exits: int = 10) -> list[dict[str, object]]:
+        return [
+            {
+                "arm": "internal",
+                "seed": s,
+                "exits": exits,
+                "band_enrichment": enrichment + 0.01 * (s % 3),
+            }
+            for s in range(16)
+        ]
+
+    def test_a_coupling_above_the_minimum_leaves_from_roaming(self) -> None:
+        """Enrichment of about 0.3 on every seed, minimum 0.1, reads ``leaves_from_roaming``."""
+        out = ls.read_leaving(
+            {"passes": True},
+            self._runs(0.3),
+            minimum=0.1,
+            min_exits=3,
+            min_seeds=8,
+        )
+        assert out["verdict"] == "leaves_from_roaming"
+
+    def test_too_few_leaving_seeds_is_unreadable(self) -> None:
+        """Seeds that leave less than the threshold are left out; too few left is unreadable."""
+        out = ls.read_leaving(
+            {"passes": True},
+            self._runs(0.3, exits=1),
+            minimum=0.1,
+            min_exits=3,
+            min_seeds=8,
+        )
+        assert out["verdict"] == "unreadable"
+        assert len(out["seeds_too_few_exits"]) == 16
