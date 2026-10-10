@@ -53,6 +53,10 @@ clause; it grades the shapes, not the crawl.
 | klinokinesis, thresholded and threshold-free | REPRODUCED / PARTIAL / ABSENT, sign-only (035) | | |
 | weathervane, thresholded and threshold-free | REPRODUCED / PARTIAL / ABSENT, sign-only (035) | | |
 
+*(Note added 2026-10-10, after the evaluation: "sign-only" was wrong for one statistic. 035's harness
+grades the thresholded klinokinesis ratio against a literature range, 1.5–3.0, and the other three on
+sign alone. The harness's own verdicts are what Logbook 086 reports; none is re-read.)*
+
 - **Edge rule (C.1d).** A banded reading whose grade differs between 20 and 40 sub-steps is reported
   as on the edge, with both grades. Speed sits at the band's floor (Logbook 083), so this is expected.
 - **The bias curves** run Logbook 035's harness over each arm's 30 episodes per seed, the 1 mm wall

@@ -70,6 +70,10 @@ set by its peak curvature and drive, so a mismatch would describe the calibratio
 | klinokinesis (reorientation rate down/up the gradient) | REPRODUCED / PARTIAL / ABSENT, sign-only | | Logbook 035 |
 | weathervane (curving rate vs bearing) | REPRODUCED / PARTIAL / ABSENT, sign-only | | Logbook 035 |
 
+*(Note added 2026-10-10, after the evaluation: "sign-only" was wrong for one statistic. 035's harness
+grades the thresholded klinokinesis ratio against a literature range, 1.5–3.0, and the other three on
+sign alone. The harness's own verdicts are what Logbook 086 reports; none is re-read.)*
+
 - **Omega turns** are reported, not graded. A head swing is the interval between two consecutive
   zero-crossings of the head segment's curvature. An omega turn is the world-frame angle of the line
   from the midline at 0.2 body lengths to the head changing, net, by more than 135° across one head

@@ -242,6 +242,37 @@ class TestPooling:
         assert out["half_step"]["agrees"]
         assert out["bias_curves"] is None
 
+    def test_the_csv_has_a_row_per_run(self, tmp_path: Path) -> None:
+        """Each run is one row, a missing run included with its arm and seed only."""
+        kinematics = dict.fromkeys(
+            ("frequency_hz", "wavelength_bl", "speed_bl_per_s", "reversal_fraction"),
+            0.3,
+        ) | {"steps_used": 10, "steps_near_wall": 0, "steps_undulating": 10}
+        run = {
+            "arm": "wild_type",
+            "seed": 1801,
+            "kinematics": kinematics,
+            "half_step": kinematics,
+            "eigenworm_captured_ss": 9.0,
+            "eigenworm_total_ss": 10.0,
+            "forward_bout_share": 1.0,
+            "omega_turns": [3.0, -3.0],
+            "omega_turn_a3": [12.0, 2.0],
+            "worm_minutes": 2.0,
+        }
+        arms = {"wild_type": {"bias_curves": _all_curves({1801: 0.05})}}
+        missing = {"arm": "wild_type", "seed": 1802, "missing": True}
+        path = bv.write_csv([missing, run], arms, tmp_path / "per-run.csv")
+        lines = path.read_text().splitlines()
+        assert len(lines) == 3
+        header = lines[0].split(",")
+        first = dict(zip(header, lines[1].split(","), strict=True))
+        assert first["eigenworm_variance"] == "0.9"
+        assert first["omega_turns"] == "2"
+        assert first["omega_postures"] == "1"
+        assert first["klinotaxis"] == "0.05"
+        assert lines[2].startswith("wild_type,1802,")
+
 
 def test_the_omega_posture_threshold_is_the_real_postures_tail() -> None:
     """The third eigenworm's 99th percentile over the 6,655 real postures, about 10.6."""

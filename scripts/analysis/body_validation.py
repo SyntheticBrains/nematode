@@ -19,7 +19,7 @@ Usage::
 
     uv run python scripts/analysis/body_validation.py \\
         --logs campaigns/c1e-panel/logs --logs campaigns/c3-control/logs \\
-        --out-dir build/c3 --out validation.json [--workers 16] [--seeds-per-arm N]
+        --out-dir build/c3 --out validation.json --csv per-run.csv [--workers 16]
 
 A cost pilot evaluates runs outside the panel's seeds: ``--logs campaigns/c1e-pilot/logs --seeds
 1701 1702 --arms wild_type chemical_only_null wild_type_frozen chemical_only_null_frozen``.
@@ -28,6 +28,7 @@ A cost pilot evaluates runs outside the panel's seeds: ``--logs campaigns/c1e-pi
 from __future__ import annotations
 
 import argparse
+import csv
 import functools
 import json
 import math
@@ -383,6 +384,61 @@ def _finite(value: float | None) -> bool:
     return value is not None and math.isfinite(float(value))
 
 
+CSV_FIELDS = (
+    "arm",
+    "seed",
+    "frequency_hz",
+    "wavelength_bl",
+    "speed_bl_per_s",
+    "reversal_fraction",
+    "steps_used",
+    "steps_near_wall",
+    "eigenworm_variance",
+    "forward_bout_share",
+    "omega_turns",
+    "omega_postures",
+    "worm_minutes",
+    "half_step_frequency_hz",
+    "half_step_wavelength_bl",
+    "half_step_speed_bl_per_s",
+    "half_step_reversal_fraction",
+    *BIAS_STATISTICS,
+)
+
+
+def write_csv(results: list[dict[str, Any]], arms: dict[str, Any], path: Path) -> Path:
+    """Write one row per evaluated run: its readings, its half-step pass, its bias statistics."""
+    threshold = omega_posture_threshold()
+    rows = []
+    for run in sorted(results, key=lambda r: (r["arm"], r["seed"])):
+        row: dict[str, Any] = {"arm": run["arm"], "seed": run["seed"]}
+        if not run.get("missing"):
+            kin = run["kinematics"]
+            row |= {name: kin[name] for name in CSV_FIELDS if name in kin}
+            total = run["eigenworm_total_ss"]
+            row |= {
+                "eigenworm_variance": run["eigenworm_captured_ss"] / total if total else None,
+                "forward_bout_share": run["forward_bout_share"],
+                "omega_turns": len(run["omega_turns"]),
+                "omega_postures": sum(a > threshold for a in run["omega_turn_a3"]),
+                "worm_minutes": run["worm_minutes"],
+            }
+            for name, value in run.get("half_step", {}).items():
+                if f"half_step_{name}" in CSV_FIELDS:
+                    row[f"half_step_{name}"] = value
+            curves = arms.get(run["arm"], {}).get("bias_curves") or {"statistics": {}}
+            for key in BIAS_STATISTICS:
+                per_seed = curves["statistics"].get(key, {}).get("per_seed", {})
+                row[key] = per_seed.get(str(run["seed"]))
+        rows.append(row)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: evaluate every arm's runs, then grade and compare."""
     ap = argparse.ArgumentParser(
@@ -392,6 +448,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--logs", type=Path, action="append", required=True, help="a run-log dir")
     ap.add_argument("--out-dir", type=Path, required=True, help="where the captures go")
     ap.add_argument("--out", type=Path, help="write the JSON here")
+    ap.add_argument("--csv", type=Path, help="write one row per evaluated run here")
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--seeds-per-arm", type=int, default=None, help="each arm's first N seeds")
     ap.add_argument(
@@ -430,6 +487,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(payload)
+    if args.csv:
+        write_csv(results, arms, args.csv)
     print(payload)
     return 0
 
