@@ -10,9 +10,10 @@ emergent: speed, the share of episodes with a 20-second forward bout, and Logboo
 and weathervane curves. Omega turns, with the share whose posture reaches an omega's, and amplitude
 are reported, not graded.
 
-The arms are C.1e's wild type, chemical-only null and MLP (seeds 1801-1864), their frozen floors,
-and a derivative-sensing MLP control with its floor (seeds 1801-1816), which says whether the
-weathervane needs the synthetic head-sweep.
+The arms are C.1e's wild type, chemical-only null and MLP (seeds 1801-1864), their floors (the
+connectome's frozen runs; the MLP's untrained policy, since C.1e trained no frozen MLP), and a
+derivative-sensing MLP control with its floor (seeds 1801-1816), which says whether the weathervane
+needs the synthetic head-sweep. Each arm's bias statistics are paired with its floor's by seed.
 
 Usage::
 
@@ -52,6 +53,7 @@ import generate_body_wiring_configs as wiring  # noqa: E402  # pyright: ignore[r
 import wiring_premise as wp  # noqa: E402  # pyright: ignore[reportMissingImports]
 from quantumnematode.validation import body_kinematics as bk  # noqa: E402
 from quantumnematode.validation import posture  # noqa: E402
+from quantumnematode.validation.datasets import load_bias_signatures  # noqa: E402
 
 if TYPE_CHECKING:
     from quantumnematode.report.dtypes import BehaviourStep
@@ -72,8 +74,33 @@ ARMS: dict[str, tuple[str, tuple[int, ...], bool]] = {
     "mlp": (wiring.MLP_STEM, PANEL_SEEDS, True),
     "wild_type_frozen": (wiring.stem("wt", "frozen"), PANEL_SEEDS, False),
     "chemical_only_null_frozen": (wiring.stem("chemnull", "frozen"), PANEL_SEEDS, False),
+    "mlp_untrained": (wiring.MLP_STEM, PANEL_SEEDS, False),
     "mlp_derivative": (control.stem("learn"), CONTROL_SEEDS, False),
     "mlp_derivative_frozen": (control.stem("frozen"), CONTROL_SEEDS, False),
+}
+
+# Arms evaluated with each seed's untrained policy instead of a run's final weights: C.1e trained no
+# frozen MLP, so the MLP's floor is its seeds' initial weights, as a frozen run's would be.
+UNTRAINED: frozenset[str] = frozenset({"mlp_untrained"})
+
+# Each arm whose bias curves are attributed to learning, and the floor it is paired with by seed.
+FLOORS: dict[str, str] = {
+    "wild_type": "wild_type_frozen",
+    "chemical_only_null": "chemical_only_null_frozen",
+    "mlp": "mlp_untrained",
+    "mlp_derivative": "mlp_derivative_frozen",
+}
+BIAS_STATISTICS = ("klinokinesis", "klinokinesis_magnitude", "klinotaxis", "klinotaxis_all")
+
+# The gate preflight's table. The control is the one trained arm; it has no contrast, so it fills
+# both of the preflight's pairs and the preflight reads its floor and saturation gates.
+STEMS: dict[str, dict[str, str]] = {
+    "control": {
+        "wt_learn": control.stem("learn"),
+        "wt_frozen": control.stem("frozen"),
+        "rn_learn": control.stem("learn"),
+        "rn_frozen": control.stem("frozen"),
+    },
 }
 
 # (pass band, partial band), each (low, high); None for an open end.
@@ -120,10 +147,12 @@ def evaluate_run(job: tuple[str, int, list[str], str]) -> dict[str, Any]:
     """Evaluate one run: kinematics, posture readings, omega turns, bouts; write its capture."""
     arm, seed, log_dirs, out_dir = job
     stem, _seeds, graded = ARMS[arm]
-    log = _log_for([Path(d) for d in log_dirs], stem, seed)
-    weights = bc.final_weights(log) if log is not None else None
-    if weights is None:
-        return {"arm": arm, "seed": seed, "missing": True}
+    weights: Path | None = None
+    if arm not in UNTRAINED:
+        log = _log_for([Path(d) for d in log_dirs], stem, seed)
+        weights = bc.final_weights(log) if log is not None else None
+        if weights is None:
+            return {"arm": arm, "seed": seed, "missing": True}
     config = wiring.FORAGING / f"{stem}.yml"
     capture = harness.run_capture(config, seed, weights, episodes=EPISODES, capture_behaviour=True)
     step_seconds = capture.body.step_seconds
@@ -279,6 +308,43 @@ def _percentiles(values: np.ndarray) -> dict[str, float] | None:
     return {"p5": float(p5), "median": float(p50), "p95": float(p95)}
 
 
+def floor_comparison(arms: dict[str, Any]) -> dict[str, Any]:
+    """Pair each arm's bias statistics with its floor's by seed: what learning added.
+
+    Each difference is oriented so that positive is the reference's direction; learning added a
+    bias where its 80% interval lies above zero. The floor's own verdicts are reported beside, so a
+    floor that leans is seen, without voiding the arm's reading.
+    """
+    signs = {key: ref.sign for key, ref in load_bias_signatures().items()}
+    out: dict[str, Any] = {}
+    for arm, floor in FLOORS.items():
+        arm_curves = arms.get(arm, {}).get("bias_curves")
+        floor_curves = arms.get(floor, {}).get("bias_curves")
+        if arm_curves is None or floor_curves is None:
+            continue
+        readings: dict[str, Any] = {}
+        for key in BIAS_STATISTICS:
+            a = arm_curves["statistics"][key]["per_seed"]
+            f = floor_curves["statistics"][key]["per_seed"]
+            paired = [
+                signs[key] * (float(a[s]) - float(f[s]))
+                for s in sorted(set(a) & set(f), key=int)
+                if _finite(a[s]) and _finite(f[s])
+            ]
+            test = wp.paired_seed_wilcoxon_bootstrap(paired) if paired else None
+            readings[key] = {
+                "n_seeds": len(paired),
+                "arm_minus_floor": test,
+                "learned": test is not None and float(test["ci_lo"]) > 0.0,
+            }
+        out[arm] = {
+            "floor": floor,
+            "statistics": readings,
+            "floor_verdicts": floor_curves["strategy_verdicts"],
+        }
+    return out
+
+
 def control_comparison(
     arms: dict[str, Any],
     learn: dict[int, float],
@@ -357,6 +423,7 @@ def main(argv: list[str] | None = None) -> int:
         "theta_sharp": THETA_SHARP,
         "wall_margin_mm": WALL_MARGIN_MM,
         "arms": arms,
+        "floors": floor_comparison(arms),
         "control": control_comparison(arms, learn, frozen),
     }
     payload = json.dumps(result, indent=2, sort_keys=True, default=str) + "\n"

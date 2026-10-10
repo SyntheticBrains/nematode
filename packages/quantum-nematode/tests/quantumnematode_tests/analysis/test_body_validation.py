@@ -21,6 +21,7 @@ sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
 sys.path.insert(0, str(_REPO / "scripts" / "campaigns"))
 
 import body_validation as bv  # noqa: E402  # pyright: ignore[reportMissingImports]
+import gate_preflight as gp  # noqa: E402  # pyright: ignore[reportMissingImports]
 import generate_body_validation_configs as gen  # noqa: E402  # pyright: ignore[reportMissingImports]
 import generate_body_wiring_configs as wiring  # noqa: E402  # pyright: ignore[reportMissingImports]
 
@@ -51,6 +52,18 @@ class TestConfigs:
         assert set(bv.CONTROL_SEEDS) <= set(bv.PANEL_SEEDS)
         graded = {arm for arm, (_s, _seeds, g) in bv.ARMS.items() if g}
         assert graded == {"wild_type", "chemical_only_null", "mlp"}
+
+    def test_the_control_fits_the_gate_preflight(self) -> None:
+        """The preflight reads the control as one level, its learning arm against its floor."""
+        stems = gp.panel_stems("body_validation")
+        assert stems == {
+            "control": {
+                "wt_learn": gen.stem("learn"),
+                "wt_frozen": gen.stem("frozen"),
+                "rn_learn": gen.stem("learn"),
+                "rn_frozen": gen.stem("frozen"),
+            },
+        }
 
 
 class TestGrades:
@@ -139,6 +152,40 @@ class TestControl:
         out = bv.control_comparison(self._arms(), {}, {})
         assert out["gate"] is None
         assert out["weathervane_specificity"] == "untested"
+
+
+def _all_curves(per_seed: dict[int, float], verdict: str = "ABSENT") -> dict[str, Any]:
+    seeds = {str(s): v for s, v in per_seed.items()}
+    return {
+        "statistics": {key: {"per_seed": seeds} for key in bv.BIAS_STATISTICS},
+        "strategy_verdicts": {"klinotaxis": {"combined": verdict}},
+    }
+
+
+class TestFloors:
+    def test_every_learned_arm_has_a_floor_on_its_seeds(self) -> None:
+        """Each floor is an evaluated arm on the same seeds; the MLP's is its untrained policy."""
+        for arm, floor in bv.FLOORS.items():
+            assert bv.ARMS[arm][1] == bv.ARMS[floor][1]
+        assert bv.FLOORS["mlp"] in bv.UNTRAINED
+        assert bv.ARMS["mlp_untrained"][0] == bv.ARMS["mlp"][0]
+
+    def test_learning_is_read_as_the_arm_minus_its_floor(self) -> None:
+        """A bias above the floor on every seed is learned; one equal to it is not."""
+        seeds = range(1, 9)
+        arms = {
+            "wild_type": {"bias_curves": _all_curves({s: 0.5 + 0.01 * s for s in seeds})},
+            "wild_type_frozen": {"bias_curves": _all_curves(dict.fromkeys(seeds, 0.1), "PRESENT")},
+            "chemical_only_null": {"bias_curves": _all_curves(dict.fromkeys(seeds, 0.1))},
+            "chemical_only_null_frozen": {"bias_curves": _all_curves(dict.fromkeys(seeds, 0.1))},
+        }
+        out = bv.floor_comparison(arms)
+        assert set(out) == {"wild_type", "chemical_only_null"}
+        wt = out["wild_type"]["statistics"]["klinotaxis"]
+        assert wt["learned"]
+        assert wt["n_seeds"] == 8
+        assert out["wild_type"]["floor_verdicts"]["klinotaxis"]["combined"] == "PRESENT"
+        assert not out["chemical_only_null"]["statistics"]["klinotaxis"]["learned"]
 
 
 class TestPooling:

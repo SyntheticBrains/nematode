@@ -19,6 +19,7 @@ for the half-step check.
 | chemical-only null, PPO | 64 | graded; does the behaviour depend on the wiring? |
 | MLP-PPO | 64 | graded; does it depend on the learner? |
 | frozen floors (wild type, null) | 64 + 64 | the bias curves' null |
+| MLP, untrained policy | 64 | the MLP's floor (C.1e trained no frozen MLP) |
 | **MLP, derivative mode** (new), learning and frozen | 16 + 16 | the weathervane's specificity control, and its floor |
 
 **The control.** Logbook 035 trained an MLP with `chemotaxis_mode: derivative`, which has no spatial
@@ -26,9 +27,9 @@ head-sweep, and its weathervane collapsed: the sensing arms' weathervane was sen
 the body the question returns: klinotaxis sensing still uses a synthetic lateral sample, apart from
 the body's own head swing. The control is the C.1e MLP config in derivative mode, entropy 0.004,
 500 steps, 3,000 episodes, **seeds 1801–1816**, paired by seed with the MLP arm, learning and frozen
-(32 runs, about two hours on 16 workers at C.1e's per-run cost). **If the control's learning arm does
-not beat its frozen floor on all 16 seeds' paired plateaus (80% interval above zero, C.1d's control
-gate), or a seed is missing, it is recorded unreadable**, and the weathervane's specificity is
+(32 runs, about 1.5 hours on 16 workers, from its pilot). **If the control's learning arm does
+not beat its frozen floor on the 16 seeds' paired plateaus (all present, 80% interval above zero,
+C.1d's control gate), or a seed is missing, it is recorded unreadable**, and the weathervane's specificity is
 reported as untested, never inferred.
 
 **Out of scope: Logbook 036's thermotaxis curves.** The body has no thermal cell; that is M.9.
@@ -91,8 +92,11 @@ set by its peak curvature and drive, so a mismatch would describe the calibratio
   episodes per run (`--tail-runs 30`), with the 1 mm wall margin (H.3), `θ_sharp` fixed at 035's 0.45,
   and its sign-only grading. A step through the body is 5 worm-seconds, so per-step heading changes run
   larger than the point worm's; the harness's threshold-free companions (the turn-magnitude ratio and
-  the all-step weathervane slope) are reported beside. Each graded arm is read against
-  its frozen floor: the floor should show no bias.
+  the all-step weathervane slope) are reported beside. **What learning added** is each arm's
+  per-seed statistic minus its floor's, paired by seed with an 80% interval: a bias is attributed to
+  learning only where the interval lies above zero, and the floors' own verdicts are reported beside.
+  The cost pilot's frozen wild-type floor already leaned on two seeds, so a binary "the floor shows
+  no bias" rule was replaced by this one before any scored reading.
 - **The control's reading**: the weathervane slope of the derivative control against the MLP arm,
   paired by seed. A weathervane that survives without the synthetic sweep is the body's own; one that
   collapses was the sweep's. Reported as an effect size with its interval, as 035 did.
@@ -123,7 +127,11 @@ forward bouts, is recorded as such.
 - **The body checks will probably pass by construction.** That is the point of separating them.
 - **The weathervane may be the synthetic sweep's.** The control is there to say so. If it is, the
   body's turning carries klinokinesis at most, and the logbook says that plainly.
-- **Cost.** The control's training is 32 runs, about two hours on 16 workers, at the review
-  threshold, so it launches only after the spec review. Evaluation is 352 runs × 30 episodes, with a
+- **The control forages worse than the MLP through the body.** Its pilot (seeds 1701–1704) plateaued
+  at 0–25%, against C.1e's MLP at 70.8%. A weathervane that collapses in the control therefore cannot
+  be told apart from weaker foraging; only one that survives is clean. The registration fixes that
+  asymmetry before the control runs.
+- **Cost.** The control's training is 32 runs, about 1.5 hours on 16 workers, near the review
+  threshold, so it launches only after the spec review. Evaluation is 416 runs × 30 episodes, with a
   second pass at 40 sub-steps for the 192 graded runs; its cost is measured on a pilot of a few runs
   before the registration.

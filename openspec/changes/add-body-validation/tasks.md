@@ -9,6 +9,7 @@
   bias curves through Logbook 035's harness, the control's effect size); the control's config. Tests.
 - [ ] 4. **Pilot and registration**: evaluate a few runs to measure cost; `086-body-validation/launch.md`
   with every band; `/nematode-review-spec`.
-- [ ] 5. **Control and evaluation**: train the derivative control (16 seeds); evaluate every arm.
+- [ ] 5. **Control and evaluation**: train the derivative control, learning and frozen (seeds
+  1801–1816, 32 runs); evaluate every arm, the MLP's untrained floor included (416 runs).
 - [ ] 6. **Readout**: Logbook 086; tracker C.3; roadmap.
 - [ ] 7. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
