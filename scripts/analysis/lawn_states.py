@@ -25,10 +25,15 @@ A run then reports:
   it is not. The cell's density is recovered from the worm's intake there: intake fraction times
   density times quality.
 
+**The registered reading** (``read_panel``): the learner's on-lawn dwelling share minus its
+untrained floor's, paired by seed, classified at the minimum the fourth pilot fixed, after the
+learning gate. Beside it, never as verdicts: the same against the arm without internal state, bouts
+of both states, and roaming where grazed against fresh.
+
 Usage::
 
-    uv run python scripts/analysis/lawn_states.py --logs campaigns/d1-pilot/logs \\
-        --arms internal internal_frozen --seeds 9101 9102 --episodes 20 --out states.json
+    uv run python scripts/analysis/lawn_states.py --logs campaigns/d1-panel/logs \\
+        --seeds 2001 2002 ... 2016 --episodes 30 --out panel.json
 """
 
 from __future__ import annotations
@@ -36,6 +41,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import math
 import re
 import statistics
 import sys
@@ -54,6 +60,8 @@ for _path in (_HERE, _HERE.parent / "campaigns"):
 import body_control as bc  # noqa: E402  # pyright: ignore[reportMissingImports]
 import body_kinematics_eval as harness  # noqa: E402  # pyright: ignore[reportMissingImports]
 import generate_lawn_configs as gen  # noqa: E402  # pyright: ignore[reportMissingImports]
+import measured_prior_contrast as mc  # noqa: E402  # pyright: ignore[reportMissingImports]
+import operating_point_surface as ops  # noqa: E402  # pyright: ignore[reportMissingImports]
 import wiring_premise as wp  # noqa: E402  # pyright: ignore[reportMissingImports]
 from quantumnematode.agent import (  # noqa: E402
     DEFAULT_AGENT_BODY_LENGTH,
@@ -72,9 +80,23 @@ from quantumnematode.utils.seeding import derive_run_seed, get_rng, set_global_s
 from quantumnematode.validation import roaming_dwelling as rd  # noqa: E402
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from quantumnematode.report.dtypes import BehaviourStep
 
 EVALUATION_RUN_OFFSET = 1_000_000
+PANEL_SEEDS: tuple[int, ...] = tuple(range(2001, 2017))
+# Fixed by the fourth pilot (seeds 9113-9116): 2/3 of its +0.591 dwelling-share reference.
+PANEL_MINIMUM = 0.394
+MDE_Z = 2.487
+# The registered reading's state -> what it licenses.
+VERDICTS: dict[str, str] = {
+    "move_wt": "dwells",
+    "move_null": "dwells_less_than_its_floor",
+    "below": "dwelling_below_minimum",
+    "no_move": "no_dwelling_at_minimum",
+    "unresolved": "unresolved_at_this_sensitivity",
+}
 PLATEAU_FRACTION = 0.25
 GRAZED_DENSITY = 0.5
 _RUN_LINE = re.compile(r"Run:\s+(\d+)\s+Status:.*?Intake:\s+([-\d.]+)")
@@ -282,6 +304,81 @@ def action_log_std(weights: Path | None) -> list[float] | None:
     return [float(v) for v in log_std.tolist()] if log_std is not None else None
 
 
+def _dwelling(run: dict[str, Any]) -> float | None:
+    fraction = run.get("roaming_fraction")
+    return None if fraction is None else 1.0 - float(fraction)
+
+
+def paired(
+    runs: list[dict[str, Any]],
+    arm: str,
+    other: str,
+    key: Callable[[dict[str, Any]], float | None] = _dwelling,
+) -> dict[str, Any]:
+    """Pair one arm's per-seed reading with another's: the mean difference and its tests."""
+    by = {(r["arm"], r["seed"]): r for r in runs if not r.get("missing")}
+    seeds = sorted({s for a, s in by if a == arm} & {s for a, s in by if a == other})
+    values: dict[int, float] = {}
+    for s in seeds:
+        a, b = key(by[(arm, s)]), key(by[(other, s)])
+        if a is not None and b is not None:
+            values[s] = a - b
+    test = wp.paired_seed_wilcoxon_bootstrap(list(values.values())) if values else None
+    return {"arm": arm, "against": other, "per_seed": values, "test": test}
+
+
+def read_panel(gate: dict[str, Any], runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Read the gate first, then the registered reading's state at the minimum, then its verdict.
+
+    The reading is the learner's on-lawn dwelling share minus its untrained floor's, paired by
+    seed. A learner that does not beat its floor on intake leaves the panel unreadable.
+    """
+    out: dict[str, Any] = {"minimum": PANEL_MINIMUM, "readable": bool(gate["passes"])}
+    if not out["readable"]:
+        out["verdict"] = "unreadable"
+        return out
+    reading = paired(runs, "internal", "internal_frozen")
+    test = reading["test"]
+    per_seed = list(reading["per_seed"].values())
+    q = ops.two_sided(test["wilcoxon_p"])
+    state = mc.classify(test["mean_delta"], test["ci_lo"], test["ci_hi"], q, PANEL_MINIMUM)
+    sd = statistics.stdev(per_seed) if len(per_seed) > 1 else float("nan")
+    out |= {
+        "reading": reading,
+        "q": q,
+        "state": state,
+        "verdict": VERDICTS[state],
+        "achieved_sd": sd,
+        "achieved_mde": MDE_Z * sd / math.sqrt(len(per_seed)) if per_seed else None,
+    }
+    return out
+
+
+def beside(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return the readings reported beside the verdict, never read as one."""
+
+    def depletion(run: dict[str, Any]) -> float | None:
+        grazed, fresh = run.get("roaming_where_grazed"), run.get("roaming_where_fresh")
+        return None if grazed is None or fresh is None else grazed - fresh
+
+    return {
+        "blind_minus_floor_dwelling": paired(runs, "blind", "internal_frozen"),
+        "internal_minus_blind_dwelling": paired(runs, "internal", "blind"),
+        "roaming_grazed_minus_fresh": {
+            arm: {r["seed"]: depletion(r) for r in runs if r["arm"] == arm and not r.get("missing")}
+            for arm in ("internal", "blind")
+        },
+        "seeds_with_both_bouts": {
+            arm: sum(
+                1
+                for r in runs
+                if r["arm"] == arm and r.get("n_roaming_bouts") and r.get("n_dwelling_bouts")
+            )
+            for arm in ("internal", "blind")
+        },
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: the learning gate from the logs, and the states from an evaluation."""
     ap = argparse.ArgumentParser(
@@ -311,7 +408,10 @@ def main(argv: list[str] | None = None) -> int:
     ]
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         runs = list(pool.map(evaluate_run, jobs))
-    result = {"episodes": args.episodes, "gates": gates, "runs": runs}
+    result: dict[str, Any] = {"episodes": args.episodes, "gates": gates, "runs": runs}
+    if "internal" in gates and {"internal", "internal_frozen"} <= set(args.arms):
+        result["panel"] = read_panel(gates["internal"], runs)
+        result["beside"] = beside(runs)
     payload = json.dumps(result, indent=2, default=str) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

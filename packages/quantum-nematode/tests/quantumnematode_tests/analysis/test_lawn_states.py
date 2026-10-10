@@ -97,3 +97,44 @@ def test_run_readings_pool_the_episodes() -> None:
     assert out["roaming_fraction"] == pytest.approx(2 / 3)
     assert out["roaming_where_grazed"] == 1.0
     assert out["roaming_where_fresh"] == 0.0
+
+
+def _run(arm: str, seed: int, roaming: float) -> dict[str, object]:
+    return {
+        "arm": arm,
+        "seed": seed,
+        "roaming_fraction": roaming,
+        "n_roaming_bouts": 1,
+        "n_dwelling_bouts": 1,
+        "roaming_where_grazed": 0.5,
+        "roaming_where_fresh": 0.4,
+    }
+
+
+class TestPanel:
+    def test_a_learner_that_dwells_well_above_its_floor_dwells(self) -> None:
+        """Dwelling share 0.6 above a floor of none, on every seed, reads ``dwells``."""
+        runs = [_run("internal", s, 0.4 - 0.01 * (s % 3)) for s in range(16)]
+        runs += [_run("internal_frozen", s, 1.0) for s in range(16)]
+        out = ls.read_panel({"passes": True}, runs)
+        assert out["state"] == "move_wt"
+        assert out["verdict"] == "dwells"
+
+    def test_a_learner_level_with_its_floor_does_not(self) -> None:
+        """No difference on any seed reads ``no_dwelling_at_minimum``."""
+        runs = [_run("internal", s, 0.9 + 0.001 * (s % 2)) for s in range(16)]
+        runs += [_run("internal_frozen", s, 0.9 + 0.001 * ((s + 1) % 2)) for s in range(16)]
+        assert ls.read_panel({"passes": True}, runs)["verdict"] == "no_dwelling_at_minimum"
+
+    def test_a_failed_learning_gate_is_unreadable(self) -> None:
+        """Without the gate, nothing is classified."""
+        assert ls.read_panel({"passes": False}, [])["verdict"] == "unreadable"
+
+    def test_the_readings_beside(self) -> None:
+        """Bouts of both states are counted per arm; depletion is grazed minus fresh."""
+        runs = [
+            _run(arm, s, 0.5) for arm in ("internal", "blind", "internal_frozen") for s in (1, 2)
+        ]
+        out = ls.beside(runs)
+        assert out["seeds_with_both_bouts"] == {"internal": 2, "blind": 2}
+        assert out["roaming_grazed_minus_fresh"]["internal"][1] == pytest.approx(0.1)

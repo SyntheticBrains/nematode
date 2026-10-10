@@ -226,9 +226,20 @@ The registration is written after a pilot on seeds disjoint from the band. It fi
 
 - **Readings beside**, graded on sign against Decision E's directions where the cell can express them:
 
-  - a richer lawn holds the worm in dwelling longer (density);
-  - a lower-quality lawn is left sooner, once verified in task 1;
+  - a richer lawn holds the worm in dwelling longer (density; not read in D.1, whose registered
+    cell has one density and one quality);
+  - a lower-quality lawn is left sooner: **not read in D.1**. The registered cell fixes quality at
+    1.0 and leaving is deferred, so this moves to D.1b or a later cell with a quality range, and
+    Shtonda & Avery 2006 is verified there;
   - the with/without-`internal_state` contrast in time on lawns as satiety changes.
+
+**Registered after the fourth pilot (2026-10-11), with the user.** The pilot showed bouts of both
+states on one seed of four and a mixed depletion direction, so the original two-part question would
+probably read negative for reasons of timing, not of whether the learner dwells at all. The primary
+reading is therefore **the learner's on-lawn dwelling share minus its untrained floor's**, paired by
+seed, at a minimum of 0.394 (2/3 of the pilot's +0.591), on 16 seeds. Both states' bouts and the
+depletion contrast are reported beside it, graded on sign or described. See
+`docs/experiments/logbooks/supporting/087-patchy-lawns/launch.md`.
 
 **If the control fails**, B.3 does not start on this readout. The logbook records why, and the readout
 is revised or closed with a reason.

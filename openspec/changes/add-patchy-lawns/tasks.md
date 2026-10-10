@@ -1,6 +1,6 @@
 # Tasks: D.1 — patchy lawns, internal state, and the roaming/dwelling readout
 
-- [ ] 1. **Reference data and directions**: from Scheer & Bargmann 2023 (CC0), check the wild-type pickle's
+- [x] 1. **Reference data and directions** — **done 2026-10-11:** Scheer & Bargmann 2023's opcode check, the derived windows of 1,586 animals, the HMM parameters and provenance; Ji et al. 2021's patch-assay, density and mutant readings, mapped to the published Figure 7 and its legends; `max_turn_rad` of π confirmed on the population. The registration cites no other direction. The quality direction (Shtonda & Avery 2006) is not read in D.1 and moves to D.1b, where it is verified. Original scope:: from Scheer & Bargmann 2023 (CC0), check the wild-type pickle's
   opcodes, then derive and vendor each animal's 5 s windows (speed, angular speed, in-lawn flag, the
   authors' label) with the HMM's parameters and provenance. Vendor Ji et al. 2021's deposit for the
   directions. Pin every array's condition and units from the papers' legends. Check `max_turn_rad`
@@ -17,7 +17,7 @@
 - [x] 6. **Configs and analysis** — **done: the three arms' configs and their generator; `scripts/analysis/lawn_states.py` (intake plateaus from the run summary and the paired learning gate; held-out evaluation with capture; on-lawn windows, states by the calibrated model, bout durations, roaming where grazed against fresh). A smoke run on the untrained floor read 96% roaming on lawns. Tests.** Original scope:: the lawn cell's configs (signed speed, `max_turn_rad` π; learner,
   without `internal_state`, untrained) and their generator; the analysis script and its intake reader
   for the gate preflight. Tests.
-- [ ] 7. **Pilot and registration**: a pilot on disjoint seeds for cost, gates and the satiety timescale;
+- [x] 7. **Pilot and registration** — **done 2026-10-11:** four pilots on seeds 9101–9116, each change decided with the user and recorded in the design (movement cost and slow depletion; start on a lawn; `entropy_coef` 0.005). The gate preflight, on the fourth pilot, passes for the learner. `087-patchy-lawns/launch.md` registers dwelling share against the floor at a minimum of 0.394 on 16 seeds. `/nematode-review-spec` applied. Original scope:: a pilot on disjoint seeds for cost, gates and the satiety timescale;
   `087-patchy-lawns/launch.md`; gate preflight; `/nematode-review-spec`.
 - [ ] 8. **Campaign and readout**: the positive control; Logbook 087; tracker D.1; roadmap (the
   point-worm decision with its reason).
