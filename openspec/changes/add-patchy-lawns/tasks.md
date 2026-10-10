@@ -14,7 +14,7 @@
 - [x] 5. **Instrument** — **done 2026-10-10 on the registered retry.** The line, calibrated at the 5 s step, reached held-out κ = 0.49 against the 0.6 gate and was not used. The retry, registered before it was computed (f015a7ea), is a Gaussian-emission HMM on log speed and angular speed, fitted with the labels on the same calibration half. It reached held-out **κ = 0.632** (accuracy 91.1%), passing, close to the bar. It calls more roaming than the authors (17.4% against 10.6% of on-lawn windows), so absolute fractions are described, never matched. The vendored model reproduces the authors' own decoding on 99.2% of bins. Tests. Original scope:: `validation/roaming_dwelling.py`: the 5 s step measures and 10 s windows,
   the line, the reference HMM's Viterbi decoding per on-lawn run, agreement and slope calibration;
   the calibration on half the real animals and the held-out κ ≥ 0.6 gate. Tests.
-- [ ] 6. **Configs and analysis**: the lawn cell's configs (signed speed, `max_turn_rad` π; learner,
+- [x] 6. **Configs and analysis** — **done: the three arms' configs and their generator; `scripts/analysis/lawn_states.py` (intake plateaus from the run summary and the paired learning gate; held-out evaluation with capture; on-lawn windows, states by the calibrated model, bout durations, roaming where grazed against fresh). A smoke run on the untrained floor read 96% roaming on lawns. Tests.** Original scope:: the lawn cell's configs (signed speed, `max_turn_rad` π; learner,
   without `internal_state`, untrained) and their generator; the analysis script and its intake reader
   for the gate preflight. Tests.
 - [ ] 7. **Pilot and registration**: a pilot on disjoint seeds for cost, gates and the satiety timescale;
