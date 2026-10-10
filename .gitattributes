@@ -19,3 +19,4 @@ data/connectome/creamer_lds_2026_model_weights.csv -text
 
 # Git LFS — vendored posture data, pinned by SHA-256 (LFS keeps the bytes exact)
 data/posture/*.csv filter=lfs diff=lfs merge=lfs -text
+data/roaming_dwelling/*.npz filter=lfs diff=lfs merge=lfs -text

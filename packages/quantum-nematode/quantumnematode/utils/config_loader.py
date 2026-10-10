@@ -71,6 +71,7 @@ from quantumnematode.env.env import (
     SocialFeedingParams,
     ThermotaxisParams,
 )
+from quantumnematode.env.lawns import LawnParams
 from quantumnematode.env.predator_brain import PredatorBrainConfig
 from quantumnematode.initializers import (
     ManualParameterInitializer,
@@ -279,6 +280,55 @@ class ParameterInitializerConfig(BaseModel):
     manual_parameter_values: dict[str, float] | None = None
 
 
+class LawnConfig(BaseModel):
+    """Disc lawns of depleting density, used in place of point food under ``food_model: lawns``."""
+
+    count: int = Field(default=3, ge=1)
+    radius_mm: float = Field(default=2.5, gt=0.0)
+    min_separation_mm: float = Field(default=2.0, ge=0.0)
+    cell_mm: float = Field(default=1.0, gt=0.0)
+    # Each lawn's quality is drawn uniformly from [low, high]; equal ends fix it.
+    quality: list[float] = Field(default_factory=lambda: [1.0, 1.0], min_length=2, max_length=2)
+    intake_fraction: float = Field(default=0.1, gt=0.0, le=1.0)
+    reward_per_intake: float = Field(default=1.0, ge=0.0)
+    # Satiety gained per unit eaten, as a fraction of the maximum, times quality.
+    satiety_per_intake: float = Field(default=0.1, ge=0.0)
+    regrowth_per_step: float = Field(default=0.0, ge=0.0)
+    # Energy, in intake value, that each millimetre moved costs, from reward and satiety alike.
+    movement_cost_per_mm: float = Field(default=0.0, ge=0.0)
+    # Centre the first lawn on the worm's start, so it begins on food.
+    start_on_lawn: bool = False
+    start_clearance_mm: float = Field(default=2.0, ge=0.0)
+    wall_clearance_mm: float = Field(default=1.0, ge=0.0)
+
+    @model_validator(mode="after")
+    def _validate_quality(self) -> "LawnConfig":
+        """Refuse a quality range that is reversed or negative."""
+        low, high = self.quality
+        if low < 0 or high < low:
+            msg = f"lawn quality must be [low, high] with 0 <= low <= high, got {self.quality}"
+            raise ValueError(msg)
+        return self
+
+    def to_params(self) -> LawnParams:
+        """Convert to the environment's lawn parameters."""
+        return LawnParams(
+            count=self.count,
+            radius_mm=self.radius_mm,
+            min_separation_mm=self.min_separation_mm,
+            cell_mm=self.cell_mm,
+            quality=(self.quality[0], self.quality[1]),
+            intake_fraction=self.intake_fraction,
+            reward_per_intake=self.reward_per_intake,
+            satiety_per_intake=self.satiety_per_intake,
+            regrowth_per_step=self.regrowth_per_step,
+            movement_cost_per_mm=self.movement_cost_per_mm,
+            start_on_lawn=self.start_on_lawn,
+            start_clearance_mm=self.start_clearance_mm,
+            wall_clearance_mm=self.wall_clearance_mm,
+        )
+
+
 class ForagingConfig(BaseModel):
     """Configuration for foraging mechanics in dynamic environment."""
 
@@ -320,6 +370,18 @@ class ForagingConfig(BaseModel):
     source_initial_amount: float = Field(default=1.0, gt=0.0)
     depletion_per_feed: float = Field(default=0.25, gt=0.0)
     source_removal_eps: float = Field(default=1e-3, ge=0.0)
+    # ``points`` (the default) places point food; ``lawns`` places the disc lawns of ``lawns``
+    # instead, and the point-food keys above are then unused.
+    food_model: Literal["points", "lawns"] = "points"
+    lawns: LawnConfig | None = None
+
+    @model_validator(mode="after")
+    def _validate_food_model(self) -> "ForagingConfig":
+        """Require a lawns block exactly when the lawn food model is chosen."""
+        if (self.food_model == "lawns") != (self.lawns is not None):
+            msg = "set foraging.lawns if and only if foraging.food_model is 'lawns'"
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _validate_depletion(self) -> "ForagingConfig":
@@ -371,6 +433,8 @@ class ForagingConfig(BaseModel):
             source_initial_amount=self.source_initial_amount,
             depletion_per_feed=self.depletion_per_feed,
             source_removal_eps=self.source_removal_eps,
+            food_model=self.food_model,
+            lawns=self.lawns.to_params() if self.lawns is not None else None,
         )
 
 
@@ -2560,6 +2624,40 @@ class SimulationConfig(BaseModel):
     # and select_encoder() returns a HyperparameterEncoder regardless
     # of brain.name.
     hyperparam_schema: list[ParamSchemaEntry] | None = None
+
+    @model_validator(mode="after")
+    def _validate_lawns(self) -> "SimulationConfig":
+        """Refuse a lawn configuration the lawn model does not support, or that shapes a state.
+
+        Lawns run on the continuous substrate with one agent. Four reward terms would favour a
+        behavioural state by construction: a stuck-position penalty and an anti-dithering penalty
+        (which fires whenever the worm is where it was two steps before) punish dwelling, an
+        exploration bonus pays for visiting new cells, and a distance reward pays for approach
+        itself, so a lawn configuration must set each to zero.
+        """
+        environment = self.environment
+        foraging = environment.foraging if environment is not None else None
+        if foraging is None or foraging.food_model != "lawns":
+            return self
+        if environment is not None and environment.env_type != "continuous_2d":
+            msg = "food_model 'lawns' runs on env_type 'continuous_2d' only"
+            raise ValueError(msg)
+        if self.multi_agent is not None and self.multi_agent.enabled:
+            msg = "food_model 'lawns' runs one agent; multi_agent must be disabled"
+            raise ValueError(msg)
+        reward = self.reward or RewardConfig()
+        for key in (
+            "penalty_stuck_position",
+            "penalty_anti_dithering",
+            "reward_exploration",
+            "reward_distance_scale",
+        ):
+            if getattr(reward, key) != 0:
+                msg = (
+                    f"food_model 'lawns' requires reward.{key} to be 0, got {getattr(reward, key)}"
+                )
+                raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _validate_signed_speed_matches_environment(self) -> "SimulationConfig":

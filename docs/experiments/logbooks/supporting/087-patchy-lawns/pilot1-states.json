@@ -1,0 +1,201 @@
+{
+  "episodes": 20,
+  "gates": {
+    "internal": {
+      "n_seeds": 4,
+      "learn_mean": 13.383171666666668,
+      "floor_mean": 4.378510666666666,
+      "test": {
+        "mean_delta": 9.004661,
+        "wilcoxon_p": 0.0625,
+        "ci_lo": 8.720498666666668,
+        "ci_hi": 9.288823333333333,
+        "n": 4,
+        "per_seed_deltas": [
+          8.692466666666668,
+          9.612994666666665,
+          9.236837333333334,
+          8.476345333333335
+        ]
+      },
+      "passes": true
+    },
+    "blind": {
+      "n_seeds": 4,
+      "learn_mean": 13.373346666666666,
+      "floor_mean": 4.378510666666666,
+      "test": {
+        "mean_delta": 8.994836,
+        "wilcoxon_p": 0.0625,
+        "ci_lo": 7.578959666666666,
+        "ci_hi": 10.410712333333333,
+        "n": 4,
+        "per_seed_deltas": [
+          6.6653493333333325,
+          12.328854666666665,
+          10.20482,
+          6.780320000000001
+        ]
+      },
+      "passes": true
+    }
+  },
+  "runs": [
+    {
+      "arm": "internal",
+      "seed": 9101,
+      "evaluation_intake": 16.863633207648952,
+      "on_lawn_windows": 1755,
+      "roaming_fraction": 0.9948717948717949,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9968553459119497,
+      "roaming_where_fresh": 0.9944328462073765
+    },
+    {
+      "arm": "internal",
+      "seed": 9102,
+      "evaluation_intake": 11.558390514660529,
+      "on_lawn_windows": 1143,
+      "roaming_fraction": 0.9833770778652668,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9900332225913622,
+      "roaming_where_fresh": 0.9809976247030879
+    },
+    {
+      "arm": "internal",
+      "seed": 9103,
+      "evaluation_intake": 14.168638392078254,
+      "on_lawn_windows": 1276,
+      "roaming_fraction": 0.9851097178683386,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.989010989010989,
+      "roaming_where_fresh": 0.9844606946983546
+    },
+    {
+      "arm": "internal",
+      "seed": 9104,
+      "evaluation_intake": 12.644895520681748,
+      "on_lawn_windows": 1338,
+      "roaming_fraction": 0.9857997010463379,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9825581395348837,
+      "roaming_where_fresh": 0.9869215291750503
+    },
+    {
+      "arm": "blind",
+      "seed": 9101,
+      "evaluation_intake": 13.4000629436996,
+      "on_lawn_windows": 1367,
+      "roaming_fraction": 0.9868324798829554,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9720670391061452,
+      "roaming_where_fresh": 0.9920713577799801
+    },
+    {
+      "arm": "blind",
+      "seed": 9102,
+      "evaluation_intake": 14.728382446553175,
+      "on_lawn_windows": 1374,
+      "roaming_fraction": 0.9883551673944687,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.98989898989899,
+      "roaming_where_fresh": 0.9880952380952381
+    },
+    {
+      "arm": "blind",
+      "seed": 9103,
+      "evaluation_intake": 15.678168046516907,
+      "on_lawn_windows": 1445,
+      "roaming_fraction": 0.9840830449826989,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9742489270386266,
+      "roaming_where_fresh": 0.985973597359736
+    },
+    {
+      "arm": "blind",
+      "seed": 9104,
+      "evaluation_intake": 8.670746667175099,
+      "on_lawn_windows": 861,
+      "roaming_fraction": 0.991869918699187,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.995575221238938,
+      "roaming_where_fresh": 0.9905511811023622
+    },
+    {
+      "arm": "internal_frozen",
+      "seed": 9101,
+      "evaluation_intake": 6.396985095863739,
+      "on_lawn_windows": 818,
+      "roaming_fraction": 0.9376528117359413,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9216417910447762,
+      "roaming_where_fresh": 0.9454545454545454
+    },
+    {
+      "arm": "internal_frozen",
+      "seed": 9102,
+      "evaluation_intake": 1.332116113976,
+      "on_lawn_windows": 130,
+      "roaming_fraction": 1.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 1.0
+    },
+    {
+      "arm": "internal_frozen",
+      "seed": 9103,
+      "evaluation_intake": 5.5184408913022285,
+      "on_lawn_windows": 811,
+      "roaming_fraction": 0.9716399506781751,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9697732997481109,
+      "roaming_where_fresh": 0.9734299516908212
+    },
+    {
+      "arm": "internal_frozen",
+      "seed": 9104,
+      "evaluation_intake": 4.818939575703163,
+      "on_lawn_windows": 744,
+      "roaming_fraction": 0.9717741935483871,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9779179810725552,
+      "roaming_where_fresh": 0.9672131147540983
+    }
+  ]
+}

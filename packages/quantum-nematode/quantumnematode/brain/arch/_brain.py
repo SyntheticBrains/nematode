@@ -380,6 +380,10 @@ class BrainParams(BaseModel):
         default=None,
         description="Current satiety level (hunger state, decays over time).",
     )
+    max_satiety: float | None = Field(
+        default=None,
+        description="Satiety's maximum, so internal state can be read as a fraction.",
+    )
     health: float | None = Field(
         default=None,
         description="Current HP (decreases from damage events).",

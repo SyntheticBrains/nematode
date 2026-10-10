@@ -55,9 +55,13 @@ def write_behaviour_capture(
     return output_path
 
 
+_OPTIONAL_FIELDS = ("speed_signed", "satiety", "intake", "on_lawn")
+
+
 def _record(step: BehaviourStep) -> dict[str, object]:
-    """Return one step's export record, leaving out the signed speed when it was not recorded."""
+    """Return one step's export record, leaving out each optional field that was not recorded."""
     record = asdict(step)
-    if record["speed_signed"] is None:
-        del record["speed_signed"]
+    for name in _OPTIONAL_FIELDS:
+        if record[name] is None:
+            del record[name]
     return record

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import time
 from dataclasses import dataclass
@@ -78,6 +79,8 @@ class EpisodeData:
         Number of times agent exited predator detection radius without dying.
     in_danger : bool
         Whether agent is currently within predator detection radius.
+    intake : float
+        Food eaten from lawns over the episode, weighted by each lawn's quality.
     """
 
     steps: int
@@ -91,6 +94,10 @@ class EpisodeData:
     predator_encounters: int = 0
     successful_evasions: int = 0
     in_danger: bool = False
+    intake: float = 0.0
+    step_intake: float = 0.0
+    movement_cost: float = 0.0
+    last_position: tuple[float, float] | None = None
 
 
 @dataclass
@@ -300,6 +307,41 @@ class StandardEpisodeRunner(EpisodeRunner):
                     brave_msg += f" [O2 brave bonus: +{o2_bonus}]"
 
         return brave_msg, reward
+
+    def _handle_lawn_intake(self, agent: QuantumNematodeAgent, reward: float) -> float:
+        """Charge the step's movement, eat from the cell under the worm, and regrow the lawns.
+
+        Energy is counted in intake value: what the worm eats, times its lawn's quality, is paid as
+        reward and restores satiety, and the cell loses what was eaten; each millimetre moved since
+        the last step costs ``movement_cost_per_mm`` of the same, taken from reward and satiety
+        alike. Without lawns the reward is returned unchanged.
+        """
+        field = agent.env.lawn_field
+        lawns = agent.env.foraging.lawns
+        if field is None or lawns is None:
+            return reward
+        tracker = agent._episode_tracker
+        satiety = agent._satiety_manager
+        position = agent.env.agent_sensing_position(agent.agent_id)
+        energy = 0.0
+        if tracker.last_position is not None and lawns.movement_cost_per_mm > 0:
+            moved = math.dist(position, tracker.last_position)
+            cost = lawns.movement_cost_per_mm * moved
+            tracker.track_movement_cost(cost)
+            satiety.spend_satiety(satiety.max_satiety * lawns.satiety_per_intake * cost)
+            energy -= cost
+        tracker.set_last_position(position)
+        intake = field.eat(position, lawns.intake_fraction)
+        field.regrow(lawns.regrowth_per_step)
+        if intake.amount > 0:
+            tracker.track_intake(intake.value)
+            satiety.restore_satiety(satiety.max_satiety * lawns.satiety_per_intake * intake.value)
+            energy += intake.value
+        if energy == 0:
+            return reward
+        gain = lawns.reward_per_intake * energy
+        tracker.track_reward(gain)
+        return reward + gain
 
     def _handle_food_collection(
         self,
@@ -1114,6 +1156,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             result, reward = self._handle_food_collection(agent, reward_config, params, reward)
             if result is not None:
                 return result
+            reward = self._handle_lawn_intake(agent, reward)
 
             # Predator checks (before and after predator movement)
             result, reward = self._handle_predator_phase(
@@ -1220,14 +1263,19 @@ class StandardEpisodeRunner(EpisodeRunner):
                     food_history=(agent.food_history or None),
                 )
 
-            # Handle max steps reached
+            # Handle max steps reached. A lawn episode has no food target: reaching the step limit
+            # alive is how it succeeds.
             if agent._episode_tracker.steps >= max_steps:
-                logger.warning("Failed to complete episode: max steps reached.")
+                survived = agent.env.lawn_field is not None
+                if survived:
+                    logger.info("Completed episode: survived to max steps on lawns.")
+                else:
+                    logger.warning("Failed to complete episode: max steps reached.")
                 return self._terminate_episode(
                     agent,
                     params,
                     reward,
-                    success=False,
+                    success=survived,
                     termination_reason=TerminationReason.MAX_STEPS,
                     learn=False,
                     update_memory=False,

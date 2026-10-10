@@ -169,6 +169,7 @@ _SIMULATION_RESULTS_FIELDNAMES = [
     "died_to_health_depletion",
     "temperature_comfort_score",
     "oxygen_comfort_score",
+    "intake",
 ]
 
 
@@ -209,6 +210,7 @@ def _simulation_result_to_row(
         "oxygen_comfort_score": result.oxygen_comfort_score
         if result.oxygen_comfort_score is not None
         else np.nan,
+        "intake": result.intake if result.intake is not None else np.nan,
     }
 
 

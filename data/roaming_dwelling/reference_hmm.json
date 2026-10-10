@@ -1,0 +1,36 @@
+{
+  "source": "Scheer & Bargmann 2023, eLife 88657; Dryad 10.5061/dryad.47d7wm3jf (CC0-1.0), file PD1074_od2_LL_Data_Centroid_RoamingDwellingHMM_081721.pkl, md5 84f3c8255ca1e1905cd657a325451eb8",
+  "states": [
+    "dwelling",
+    "roaming"
+  ],
+  "categories": [
+    "dwelling observation",
+    "roaming observation"
+  ],
+  "log_pi0": [
+    -0.7222394529234272,
+    -0.6648773968126739
+  ],
+  "log_transitions": [
+    [
+      -0.021392213153571246,
+      -3.8554053333668628
+    ],
+    [
+      -2.283506714549273,
+      -0.1075029794976016
+    ]
+  ],
+  "log_emissions": [
+    [
+      -0.010471128339219595,
+      -4.564364486769202
+    ],
+    [
+      -0.7483862125803089,
+      -0.6408004292498671
+    ]
+  ],
+  "window_seconds": 10
+}

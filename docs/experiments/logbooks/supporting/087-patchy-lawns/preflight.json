@@ -1,0 +1,43 @@
+{
+  "source": "fourth pilot, seeds 9113-9116, configured as the panel",
+  "gates": {
+    "internal": {
+      "n_seeds": 4,
+      "learn_mean": 3.0197333333333334,
+      "floor_mean": 1.978383,
+      "test": {
+        "mean_delta": 1.0413503333333334,
+        "wilcoxon_p": 0.125,
+        "ci_lo": 0.4606546666666668,
+        "ci_hi": 1.622046,
+        "n": 4,
+        "per_seed_deltas": [
+          2.1747413333333334,
+          0.6056013333333334,
+          1.5331,
+          -0.14804133333333303
+        ]
+      },
+      "passes": true
+    },
+    "blind": {
+      "n_seeds": 4,
+      "learn_mean": 2.1983639999999998,
+      "floor_mean": 1.978383,
+      "test": {
+        "mean_delta": 0.21998099999999987,
+        "wilcoxon_p": 0.4375,
+        "ci_lo": -0.2607330000000001,
+        "ci_hi": 0.7006949999999998,
+        "n": 4,
+        "per_seed_deltas": [
+          0.8932959999999999,
+          0.5983306666666666,
+          0.4178573333333331,
+          -1.02956
+        ]
+      },
+      "passes": false
+    }
+  }
+}

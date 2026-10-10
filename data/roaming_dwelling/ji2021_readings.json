@@ -1,0 +1,55 @@
+{
+  "source": "Ji et al. 2021, eLife 10:e62889; Dryad 10.5061/dryad.3bk3j9kh3 (CC0-1.0), RD_manuscript_data.mat, md5 8afe85564b77d5249fa55d91237f592e",
+  "patch_foraging_assay": {
+    "note": "Deposit Data_F6.BEF = paper Fig. 7B, 7E and 7-figure supplement 1C: fraction of time roaming on sparse food, one value per animal (NaN entries dropped).",
+    "wild_type_patch": {
+      "n_values": 248,
+      "mean": 0.3654,
+      "median": 0.2237
+    },
+    "wild_type_uniform_sparse_food": {
+      "n_values": 128,
+      "mean": 0.1747,
+      "median": 0.0555
+    },
+    "tax4_patch": {
+      "n_values": 111,
+      "mean": 0.0671,
+      "median": 0.0333
+    },
+    "AIA_silenced_patch": {
+      "n_values": 132,
+      "mean": 0.1865,
+      "median": 0.0437
+    },
+    "pdfr1_patch": {
+      "n_values": 103,
+      "mean": 0.2171,
+      "median": 0.0333
+    },
+    "tph1_patch": {
+      "n_values": 233,
+      "mean": 0.7278,
+      "median": 0.9609
+    }
+  },
+  "uniform_food_density": {
+    "note": "Deposit Data_F6.G = paper Fig. 7F: wild type at two uniform food densities. The 200 fraction values per condition are tightly clustered and are read as resamples; their mean is reported. The durations' unit is not stated in the legend; use them only as ratios between conditions.",
+    "wild_type_low_density": {
+      "fraction_roaming_mean": 0.355,
+      "fraction_roaming_n_values": 200,
+      "roaming_duration_median": 330.0,
+      "roaming_duration_n": 608,
+      "dwelling_duration_median": 510.0,
+      "dwelling_duration_n": 583
+    },
+    "wild_type_high_density": {
+      "fraction_roaming_mean": 0.2006,
+      "fraction_roaming_n_values": 200,
+      "roaming_duration_median": 210.0,
+      "roaming_duration_n": 165,
+      "dwelling_duration_median": 1140.0,
+      "dwelling_duration_n": 164
+    }
+  }
+}

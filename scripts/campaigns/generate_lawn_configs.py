@@ -1,0 +1,138 @@
+#!/usr/bin/env python
+"""Emit D.1's lawn-cell configs: MLP-PPO on patchy lawns, with and without internal state.
+
+The cell is the point worm's MLP-PPO at the hard-food cell's sensing (klinotaxis, the adaptive
+fold-change sensor, the Fick field), with point food replaced by lawns:
+
+- **Lawns**: four disc lawns of 2.5 mm radius in a 20 mm arena, 1 mm cells, intake 2% of a cell's
+  density per step (a spot lasts minutes, as a real lawn does), no regrowth.
+- **Moving costs energy**: 0.013 of intake value per mm, from reward and satiety alike. On a fresh
+  cell a worm gains 0.006 of its maximum satiety per step; moving 1 mm costs 0.0039; basal decay is
+  0.0027. A spot is worth staying on until it falls to about 0.35 of its density, some 52 steps
+  (4.3 minutes), and roaming through a lawn without stopping slowly starves the worm.
+- **A lower entropy bonus**, 0.005: at the base's 0.05, PPO kept its speed noise near the boundary
+  between the two states (about 0.05 mm/s of jitter alone) and drove the turn's noise until every
+  turn was random, since turning cost nothing.
+- **The worm starts on a lawn**, as assays place worms on food: the first lawn is centred on its
+  start. With movement costed and the worm starting off food, PPO learned to stand still and
+  starve before it found a lawn.
+- **Both states expressible**: signed speed (zero is the centre of the speed range) and turns of up
+  to half a revolution per step, the reorientation a dwelling worm makes.
+- **No shaping that favours a state**: the stuck-position, anti-dithering, exploration and distance
+  terms are zero, so intake is the only food reward.
+- **Satiety matters within an episode**: 720 steps (an hour of worm time), and an idle worm starves
+  in about 375 of them.
+
+Arms: ``internal`` reads ``internal_state``; ``blind`` does not; ``internal_frozen`` is the
+learner's untrained policy, its floor. The pilot may revise the cell's numbers before registration;
+each config is re-checked through the real loader by a test, and an existing config is left alone.
+
+Usage::
+
+    uv run python scripts/campaigns/generate_lawn_configs.py
+"""
+
+from __future__ import annotations
+
+import math
+import sys
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+FORAGING = PROJECT_ROOT / "configs" / "scenarios" / "foraging"
+BASE_STEM = "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64"
+STEM = "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns"
+ARMS: tuple[str, ...] = ("internal", "blind", "internal_frozen")
+
+MAX_STEPS = 720
+LAWNS: dict[str, Any] = {
+    "count": 4,
+    "radius_mm": 2.5,
+    "min_separation_mm": 2.0,
+    "cell_mm": 1.0,
+    "quality": [1.0, 1.0],
+    "intake_fraction": 0.02,
+    "reward_per_intake": 10.0,
+    "satiety_per_intake": 0.3,
+    "regrowth_per_step": 0.0,
+    "movement_cost_per_mm": 0.013,
+    "start_on_lawn": True,
+    "start_clearance_mm": 2.0,
+    "wall_clearance_mm": 1.0,
+}
+# A learning setting: at the base's 0.05 the entropy bonus kept the speed noise near the boundary
+# between the two states and pushed the turn's noise until every turn was random.
+ENTROPY_COEF = 0.005
+ZERO_SHAPING = (
+    "penalty_stuck_position",
+    "penalty_anti_dithering",
+    "reward_exploration",
+    "reward_distance_scale",
+)
+
+
+def stem(arm: str) -> str:
+    """Return the config stem of ``arm``."""
+    return f"{STEM}_{arm}"
+
+
+def derive(arm: str) -> tuple[Path, str]:
+    """Build one arm's config from the point worm's MLP-PPO config."""
+    if arm not in ARMS:
+        msg = f"unknown arm {arm!r}; expected one of {ARMS}"
+        raise ValueError(msg)
+    data: dict[str, Any] = yaml.safe_load((FORAGING / f"{BASE_STEM}.yml").read_text())
+    data["max_steps"] = MAX_STEPS
+    brain = data["brain"]["config"]
+    brain["signed_speed"] = True
+    brain["entropy_coef"] = ENTROPY_COEF
+    modules = [m for m in brain["sensory_modules"] if m != "internal_state"]
+    if arm != "blind":
+        modules.append("internal_state")
+    brain["sensory_modules"] = modules
+    if arm == "internal_frozen":
+        brain["freeze_updates"] = True
+    for key in ZERO_SHAPING:
+        data["reward"][key] = 0
+    continuous = data["environment"]["continuous"]
+    continuous["allow_reversal"] = True
+    continuous["max_turn_rad"] = round(math.pi, 6)
+    foraging = data["environment"]["foraging"]
+    for key in ("foods_on_grid", "target_foods_to_collect", "min_food_distance"):
+        foraging.pop(key, None)
+    foraging["food_model"] = "lawns"
+    foraging["lawns"] = dict(LAWNS)
+    header = (
+        f"# D.1 lawn cell, arm `{arm}`.\n#\n"
+        f"# Derived from {BASE_STEM}.yml: max_steps {MAX_STEPS}; signed speed and reversal;\n"
+        "# max_turn_rad pi; entropy_coef 0.005; point food replaced by lawns; the stuck-position,\n"
+        "# anti-dithering,"
+        " exploration and distance rewards zero"
+        + {
+            "internal": "; reads internal_state.\n",
+            "blind": "; does not read internal_state.\n",
+            "internal_frozen": "; reads internal_state; freeze_updates (the floor).\n",
+        }[arm]
+        + "#\n# Generated by scripts/campaigns/generate_lawn_configs.py; re-checked through the\n"
+        "# real config loader by test_lawn_configs.py.\n#\n"
+    )
+    return FORAGING / f"{stem(arm)}.yml", header + yaml.safe_dump(data, sort_keys=False)
+
+
+def main() -> int:
+    """CLI: write every arm's config if missing."""
+    written = 0
+    for arm in ARMS:
+        path, text = derive(arm)
+        if not path.exists():
+            path.write_text(text)
+            written += 1
+    print(f"wrote {written} configs; kept {len(ARMS) - written}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
