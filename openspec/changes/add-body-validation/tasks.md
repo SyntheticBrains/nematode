@@ -1,6 +1,6 @@
 # Tasks: C.3 — body-level validation
 
-- [ ] 1. **Data**: vendor the eigenworm basis and the real postures with licences and provenance;
+- [x] 1. **Data** — **done 2026-10-10: both files vendored in LFS at Wormlight's pinned SHA-256s; columns are the modes; four modes capture 96.49% of the real postures; `validation/posture.py` loads and checks them.** Original scope:: vendor the eigenworm basis and the real postures with licences and provenance;
   checked against their pinned SHA-256s. Tests.
 - [ ] 2. **Instruments**: the frame angle in the posture record; eigenworm variance, peak |κL|, omega
   turns, forward bouts. Tests on generated postures and the vendored real postures.

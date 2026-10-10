@@ -16,3 +16,6 @@ data/connectome/**/*.xlsx filter=lfs diff=lfs merge=lfs -text
 # Vendored verbatim and pinned by SHA256: the upstream file uses CRLF line endings, which
 # `text=auto` would normalise on commit, and the stored bytes would no longer match their digest.
 data/connectome/creamer_lds_2026_model_weights.csv -text
+
+# Git LFS — vendored posture data, pinned by SHA-256 (LFS keeps the bytes exact)
+data/posture/*.csv filter=lfs diff=lfs merge=lfs -text

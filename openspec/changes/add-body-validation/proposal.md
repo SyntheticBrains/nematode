@@ -16,7 +16,7 @@ re-derived from emergent kinematics, with Wormlight's thresholds and instruments
   tutorials (CC BY 4.0), with licences and SHA-256s in `data/` provenance.
 - **New instruments**:
   - the variance the first four eigenworms capture in body postures;
-  - undulation amplitude, beside the real postures' curvature;
+  - undulation amplitude in the first two eigenworms' plane, beside the real postures';
   - omega turns, by Wormlight's definition;
   - forward bouts.
 - **The posture record carries the body's frame angle**, which omega turns need.

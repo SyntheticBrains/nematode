@@ -6,15 +6,17 @@ The kinematic instruments SHALL report, from captured postures:
 
 - the variance the first four eigenworms capture, with each posture's segment angles interpolated to
   100 mean-removed tangent angles head to tail and projected on the vendored basis;
-- each posture's peak |κL|;
-- omega turns: the line from the midline at 0.2 body lengths to the head turning, net, by more than
-  135° between two consecutive crossings of the head's swing;
+- each posture's undulation amplitude, its radius in the plane of the first two eigenworms;
+- omega turns: across one head swing, the interval between consecutive zero-crossings of the head
+  segment's curvature, the line from the midline at 0.2 body lengths to the head turning, net, by more
+  than 135° in the world frame;
 - the share of episodes with a forward bout of at least 20 worm-seconds.
 
 #### Scenario: The basis captures a real posture
 
 - **WHEN** a vendored real posture is projected on the basis
-- **THEN** the first four modes SHALL capture most of its variance, as the reference set reports
+- **THEN** the first four modes SHALL capture at least 96% of the variance pooled over the 6,655 real
+  postures, as the reference set reports (96.46%)
 
 #### Scenario: A straight body has no omega turn
 
