@@ -145,6 +145,31 @@ The HMM's parameters are vendored from the deposited model, read without executi
   each run of on-lawn windows. Simulated worms are then read with the same slope and model, never
   refitted.
 
+**The first calibration failed its gate, and one retry is registered.** Calibrated on 793 animals, the
+line reached held-out κ = 0.49 (accuracy 90.1%, roaming 11.3% against the authors' 10.6%). At a 5 s
+step, a dwelling worm's turn is close to random, so the line separates the states mostly on speed.
+With the user, on 2026-10-10, one retry was registered. It was written down before any of it was
+computed:
+
+- **Same data:** the same 10-second windows, split (seed 2026) and labels.
+
+- **Features:** each window's log(speed + 0.001 mm/s) and angular speed. A window with no measurable
+  turn gets angular speed 0, as the line treated it.
+
+- **Model:** a two-state HMM with Gaussian emissions, fitted with the labels on the calibration
+  half:
+
+  - each state's mean and full covariance come from its labelled on-lawn windows;
+  - the transition probabilities are counted from consecutive labelled windows within on-lawn runs;
+  - the initial distribution is the labels' state shares.
+
+  This is deterministic; no iterative fitting.
+
+- **Decoding:** Viterbi, within each on-lawn run.
+
+- **Gate:** held-out κ ≥ 0.6, one attempt. **If it fails, D.1's roaming/dwelling readout closes**,
+  with its reason and a destination, and B.3's start is decided separately.
+
 **States are read on lawns only.** Both states are on-food states. Off a lawn, worms search and
 disperse, so off-lawn windows are reported as description, never classified into a verdict.
 
