@@ -1,0 +1,35 @@
+{
+  "source": "Scheer & Bargmann 2023 wild type (PD1074, OD2 small lawns), 1,586 animals",
+  "split_seed": 2026,
+  "fit_animals": 793,
+  "held_out_animals": 793,
+  "slope": 70.627,
+  "fit_kappa": 0.4532896500802894,
+  "held_out": {
+    "n": 185032.0,
+    "accuracy": 0.9009522677158546,
+    "kappa": 0.4921353103876878
+  },
+  "kappa_gate": 0.6,
+  "gate_passes": false,
+  "roaming_fraction_on_lawn": {
+    "classifier": 0.11273185178779886,
+    "authors": 0.10625189156470233
+  },
+  "turning_deg_per_s": {
+    "roaming": {
+      "median": 6.915289878845215,
+      "p90": 32.36956443786621,
+      "p99": 35.561563377380374,
+      "n": 19660
+    },
+    "dwelling": {
+      "median": 18.399276733398438,
+      "p90": 35.285221099853516,
+      "p99": 35.8474592590332,
+      "n": 165367
+    }
+  },
+  "point_worm_max_turn_deg_per_s": 36.0,
+  "dwelling_p99_within_point_worm": true
+}

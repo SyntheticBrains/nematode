@@ -74,3 +74,36 @@ paper's Figure 7, the patch foraging assay. Matched against the published legend
 - wild type roams more on sparse food with a dense patch nearby than on uniform sparse food;
 - wild type roams less, and dwells longer, at the higher density;
 - *tph-1* roams more than wild type in the patch assay, and *pdfr-1* less.
+
+## `scheer2023_windows.npz` and `calibration.json`
+
+**`scheer2023_windows.npz`** is derived from Scheer & Bargmann 2023's wild-type deposit (CC0):
+
+- **Source file:** `PD1074_od2_Fig1_021523.pkl` (Zenodo record 8310289), 4,871,119,532 bytes, MD5
+  `f8556a4684e7a7f30a3dc01242591556` as published, downloaded 2026-10-10. It is not vendored.
+
+- **How it was read.** Its opcodes were scanned first: it references only numpy, pandas,
+  `builtins.slice`, `datetime.date` and the `ssm` model classes. It was then loaded with an unpickler
+  that admits only those modules and replaces `ssm` with stand-ins.
+
+- **What each animal contributes.** The animal's midbody position (`Midbody_cent_x/y`) is sampled
+  every 15 frames (5 s at 3 frames/s) and divided by its own `pixpermm`. Its 10-second windows are
+  then measured exactly as simulated tracks are.
+
+- **What each window keeps:**
+
+  - its speed and angular speed;
+  - whether it lies in an in-lawn run (`InLawnRunMask`);
+  - the authors' label (`RD_states_Matrix_exog`: 1 roaming, 0 dwelling, -1 masked off-lawn).
+
+  The windows line up with the authors' 10-second bins.
+
+- **Size:** 1,586 animals, 240 windows each.
+
+**The model reads correctly.** Fed the authors' own bin measures (`bin_Midbody_absSpeed_inLawn`,
+`bin_Midbody_angspeed_inLawn`, slope 450), the vendored model decoded by this project's Viterbi
+reproduces their labels on 99.2% of 372,860 bins.
+
+**`calibration.json`** is the output of `scripts/analysis/roaming_dwelling_calibration.py calibrate`:
+the slope fitted on half the animals (split seed 2026), and the held-out agreement against the gate
+of kappa >= 0.6 that was fixed before calibration.
