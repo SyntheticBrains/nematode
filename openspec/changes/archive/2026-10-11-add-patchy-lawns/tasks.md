@@ -19,6 +19,6 @@
   for the gate preflight. Tests.
 - [x] 7. **Pilot and registration** — **done 2026-10-11:** four pilots on seeds 9101–9116, each change decided with the user and recorded in the design (movement cost and slow depletion; start on a lawn; `entropy_coef` 0.005). The gate preflight, on the fourth pilot, passes for the learner. `087-patchy-lawns/launch.md` registers dwelling share against the floor at a minimum of 0.394 on 16 seeds. `/nematode-review-spec` applied. Original scope:: a pilot on disjoint seeds for cost, gates and the satiety timescale;
   `087-patchy-lawns/launch.md`; gate preflight; `/nematode-review-spec`.
-- [ ] 8. **Campaign and readout**: the positive control; Logbook 087; tracker D.1; roadmap (the
+- [x] 8. **Campaign and readout** — **done 2026-10-11:** 48 runs on seeds 2001–2016, all succeeded. The registered reading is **dwells**: +0.603 [+0.509, +0.698], q 6e-5. Logbook 087, the tracker's D.1 entry, the roadmap row and note, the experiments index and the changelog are written. Original scope:: the positive control; Logbook 087; tracker D.1; roadmap (the
   point-worm decision with its reason).
-- [ ] 9. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
+- [x] 9. **Close-out** — **done: full suite 7543 passed; hooks over all files by exit code; validated; archived.** Original scope:: full suite; hooks by exit code; validate; archive; PR.

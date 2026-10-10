@@ -33,12 +33,13 @@ of both states, and roaming where grazed against fresh.
 Usage::
 
     uv run python scripts/analysis/lawn_states.py --logs campaigns/d1-panel/logs \\
-        --seeds 2001 2002 ... 2016 --episodes 30 --out panel.json
+        --seeds 2001 2002 ... 2016 --episodes 30 --out panel.json --csv per-run.csv
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import itertools
 import json
 import math
@@ -134,6 +135,8 @@ def learning_gate(learn: dict[int, float], floor: dict[int, float]) -> dict[str,
     test = wp.paired_seed_wilcoxon_bootstrap([learn[s] - floor[s] for s in seeds])
     return {
         "n_seeds": len(seeds),
+        "learn": {s: learn[s] for s in seeds},
+        "floor": {s: floor[s] for s in seeds},
         "learn_mean": statistics.fmean(learn[s] for s in seeds) if seeds else None,
         "floor_mean": statistics.fmean(floor[s] for s in seeds) if seeds else None,
         "test": test,
@@ -379,6 +382,52 @@ def beside(runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+CSV_FIELDS = (
+    "arm",
+    "seed",
+    "intake_plateau",
+    "evaluation_intake",
+    "on_lawn_windows",
+    "roaming_fraction",
+    "dwelling_share",
+    "n_roaming_bouts",
+    "n_dwelling_bouts",
+    "roaming_bout_s",
+    "dwelling_bout_s",
+    "roaming_where_grazed",
+    "roaming_where_fresh",
+    "log_std_speed",
+    "log_std_turn",
+)
+
+
+def write_csv(result: dict[str, Any], path: Path) -> Path:
+    """Write one row per evaluated run, with its intake plateau from training."""
+    plateau: dict[tuple[str, int], float] = {}
+    for arm, gate in result["gates"].items():
+        plateau |= {(arm, int(s)): v for s, v in gate["learn"].items()}
+        plateau |= {("internal_frozen", int(s)): v for s, v in gate["floor"].items()}
+    rows = []
+    for run in sorted(result["runs"], key=lambda r: (r["arm"], r["seed"])):
+        log_std = run.get("action_log_std") or [None, None]
+        roaming = run.get("roaming_fraction")
+        rows.append(
+            {
+                **{k: run.get(k) for k in CSV_FIELDS if k in run},
+                "intake_plateau": plateau.get((run["arm"], run["seed"])),
+                "dwelling_share": None if roaming is None else 1.0 - roaming,
+                "log_std_speed": log_std[0],
+                "log_std_turn": log_std[1],
+            },
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: the learning gate from the logs, and the states from an evaluation."""
     ap = argparse.ArgumentParser(
@@ -391,6 +440,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--episodes", type=int, default=20)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--out", type=Path, help="write the JSON here")
+    ap.add_argument("--csv", type=Path, help="write one row per evaluated run here")
     args = ap.parse_args(argv)
     seeds = tuple(args.seeds)
     gates = {
@@ -412,6 +462,8 @@ def main(argv: list[str] | None = None) -> int:
     if "internal" in gates and {"internal", "internal_frozen"} <= set(args.arms):
         result["panel"] = read_panel(gates["internal"], runs)
         result["beside"] = beside(runs)
+    if args.csv:
+        write_csv(result, args.csv)
     payload = json.dumps(result, indent=2, default=str) + "\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

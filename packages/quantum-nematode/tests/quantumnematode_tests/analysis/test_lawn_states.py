@@ -138,3 +138,22 @@ class TestPanel:
         out = ls.beside(runs)
         assert out["seeds_with_both_bouts"] == {"internal": 2, "blind": 2}
         assert out["roaming_grazed_minus_fresh"]["internal"][1] == pytest.approx(0.1)
+
+
+def test_the_csv_has_a_row_per_run_with_its_plateau(tmp_path: Path) -> None:
+    """Each evaluated run is a row, carrying its training intake plateau and its action noise."""
+    result = {
+        "gates": {"internal": {"learn": {"1": 3.0}, "floor": {"1": 1.0}}},
+        "runs": [
+            _run("internal", 1, 0.25) | {"action_log_std": [-3.0, -2.0]},
+            _run("internal_frozen", 1, 1.0) | {"action_log_std": None},
+        ],
+    }
+    lines = ls.write_csv(result, tmp_path / "per-run.csv").read_text().splitlines()
+    assert len(lines) == 3
+    header = lines[0].split(",")
+    first = dict(zip(header, lines[1].split(","), strict=True))
+    assert first["arm"] == "internal"
+    assert first["intake_plateau"] == "3.0"
+    assert first["dwelling_share"] == "0.75"
+    assert first["log_std_speed"] == "-3.0"
