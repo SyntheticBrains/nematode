@@ -1,22 +1,25 @@
 ## ADDED Requirements
 
-### Requirement: Roaming and dwelling from speed
+### Requirement: Roaming and dwelling from speed and angular speed
 
-The validation package SHALL classify behaviour into roaming and dwelling as Ji et al. 2021 classified
-their tracked animals: each time point's median and variance of speed over a sliding 20-second window,
-with a two-state hidden Markov model with Gaussian emissions fitted on the vendored real-worm track and
-applied unchanged to simulated tracks. States SHALL be read only while a worm is on food.
+The validation package SHALL classify behaviour into roaming and dwelling from each 10-second window's
+speed and angular speed, measured from positions sampled once per 5-second step. A window SHALL be a
+roaming observation when its speed times a slope exceeds its angular speed, and a two-state hidden
+Markov model SHALL decode the observations within each run of on-food windows. The slope SHALL be
+calibrated on vendored real-worm tracks, measured the same way, against their authors' labels, and the
+slope and model SHALL be applied unchanged to simulated tracks.
 
 #### Scenario: Real and simulated worms are read alike
 
-- **WHEN** a real track and a simulated track are resampled to 5-second steps
-- **THEN** both SHALL be classified by the same fitted model, with no refitting on simulated data
+- **WHEN** a real track resampled to 5-second steps and a simulated track are classified
+- **THEN** both SHALL be measured by the same functions and decoded with the same slope and model,
+  with no refitting on simulated data
 
-#### Scenario: The fit is checked against the authors' labels
+#### Scenario: The calibration is checked on held-out animals
 
-- **WHEN** the model is fitted on the vendored real track
-- **THEN** its agreement with the authors' own roaming/dwelling labels on that track SHALL be reported,
-  and the instrument SHALL NOT be used if the fit does not reproduce them
+- **WHEN** the slope is calibrated on half of the real animals
+- **THEN** its agreement with the authors' labels on the other half SHALL be reported as Cohen's
+  kappa, and the instrument SHALL NOT be used if kappa is below 0.6
 
 #### Scenario: Off-food windows are not classified
 

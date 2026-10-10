@@ -101,57 +101,71 @@ modulator field's release neurons, not a direct sensory input.
 
 ### Decision E: The roaming/dwelling instrument and its reference data
 
-**What the deposit holds** (Ji et al. 2021, Dryad 10.5061/dryad.3bk3j9kh3, CC0, read 2026-10-10):
+**Two open deposits**, both CC0, chosen with the user on 2026-10-10:
 
-- **One raw wild-type track** (`Data_F1.A`, about 68 minutes at 3 frames/s): position, speed, and the
-  authors' roaming/dwelling label per frame, with 14 state changes.
-- **Derived readings from the multi-worm patch foraging assay** (the paper's Fig. 7, the deposit's
-  `Data_F6`), each a fraction of animals roaming:
-  - wild type in the assay;
-  - wild type on uniform sparse food;
-  - *tph-1* and *pdfr-1* mutants;
-  - wild type at two uniform food densities, with state durations.
+- **The classifier's source: Scheer & Bargmann 2023** (eLife 88657; Dryad 10.5061/dryad.47d7wm3jf,
+  mirrored on Zenodo 8310289).
+  - **Animals:** 1,586 wild-type animals, 40 minutes each at 3 frames/s, one per well on a small
+    bacterial lawn.
+  - **Per animal:** midbody speed, angular speed, and whether it is in the lawn, plus the authors'
+    roaming/dwelling label per 10-second bin.
+  - **The model:** the authors' two-state roaming/dwelling HMM.
+- **The directions' source: Ji et al. 2021** (Dryad 10.5061/dryad.3bk3j9kh3). Its patch foraging
+  assay, food-density and *tph-1* / *pdfr-1* fractions of animals roaming.
 
-**What it does not hold** is a population of raw tracks. The multi-worm data, segmented by Flavell et
-al. 2013's speed and angular-speed method, are deposited only as fractions.
+**The authors' method**, read from their code (MIT):
 
-**The classifier** is Ji et al. 2021's own method for their tracked animals:
+1. Each 10-second bin's midbody speed and angular speed (degrees between consecutive frames' motion
+   vectors, averaged) is a roaming observation when `speed × 450 > angular speed`.
+2. A two-state categorical HMM over those binary observations, decoded within each run of in-lawn
+   bins, gives the states.
 
-- each time point gets the median and variance of speed over a sliding 20-second window (four 5 s
-  steps);
-- a two-state hidden Markov model with Gaussian emissions is fitted on the deposited wild-type track,
-  resampled to 5 s;
-- its agreement with the authors' own labels is reported;
-- it is applied unchanged to simulated worms.
+The HMM's parameters are vendored from the deposited model, read without executing it:
 
-The states are defined by speed, which the point worm controls fully. Angular speed per state is
-reported beside, against the real track's.
+| | dwelling | roaming |
+|---|---|---|
+| stay per 10 s | 0.979, mean bout about 8 min | 0.898, mean bout about 1.6 min |
+| emits a roaming observation | 1% | 53% |
 
-**The reference readings are directions, graded on sign** as Logbook 035 graded its curves. The
-deposited fractions come from a different classifier and assay geometry, so their absolute values are
-described, not matched. Each direction's condition is pinned from the paper's legends in task 1:
+**Transferred to the point worm.**
+
+- **The measures.** The point worm moves in 5 s steps. Its angular speed is the angle between
+  consecutive steps' displacements, which is coarser than the authors' frame-to-frame measure, so
+  their slope of 450 does not transfer.
+- **Calibrating the slope.** The real tracks are resampled to 5 s and measured exactly as simulated
+  tracks are (two-step windows, the three-point turn). The slope is then calibrated on real worms:
+  the value whose decoded states best agree with the authors' labels (Cohen's κ). It is fitted on a
+  calibration half of the animals, split by animal with a fixed seed.
+- **The gate, fixed before calibration.** On the held-out half, agreement must reach **κ ≥ 0.6**,
+  "substantial" (Landis & Koch 1977). Otherwise the instrument is not used and the change stops for a
+  decision.
+- **What carries over unchanged.** The authors' HMM smooths the binary observations, decoded within
+  each run of on-lawn windows. Simulated worms are then read with the same slope and model, never
+  refitted.
+
+**States are read on lawns only.** Both states are on-food states. Off a lawn, worms search and
+disperse, so off-lawn windows are reported as description, never classified into a verdict.
+
+**Vendored.** The HMM parameters (`data/roaming_dwelling/reference_hmm.json`), and a derived file of
+the wild-type animals' windows: each window's speed and angular speed in the point worm's measure,
+its in-lawn flag and the authors' label. Both come with provenance. The 4.9 GB source pickle is not
+vendored. It is read once, after its opcodes are checked to reference only numpy and pandas types.
+
+**The reference readings are directions, graded on sign**, as Logbook 035 graded its curves. The
+classifier's own fractions on real worms are reported beside. Absolute fractions from other assays
+are described, never matched. Each direction's condition is pinned from the papers' legends in task
+1:
 
 | direction | deposited values |
 |---|---|
-| more roaming on sparse food when a dense patch is near than without one | wild type in the assay 0.37 against 0.18 |
-| less roaming and longer dwelling at higher food density | 0.36 to 0.20 |
-| *tph-1* roams more | 0.73 against 0.37; for B.3 |
-| *pdfr-1* roams less | 0.22 against 0.37; for B.3 |
+| less roaming and longer dwelling at higher food density | Ji 2021: 0.36 to 0.20 |
+| more roaming on sparse food when a dense patch is near than without one | Ji 2021: 0.37 against 0.18 |
+| *tph-1* roams more | Ji 2021: 0.73 against 0.37; for B.3 |
+| *pdfr-1* roams less | Ji 2021: 0.22 against 0.37; for B.3 |
 
-The duration arrays' unit is unstated in the legends; task 1 pins it or reports durations only as
-ratios.
-
-**One animal is thin for a fit.** The fitted model's fraction on the deposited track is checked against
-the authors' labels, and against the deposited wild-type fractions as description. If the fit does not
-reproduce the authors' labels on that track, the instrument is not used, and the change stops for a
-decision.
-
-**States are read on lawns only.** Both states are on-food states. Off a lawn, worms search and
-disperse (Ji et al. 2021 and Flavell et al. 2013 assay on food), so off-lawn windows are reported as
-description, never classified into a verdict.
-
-**The model is written here.** A two-state Gaussian HMM fitted by expectation-maximisation is about 80
-lines and testable on generated sequences. No dependency is added.
+**Reorientation, checked on the population.** Decision A's `max_turn_rad` of π was set from Ji et al.'s
+one track. Task 1 checks it against the wild-type population's 5 s turning distribution in each
+state.
 
 ### Decision F: The positive control
 
@@ -184,8 +198,8 @@ is revised or closed with a reason.
 
 ### Decision G: Feasibility
 
-- **States last minutes.** Read in task 1 from the deposited durations, in whatever unit task 1 pins.
-  An episode of 720 steps is an hour of worm time; the real track holds 14 state changes in 68 minutes.
+- **States last minutes.** In the reference model a dwelling bout averages about 8 minutes and a
+  roaming bout about 1.6. An episode of 720 steps is an hour of worm time, room for several of each.
 - **Satiety must matter within an episode.** Decay and intake are set so an idle worm starves in about
   half an episode, and a lawn can sustain a worm for a few minutes before its nearby cells are grazed
   out. The pilot checks both.
@@ -197,8 +211,8 @@ is revised or closed with a reason.
 
 - **Dwelling may not emerge.** The positive control exists to say so, and the result is informative
   either way.
-- **One real track calibrates the classifier.** The check against the authors' labels guards it, and
-  the reference directions do not depend on matching absolute fractions.
+- **The calibrated line may not reproduce the authors' labels** at the point worm's coarser step. The
+  κ ≥ 0.6 gate on held-out animals catches that before anything is built on it.
 - **The literature's directions must be checked**, not recalled: M.7 found five of five chemotaxis
   reference values unsourced. Task 1 verifies every reference reading against its source before the
   registration cites it.

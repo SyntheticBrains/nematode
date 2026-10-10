@@ -26,9 +26,11 @@ pivots with no omega posture. The point worm sets its speed, reversal included, 
   depend on speed, so dwelling is not rewarded by construction.
 - **An internal-state sensory module**, `internal_state`, giving the brain its satiety.
 - **Behaviour capture** gains the worm's satiety, intake and whether it is on a lawn.
-- **A roaming/dwelling instrument**: Ji et al. 2021's speed-based method, a two-state model fitted on
-  their deposited wild-type track (Dryad, CC0) and applied unchanged to simulated worms on lawns. Their
-  patch-foraging, food-density and mutant readings give the reference directions.
+- **A roaming/dwelling instrument**: Flavell et al. 2013's speed and angular-speed line and Scheer &
+  Bargmann 2023's two-state model. The line is calibrated at the point worm's 5-second step against
+  the authors' labels on 1,586 real wild-type animals (Dryad, CC0), and applied unchanged to simulated
+  worms on lawns. Ji et al. 2021's patch-foraging, food-density and mutant readings give the
+  reference directions.
 - **A positive control**: MLP-PPO with the internal-state module on a patchy-lawn cell, against its
   untrained policy and against MLP-PPO without the module, registered before it runs.
 
