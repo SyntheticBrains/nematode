@@ -120,3 +120,37 @@ commit f015a7ea before it was computed, and produced by `roaming_dwelling_calibr
   against the authors' 10.6%.
 
 Its `parameters` are the instrument this project uses (`load_calibrated_hmm`).
+
+## `scheer2023_windows.npz` gains `off_lawn` (2026-10-11)
+
+The windows file was re-derived to add each window's out-of-lawn flag (`OutLawnRunMask`). The existing
+arrays (`speed`, `angular`, `on_food`, `labels`) are byte-identical to before, so D.1's calibration
+stands.
+
+## `scheer2023_leaving.json`
+
+The real worms' patch-leaving reference, produced by `scripts/analysis/patch_leaving_reference.py`
+from the vendored windows alone.
+
+**How exits are counted.** An exit is the first window of an out-of-lawn run after an in-lawn run,
+the same rule as for simulated worms. The authors' in- and out-of-lawn masks overlap at the moment of
+leaving: a bin can be marked both. Counting raw mask transitions therefore double-counts exits, and
+the state machine in `roaming_dwelling.lawn_exits` does not. By this rule there are 212 sustained
+exits, from 184 of the 1,586 animals. The authors' own exit events (`bin_LawnExit`, 669) also include
+brief excursions that never become an out-of-lawn run.
+
+**How states are read.**
+
+- **The matched reference:** D.1's calibrated classifier, on windows measured at the 5 s step.
+- **Beside it:** the authors' labels.
+
+**The registered statistic** is the roaming share of on-lawn windows 30 to 180 s before each exit,
+minus the overall on-lawn roaming share:
+
+| | band roaming | overall | enrichment |
+|---|---|---|---|
+| classifier (matched reference) | 46.3% | 17.5% | **+0.288** |
+| authors' labels | 33.4% | 10.7% | +0.227 |
+
+The last window before each exit, which is partly mechanical since leaving means moving, gives
+enrichments of +0.467 (classifier) and +0.431 (authors' labels).

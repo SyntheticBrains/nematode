@@ -62,6 +62,7 @@ def _deposit(tmp_path: Path, n_animals: int = 8, n_bins: int = 40) -> Path:
         "Midbody_cent_y": y[:, :-1],
         "pixpermm": np.full((n_animals, 1), 100.0),
         "InLawnRunMask": in_run,
+        "OutLawnRunMask": ~in_run,
         "RD_states_Matrix_exog": np.ma.masked_array(labels, mask=~in_run),
     }
     path = tmp_path / "deposit.pkl"

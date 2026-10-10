@@ -1,0 +1,40 @@
+{
+  "source": "Scheer & Bargmann 2023 wild type (PD1074, OD2 small lawns), 1,586 animals",
+  "exit_rule": "the first window of an out-of-lawn run after an in-lawn run",
+  "band_seconds": [
+    30.0,
+    180.0
+  ],
+  "animals": 1586,
+  "animals_leaving": 184,
+  "exits": 212,
+  "exits_per_on_lawn_hour": 0.2064024794260107,
+  "classifier": {
+    "overall_on_lawn_roaming": 0.17500669347663234,
+    "band_30_180s_roaming": 0.4630192502532928,
+    "band_enrichment": 0.2880125567766605,
+    "band_windows": 2961,
+    "last_window_roaming": 0.6415094339622641,
+    "last_window_enrichment": 0.4665027404856318,
+    "roaming_before_exit": {
+      "10s": 0.6305418719211823,
+      "30s": 0.6210873146622735,
+      "60s": 0.5986842105263158,
+      "180s": 0.4899103139013453
+    }
+  },
+  "authors_labels": {
+    "overall_on_lawn_roaming": 0.10663587216676627,
+    "band_30_180s_roaming": 0.33400878081729146,
+    "band_enrichment": 0.22737290865052517,
+    "band_windows": 2961,
+    "last_window_roaming": 0.5377358490566038,
+    "last_window_enrichment": 0.4310999768898375,
+    "roaming_before_exit": {
+      "10s": 0.5221674876847291,
+      "30s": 0.514003294892916,
+      "60s": 0.4654605263157895,
+      "180s": 0.36463004484304934
+    }
+  }
+}
