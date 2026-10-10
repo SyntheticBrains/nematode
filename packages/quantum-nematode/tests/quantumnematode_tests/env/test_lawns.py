@@ -78,6 +78,18 @@ class TestPlacement:
                     assert gap >= params.min_separation_mm
             assert np.all(field.density == 1.0)
 
+    def test_a_tight_layout_places_on_every_seed(self) -> None:
+        """Four 2.5 mm lawns in 20 mm strand a greedy placement on some seeds; restarts recover."""
+        params = LawnParams(count=4, radius_mm=2.5, min_separation_mm=2.0)
+        for seed in range(500):
+            field = LawnField.place(
+                params,
+                np.random.default_rng(seed),
+                world_size_mm=WORLD_MM,
+                start=[(10.0, 10.0)],
+            )
+            assert len(field.centres) == 4
+
     def test_an_arena_too_small_is_refused(self) -> None:
         """Lawns that cannot fit raise rather than silently placing fewer."""
         with pytest.raises(ValueError, match="too small"):

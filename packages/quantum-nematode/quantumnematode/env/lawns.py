@@ -27,7 +27,9 @@ import numpy as np
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-MAX_PLACEMENT_ATTEMPTS = 10_000
+MAX_PLACEMENT_ATTEMPTS = 2_000
+# A greedy placement can strand itself with room left for none; it then starts afresh.
+MAX_PLACEMENT_RESTARTS = 50
 
 
 @dataclass(frozen=True)
@@ -118,19 +120,23 @@ class LawnField:
             msg = f"a lawn of radius {r} mm does not fit a {world_size_mm} mm arena"
             raise ValueError(msg)
         centres: list[np.ndarray] = []
-        for _ in range(MAX_PLACEMENT_ATTEMPTS):
+        for _ in range(MAX_PLACEMENT_RESTARTS):
+            centres = []
+            for _ in range(MAX_PLACEMENT_ATTEMPTS):
+                if len(centres) == params.count:
+                    break
+                candidate = rng.uniform(lo, hi, size=2)
+                clear_of_lawns = all(
+                    np.hypot(*(candidate - c)) >= 2 * r + params.min_separation_mm for c in centres
+                )
+                clear_of_start = all(
+                    np.hypot(candidate[0] - x, candidate[1] - y) >= r + params.start_clearance_mm
+                    for x, y in start
+                )
+                if clear_of_lawns and clear_of_start:
+                    centres.append(candidate)
             if len(centres) == params.count:
                 break
-            candidate = rng.uniform(lo, hi, size=2)
-            clear_of_lawns = all(
-                np.hypot(*(candidate - c)) >= 2 * r + params.min_separation_mm for c in centres
-            )
-            clear_of_start = all(
-                np.hypot(candidate[0] - x, candidate[1] - y) >= r + params.start_clearance_mm
-                for x, y in start
-            )
-            if clear_of_lawns and clear_of_start:
-                centres.append(candidate)
         if len(centres) < params.count:
             msg = (
                 f"placed {len(centres)} of {params.count} lawns of radius {r} mm in a "
