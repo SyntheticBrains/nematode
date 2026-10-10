@@ -7,12 +7,14 @@ turning (Ben Arous et al. 2009; Flavell et al. 2013). They are classified in thr
    its displacement over its duration, and a turn, the angle between its displacement and the
    previous step's, the three-point angle real-worm trackers use. A window of two steps, 10 seconds,
    has the mean speed (mm/s) and the mean turn per second (degrees/s).
-2. **A line.** A window is a roaming observation when ``speed * slope > angular speed``, the form
-   Flavell et al. 2013 and Scheer & Bargmann 2023 use. The slope is calibrated on real worms'
-   tracks, measured exactly as here, against the authors' own labels.
-3. **Smoothing.** A two-state hidden Markov model over those binary observations, decoded by Viterbi
-   within each run of windows on food, gives the states. Off food a worm searches and disperses
-   rather than roaming or dwelling, so off-food windows are not classified.
+2. **A model.** Each window's ``(log speed, angular speed)`` is scored under a two-state hidden
+   Markov model with Gaussian emissions, fitted on real worms' tracks measured exactly as here
+   against the authors' own labels, and decoded by Viterbi within each run of windows on food.
+   Off food a worm searches and disperses rather than roaming or dwelling, so off-food windows are
+   not classified.
+3. **The authors' own form**, a line ``speed * slope > angular speed`` smoothed by their categorical
+   model (Flavell et al. 2013; Scheer & Bargmann 2023), is kept beside it: at the 5 s step a
+   dwelling worm's turn is close to random, and the line reproduces the authors' labels less well.
 
 Real and simulated tracks go through the same functions with the same slope and model: nothing is
 refitted on simulated data.
@@ -34,6 +36,7 @@ ROAMING = 1
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 REFERENCE_HMM_PATH = _PROJECT_ROOT / "data" / "roaming_dwelling" / "reference_hmm.json"
+CALIBRATED_HMM_PATH = _PROJECT_ROOT / "data" / "roaming_dwelling" / "calibration_retry.json"
 
 
 def step_measures(
@@ -91,6 +94,29 @@ def roaming_observations(speed: np.ndarray, angular: np.ndarray, slope: float) -
     return (np.asarray(speed) * slope > np.nan_to_num(np.asarray(angular), nan=0.0)).astype(int)
 
 
+def _viterbi(
+    log_pi0: np.ndarray,
+    log_transitions: np.ndarray,
+    log_likelihood: np.ndarray,
+) -> np.ndarray:
+    """Return the most likely state sequence given each step's log-likelihood per state."""
+    n, k = log_likelihood.shape
+    if n == 0:
+        return np.zeros(0, dtype=int)
+    score = np.empty((n, k))
+    back = np.zeros((n, k), dtype=int)
+    score[0] = log_pi0 + log_likelihood[0]
+    for t in range(1, n):
+        candidates = score[t - 1][:, None] + log_transitions
+        back[t] = np.argmax(candidates, axis=0)
+        score[t] = candidates[back[t], np.arange(k)] + log_likelihood[t]
+    states = np.empty(n, dtype=int)
+    states[-1] = int(np.argmax(score[-1]))
+    for t in range(n - 1, 0, -1):
+        states[t - 1] = back[t, states[t]]
+    return states
+
+
 @dataclass(frozen=True)
 class CategoricalHMM:
     """A two-state hidden Markov model over binary observations, in log space.
@@ -107,21 +133,7 @@ class CategoricalHMM:
     def viterbi(self, observations: np.ndarray) -> np.ndarray:
         """Return the most likely state sequence for a run of binary observations."""
         obs = np.asarray(observations, dtype=int)
-        if obs.size == 0:
-            return np.zeros(0, dtype=int)
-        n, k = len(obs), len(self.log_pi0)
-        score = np.empty((n, k))
-        back = np.zeros((n, k), dtype=int)
-        score[0] = self.log_pi0 + self.log_emissions[:, obs[0]]
-        for t in range(1, n):
-            candidates = score[t - 1][:, None] + self.log_transitions
-            back[t] = np.argmax(candidates, axis=0)
-            score[t] = candidates[back[t], np.arange(k)] + self.log_emissions[:, obs[t]]
-        states = np.empty(n, dtype=int)
-        states[-1] = int(np.argmax(score[-1]))
-        for t in range(n - 1, 0, -1):
-            states[t - 1] = back[t, states[t]]
-        return states
+        return _viterbi(self.log_pi0, self.log_transitions, self.log_emissions[:, obs].T)
 
     def sample(self, n: int, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
         """Draw ``n`` steps of states and observations from the model."""
@@ -161,6 +173,92 @@ class Classifier:
         return result
 
 
+SPEED_FLOOR_MM_S = 0.001
+
+
+def window_features(speed: np.ndarray, angular: np.ndarray) -> np.ndarray:
+    """Return each window's ``(log(speed + 0.001 mm/s), angular speed)``, a missing turn as 0."""
+    return np.column_stack(
+        [
+            np.log(np.asarray(speed, dtype=float) + SPEED_FLOOR_MM_S),
+            np.nan_to_num(np.asarray(angular, dtype=float), nan=0.0),
+        ],
+    )
+
+
+@dataclass(frozen=True)
+class GaussianHMM:
+    """A two-state hidden Markov model with Gaussian emissions over window features.
+
+    State 1 is roaming and state 0 dwelling. ``means`` is ``(2, d)`` and ``covariances``
+    ``(2, d, d)``.
+    """
+
+    log_pi0: np.ndarray
+    log_transitions: np.ndarray
+    means: np.ndarray
+    covariances: np.ndarray
+
+    def log_likelihood(self, features: np.ndarray) -> np.ndarray:
+        """Return each window's log-density under each state's Gaussian, ``(n, 2)``."""
+        x = np.atleast_2d(np.asarray(features, dtype=float))
+        out = np.empty((len(x), len(self.means)))
+        for k, (mean, cov) in enumerate(zip(self.means, self.covariances, strict=True)):
+            diff = x - mean
+            inverse = np.linalg.inv(cov)
+            _, logdet = np.linalg.slogdet(cov)
+            mahalanobis = np.einsum("ni,ij,nj->n", diff, inverse, diff)
+            out[:, k] = -0.5 * (mahalanobis + logdet + x.shape[1] * np.log(2 * np.pi))
+        return out
+
+    def viterbi(self, features: np.ndarray) -> np.ndarray:
+        """Return the most likely state sequence for a run of windows' features."""
+        if len(features) == 0:
+            return np.zeros(0, dtype=int)
+        return _viterbi(self.log_pi0, self.log_transitions, self.log_likelihood(features))
+
+    @classmethod
+    def fit_labelled(cls, runs: list[tuple[np.ndarray, np.ndarray]]) -> GaussianHMM:
+        """Fit from labelled runs of ``(features, states)``, with no iterative search.
+
+        Each state's mean and full covariance come from its windows; the transition probabilities
+        are counted from consecutive windows within each run; the initial distribution is the
+        states' shares.
+        """
+        features = np.vstack([f for f, _ in runs])
+        states = np.concatenate([s for _, s in runs])
+        k = 2
+        means = np.array([features[states == j].mean(axis=0) for j in range(k)])
+        covariances = np.array([np.cov(features[states == j].T) for j in range(k)])
+        counts = np.zeros((k, k))
+        for _, s in runs:
+            np.add.at(counts, (s[:-1], s[1:]), 1)
+        transitions = counts / counts.sum(axis=1, keepdims=True)
+        shares = np.bincount(states, minlength=k) / len(states)
+        return cls(
+            log_pi0=np.log(shares),
+            log_transitions=np.log(transitions),
+            means=means,
+            covariances=covariances,
+        )
+
+
+@dataclass(frozen=True)
+class GaussianClassifier:
+    """Read a track's states from its windows' features with a Gaussian-emission model."""
+
+    hmm: GaussianHMM
+
+    def states(self, speed: np.ndarray, angular: np.ndarray, on_food: np.ndarray) -> np.ndarray:
+        """Return each window's state: ``ROAMING``, ``DWELLING``, or ``OFF_FOOD``."""
+        on = np.asarray(on_food, dtype=bool)
+        result = np.full(len(on), OFF_FOOD, dtype=int)
+        features = window_features(speed, angular)
+        for start, stop in on_food_runs(on):
+            result[start:stop] = self.hmm.viterbi(features[start:stop])
+        return result
+
+
 def on_food_runs(on_food: np.ndarray) -> list[tuple[int, int]]:
     """Return ``(start, stop)`` index pairs of each contiguous run of True values."""
     on = np.concatenate([[False], np.asarray(on_food, dtype=bool), [False]])
@@ -175,6 +273,17 @@ def load_reference_hmm(path: Path = REFERENCE_HMM_PATH) -> CategoricalHMM:
         log_pi0=np.asarray(data["log_pi0"], dtype=float),
         log_transitions=np.asarray(data["log_transitions"], dtype=float),
         log_emissions=np.asarray(data["log_emissions"], dtype=float),
+    )
+
+
+def load_calibrated_hmm(path: Path = CALIBRATED_HMM_PATH) -> GaussianHMM:
+    """Load the Gaussian-emission model calibrated on real worms at the 5 s step."""
+    params = json.loads(path.read_text())["parameters"]
+    return GaussianHMM(
+        log_pi0=np.asarray(params["log_pi0"], dtype=float),
+        log_transitions=np.asarray(params["log_transitions"], dtype=float),
+        means=np.asarray(params["means"], dtype=float),
+        covariances=np.asarray(params["covariances"], dtype=float),
     )
 
 

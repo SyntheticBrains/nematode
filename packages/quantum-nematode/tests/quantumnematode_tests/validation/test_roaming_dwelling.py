@@ -114,3 +114,32 @@ class TestCalibration:
         slope, kappa = rd.calibrate_slope(tracks, hmm, np.array([50.0, 100.0, 200.0, 400.0]))
         assert slope == 200.0
         assert kappa == pytest.approx(1.0)
+
+
+class TestGaussianModel:
+    def test_fitting_with_labels_recovers_the_states(self) -> None:
+        """Fitted on labelled runs drawn from two separated states, decoding recovers them."""
+        rng = np.random.default_rng(3)
+        runs = []
+        for _ in range(30):
+            states = np.repeat([0, 1, 0], [20, 8, 20])
+            speed = np.where(states == 1, 0.12, 0.02) * np.exp(rng.normal(0, 0.2, len(states)))
+            angular = np.where(states == 1, 3.0, 18.0) + rng.normal(0, 4.0, len(states))
+            runs.append((rd.window_features(speed, angular), states))
+        hmm = rd.GaussianHMM.fit_labelled(runs)
+        assert hmm.means[rd.ROAMING, 0] > hmm.means[rd.DWELLING, 0]
+        assert np.exp(hmm.log_transitions).sum(axis=1) == pytest.approx([1.0, 1.0])
+        decoded = np.concatenate([hmm.viterbi(f) for f, _ in runs])
+        truth = np.concatenate([s for _, s in runs])
+        assert np.mean(decoded == truth) > 0.95
+
+    def test_the_calibrated_model_loads(self) -> None:
+        """The vendored calibration is a proper two-state model whose roaming state is faster."""
+        hmm = rd.load_calibrated_hmm()
+        assert hmm.means.shape == (2, 2)
+        assert hmm.means[rd.ROAMING, 0] > hmm.means[rd.DWELLING, 0]
+        classifier = rd.GaussianClassifier(hmm=hmm)
+        speed = np.array([0.15] * 8 + [0.005] * 8)
+        states = classifier.states(speed, np.zeros(16), np.ones(16, dtype=bool))
+        assert states[0] == rd.ROAMING
+        assert states[-1] == rd.DWELLING

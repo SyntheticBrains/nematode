@@ -170,6 +170,12 @@ computed:
 - **Gate:** held-out κ ≥ 0.6, one attempt. **If it fails, D.1's roaming/dwelling readout closes**,
   with its reason and a destination, and B.3's start is decided separately.
 
+**The retry passed.** Its held-out κ is 0.632, against the gate of 0.6, with accuracy 91.1%; that is
+close to the bar, and is said wherever the instrument is cited. It calls more roaming than the
+authors: 17.4% of on-lawn windows, against their 10.6%. So the cell's readings stay on directions and
+within-cell contrasts, and absolute fractions are only described. This model is the instrument. The
+line is kept beside it, unused for verdicts.
+
 **States are read on lawns only.** Both states are on-food states. Off a lawn, worms search and
 disperse, so off-lawn windows are reported as description, never classified into a verdict.
 

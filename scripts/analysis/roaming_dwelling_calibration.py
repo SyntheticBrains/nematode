@@ -14,6 +14,11 @@ Two stages, each a subcommand:
     (``RD_states_Matrix_exog``: roaming, dwelling, or masked off-lawn). The windows line up with the
     authors' 10-second bins. The result is written as a compressed ``.npz``.
 
+``retry``
+    The one registered retry after ``calibrate`` failed its gate: a two-state Gaussian-emission
+    model on each window's log speed and angular speed, fitted with the labels on the same
+    calibration half, decoded per on-lawn run, read against the same gate on the held-out half.
+
 ``calibrate``
     Split the animals in half with a fixed seed. On the first half, choose the slope whose decoded
     states best agree with the authors' labels (Cohen's kappa), with the vendored model. On the
@@ -167,6 +172,51 @@ def calibrate(windows_path: Path) -> dict[str, Any]:
     }
 
 
+def _labelled_runs(tracks: list[Track]) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Split each track's on-food windows into runs whose every window carries a label."""
+    runs: list[tuple[np.ndarray, np.ndarray]] = []
+    for speed, angular, on, labels in tracks:
+        usable = on & (labels != rd.OFF_FOOD)
+        features = rd.window_features(speed, angular)
+        runs.extend((features[a:b], labels[a:b].astype(int)) for a, b in rd.on_food_runs(usable))
+    return runs
+
+
+def retry(windows_path: Path) -> dict[str, Any]:
+    """Fit the Gaussian-emission model with the labels on the same calibration half; read the gate."""
+    with np.load(windows_path) as f:
+        windows = {k: f[k] for k in f.files}
+    n = windows["speed"].shape[0]
+    order = np.random.default_rng(SPLIT_SEED).permutation(n)
+    fit_animals, held_animals = np.sort(order[: n // 2]), np.sort(order[n // 2 :])
+    hmm = rd.GaussianHMM.fit_labelled(_labelled_runs(_tracks(windows, fit_animals)))
+    classifier = rd.GaussianClassifier(hmm=hmm)
+    held_tracks = _tracks(windows, held_animals)
+    predicted = np.concatenate([classifier.states(s, a, on) for s, a, on, _ in held_tracks])
+    labels = np.concatenate([lab for *_, lab in held_tracks])
+    held = rd.agreement(predicted, labels)
+    classified, authors = predicted != rd.OFF_FOOD, labels != rd.OFF_FOOD
+    return {
+        "model": "two-state Gaussian-emission HMM on (log(speed + 0.001), angular speed)",
+        "split_seed": SPLIT_SEED,
+        "fit_animals": len(fit_animals),
+        "held_out_animals": len(held_animals),
+        "held_out": held,
+        "kappa_gate": KAPPA_GATE,
+        "gate_passes": bool(held["kappa"] >= KAPPA_GATE),
+        "roaming_fraction_on_lawn": {
+            "classifier": float(np.mean(predicted[classified] == rd.ROAMING)),
+            "authors": float(np.mean(labels[authors] == rd.ROAMING)),
+        },
+        "parameters": {
+            "log_pi0": hmm.log_pi0.tolist(),
+            "log_transitions": hmm.log_transitions.tolist(),
+            "means": hmm.means.tolist(),
+            "covariances": hmm.covariances.tolist(),
+        },
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: derive the windows, or calibrate on them."""
     ap = argparse.ArgumentParser(
@@ -177,14 +227,15 @@ def main(argv: list[str] | None = None) -> int:
     d = sub.add_parser("derive")
     d.add_argument("--pickle", type=Path, required=True)
     d.add_argument("--out", type=Path, required=True)
-    c = sub.add_parser("calibrate")
-    c.add_argument("--windows", type=Path, required=True)
-    c.add_argument("--out", type=Path, required=True)
+    for name in ("calibrate", "retry"):
+        c = sub.add_parser(name)
+        c.add_argument("--windows", type=Path, required=True)
+        c.add_argument("--out", type=Path, required=True)
     args = ap.parse_args(argv)
     if args.stage == "derive":
         result = derive(args.pickle, args.out)
     else:
-        result = calibrate(args.windows)
+        result = calibrate(args.windows) if args.stage == "calibrate" else retry(args.windows)
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

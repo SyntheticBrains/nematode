@@ -107,3 +107,16 @@ reproduces their labels on 99.2% of 372,860 bins.
 **`calibration.json`** is the output of `scripts/analysis/roaming_dwelling_calibration.py calibrate`:
 the slope fitted on half the animals (split seed 2026), and the held-out agreement against the gate
 of kappa >= 0.6 that was fixed before calibration.
+
+## `calibration_retry.json`
+
+The one registered retry after `calibration.json` failed its gate. It was registered in the design at
+commit f015a7ea before it was computed, and produced by `roaming_dwelling_calibration.py retry`:
+
+- **Model:** a two-state Gaussian-emission HMM on each window's `(log(speed + 0.001 mm/s), angular speed)`.
+- **Fitting:** with the authors' labels, on the same calibration half (split seed 2026).
+- **Decoding:** Viterbi per on-lawn run.
+- **Held-out result:** κ = 0.632 against the gate of 0.6, accuracy 91.1%. On-lawn roaming is 17.4%
+  against the authors' 10.6%.
+
+Its `parameters` are the instrument this project uses (`load_calibrated_hmm`).
