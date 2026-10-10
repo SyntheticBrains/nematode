@@ -292,6 +292,32 @@ pilot, on fresh seeds, checks it.
   per lawn. The odour field costs about 150 kernel evaluations per sensing query, negligible beside a
   step.
 
+**The third pilot, 2026-10-11** (seeds 9109–9112, the worm starting on a lawn):
+
+| arm | intake, final quarter | gate against floor (1.55) |
+|---|---|---|
+| with `internal_state` | 3.03 | passes: +1.48 [+0.62, +2.34] |
+| without it | 2.59 | passes: +1.04 [+0.45, +1.63] |
+
+The exploration trap was gone, and both learners passed the learning gate. They still forage
+poorly: late episodes often starve. On lawns they were classified as roaming in 92–98% of windows.
+There were a few complete dwelling bouts, 15 with `internal_state` against 4 without, over four
+seeds.
+
+On seed 9109, the trained learner moved at a median of 0.044 mm/s on lawns, against its floor's
+0.150. It learned the economy of movement but settled between real dwelling (0.022) and roaming
+(0.067). Two reasons:
+
+- **Speed noise.** Its noise had shrunk only to a standard deviation of 0.26 of full speed, about
+  0.05 mm/s of jitter on its own.
+- **Turn noise.** The turn's noise had grown to a standard deviation of 7.4, saturating its squash,
+  so every turn was random. That is what PPO's entropy bonus, at the base's 0.05, does to an action
+  dimension that costs nothing.
+
+With the user, the lawn cell's `entropy_coef` is now **0.005**. This is a learning setting, as C.1e
+matched entropy to its action. Each evaluated run reports its learned action noise beside its
+readings. A fourth pilot, on fresh seeds, checks it.
+
 ### Decision H: Patch-leaving is deferred to D.1b, with a destination
 
 Decided with the user on 2026-10-11.

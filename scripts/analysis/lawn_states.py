@@ -261,8 +261,25 @@ def evaluate_run(job: tuple[str, int, list[str], int]) -> dict[str, Any]:
         "arm": arm,
         "seed": seed,
         "evaluation_intake": statistics.fmean(intakes) if intakes else None,
+        "action_log_std": action_log_std(weights),
         **run_readings(windows),
     }
+
+
+def action_log_std(weights: Path | None) -> list[float] | None:
+    """Return the policy's learned action noise, ``log_std`` for (speed, turn), from its weights.
+
+    The policy samples its actions, so its noise is part of the behaviour the instrument reads.
+    """
+    if weights is None:
+        return None
+    import torch
+
+    state = torch.load(weights, map_location="cpu", weights_only=False)
+    log_std = state.get("log_std") if isinstance(state, dict) else None
+    if isinstance(log_std, dict):
+        log_std = log_std.get("log_std")
+    return [float(v) for v in log_std.tolist()] if log_std is not None else None
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -39,6 +39,7 @@ def test_the_committed_lawn_configs_are_the_generators(arm: str) -> None:
     assert config.brain is not None
     brain = config.brain.config
     assert getattr(brain, "signed_speed", False)
+    assert getattr(brain, "entropy_coef", None) == gen.ENTROPY_COEF
     modules = [str(m) for m in getattr(brain, "sensory_modules", [])]
     assert ("internal_state" in modules) is (arm != "blind")
     assert getattr(brain, "freeze_updates", False) is (arm == "internal_frozen")

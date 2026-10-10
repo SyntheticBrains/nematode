@@ -10,6 +10,9 @@ fold-change sensor, the Fick field), with point food replaced by lawns:
   cell a worm gains 0.006 of its maximum satiety per step; moving 1 mm costs 0.0039; basal decay is
   0.0027. A spot is worth staying on until it falls to about 0.35 of its density, some 52 steps
   (4.3 minutes), and roaming through a lawn without stopping slowly starves the worm.
+- **A lower entropy bonus**, 0.005: at the base's 0.05, PPO kept its speed noise near the boundary
+  between the two states (about 0.05 mm/s of jitter alone) and drove the turn's noise until every
+  turn was random, since turning cost nothing.
 - **The worm starts on a lawn**, as assays place worms on food: the first lawn is centred on its
   start. With movement costed and the worm starting off food, PPO learned to stand still and
   starve before it found a lawn.
@@ -60,6 +63,9 @@ LAWNS: dict[str, Any] = {
     "start_clearance_mm": 2.0,
     "wall_clearance_mm": 1.0,
 }
+# A learning setting: at the base's 0.05 the entropy bonus kept the speed noise near the boundary
+# between the two states and pushed the turn's noise until every turn was random.
+ENTROPY_COEF = 0.005
 ZERO_SHAPING = (
     "penalty_stuck_position",
     "penalty_anti_dithering",
@@ -82,6 +88,7 @@ def derive(arm: str) -> tuple[Path, str]:
     data["max_steps"] = MAX_STEPS
     brain = data["brain"]["config"]
     brain["signed_speed"] = True
+    brain["entropy_coef"] = ENTROPY_COEF
     modules = [m for m in brain["sensory_modules"] if m != "internal_state"]
     if arm != "blind":
         modules.append("internal_state")
@@ -101,8 +108,9 @@ def derive(arm: str) -> tuple[Path, str]:
     header = (
         f"# D.1 lawn cell, arm `{arm}`.\n#\n"
         f"# Derived from {BASE_STEM}.yml: max_steps {MAX_STEPS}; signed speed and reversal;\n"
-        "# max_turn_rad pi; point food replaced by lawns; the stuck-position, anti-dithering,\n"
-        "# exploration and distance rewards zero"
+        "# max_turn_rad pi; entropy_coef 0.005; point food replaced by lawns; the stuck-position,\n"
+        "# anti-dithering,"
+        " exploration and distance rewards zero"
         + {
             "internal": "; reads internal_state.\n",
             "blind": "; does not read internal_state.\n",
