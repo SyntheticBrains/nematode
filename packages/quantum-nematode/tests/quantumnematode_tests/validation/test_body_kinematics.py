@@ -19,6 +19,7 @@ from quantumnematode.validation.body_kinematics import (
     forward_bout_share,
     in_bands,
     measure,
+    omega_turn_swings,
     omega_turns,
 )
 
@@ -242,6 +243,9 @@ class TestBehaviourInstruments:
         turns = omega_turns(episode, world_size_mm=100.0)
         assert len(turns) == 1
         assert turns[0] == pytest.approx(np.radians(160.0), abs=0.05)
+        swings = omega_turn_swings(episode, world_size_mm=100.0)
+        assert [(start, end) for _change, start, end in swings] == [(1, 8)]
+        assert swings[0][0] == turns[0]
 
     def test_forward_bouts(self) -> None:
         """An episode qualifies with a forward run of 20 worm-seconds: four 5 s steps."""

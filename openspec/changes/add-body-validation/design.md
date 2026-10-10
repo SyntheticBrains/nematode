@@ -76,6 +76,15 @@ set by its peak curvature and drive, so a mismatch would describe the calibratio
   across each. The body may rarely or never make one, since steering acts within a 5 s step and long
   reversals cannot occur; a rate near zero is then a finding about the body, not an instrument
   failure.
+- **Omega posture, added after the cost pilot.** The pilot (C.1e's pilot runs, seeds 1701–1702)
+  showed the opposite of that expectation: trained arms turn the head line past 135° within one head
+  swing 2–4 times per worm-minute, while their postures stay ordinary (the third eigenworm's peak
+  across a turn has median 3.3 and never reaches the real postures' 99th percentile, 10.6). The
+  heading criterion counts steering pivots as well as omega turns. So each counted turn is also read
+  for its posture: the peak |a3| across its swing, against the real postures' 99th percentile of
+  |a3|; a real omega's deep bend loads the third eigenworm (Stephens et al. 2008). Reported: the
+  share of turns that reach it. Omega turns remain reported, not graded, so no grade is chosen after
+  the pilot.
 - **Reversals** are reported as before. A reversal lasts one step by construction, so long reversals
   and pirouettes cannot occur, and none is graded.
 - **The bias curves** come from Logbook 035's harness on the evaluations' behaviour captures, all 30

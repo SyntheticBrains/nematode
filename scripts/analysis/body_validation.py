@@ -7,7 +7,8 @@ sub-step, 4 Hz) and behaviour capture (every step), then at 40 sub-steps for the
 **Body checks**, which the body's generator largely sets: frequency, wavelength, the variance the
 first four eigenworms capture, and the half-step agreement. **Behaviour readings**, which are
 emergent: speed, the share of episodes with a 20-second forward bout, and Logbook 035's klinokinesis
-and weathervane curves. Omega turns and amplitude are reported, not graded.
+and weathervane curves. Omega turns, with the share whose posture reaches an omega's, and amplitude
+are reported, not graded.
 
 The arms are C.1e's wild type, chemical-only null and MLP (seeds 1801-1864), their frozen floors,
 and a derivative-sensing MLP control with its floor (seeds 1801-1816), which says whether the
@@ -18,11 +19,15 @@ Usage::
     uv run python scripts/analysis/body_validation.py \\
         --logs campaigns/c1e-panel/logs --logs campaigns/c3-control/logs \\
         --out-dir build/c3 --out validation.json [--workers 16] [--seeds-per-arm N]
+
+A cost pilot evaluates runs outside the panel's seeds: ``--logs campaigns/c1e-pilot/logs --seeds
+1701 1702 --arms wild_type chemical_only_null wild_type_frozen chemical_only_null_frozen``.
 """
 
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import math
 import statistics
@@ -58,6 +63,7 @@ THETA_SHARP = 0.45
 PANEL_SEEDS: tuple[int, ...] = tuple(range(1801, 1865))
 CONTROL_SEEDS: tuple[int, ...] = tuple(range(1801, 1817))
 AMPLITUDE_SAMPLE_EVERY = 20
+OMEGA_POSTURE_PERCENTILE = 99.0
 
 # Arm -> (config stem, seeds, graded). Graded arms get the bands and the half-step check.
 ARMS: dict[str, tuple[str, tuple[int, ...], bool]] = {
@@ -78,6 +84,19 @@ BANDS: dict[str, tuple[tuple[float, float], tuple[float, float]]] = {
     "eigenworm_variance": ((0.85, math.inf), (0.70, math.inf)),
     "forward_bout_share": ((0.80, math.inf), (0.50, math.inf)),
 }
+
+
+@functools.cache
+def omega_posture_threshold() -> float:
+    """Return the real postures' 99th percentile of the third eigenworm's magnitude.
+
+    A real omega turn bends the body deeply, which loads the third eigenworm (Stephens et al. 2008);
+    a turn whose posture never passes the real postures' tail turned by steering, not by an omega
+    posture.
+    """
+    real = posture.load_real_postures()
+    third = np.abs(real @ posture.load_eigenworms()[:, 2])
+    return float(np.percentile(third, OMEGA_POSTURE_PERCENTILE))
 
 
 def grade(name: str, value: float | None) -> str | None:
@@ -108,20 +127,27 @@ def evaluate_run(job: tuple[str, int, list[str], str]) -> dict[str, Any]:
     config = wiring.FORAGING / f"{stem}.yml"
     capture = harness.run_capture(config, seed, weights, episodes=EPISODES, capture_behaviour=True)
     step_seconds = capture.body.step_seconds
-    curvature = np.array([s[1] for ep in capture.episodes for step in ep for s in step["substeps"]])
-    postures = posture.body_tangent_angles(curvature)
     basis = posture.load_eigenworms()
+    per_episode = [
+        posture.body_tangent_angles(
+            np.array([s[1] for step in ep for s in step["substeps"]]),
+        )
+        for ep in capture.episodes
+    ]
+    postures = np.vstack(per_episode)
     projections = postures @ basis[:, :4]
     amplitude = posture.mode_amplitude(postures, basis)
-    turns = [
-        turn
-        for ep in capture.episodes
-        for turn in bk.omega_turns(
+    turns: list[float] = []
+    turn_a3: list[float] = []
+    for ep, angles in zip(capture.episodes, per_episode, strict=True):
+        third = np.abs(angles @ basis[:, 2])
+        for change, start, end in bk.omega_turn_swings(
             ep,
             world_size_mm=capture.world_size_mm,
             wall_margin_mm=WALL_MARGIN_MM,
-        )
-    ]
+        ):
+            turns.append(change)
+            turn_a3.append(float(third[start : end + 1].max()))
     capture_path = write_capture(
         Path(out_dir) / "captures" / f"{arm}-seed{seed}.json",
         seed,
@@ -136,6 +162,7 @@ def evaluate_run(job: tuple[str, int, list[str], str]) -> dict[str, Any]:
         "eigenworm_total_ss": float((postures**2).sum()),
         "amplitude_sample": amplitude[::AMPLITUDE_SAMPLE_EVERY].tolist(),
         "omega_turns": turns,
+        "omega_turn_a3": turn_a3,
         "worm_minutes": sum(len(ep) for ep in capture.episodes) * step_seconds / 60.0,
         "forward_bout_share": bk.forward_bout_share(capture.episodes, step_seconds=step_seconds),
         "capture": str(capture_path),
@@ -205,6 +232,7 @@ def summarise_arm(runs: list[dict[str, Any]], *, graded: bool) -> dict[str, Any]
     total = sum(r["eigenworm_total_ss"] for r in present)
     bouts = [r["forward_bout_share"] for r in present if r["forward_bout_share"] is not None]
     turns = [t for r in present for t in r["omega_turns"]]
+    turn_a3 = [a for r in present for a in r.get("omega_turn_a3", [])]
     minutes = sum(r["worm_minutes"] for r in present)
     amplitude = np.array([a for r in present for a in r["amplitude_sample"]])
     readings = {
@@ -220,6 +248,10 @@ def summarise_arm(runs: list[dict[str, Any]], *, graded: bool) -> dict[str, Any]
             "median_heading_change_deg": (
                 float(np.degrees(np.median(np.abs(turns)))) if turns else None
             ),
+            "omega_posture_share": (
+                float(np.mean(np.array(turn_a3) > omega_posture_threshold())) if turn_a3 else None
+            ),
+            "omega_posture_threshold_a3": omega_posture_threshold(),
         },
         "amplitude": _percentiles(amplitude),
         "bias_curves": bias_curves(present),
@@ -295,13 +327,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", type=Path, required=True, help="where the captures go")
     ap.add_argument("--out", type=Path, help="write the JSON here")
     ap.add_argument("--workers", type=int, default=16)
-    ap.add_argument("--seeds-per-arm", type=int, default=None, help="a pilot: each arm's first N")
+    ap.add_argument("--seeds-per-arm", type=int, default=None, help="each arm's first N seeds")
+    ap.add_argument(
+        "--seeds",
+        type=int,
+        nargs="+",
+        default=None,
+        help="evaluate these seeds in every arm instead: a pilot on seeds outside the panel",
+    )
     ap.add_argument("--arms", nargs="*", choices=list(ARMS), default=list(ARMS))
     args = ap.parse_args(argv)
     jobs = [
         (arm, seed, [str(d) for d in args.logs], str(args.out_dir))
         for arm in args.arms
-        for seed in ARMS[arm][1][: args.seeds_per_arm]
+        for seed in (tuple(args.seeds) if args.seeds else ARMS[arm][1])[: args.seeds_per_arm]
     ]
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         results = list(pool.map(evaluate_run, jobs))

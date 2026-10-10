@@ -170,6 +170,7 @@ class TestPooling:
                 "eigenworm_captured_ss": 9.0,
                 "eigenworm_total_ss": 10.0,
                 "omega_turns": [3.0],
+                "omega_turn_a3": [12.0],
                 "worm_minutes": 1.0,
             },
             run
@@ -178,6 +179,7 @@ class TestPooling:
                 "eigenworm_captured_ss": 1.0,
                 "eigenworm_total_ss": 10.0,
                 "omega_turns": [],
+                "omega_turn_a3": [],
                 "worm_minutes": 3.0,
             },
             {"arm": "wild_type", "seed": 3, "missing": True},
@@ -187,7 +189,13 @@ class TestPooling:
         assert out["missing_seeds"] == [3]
         assert out["readings"]["eigenworm_variance"] == pytest.approx(0.5)
         assert out["omega_turns"]["per_worm_minute"] == pytest.approx(0.25)
+        assert out["omega_turns"]["omega_posture_share"] == pytest.approx(1.0)
         assert out["grades"]["frequency_hz"] == "pass"
         assert out["grades"]["eigenworm_variance"] == "fail"
         assert out["half_step"]["agrees"]
         assert out["bias_curves"] is None
+
+
+def test_the_omega_posture_threshold_is_the_real_postures_tail() -> None:
+    """The third eigenworm's 99th percentile over the 6,655 real postures, about 10.6."""
+    assert bv.omega_posture_threshold() == pytest.approx(10.6, abs=0.1)

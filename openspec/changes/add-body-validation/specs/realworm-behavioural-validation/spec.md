@@ -9,7 +9,8 @@ The kinematic instruments SHALL report, from captured postures:
 - each posture's undulation amplitude, its radius in the plane of the first two eigenworms;
 - omega turns: across one head swing, the interval between consecutive zero-crossings of the head
   segment's curvature, the line from the midline at 0.2 body lengths to the head turning, net, by more
-  than 135° in the world frame;
+  than 135° in the world frame, each with its swing's bounds so that the posture across the turn can
+  be read;
 - the share of episodes with a forward bout of at least 20 worm-seconds.
 
 #### Scenario: The basis captures a real posture
@@ -26,7 +27,8 @@ The kinematic instruments SHALL report, from captured postures:
 #### Scenario: A sharp turn is an omega turn
 
 - **WHEN** the head line turns by more than 135° within one head swing
-- **THEN** one omega turn SHALL be counted, with its heading change
+- **THEN** one omega turn SHALL be counted, with its heading change and the swing's first and last
+  sub-steps
 
 ### Requirement: Behaviour capture in the evaluation harness
 
