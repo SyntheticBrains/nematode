@@ -80,9 +80,11 @@ density. The worm eats that amount, times the lawn's quality.
 
 - **Intake does not depend on speed.** Dwelling has to emerge from patchiness, depletion and satiety.
 
-- **No shaping that favours either state.** Three reward terms would:
+- **No shaping that favours either state.** Four reward terms would:
 
   - `penalty_stuck_position` punishes dwelling directly;
+  - `penalty_anti_dithering` fires whenever the worm is where it was two steps before, which a
+    worm staying put always is, so it punishes dwelling too;
   - `reward_exploration` pays for visiting new cells, which rewards roaming;
   - `reward_distance_scale` rewards approach for its own sake.
 

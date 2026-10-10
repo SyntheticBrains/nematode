@@ -181,6 +181,7 @@ class TestIntake:
 def _config(**reward: float) -> dict[str, Any]:
     zeroed = {
         "penalty_stuck_position": 0.0,
+        "penalty_anti_dithering": 0.0,
         "reward_exploration": 0.0,
         "reward_distance_scale": 0.0,
     }
@@ -207,7 +208,12 @@ class TestConfiguration:
 
     @pytest.mark.parametrize(
         "key",
-        ["penalty_stuck_position", "reward_exploration", "reward_distance_scale"],
+        [
+            "penalty_stuck_position",
+            "penalty_anti_dithering",
+            "reward_exploration",
+            "reward_distance_scale",
+        ],
     )
     def test_state_shaping_is_refused(self, key: str) -> None:
         """A dwelling penalty, exploration pay or approach reward is refused, by name."""

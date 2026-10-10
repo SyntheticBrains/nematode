@@ -65,7 +65,7 @@ quality. Intake SHALL NOT depend on the worm's speed.
 ### Requirement: No shaping that favours a state
 
 A configuration with `food_model: lawns` SHALL be refused if it sets a non-zero `penalty_stuck_position`,
-`reward_exploration` or `reward_distance_scale`. Under lawns there SHALL be no capture event, so the goal
+`penalty_anti_dithering`, `reward_exploration` or `reward_distance_scale`. Under lawns there SHALL be no capture event, so the goal
 bonus never applies and intake is the only food reward.
 
 #### Scenario: A dwelling penalty is refused

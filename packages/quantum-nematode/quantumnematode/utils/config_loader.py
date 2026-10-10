@@ -2623,8 +2623,9 @@ class SimulationConfig(BaseModel):
     def _validate_lawns(self) -> "SimulationConfig":
         """Refuse a lawn configuration the lawn model does not support, or that shapes a state.
 
-        Lawns run on the continuous substrate with one agent. Three reward terms would favour a
-        behavioural state by construction: a stuck-position penalty punishes dwelling, an
+        Lawns run on the continuous substrate with one agent. Four reward terms would favour a
+        behavioural state by construction: a stuck-position penalty and an anti-dithering penalty
+        (which fires whenever the worm is where it was two steps before) punish dwelling, an
         exploration bonus pays for visiting new cells, and a distance reward pays for approach
         itself, so a lawn configuration must set each to zero.
         """
@@ -2639,7 +2640,12 @@ class SimulationConfig(BaseModel):
             msg = "food_model 'lawns' runs one agent; multi_agent must be disabled"
             raise ValueError(msg)
         reward = self.reward or RewardConfig()
-        for key in ("penalty_stuck_position", "reward_exploration", "reward_distance_scale"):
+        for key in (
+            "penalty_stuck_position",
+            "penalty_anti_dithering",
+            "reward_exploration",
+            "reward_distance_scale",
+        ):
             if getattr(reward, key) != 0:
                 msg = (
                     f"food_model 'lawns' requires reward.{key} to be 0, got {getattr(reward, key)}"

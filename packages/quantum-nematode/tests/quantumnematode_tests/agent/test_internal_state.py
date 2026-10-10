@@ -74,6 +74,7 @@ def test_a_lawn_step_is_recorded() -> None:
     agent = _agent(lawns=True)
     reward = RewardConfig(
         penalty_stuck_position=0.0,
+        penalty_anti_dithering=0.0,
         reward_exploration=0.0,
         reward_distance_scale=0.0,
     )
