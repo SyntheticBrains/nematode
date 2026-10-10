@@ -292,6 +292,31 @@ pilot, on fresh seeds, checks it.
   per lawn. The odour field costs about 150 kernel evaluations per sensing query, negligible beside a
   step.
 
+### Decision H: Patch-leaving is deferred to D.1b, with a destination
+
+Decided with the user on 2026-10-11.
+
+**Why D.1's cell cannot test leaving.** The worm starts on a lawn of about 21 cells, and that lawn
+holds about three times the food it needs to survive an episode. It cannot be grazed out within 720
+steps, so a run succeeds without ever leaving, and leaving never pays. This is right for D.1's
+question, because roaming and dwelling are within-lawn states: Ji et al.'s and Scheer & Bargmann's
+reference worms forage on a single lawn.
+
+**D.1b's design.**
+
+- **Its own cell:** smaller lawns, about 1.5 mm in radius, so that leaving is needed.
+- **Its readings:** the leaving rate, and whether leaving comes out of roaming rather than
+  dwelling. That coupling is Scheer & Bargmann 2023's central result.
+- **Its reference:** the deposit already downloaded holds lawn exits and entries for all 1,586
+  wild-type animals.
+- **What it answers:** Al-Asmar & Pérez-Escudero's patch-leaving framing, named in the roadmap's D.1
+  validation.
+
+**Its order.** D.1b runs after D.1's within-lawn positive control passes, and before B.3, without
+blocking it. B.3's references are within-lawn roaming fractions, so B.3 does not need leaving, but if
+the mutants shift roaming it is worth knowing whether leaving shifts with it. If D.1's control fails,
+D.1b has no states to couple leaving to.
+
 ## Risks
 
 - **Dwelling may not emerge.** The positive control exists to say so, and the result is informative
