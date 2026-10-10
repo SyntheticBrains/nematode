@@ -106,3 +106,34 @@ def test_intake_is_recorded_per_episode() -> None:
     missing = _simulation_result_to_row(SimulationResult(**base))["intake"]
     assert isinstance(missing, float)
     assert np.isnan(missing)
+
+
+def test_moving_costs_energy_from_reward_and_satiety() -> None:
+    """Scenario "Moving costs energy": a 2 mm move costs twice the per-mm cost, in intake value."""
+    costly = LawnParams(
+        count=1,
+        intake_fraction=0.2,
+        reward_per_intake=3.0,
+        satiety_per_intake=0.5,
+        movement_cost_per_mm=0.05,
+    )
+    env = Continuous2DEnvironment(
+        continuous=Continuous2DParams(world_size_mm=20.0),
+        foraging=ForagingParams(food_model="lawns", lawns=costly),
+        seed=5,
+        theme=Theme.HEADLESS,
+    )
+    agent: Any = SimpleNamespace(
+        env=env,
+        agent_id="default",
+        _episode_tracker=EpisodeTracker(),
+        _satiety_manager=SatietyManager(SatietyConfig(initial_satiety=100.0)),
+    )
+    env.agents["default"].pos_continuous = (0.5, 0.5)  # off every lawn
+    runner = _runner()
+    assert runner._handle_lawn_intake(agent, 0.0) == 0.0  # the first step has no move to charge
+    env.agents["default"].pos_continuous = (2.5, 0.5)
+    reward = runner._handle_lawn_intake(agent, 0.0)
+    assert reward == pytest.approx(-3.0 * 0.05 * 2.0)
+    assert agent._episode_tracker.movement_cost == pytest.approx(0.1)
+    assert agent._satiety_manager.current_satiety == pytest.approx(100.0 - 100.0 * 0.5 * 0.1)

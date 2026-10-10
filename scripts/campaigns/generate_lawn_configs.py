@@ -4,8 +4,12 @@
 The cell is the point worm's MLP-PPO at the hard-food cell's sensing (klinotaxis, the adaptive
 fold-change sensor, the Fick field), with point food replaced by lawns:
 
-- **Lawns**: four disc lawns of 2.5 mm radius in a 20 mm arena, 1 mm cells, intake a tenth of a
-  cell's density per step, no regrowth.
+- **Lawns**: four disc lawns of 2.5 mm radius in a 20 mm arena, 1 mm cells, intake 2% of a cell's
+  density per step (a spot lasts minutes, as a real lawn does), no regrowth.
+- **Moving costs energy**: 0.013 of intake value per mm, from reward and satiety alike. On a fresh
+  cell a worm gains 0.006 of its maximum satiety per step; moving 1 mm costs 0.0039; basal decay is
+  0.0027. A spot is worth staying on until it falls to about 0.35 of its density, some 52 steps
+  (4.3 minutes), and roaming through a lawn without stopping slowly starves the worm.
 - **Both states expressible**: signed speed (zero is the centre of the speed range) and turns of up
   to half a revolution per step, the reorientation a dwelling worm makes.
 - **No shaping that favours a state**: the stuck-position, anti-dithering, exploration and distance
@@ -44,10 +48,11 @@ LAWNS: dict[str, Any] = {
     "min_separation_mm": 2.0,
     "cell_mm": 1.0,
     "quality": [1.0, 1.0],
-    "intake_fraction": 0.1,
+    "intake_fraction": 0.02,
     "reward_per_intake": 10.0,
-    "satiety_per_intake": 0.1,
+    "satiety_per_intake": 0.3,
     "regrowth_per_step": 0.0,
+    "movement_cost_per_mm": 0.013,
     "start_clearance_mm": 2.0,
     "wall_clearance_mm": 1.0,
 }

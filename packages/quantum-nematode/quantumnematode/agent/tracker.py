@@ -103,6 +103,24 @@ class EpisodeTracker:
         """Get the lawn intake of the latest step, weighted by quality."""
         return self.data.step_intake
 
+    @property
+    def movement_cost(self) -> float:
+        """Get the energy spent moving over the episode, in intake value."""
+        return self.data.movement_cost
+
+    @property
+    def last_position(self) -> tuple[float, float] | None:
+        """Get the position recorded at the previous lawn step, or None at an episode's start."""
+        return self.data.last_position
+
+    def set_last_position(self, position: tuple[float, float]) -> None:
+        """Record the position the next step's movement is measured from."""
+        self.data.last_position = (float(position[0]), float(position[1]))
+
+    def track_movement_cost(self, cost: float) -> None:
+        """Add one step's movement cost, in intake value."""
+        self.data.movement_cost += cost
+
     def track_intake(self, value: float) -> None:
         """Add one step's lawn intake, weighted by its lawn's quality."""
         self.data.intake += value

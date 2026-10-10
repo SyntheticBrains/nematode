@@ -14,6 +14,9 @@ but no food.
   depend on the worm's speed.
 * **Quality** is a lawn's nutritional value per unit eaten. It does not change the odour: a worm
   learns it by eating.
+* **Moving costs energy**, in the same units as food: each millimetre moved costs
+  ``movement_cost_per_mm`` of intake value, taken from reward and satiety alike. Standing still
+  costs only the basal decay every worm pays.
 """
 
 from __future__ import annotations
@@ -45,6 +48,7 @@ class LawnParams:
     reward_per_intake: float = 1.0
     satiety_per_intake: float = 0.1
     regrowth_per_step: float = 0.0
+    movement_cost_per_mm: float = 0.0
     start_clearance_mm: float = 2.0
     wall_clearance_mm: float = 1.0
 

@@ -294,6 +294,8 @@ class LawnConfig(BaseModel):
     # Satiety gained per unit eaten, as a fraction of the maximum, times quality.
     satiety_per_intake: float = Field(default=0.1, ge=0.0)
     regrowth_per_step: float = Field(default=0.0, ge=0.0)
+    # Energy, in intake value, that each millimetre moved costs, from reward and satiety alike.
+    movement_cost_per_mm: float = Field(default=0.0, ge=0.0)
     start_clearance_mm: float = Field(default=2.0, ge=0.0)
     wall_clearance_mm: float = Field(default=1.0, ge=0.0)
 
@@ -318,6 +320,7 @@ class LawnConfig(BaseModel):
             reward_per_intake=self.reward_per_intake,
             satiety_per_intake=self.satiety_per_intake,
             regrowth_per_step=self.regrowth_per_step,
+            movement_cost_per_mm=self.movement_cost_per_mm,
             start_clearance_mm=self.start_clearance_mm,
             wall_clearance_mm=self.wall_clearance_mm,
         )

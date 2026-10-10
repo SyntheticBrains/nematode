@@ -93,6 +93,14 @@ class SatietyManager:
         self._current_satiety = min(self.max_satiety, self._current_satiety + amount)
         return self._current_satiety
 
+    def spend_satiety(self, amount: float) -> float:
+        """Spend ``amount`` of satiety on an activity, such as moving; it cannot go below 0.0."""
+        if amount < 0:
+            msg = f"amount must be non-negative, got {amount}"
+            raise ValueError(msg)
+        self._current_satiety = max(0.0, self._current_satiety - amount)
+        return self._current_satiety
+
     def is_starved(self) -> bool:
         """Check if the agent is starved.
 

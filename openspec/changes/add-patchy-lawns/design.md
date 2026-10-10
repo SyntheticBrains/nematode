@@ -80,6 +80,10 @@ density. The worm eats that amount, times the lawn's quality.
 
 - **Intake does not depend on speed.** Dwelling has to emerge from patchiness, depletion and satiety.
 
+- **Moving costs energy**, added after the first pilot (see Decision G). It is counted in intake value:
+  each millimetre moved costs `lawns.movement_cost_per_mm`, taken from reward and satiety alike, so
+  the learner sees what the worm pays. Standing still costs only the basal decay every worm pays.
+
 - **No shaping that favours either state.** Four reward terms would:
 
   - `penalty_stuck_position` punishes dwelling directly;
@@ -229,7 +233,40 @@ The registration is written after a pilot on seeds disjoint from the band. It fi
 **If the control fails**, B.3 does not start on this readout. The logbook records why, and the readout
 is revised or closed with a reason.
 
-### Decision G: Feasibility
+### Decision G: Feasibility, and what the first pilot changed
+
+**The first pilot, 2026-10-10** (seeds 9101–9104, 3,000 episodes, the original cell: intake 10% of a
+cell per step, movement free):
+
+| arm | intake per episode, final quarter |
+|---|---|
+| with `internal_state` | 13.4 |
+| without it | 13.4 |
+| untrained floor | 4.4 |
+
+- **Both learners passed the learning gate.**
+- **Neither dwelt.** Each was classified as roaming in 98–99% of on-lawn windows, with no complete
+  bout of either state.
+- **The cause is the cell's economics.** With movement free and a cell losing a tenth of its density
+  per step, a worm moving at full speed reaches a fresh cell every step, so continuous roaming is
+  optimal and dwelling never pays.
+
+With the user, the cell now charges for movement and depletes slowly, as real lawns do over minutes.
+Its numbers, per step, in fractions of maximum satiety:
+
+| | per step |
+|---|---|
+| eating on a fresh cell (intake 2% of the cell, `satiety_per_intake` 0.3) | +0.006 |
+| moving 1 mm (`movement_cost_per_mm` 0.013) | −0.0039 |
+| basal decay | 0.0027 |
+
+- **A spot is worth staying on** until its density falls to about 0.35: some 52 steps, 4.3 minutes,
+  the order of a real dwelling bout.
+- **Roaming through a lawn without stopping slowly starves the worm.**
+- **Intake still does not depend on speed.** The cost is locomotion's, not a reward for slowness, and
+  off a lawn it makes searching costly too.
+
+A second pilot, on seeds disjoint from the first and from the band, checks it.
 
 - **States last minutes.** In the reference model a dwelling bout averages about 8 minutes and a
   roaming bout about 1.6. An episode of 720 steps is an hour of worm time, room for several of each.

@@ -57,6 +57,13 @@ quality. Intake SHALL NOT depend on the worm's speed.
 - **WHEN** two worms occupy cells of equal density, one moving and one still
 - **THEN** their intake SHALL be equal
 
+#### Scenario: Moving costs energy
+
+- **WHEN** a lawn configuration sets `movement_cost_per_mm` and the worm moves 2 mm in a step
+- **THEN** reward SHALL fall by `reward_per_intake` times twice the per-mm cost, and satiety by
+  `satiety_per_intake` times the same cost as a fraction of its maximum; the first step of an
+  episode SHALL be charged nothing
+
 #### Scenario: Off a lawn there is no intake
 
 - **WHEN** a worm is outside every lawn

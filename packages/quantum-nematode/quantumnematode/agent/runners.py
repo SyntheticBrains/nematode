@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import time
 from dataclasses import dataclass
@@ -95,6 +96,8 @@ class EpisodeData:
     in_danger: bool = False
     intake: float = 0.0
     step_intake: float = 0.0
+    movement_cost: float = 0.0
+    last_position: tuple[float, float] | None = None
 
 
 @dataclass
@@ -306,25 +309,38 @@ class StandardEpisodeRunner(EpisodeRunner):
         return brave_msg, reward
 
     def _handle_lawn_intake(self, agent: QuantumNematodeAgent, reward: float) -> float:
-        """Eat from the lawn cell under the worm, then regrow the lawns, under the lawn food model.
+        """Charge the step's movement, eat from the cell under the worm, and regrow the lawns.
 
-        What the worm eats, times its lawn's quality, is paid as reward and restores satiety; the
-        cell loses what was eaten. Without lawns the reward is returned unchanged.
+        Energy is counted in intake value: what the worm eats, times its lawn's quality, is paid as
+        reward and restores satiety, and the cell loses what was eaten; each millimetre moved since
+        the last step costs ``movement_cost_per_mm`` of the same, taken from reward and satiety
+        alike. Without lawns the reward is returned unchanged.
         """
         field = agent.env.lawn_field
         lawns = agent.env.foraging.lawns
         if field is None or lawns is None:
             return reward
+        tracker = agent._episode_tracker
+        satiety = agent._satiety_manager
         position = agent.env.agent_sensing_position(agent.agent_id)
+        energy = 0.0
+        if tracker.last_position is not None and lawns.movement_cost_per_mm > 0:
+            moved = math.dist(position, tracker.last_position)
+            cost = lawns.movement_cost_per_mm * moved
+            tracker.track_movement_cost(cost)
+            satiety.spend_satiety(satiety.max_satiety * lawns.satiety_per_intake * cost)
+            energy -= cost
+        tracker.set_last_position(position)
         intake = field.eat(position, lawns.intake_fraction)
         field.regrow(lawns.regrowth_per_step)
-        if intake.amount <= 0:
+        if intake.amount > 0:
+            tracker.track_intake(intake.value)
+            satiety.restore_satiety(satiety.max_satiety * lawns.satiety_per_intake * intake.value)
+            energy += intake.value
+        if energy == 0:
             return reward
-        agent._episode_tracker.track_intake(intake.value)
-        gain = lawns.reward_per_intake * intake.value
-        agent._episode_tracker.track_reward(gain)
-        satiety = agent._satiety_manager
-        satiety.restore_satiety(satiety.max_satiety * lawns.satiety_per_intake * intake.value)
+        gain = lawns.reward_per_intake * energy
+        tracker.track_reward(gain)
         return reward + gain
 
     def _handle_food_collection(

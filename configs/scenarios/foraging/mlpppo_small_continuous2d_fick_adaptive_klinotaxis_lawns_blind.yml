@@ -82,9 +82,10 @@ environment:
       quality:
       - 1.0
       - 1.0
-      intake_fraction: 0.1
+      intake_fraction: 0.02
       reward_per_intake: 10.0
-      satiety_per_intake: 0.1
+      satiety_per_intake: 0.3
       regrowth_per_step: 0.0
+      movement_cost_per_mm: 0.013
       start_clearance_mm: 2.0
       wall_clearance_mm: 1.0
