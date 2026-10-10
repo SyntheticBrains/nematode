@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change add-patchy-lawns. Update Purpose after archive.
+The lawn food model on the continuous environment. It places disc lawns of depleting density, with an area-weighted odour field. Feeding is continuous and depends on the lawn's quality, not on speed. Moving can cost energy, and the worm can start on a lawn. Configurations that shape behaviour toward a state are refused. This is the substrate on which roaming and dwelling are read.
 
 ## Requirements
 
