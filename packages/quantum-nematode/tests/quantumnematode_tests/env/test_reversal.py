@@ -23,6 +23,7 @@ from quantumnematode.env.worm_time import (
     step_worm_seconds,
     undulations_per_step,
 )
+from quantumnematode.report import behaviour_export
 from quantumnematode.report.behaviour_export import write_behaviour_capture
 from quantumnematode.report.dtypes import BehaviourStep
 from quantumnematode.utils.config_loader import SensingConfig, load_simulation_config
@@ -177,7 +178,8 @@ class TestCapture:
         assert path is not None
         step = json.loads(path.read_text())["runs"][0]["steps"][0]
         assert "speed_signed" not in step
-        assert set(step) == {f for f in BehaviourStep.__dataclass_fields__ if f != "speed_signed"}
+        optional = set(behaviour_export._OPTIONAL_FIELDS)
+        assert set(step) == {f for f in BehaviourStep.__dataclass_fields__ if f not in optional}
 
 
 class TestStepConstant:

@@ -78,6 +78,8 @@ class EpisodeData:
         Number of times agent exited predator detection radius without dying.
     in_danger : bool
         Whether agent is currently within predator detection radius.
+    intake : float
+        Food eaten from lawns over the episode, weighted by each lawn's quality.
     """
 
     steps: int
@@ -91,6 +93,8 @@ class EpisodeData:
     predator_encounters: int = 0
     successful_evasions: int = 0
     in_danger: bool = False
+    intake: float = 0.0
+    step_intake: float = 0.0
 
 
 @dataclass
@@ -300,6 +304,28 @@ class StandardEpisodeRunner(EpisodeRunner):
                     brave_msg += f" [O2 brave bonus: +{o2_bonus}]"
 
         return brave_msg, reward
+
+    def _handle_lawn_intake(self, agent: QuantumNematodeAgent, reward: float) -> float:
+        """Eat from the lawn cell under the worm, then regrow the lawns, under the lawn food model.
+
+        What the worm eats, times its lawn's quality, is paid as reward and restores satiety; the
+        cell loses what was eaten. Without lawns the reward is returned unchanged.
+        """
+        field = agent.env.lawn_field
+        lawns = agent.env.foraging.lawns
+        if field is None or lawns is None:
+            return reward
+        position = agent.env.agent_sensing_position(agent.agent_id)
+        intake = field.eat(position, lawns.intake_fraction)
+        field.regrow(lawns.regrowth_per_step)
+        if intake.amount <= 0:
+            return reward
+        agent._episode_tracker.track_intake(intake.value)
+        gain = lawns.reward_per_intake * intake.value
+        agent._episode_tracker.track_reward(gain)
+        satiety = agent._satiety_manager
+        satiety.restore_satiety(satiety.max_satiety * lawns.satiety_per_intake * intake.value)
+        return reward + gain
 
     def _handle_food_collection(
         self,
@@ -1114,6 +1140,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             result, reward = self._handle_food_collection(agent, reward_config, params, reward)
             if result is not None:
                 return result
+            reward = self._handle_lawn_intake(agent, reward)
 
             # Predator checks (before and after predator movement)
             result, reward = self._handle_predator_phase(

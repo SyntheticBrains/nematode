@@ -93,6 +93,21 @@ class EpisodeTracker:
         """Set whether agent is currently in danger."""
         self.data.in_danger = value
 
+    @property
+    def intake(self) -> float:
+        """Get the food eaten from lawns over the episode, weighted by quality."""
+        return self.data.intake
+
+    @property
+    def step_intake(self) -> float:
+        """Get the lawn intake of the latest step, weighted by quality."""
+        return self.data.step_intake
+
+    def track_intake(self, value: float) -> None:
+        """Add one step's lawn intake, weighted by its lawn's quality."""
+        self.data.intake += value
+        self.data.step_intake = value
+
     def track_food_collection(self, distance_efficiency: float | None = None) -> None:
         """Track food collection event.
 
@@ -172,6 +187,7 @@ class EpisodeTracker:
             Current satiety level (for dynamic foraging environments).
         """
         self.data.steps += 1
+        self.data.step_intake = 0.0
         self.data.rewards += reward
         if satiety is not None:
             self.data.satiety_history.append(satiety)

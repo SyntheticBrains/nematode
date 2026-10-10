@@ -984,6 +984,20 @@ class QuantumNematodeAgent:
 
         return result
 
+    def _capture_lawn_fields(
+        self,
+        position: tuple[float, float],
+    ) -> tuple[float | None, float | None, bool | None]:
+        """Return the step's satiety, intake and whether it is on a lawn; all None without lawns."""
+        field = self.env.lawn_field
+        if field is None:
+            return None, None, None
+        return (
+            float(self.current_satiety),
+            float(self._episode_tracker.step_intake),
+            field.lawn_at(position) is not None,
+        )
+
     def _capture_signed_speed(
         self,
         position: tuple[float, float],
@@ -1267,6 +1281,7 @@ class QuantumNematodeAgent:
                 agent_pos,
                 temperature,
             )
+            _satiety, _intake, _on_lawn = self._capture_lawn_fields(_bpos)
             self.behaviour.append(
                 BehaviourStep(
                     step=self._episode_tracker.steps,
@@ -1278,6 +1293,9 @@ class QuantumNematodeAgent:
                     grad_dir=_gdir,
                     grad_strength=_gstr,
                     speed_signed=self._capture_signed_speed(_bpos, agent_state.heading_rad),
+                    satiety=_satiety,
+                    intake=_intake,
+                    on_lawn=_on_lawn,
                 ),
             )
 
@@ -1301,6 +1319,7 @@ class QuantumNematodeAgent:
             predator_gradient_direction=separated_grads.get("predator_gradient_direction"),
             # Internal state (hunger)
             satiety=self.current_satiety,
+            max_satiety=self.max_satiety,
             # Health state
             health=health,
             max_health=max_health,

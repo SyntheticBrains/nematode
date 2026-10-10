@@ -93,6 +93,7 @@ class ModuleName(StrEnum):
 
     # Social sensing module
     SOCIAL_PROXIMITY = "social_proximity"
+    INTERNAL_STATE = "internal_state"
 
     # Pheromone sensing modules
     PHEROMONE_FOOD = "pheromone_food"
@@ -966,6 +967,37 @@ SENSORY_MODULES[ModuleName.SOCIAL_PROXIMITY] = SensoryModule(
         "Social proximity detection (oracle mode). Encodes normalized count of "
         "nearby agents within social detection radius. Strength only (1 dimension). "
         "Biologically honest pheromone-based sensing planned for multi-agent pheromone deliverable."
+    ),
+    classical_dim=1,
+)
+
+# --- Internal state ---
+
+
+def _internal_state_core(params: BrainParams) -> CoreFeatures:
+    """Extract the agent's satiety as a fraction of its maximum.
+
+    Parameters
+    ----------
+    params : BrainParams
+        Brain parameters containing satiety and its maximum.
+
+    Returns
+    -------
+    CoreFeatures
+        strength = satiety / max_satiety, clamped to [0, 1]; 0 when either is unknown.
+    """
+    if params.satiety is None or not params.max_satiety:
+        return CoreFeatures(strength=0.0, angle=0.0, binary=0.0)
+    fraction = max(0.0, min(params.satiety / params.max_satiety, 1.0))
+    return CoreFeatures(strength=fraction, angle=0.0, binary=0.0)
+
+
+SENSORY_MODULES[ModuleName.INTERNAL_STATE] = SensoryModule(
+    name=ModuleName.INTERNAL_STATE,
+    extract=_internal_state_core,
+    description=(
+        "Internal state: satiety as a fraction of its maximum. Strength only (1 dimension)."
     ),
     classical_dim=1,
 )

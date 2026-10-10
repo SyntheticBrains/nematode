@@ -755,9 +755,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_reward = agent._episode_tracker.rewards
 
             # Determine success and track termination types
+            # A lawn episode has no food target: it succeeds by surviving to the step limit.
+            on_lawns = agent.env.lawn_field is not None
             success = step_result.termination_reason in (
-                TerminationReason.GOAL_REACHED,
-                TerminationReason.COMPLETED_ALL_FOOD,
+                (TerminationReason.MAX_STEPS,)
+                if on_lawns
+                else (TerminationReason.GOAL_REACHED, TerminationReason.COMPLETED_ALL_FOOD)
             )
 
             # Update session-level counters
@@ -828,8 +831,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 last_total_reward=agent._episode_tracker.rewards,
                 termination_reason=step_result.termination_reason,
                 success=success,
-                foods_collected=foods_collected_this_run,
-                foods_available=foods_available_this_run,
+                foods_collected=None if on_lawns else foods_collected_this_run,
+                foods_available=None if on_lawns else foods_available_this_run,
+                intake=agent._episode_tracker.intake if on_lawns else None,
                 satiety_remaining=satiety_remaining_this_run,
                 average_distance_efficiency=average_distance_efficiency,
                 satiety_history=satiety_history_this_run,

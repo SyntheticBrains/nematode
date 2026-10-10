@@ -63,6 +63,8 @@ def summary(  # noqa: C901, PLR0912, PLR0913, PLR0915
         if result.foods_collected is not None and result.foods_available is not None:
             foods_info = f"Eaten: {result.foods_collected}/{result.foods_available:<6} "
             additional_info += foods_info
+        if result.intake is not None:
+            additional_info += f"Intake: {result.intake:<8.3f} "
         if result.average_distance_efficiency is not None:
             additional_info += f"Avg Dist Eff: {result.average_distance_efficiency:<10.4f} "
 

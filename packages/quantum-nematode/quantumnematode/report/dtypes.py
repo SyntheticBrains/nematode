@@ -45,6 +45,10 @@ class BehaviourStep:
         captured step projected on the heading, in mm, negative when the worm backed up; zero at
         an episode's first captured step, which follows no move. ``None`` otherwise, and then
         omitted from the export, so captures without reversal are unchanged.
+    satiety, intake, on_lawn : float | None, float | None, bool | None
+        Recorded only under the lawn food model: satiety, the quality-weighted food eaten on the
+        move into this step, and whether the worm is inside a lawn. ``None`` otherwise, and then
+        omitted from the export.
     """
 
     step: int
@@ -56,6 +60,9 @@ class BehaviourStep:
     grad_dir: float
     grad_strength: float
     speed_signed: float | None = None
+    satiety: float | None = None
+    intake: float | None = None
+    on_lawn: bool | None = None
 
 
 class TerminationReason(StrEnum):
@@ -150,6 +157,8 @@ class SimulationResult(BaseModel):
     success: bool
     foods_collected: int | None = None
     foods_available: int | None = None
+    # Food eaten from lawns, weighted by quality; None unless the lawn food model is on.
+    intake: float | None = None
     satiety_remaining: float | None = None
     average_distance_efficiency: float | None = None
     satiety_history: list[float] | None = None
