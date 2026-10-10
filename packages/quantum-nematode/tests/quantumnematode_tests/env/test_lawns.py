@@ -106,9 +106,21 @@ class TestPlacement:
             params,
             np.random.default_rng(0),
             world_size_mm=WORLD_MM,
-            start=[(0.5, 0.5)],
+            start=[(2.0, 2.0)],
         )
         assert np.all(near_wall.centres[0] >= params.radius_mm + params.wall_clearance_mm)
+        assert near_wall.lawn_at((2.0, 2.0)) == 0
+
+    def test_a_start_no_lawn_can_cover_is_refused(self) -> None:
+        """In a corner, the nearest permitted lawn misses the start, so placement refuses it."""
+        params = LawnParams(count=1, radius_mm=2.5, start_on_lawn=True)
+        with pytest.raises(ValueError, match="covers the start"):
+            LawnField.place(
+                params,
+                np.random.default_rng(0),
+                world_size_mm=WORLD_MM,
+                start=[(0.5, 0.5)],
+            )
 
     def test_an_arena_too_small_is_refused(self) -> None:
         """Lawns that cannot fit raise rather than silently placing fewer."""

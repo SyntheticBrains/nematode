@@ -1263,14 +1263,19 @@ class StandardEpisodeRunner(EpisodeRunner):
                     food_history=(agent.food_history or None),
                 )
 
-            # Handle max steps reached
+            # Handle max steps reached. A lawn episode has no food target: reaching the step limit
+            # alive is how it succeeds.
             if agent._episode_tracker.steps >= max_steps:
-                logger.warning("Failed to complete episode: max steps reached.")
+                survived = agent.env.lawn_field is not None
+                if survived:
+                    logger.info("Completed episode: survived to max steps on lawns.")
+                else:
+                    logger.warning("Failed to complete episode: max steps reached.")
                 return self._terminate_episode(
                     agent,
                     params,
                     reward,
-                    success=False,
+                    success=survived,
                     termination_reason=TerminationReason.MAX_STEPS,
                     learn=False,
                     update_memory=False,

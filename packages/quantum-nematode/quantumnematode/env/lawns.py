@@ -119,7 +119,8 @@ class LawnField:
         Raises
         ------
         ValueError
-            If the lawns cannot be placed: the arena is too small for them.
+            If the lawns cannot be placed: the arena is too small for them, or, with
+            ``start_on_lawn``, the start lies so near a wall that no permitted lawn covers it.
         """
         r = params.radius_mm
         lo, hi = r + params.wall_clearance_mm, world_size_mm - r - params.wall_clearance_mm
@@ -128,7 +129,16 @@ class LawnField:
             raise ValueError(msg)
         first: list[np.ndarray] = []
         if params.start_on_lawn and start:
-            first = [np.clip(np.asarray(start[0], dtype=float), lo, hi)]
+            origin = np.asarray(start[0], dtype=float)
+            centre = np.clip(origin, lo, hi)
+            # The clipped centre is the nearest permitted one, so if it misses the start, all do.
+            if np.hypot(*(centre - origin)) > r:
+                msg = (
+                    f"no lawn of radius {r} mm with {params.wall_clearance_mm} mm wall clearance "
+                    f"covers the start {tuple(origin)}"
+                )
+                raise ValueError(msg)
+            first = [centre]
         centres: list[np.ndarray] = []
         for _ in range(MAX_PLACEMENT_RESTARTS):
             centres = list(first)

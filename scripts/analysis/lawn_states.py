@@ -300,7 +300,7 @@ def action_log_std(weights: Path | None) -> list[float] | None:
         return None
     import torch
 
-    state = torch.load(weights, map_location="cpu", weights_only=False)
+    state = torch.load(weights, map_location="cpu", weights_only=True)
     log_std = state.get("log_std") if isinstance(state, dict) else None
     if isinstance(log_std, dict):
         log_std = log_std.get("log_std")

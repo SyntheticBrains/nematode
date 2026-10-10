@@ -770,7 +770,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 total_starved += 1
             elif step_result.termination_reason == TerminationReason.HEALTH_DEPLETED:
                 total_health_depleted += 1
-            elif step_result.termination_reason == TerminationReason.MAX_STEPS:
+            elif step_result.termination_reason == TerminationReason.MAX_STEPS and not on_lawns:
                 total_max_steps += 1
             elif step_result.termination_reason == TerminationReason.INTERRUPTED:
                 total_interrupted += 1

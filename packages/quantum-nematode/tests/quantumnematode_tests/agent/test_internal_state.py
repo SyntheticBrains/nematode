@@ -95,3 +95,26 @@ def test_point_food_captures_leave_the_lawn_fields_out() -> None:
     agent.run_episode(RewardConfig(), max_steps=4)
     record = _record(agent.behaviour[0])
     assert {"satiety", "intake", "on_lawn"}.isdisjoint(record)
+
+
+@pytest.mark.parametrize("lawns", [True, False])
+def test_reaching_the_step_limit_succeeds_only_on_lawns(lawns: bool) -> None:  # noqa: FBT001
+    """A lawn episode surviving to max steps reports success to the brain; point food does not."""
+    agent = _agent(lawns=lawns)
+    seen: list[bool | None] = []
+    original = agent.brain.post_process_episode
+
+    def record(*args: object, episode_success: bool | None = None, **kwargs: object) -> None:
+        seen.append(episode_success)
+        original(*args, episode_success=episode_success, **kwargs)  # type: ignore[arg-type]
+
+    agent.brain.post_process_episode = record  # type: ignore[method-assign]
+    reward = RewardConfig(
+        penalty_stuck_position=0.0,
+        penalty_anti_dithering=0.0,
+        reward_exploration=0.0,
+        reward_distance_scale=0.0,
+    )
+    result = agent.run_episode(reward, max_steps=4)
+    assert result.termination_reason.value == "max_steps"
+    assert seen == [lawns]
