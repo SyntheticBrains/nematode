@@ -198,7 +198,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             body = new_body(x, y, agent_state.heading_rad)
             self.bodies[agent_id] = body
         drive_array = np.asarray(drive, dtype=float)
-        record: list[tuple[float, np.ndarray, np.ndarray]] | None = (
+        record: list[tuple[float, np.ndarray, np.ndarray, float]] | None = (
             [] if self.posture_log is not None else None
         )
         self._body.step(body, drive_array, self.continuous.world_size_mm, record=record)

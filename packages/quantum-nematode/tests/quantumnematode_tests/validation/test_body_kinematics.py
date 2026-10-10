@@ -16,8 +16,10 @@ from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuou
 from quantumnematode.validation.body_kinematics import (
     Kinematics,
     band_crossings,
+    forward_bout_share,
     in_bands,
     measure,
+    omega_turns,
 )
 
 _STEP_S = 5.0
@@ -207,3 +209,43 @@ class TestCapture:
         bands = in_bands(k)
         assert bands["frequency"]
         assert bands["wavelength"]
+
+
+class TestBehaviourInstruments:
+    def test_a_straight_crawl_has_no_omega_turn(self) -> None:
+        """The neutral crawl swings its head but never turns the head line past 135 degrees."""
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(
+                world_size_mm=1000.0,
+                allow_reversal=True,
+                body_model="kinematic",
+            ),
+            seed=0,
+        )
+        env.posture_log = []
+        for _ in range(20):
+            env.move_agent_body(np.r_[np.zeros(DRIVE_WIDTH - 1), 1.0])
+        assert omega_turns(env.posture_log, world_size_mm=1000.0) == []
+
+    def test_a_sharp_turn_within_a_swing_is_an_omega_turn(self) -> None:
+        """A head line that turns 160 degrees between two head-swing crossings is one omega turn."""
+        straight = np.zeros(N_SEGMENTS)
+        substeps = []
+        # The head curvature changes sign entering samples 1 and 8, the swing's two crossings; the
+        # frame turns 160 degrees between them.
+        frames = np.r_[0.0, np.linspace(0.0, np.radians(160.0), 8)]
+        for k, frame in enumerate(frames):
+            curvature = straight.copy()
+            curvature[0] = 0.01 if 0 < k < 8 else -0.01  # small, so the bend barely moves the line
+            substeps.append((float(k), curvature, np.array([50.0, 50.0]), float(frame)))
+        episode = [{"drive": np.zeros(DRIVE_WIDTH), "substeps": substeps}]
+        turns = omega_turns(episode, world_size_mm=100.0)
+        assert len(turns) == 1
+        assert turns[0] == pytest.approx(np.radians(160.0), abs=0.05)
+
+    def test_forward_bouts(self) -> None:
+        """An episode qualifies with a forward run of 20 worm-seconds: four 5 s steps."""
+        forward = [{"reversed": False}] * 4
+        broken = [{"reversed": False}] * 3 + [{"reversed": True}] + [{"reversed": False}] * 3
+        assert forward_bout_share([forward, broken], step_seconds=5.0) == pytest.approx(0.5)
+        assert forward_bout_share([], step_seconds=5.0) is None

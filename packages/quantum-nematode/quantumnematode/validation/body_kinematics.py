@@ -25,12 +25,14 @@ joins two pieces of signal. The share of steps that qualify is reported beside.
 
 from __future__ import annotations
 
+import itertools
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from quantumnematode.env.body import MIN_WAVE_AMPLITUDE, wave_amplitude
+from quantumnematode.env.body import MIN_WAVE_AMPLITUDE, head_line_angle, wave_amplitude
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -180,6 +182,61 @@ def measure(  # noqa: PLR0913 - an episode and the geometry it was captured in
         steps_near_wall=near_wall,
         steps_undulating=undulating,
     )
+
+
+OMEGA_TURN_RAD = math.radians(135.0)
+"""The net turning of the head line across one head swing that makes an omega turn."""
+
+
+def omega_turns(
+    episode: Sequence[dict[str, Any]],
+    *,
+    world_size_mm: float,
+    wall_margin_mm: float = 1.0,
+) -> list[float]:
+    """Return each omega turn's net heading change, in radians, over one captured episode.
+
+    A head swing runs between consecutive zero-crossings of the head segment's curvature. Across
+    one, the line from the midline at 0.2 body lengths to the head turns; more than 135 degrees,
+    net, is an omega turn. Swings that start or end with the head near a wall are skipped.
+    """
+    substeps = [s for step in episode for s in step["substeps"]]
+    if len(substeps) < 2:  # noqa: PLR2004 - a swing needs two samples
+        return []
+    head_curvature = np.array([s[1][0] for s in substeps])
+    angles = np.unwrap([head_line_angle(s[1], s[3]) for s in substeps])
+    crossings = np.nonzero(np.sign(head_curvature[:-1]) * np.sign(head_curvature[1:]) < 0)[0] + 1
+    turns: list[float] = []
+    for start, end in itertools.pairwise(crossings):
+        if _near_wall(substeps[start][2], world_size_mm, wall_margin_mm) or _near_wall(
+            substeps[end][2],
+            world_size_mm,
+            wall_margin_mm,
+        ):
+            continue
+        change = float(angles[end] - angles[start])
+        if abs(change) > OMEGA_TURN_RAD:
+            turns.append(change)
+    return turns
+
+
+def forward_bout_share(
+    episodes: Sequence[Sequence[dict[str, Any]]],
+    *,
+    step_seconds: float,
+    minimum_s: float = 20.0,
+) -> float | None:
+    """Return the share of episodes with a forward run of at least ``minimum_s`` worm-seconds."""
+    if not episodes:
+        return None
+    with_bout = 0
+    for episode in episodes:
+        longest = run = 0
+        for step in episode:
+            run = 0 if bool(step.get("reversed", False)) else run + 1
+            longest = max(longest, run)
+        with_bout += int(longest * step_seconds >= minimum_s)
+    return with_bout / len(episodes)
 
 
 def in_bands(kinematics: Kinematics) -> dict[str, bool | None]:

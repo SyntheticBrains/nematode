@@ -2,7 +2,7 @@
 
 - [x] 1. **Data** — **done 2026-10-10: both files vendored in LFS at Wormlight's pinned SHA-256s; columns are the modes; four modes capture 96.49% of the real postures; `validation/posture.py` loads and checks them.** Original scope:: vendor the eigenworm basis and the real postures with licences and provenance;
   checked against their pinned SHA-256s. Tests.
-- [ ] 2. **Instruments**: the frame angle in the posture record; eigenworm variance, peak |κL|, omega
+- [x] 2. **Instruments** — **done: the posture record carries the frame angle; `head_line_angle`; omega turns (head-swing crossings of the head segment's curvature, 135° net, wall swings skipped); forward bouts; eigenworm variance and amplitude in `validation/posture.py`. Tests.** Original scope:: the frame angle in the posture record; eigenworm variance, peak |κL|, omega
   turns, forward bouts. Tests on generated postures and the vendored real postures.
 - [ ] 3. **Harness and analysis**: behaviour capture in the evaluation harness;
   `scripts/analysis/body_validation.py` (evaluation over the arms, the half-step check, the grades, the

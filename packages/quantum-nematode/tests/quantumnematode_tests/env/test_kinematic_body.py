@@ -25,6 +25,7 @@ from quantumnematode.env.body import (
     N_SEGMENTS,
     BodyParams,
     KinematicBody,
+    head_line_angle,
     new_body,
     wave_amplitude,
 )
@@ -166,6 +167,19 @@ class TestBody:
         assert left - straight > 0.3
         assert right - straight < -0.3
 
+    def test_the_record_carries_the_frame_angle(self) -> None:
+        """Each sub-step's frame angle places its posture: the mid-body head line is the heading."""
+        body = KinematicBody()
+        state = new_body(10.0, 10.0, 0.3)
+        record: list = []
+        body.step(state, _drive(bias=0.2), 20.0, record=record)
+        _time, curvature, _head, frame_angle = record[-1]
+        assert frame_angle == state.frame_angle
+        assert head_line_angle(curvature, frame_angle, distance_bl=0.5) == pytest.approx(
+            body.heading(state),
+            abs=0.05,
+        )
+
     def test_drive_damps_a_segment_but_never_silences_it(self) -> None:
         """Full negative drive leaves the floor, neutral half the peak, full drive the peak."""
         levels = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
@@ -184,7 +198,7 @@ class TestBody:
         record: list = []
         for _ in range(8):
             body.step(state, _drive(), 1000.0, record=record)
-        head_wave = np.array([curvature[0] for _t, curvature, _h in record[40:]])
+        head_wave = np.array([entry[1][0] for entry in record[40:]])
         peak = body.params.peak_curvature * 0.5  # the neutral drive's amplitude factor
         # The switch peaks between sub-step samples, so the sampled peak sits just under it.
         assert head_wave.max() == pytest.approx(peak, rel=0.05)

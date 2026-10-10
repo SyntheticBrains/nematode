@@ -136,6 +136,22 @@ def _shape(curvature: np.ndarray, ds: float) -> tuple[np.ndarray, np.ndarray]:
     return midpoints, tangents
 
 
+def head_line_angle(curvature: np.ndarray, frame_angle: float, distance_bl: float = 0.2) -> float:
+    """Return the world-frame direction to the head from the midline ``distance_bl`` behind it.
+
+    The point lies on the midline at that arc length from the head, in body lengths; the line runs
+    from it to the head. Its turning across a head swing is how an omega turn is measured.
+    """
+    ds = 1.0 / N_SEGMENTS
+    angles = _segment_angles(curvature)
+    tangents = np.stack([np.cos(angles), np.sin(angles)], axis=1)
+    joints = np.vstack([[0.0, 0.0], -np.cumsum(tangents * ds, axis=0)])
+    index = min(int(distance_bl / ds), N_SEGMENTS - 1)
+    point = joints[index] - tangents[index] * (distance_bl - index * ds)
+    direction = _rotate(-point[None, :], frame_angle)[0]
+    return math.atan2(direction[1], direction[0])
+
+
 def _rotate(vectors: np.ndarray, angle: float) -> np.ndarray:
     c, s = math.cos(angle), math.sin(angle)
     return vectors @ np.array([[c, s], [-s, c]])
@@ -235,12 +251,12 @@ class KinematicBody:
         state: BodyState,
         drive: np.ndarray,
         world_size_mm: float,
-        record: list[tuple[float, np.ndarray, np.ndarray]] | None = None,
+        record: list[tuple[float, np.ndarray, np.ndarray, float]] | None = None,
     ) -> None:
         """Advance ``state`` by one environment step under ``drive``, clamped to the arena.
 
-        ``record``, when given, receives each sub-step's ``(time, curvature, head)``, copies that
-        leave the motion untouched.
+        ``record``, when given, receives each sub-step's ``(time, curvature, head, frame_angle)``,
+        copies that leave the motion untouched.
         """
         p = self.params
         if drive.shape != (DRIVE_WIDTH,):
@@ -271,7 +287,7 @@ class KinematicBody:
             state.head = np.clip(state.head, 0.0, world_size_mm)
             state.curvature = after
             if record is not None:
-                record.append((state.time, after.copy(), state.head.copy()))
+                record.append((state.time, after.copy(), state.head.copy(), state.frame_angle))
 
     def _reverses(self, state: BodyState, *, requested: bool) -> bool:
         """Decide whether this step runs tail-to-head, and advance the reversal bookkeeping."""
