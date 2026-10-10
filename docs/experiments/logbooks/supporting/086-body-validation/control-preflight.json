@@ -1,0 +1,16 @@
+{
+  "saturation_bar": 90.0,
+  "margin_points": 5.0,
+  "levels": {
+    "control": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 18.066666666666666,
+      "rn_plateau": 18.066666666666666,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    }
+  },
+  "launch": true
+}
