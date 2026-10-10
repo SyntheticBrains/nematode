@@ -173,13 +173,20 @@ The registered outcome is **"the body carries a weathervane and the sweep streng
 - **The second half carries the registered caveat.** The sweep's added slope cannot be told apart from
   the control foraging worse: 10% against the MLP's 70.8%.
 
+**What the control's network receives.** The temporal derivative of concentration, proprioception
+and the short-term memory module: everything the MLP arm has except the synthetic lateral sample. Logbook
+035's point-worm control had the same three inputs. So the weathervane it learns here comes from
+those inputs acting through the body's motion, whether by the head's swing or by comparing
+concentrations across steps. Which one is not separated here.
+
 **Beside it, Logbook 035's point worm**, for scale and not as a delta:
 
 - Removing the sweep there cut the thresholded slope from +0.027 to +0.002, a geometric residual
   that fell to PARTIAL once walls were excluded.
 - Through the body, the control's slope is +0.015, about seven times the point worm's residual, and
   REPRODUCED with walls excluded.
-- What survives without the sweep is larger through the body than on the point worm.
+- What survives without the sweep is larger through the body than on the point worm. The inputs are the
+  same; the body and the cell (hard350 at 500 steps here) differ.
 
 ### Omega turns and amplitude, reported
 
