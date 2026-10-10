@@ -64,8 +64,8 @@ one body length per 5 s step.
   foods of different quality (Shtonda & Avery 2006, to be verified in task 1).
 - **Scope.**
   - Lawns run single-agent only; multi-agent configs with lawns are refused.
-  - Lawn configs run headless; a non-headless theme with lawns is refused until the renderer draws
-    them.
+  - Lawns refuse the pixel renderers, which would draw no lawns, until the renderer draws them.
+    Text themes are left alone, as they draw no food geometry anyway.
   - Predators and thermal fields stay off in the lawn configs.
   - `foods_on_grid`, `target_foods_to_collect` and their validators are ignored under lawns.
 

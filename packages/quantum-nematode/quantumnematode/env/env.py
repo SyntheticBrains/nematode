@@ -28,6 +28,7 @@ from quantumnematode.dtypes import (
     Position,
     TemperatureSpot,
 )
+from quantumnematode.env.lawns import LawnField, LawnParams
 from quantumnematode.env.oxygen import (
     OxygenField,
     OxygenZone,
@@ -103,6 +104,23 @@ def field_magnitude(
         return float(strength * np.exp(-((distance / fick_length) ** 2)))
     if mode == "exponential":
         return float(strength * np.exp(-distance / decay))
+    msg = f"Unknown gradient field mode {mode!r}; expected 'exponential' or 'fick'."
+    raise ValueError(msg)
+
+
+def field_magnitudes(
+    distances: np.ndarray,
+    *,
+    mode: str,
+    decay: float,
+    strength: float,
+    fick_length: float,
+) -> np.ndarray:
+    """Return :func:`field_magnitude` for an array of distances at once."""
+    if mode == "fick":
+        return strength * np.exp(-((distances / fick_length) ** 2))
+    if mode == "exponential":
+        return strength * np.exp(-distances / decay)
     msg = f"Unknown gradient field mode {mode!r}; expected 'exponential' or 'fick'."
     raise ValueError(msg)
 
@@ -276,6 +294,11 @@ class ForagingParams:
     source_initial_amount: float = 1.0
     depletion_per_feed: float = 0.25
     source_removal_eps: float = 1e-3
+    # ``points`` places point food sources (every field above applies). ``lawns`` replaces them
+    # with disc lawns of depleting density (see ``env/lawns.py``); the point-food fields are then
+    # unused and there is no capture event.
+    food_model: str = "points"
+    lawns: LawnParams | None = None
 
     def fick_length(self) -> float:
         """Fick diffusion length ``sqrt(4 * D * assay_time)`` for the Gaussian kernel.
@@ -1577,6 +1600,8 @@ class DynamicForagingEnvironment(BaseEnvironment):
         # food field consults it only when self.foraging.source_depletion_enabled, so it is
         # byte-identical when depletion is off.
         self.food_amounts: list[float] = []
+        # The lawns, under ``food_model: lawns``; None under point food.
+        self.lawn_field: LawnField | None = None
         self.predators: list[Predator] = []
         if self.foraging.min_food_predator_distance > 0 and self.predator.enabled:
             self._initialize_predators()
@@ -1746,6 +1771,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
         """
         self.foods = []
         self.food_amounts = []
+        if self.foraging.food_model == "lawns":
+            self._initialize_lawns()
+            return
         attempts = 0
         max_total_attempts = MAX_POISSON_ATTEMPTS * self.foraging.foods_on_grid
         safe_bias = self.foraging.safe_zone_food_bias
@@ -1771,6 +1799,36 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 f"Could only place {len(self.foods)}/{self.foraging.foods_on_grid} initial foods "
                 f"after {attempts} attempts.",
             )
+
+    def _initialize_lawns(self) -> None:
+        """Place the lawns away from every agent's start, as the lawn configuration sets."""
+        params = self.foraging.lawns
+        if params is None:
+            msg = "food_model 'lawns' needs a lawns configuration"
+            raise ValueError(msg)
+        if self.theme in {Theme.PIXEL, Theme.PIXEL_CONTINUOUS}:
+            msg = f"the {self.theme} renderer does not draw lawns; run lawns headless"
+            raise ValueError(msg)
+        starts = [
+            (float(state.position[0]), float(state.position[1])) for state in self.agents.values()
+        ]
+        self.lawn_field = LawnField.place(
+            params,
+            self.rng,
+            world_size_mm=float(self.grid_size),
+            start=starts,
+        )
+
+    def _food_kernel(self, distances: np.ndarray) -> np.ndarray:
+        """Return the food field's per-source magnitudes at ``distances``, at full strength."""
+        foraging = self.foraging
+        return field_magnitudes(
+            distances,
+            mode=foraging.gradient_field_mode,
+            decay=foraging.gradient_decay_constant,
+            strength=foraging.gradient_strength,
+            fick_length=foraging.fick_length(),
+        )
 
     def _is_valid_food_position(self, pos: tuple[int, int]) -> bool:
         """
@@ -2208,6 +2266,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
             vector_x += strength * np.cos(direction)
             vector_y += strength * np.sin(direction)
 
+        if self.lawn_field is not None:
+            lawn_x, lawn_y = self.lawn_field.gradient(position, self._food_kernel)
+            vector_x += lawn_x
+            vector_y += lawn_y
+
         return vector_x, vector_y
 
     def _predator_xy(self, pred: Predator) -> tuple[float, float]:
@@ -2306,6 +2369,9 @@ class DynamicForagingEnvironment(BaseEnvironment):
                 distance,
                 source_amount=self.food_amounts[i] if deplete else None,
             )
+
+        if self.lawn_field is not None:
+            raw_concentration += self.lawn_field.concentration(position, self._food_kernel)
 
         return float(np.tanh(raw_concentration * GRADIENT_SCALING_TANH_FACTOR))
 
@@ -4404,6 +4470,7 @@ class DynamicForagingEnvironment(BaseEnvironment):
         new_env = self._new_like()
         new_env.foods = self.foods.copy()
         new_env.food_amounts = self.food_amounts.copy()
+        new_env.lawn_field = self.lawn_field.copy() if self.lawn_field is not None else None
         # Copy RNG state for reproducibility. We construct a fresh
         # Generator from the same seed and then transfer the source
         # generator's bit_generator state, so the clone resumes from

@@ -90,8 +90,8 @@ intake and outcome SHALL be written to the run's summary and its log line.
 
 ### Requirement: The lawn model's scope
 
-A configuration with `food_model: lawns` SHALL be refused if it runs more than one agent or a
-non-headless theme. Point-food keys (`foods_on_grid`, `target_foods_to_collect`) SHALL be ignored under
+A configuration with `food_model: lawns` SHALL be refused if it runs more than one agent or off the
+continuous substrate, and a lawn environment SHALL refuse a pixel renderer, which would draw no lawns. Point-food keys (`foods_on_grid`, `target_foods_to_collect`) SHALL be ignored under
 lawns rather than validated.
 
 #### Scenario: Multi-agent lawns are refused

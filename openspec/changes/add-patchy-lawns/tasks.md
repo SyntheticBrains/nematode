@@ -4,7 +4,7 @@
   and a pinned SHA-256. Pin each deposited array's condition and units from the paper's legends,
   including the durations' unit. Verify against its source every direction the registration will cite:
   the patch assay, food density, quality (Shtonda & Avery 2006), and the mutants for B.3.
-- [ ] 2. **Lawns**: `food_model: lawns`, the density grid, the area-weighted odour field and gradient
+- [x] 2. **Lawns** — **done: `env/lawns.py` (`LawnField`, `LawnParams`, placement, area-weighted odour and gradient, intake, regrowth); the environment reads it in both field functions and copies it; `LawnConfig` with the food-model, shaping, substrate and multi-agent validators; pixel renderers refused. Tests.** Original scope:: `food_model: lawns`, the density grid, the area-weighted odour field and gradient
   vector, placement, and the scope refusals. The default byte-identical. Tests.
 - [ ] 3. **Intake and outcomes**: per-step intake, reward and satiety by quality; the shaping
   validator; survived/starved outcomes; intake in the run summary and the log line. Tests.
