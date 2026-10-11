@@ -68,7 +68,8 @@ tail and the body's first two eigenworm amplitudes. It SHALL be off by default.
 `run_simulation.py` SHALL accept `--record-frames <dir>` and `--record-every <n>` (default 1). With
 them, the continuous renderer SHALL save every n-th rendered frame as a PNG named by run and step.
 `--record-frames` SHALL be refused with the `headless` theme, and SHALL run without a window under a
-dummy SDL video driver.
+dummy SDL video driver. `--record-follow` SHALL start a recording on the agent-following camera, and
+`--render-ppm` SHALL set the continuous renderer's scale, live or recorded.
 
 #### Scenario: Frames are saved
 

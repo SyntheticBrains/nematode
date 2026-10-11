@@ -330,7 +330,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 ### C.5 — rendering (SHOULD)
 
-- [ ] **C.5** `pixel_continuous` draws the segmented body from curvature or rod state (head,
+- [x] **C.5** — **met 2026-10-12** (`add-body-rendering`): the kinematic body drawn from its state with reversals marked and a posture panel; lawns drawn with density shading (the refusal narrowed to the grid theme); intake, lawn and modulator status lines; `--record-frames` with `--record-every`, `--record-follow` and `--render-ppm`. Original scope: `pixel_continuous` draws the segmented body from curvature or rod state (head,
   tail, reversals and omega turns visible) with an optional posture overlay; headless unchanged.
 
 ### B.3 + D.1 — internal state, the modulator field, patchy lawns (SHOULD, coupled)

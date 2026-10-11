@@ -152,6 +152,19 @@ def head_line_angle(curvature: np.ndarray, frame_angle: float, distance_bl: floa
     return math.atan2(direction[1], direction[0])
 
 
+def midline(state: BodyState, params: BodyParams) -> np.ndarray:
+    """Return the body's ``N_SEGMENTS + 1`` joints in world coordinates (mm), head first.
+
+    The same segment angles and frame rotation the physics uses, so a drawing of these points is the
+    body that moved.
+    """
+    ds = params.body_length_mm / N_SEGMENTS
+    angles = _segment_angles(state.curvature)
+    tangents = np.stack([np.cos(angles), np.sin(angles)], axis=1)
+    joints = np.vstack([[0.0, 0.0], -np.cumsum(tangents * ds, axis=0)])
+    return np.asarray(state.head, dtype=float) + _rotate(joints, state.frame_angle)
+
+
 def _rotate(vectors: np.ndarray, angle: float) -> np.ndarray:
     c, s = math.cos(angle), math.sin(angle)
     return vectors @ np.array([[c, s], [-s, c]])

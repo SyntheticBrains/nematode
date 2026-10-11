@@ -29,7 +29,11 @@ if TYPE_CHECKING:
     from quantumnematode.agent import QuantumNematodeAgent
     from quantumnematode.agent.runners import EpisodeResult
     from quantumnematode.brain.rollouts import RolloutRecorder
-    from quantumnematode.env.pygame_renderer import Continuous2DRenderer, PygameRenderer
+    from quantumnematode.env.pygame_renderer import (
+        Continuous2DRenderer,
+        FrameRecorder,
+        PygameRenderer,
+    )
     from quantumnematode.utils.config_loader import SensingConfig
 
 # Defaults
@@ -435,6 +439,10 @@ class QuantumNematodeAgent:
         # Optional per-step rollout recorder; the runners call it after every
         # ``run_brain`` when it is set and do nothing when it is None.
         self.rollout_recorder: RolloutRecorder | None = None
+        # When set, the continuous renderer saves frames here (a reviewer's recording).
+        self.frame_recorder: FrameRecorder | None = None
+        # The continuous renderer's scale in pixels per mm; None keeps its default.
+        self.render_pixels_per_mm: float | None = None
         self.satiety_config = satiety_config or SatietyConfig()
         self.sensing_config: SensingConfig = sensing_config or SensingConfig()
 
@@ -1581,9 +1589,17 @@ class QuantumNematodeAgent:
             try:
                 from quantumnematode.env.pygame_renderer import Continuous2DRenderer
 
-                self._continuous_renderer = Continuous2DRenderer(
-                    world_size_mm=self.env.continuous.world_size_mm,
-                )
+                if self.render_pixels_per_mm is None:
+                    self._continuous_renderer = Continuous2DRenderer(
+                        world_size_mm=self.env.continuous.world_size_mm,
+                    )
+                else:
+                    self._continuous_renderer = Continuous2DRenderer(
+                        world_size_mm=self.env.continuous.world_size_mm,
+                        pixels_per_mm=self.render_pixels_per_mm,
+                    )
+                if self.frame_recorder is not None and self.frame_recorder.follow:
+                    self._continuous_renderer.follow()
             except Exception as exc:  # pragma: no cover
                 msg = (
                     "pixel_continuous theme requires pygame with an available video "
@@ -1674,9 +1690,37 @@ class QuantumNematodeAgent:
             zone_name=zone_name,
             oxygen=oxygen,
             oxygen_zone_name=oxygen_zone_name,
+            **self._continuous_render_extras(pos),
         )
-
         renderer.render_frame(self.env, state, session_text=render_text)
+        recorder = self.frame_recorder
+        step = self._episode_tracker.steps
+        if recorder is not None and step % recorder.every == 0:
+            renderer.save_frame(recorder.directory / f"run{recorder.run:04d}-step{step:05d}.png")
+
+    def _continuous_render_extras(self, pos: tuple[float, float]) -> dict[str, Any]:
+        """Return the snapshot's optional fields: the kinematic body, lawn state and modulators.
+
+        Each is left out when it does not apply, so the renderer draws the point worm and omits the
+        status lines for a quantity this run does not have.
+        """
+        env = self.env
+        extras: dict[str, Any] = {}
+        midline = env.body_midline(self.agent_id)  # type: ignore[attr-defined]
+        if midline is not None:
+            extras["body_midline"] = tuple((float(x), float(y)) for x, y in midline)
+            extras["body_curvature"] = tuple(
+                float(k)
+                for k in env.body_curvature(self.agent_id)  # type: ignore[attr-defined]
+            )
+            extras["body_reversed"] = env.body_reversed(self.agent_id)  # type: ignore[attr-defined]
+        if env.lawn_field is not None:
+            extras["intake"] = float(self._episode_tracker.step_intake)
+            extras["on_lawn"] = env.lawn_field.lawn_at(pos) is not None
+        modulators = getattr(self.brain, "modulator_concentrations", None)
+        if modulators is not None:
+            extras["modulators"] = (float(modulators[0]), float(modulators[1]))
+        return extras
 
     def calculate_reward(  # noqa: PLR0913
         self,

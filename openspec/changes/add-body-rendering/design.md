@@ -70,6 +70,10 @@ run and step so a reviewer can find an episode's moment.
 
 - **Without a window.** Under `SDL_VIDEODRIVER=dummy` it records with no window, as the existing
   screenshot export does.
+- **Framing a body** (added in implementation): at the default scale the 1 mm body spans about 12
+  pixels. So `--record-follow` starts a recording on the following camera, and `--render-ppm` sets
+  the scale, live or recorded. The body is drawn at a worm's width, about a fifteenth of its length;
+  the point worm's broader stylised marker would hide the segments.
 - **No animation export.** Assembling a GIF or MP4 is left to the reviewer's tools (for example
   `ffmpeg -framerate 10 -pattern_type glob -i '<dir>/run1-*.png' out.mp4`), as the user chose. No new
   dependency.

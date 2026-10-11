@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from quantumnematode.env.body import BodyParams, BodyState, KinematicBody, new_body
+from quantumnematode.env.body import BodyParams, BodyState, KinematicBody, midline, new_body
 from quantumnematode.env.env import (
     _HEADING_OFFSET,
     DEFAULT_AGENT_ID,
@@ -173,6 +173,24 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             raise TypeError(msg)
         new_env.bodies = _copy.deepcopy(self.bodies)
         return new_env
+
+    def body_midline(self, agent_id: str = "default") -> np.ndarray | None:
+        """Return an agent's kinematic body as world-frame joints (mm), head first; None otherwise.
+
+        None under the point worm, and before the body's first step of an episode.
+        """
+        body = self.bodies.get(agent_id)
+        return None if body is None else midline(body, self._body.params)
+
+    def body_reversed(self, agent_id: str = "default") -> bool | None:
+        """Return whether an agent's kinematic body last ran tail-to-head; None without a body."""
+        body = self.bodies.get(agent_id)
+        return None if body is None else bool(body.last_reversed)
+
+    def body_curvature(self, agent_id: str = "default") -> np.ndarray | None:
+        """Return an agent's kinematic body's segment curvatures, head to tail; None without one."""
+        body = self.bodies.get(agent_id)
+        return None if body is None else np.array(body.curvature, dtype=float)
 
     def move_agent_body(
         self,
