@@ -59,3 +59,26 @@ def test_the_committed_leaving_configs_are_the_generators(arm: str, cell: str) -
     assert lawns.radius_mm == gen.CELLS[cell]["radius_mm"]
     assert lawns.count == gen.CELLS[cell]["count"]
     assert lawns.start_on_lawn
+
+
+@pytest.mark.parametrize("arm", gen.CONNECTOME_ARMS)
+def test_the_committed_connectome_lawn_configs_are_the_generators(arm: str) -> None:
+    """Each connectome arm is the connectome on D.1's lawn cell, at its entropy, and loads."""
+    path, text = gen.derive_connectome(arm)
+    assert path.read_text() == text
+    config = load_simulation_config(str(path))
+    assert config.max_steps == gen.MAX_STEPS
+    assert config.brain is not None
+    assert config.brain.name == "connectomeppo"
+    brain = config.brain.config
+    level = arm.removeprefix("connectome_").removesuffix("_frozen")
+    assert getattr(brain, "entropy_coef", None) == gen.CONNECTOME_ENTROPY[level]
+    assert getattr(brain, "freeze_updates", False) is arm.endswith("_frozen")
+    assert getattr(brain, "connectome_source", None) == "emmons_2024_hermaphrodite"
+    assert config.environment is not None
+    assert config.environment.foraging is not None
+    assert config.environment.foraging.food_model == "lawns"
+    patch = load_simulation_config(str(gen.FORAGING / f"{gen.stem('internal')}.yml"))
+    assert patch.environment is not None
+    assert config.environment.foraging == patch.environment.foraging
+    assert config.reward == patch.reward
