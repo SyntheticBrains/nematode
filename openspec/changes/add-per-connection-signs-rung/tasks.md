@@ -11,8 +11,10 @@ Phase 8, run before the M.9 decision. Registered in
   the 342; a null's outgoing sign multisets; the atlas null unchanged; PPO holds; off byte-identical.
 - [ ] 3. **Configs**: the rung's 12 thermal t35 arms and the two per-connection modulated arms, through
   generators, with loader tests.
-- [ ] 4. **Analysis**: the rung's readings, Holm, the verdicts and the beside readings, in the gate
+- [ ] 4. **Analysis**: the rung's three readings, Holm across the three, the verdicts and the beside readings, in the gate
   preflight's shape (`STEMS` per sign level), with tests. The modulated arms through `lawn_states.py`.
+- [ ] 4a. **Plan record**: the rung entered in `phase8-tracking` as M.10 and in the roadmap's Phase 8
+  list, with C.5's start noted, before registration.
 - [ ] 5. **Pilot**: seeds 9501–9504, configured as the panel; gates per level, spreads, cost.
 - [ ] 6. **Registration**: `launch.md`, the gate preflight, `/nematode-review-spec`.
 - [ ] 7. **Campaign and readout**: the panel from a worktree at the registration commit; the modulated

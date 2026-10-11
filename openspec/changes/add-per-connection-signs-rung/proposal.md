@@ -39,8 +39,12 @@ the thermal body cell.
 - **A registered rung** on the thermal cell at target 35 under PPO, run as a 2×3:
   - signs {random, atlas, per-connection} × wiring {wild type, chemical-only null}, each with a
     frozen floor;
-  - two contrasts on the wild type's lead: **grounding** (per-connection − random) and **receptor
-    correction** (per-connection − atlas), Holm-adjusted together.
+  - three readings on the wild type's lead over the null: **the lead** under per-connection signs,
+    **grounding** (per-connection − random) and **receptor correction** (per-connection − atlas),
+    Holm-adjusted together.
+  - At random signs that lead is +0.016 here, so the rung asks whether grounded signs make the
+    chemical wiring matter. The cell's large wiring effect is gap placement, which signs do not
+    touch.
 - **Beside it:** B.3's two acute knockouts re-read on a modulated connectome with per-connection
   signs, on B.3's seeds, never as verdicts.
 

@@ -75,8 +75,18 @@ byte-identical to before.
 
 ### Decision D: The rung
 
-**The cell** is block V's thermal cell at target 35 under PPO, where the wiring effect is largest on
-this substrate. It is the cell of Logbooks 078 and 082.
+**The cell** is block V's thermal cell at target 35 under PPO, the cell of Logbooks 078 and 082. It
+is chosen because it does not saturate and its gates are known, **not** because its wiring effect is
+large.
+
+- **That large effect is gap-junction placement** (+0.0865 in Logbook 078's split; +0.096 in M.8).
+  Signs touch only chemical synapses, so they cannot touch it.
+- **The relevant baseline is small.** That is the wild type's lead over a null that differs in
+  chemical placement alone. At random signs it is **+0.016** [+0.006, +0.027] here, against Logbook
+  078's gap-held null, read as `lead_below_minimum`. On hard350 it is +0.025.
+- **So the rung asks whether grounding signs makes the chemical wiring matter** where, at random
+  signs, it barely does. That is the phase's question at this rung, read where its answer is
+  currently near zero.
 
 **The wiring** is the wild type against **the chemical-only null**. It is D21's primary null, and it
 differs from the wild type in chemical placement alone, which is where signs live.
@@ -97,19 +107,30 @@ learning and frozen. That is 12 arms.
 
 A level failing either leaves the rung unreadable.
 
-**The readings** are two contrasts on the wild type's lead `gap = wild type − null`, paired by seed:
+**The readings** are three, on the wild type's lead `gap = wild type − null`, paired by seed:
 
+- **the lead:** `gap(per_connection)`. Does the wild type's chemical wiring matter once signs are
+  real? This is the phase's question at this rung, read as M.8 read its lead.
 - **grounding:** `gap(per_connection) − gap(random)`;
 - **receptor correction:** `gap(per_connection) − gap(atlas)`.
 
 Each is classified by `mc.classify`. The q values come from two-sided Wilcoxon tests,
-**Holm-adjusted** across the two.
+**Holm-adjusted** across the three. Holm is implemented directly, as in `lawn_states.holm`, since the
+house family correction is BH-FDR.
 
-**The minimum** is 2/3 of 0.0865, which is **0.058**. That is the thermal split's committed effect on
-this cell: how far a change to the null's placement moved the lead (Logbook 078). M.8 used the same
-reference. Both readings ask how far a change to the substrate moves the same lead.
+**The minimum** is 2/3 of 0.0865, which is **0.058**: **a change the size of the cell's largest
+committed wiring effect.** 0.0865 is how far a change to the null's gap placement moved the lead in
+Logbook 078's split. M.8 used the same reference.
 
-**The verdicts,** per reading:
+- **What a pass would mean.** The readings ask whether signs move the chemical lead by a cell-scale
+  amount. That would take it from +0.016 to beyond +0.07.
+- **What is likely.** `no_move` or `below` are the likely outcomes unless grounding transforms the
+  chemical wiring's role. The minimum is stated that way rather than anchored on the small chemical
+  lead itself: 2/3 of +0.016 is 0.011, below what an affordable panel resolves here.
+- **Who decided.** The user chose this framing at the spec review.
+
+**The verdicts,** per reading (for the lead, `move_wt` means the wild type's chemical wiring
+matters by at least the minimum):
 
 | state | verdict |
 |---|---|
@@ -121,7 +142,7 @@ reference. Both readings ask how far a change to the substrate moves the same le
 
 **Reported beside, never read as verdicts:**
 
-- the lead at each level;
+- the lead at the random and atlas levels;
 - `gap(atlas) − gap(random)`;
 - `episodes_to_30pct_success`;
 - each level's learning against its floor;
@@ -150,7 +171,8 @@ correcting AWC → AIY, where both modulators converge, changes what the learner
 and PDF.
 
 It is not registered as a second rung, because B.3's readout already showed that knockouts on
-single-state seeds say little.
+single-state seeds say little. Each substrate's knockouts are read against its own intact arm, so
+comparing knockout effects across the two substrates is description only.
 
 ## Risks
 
@@ -161,4 +183,6 @@ single-state seeds say little.
   rung is registered so that either outcome reads.
 - **Enforcement under PPO is new** (B.3, #444), and grounded and random signs are learned under
   different constraints. The grounding contrast reads that difference together with the signs
-  themselves. The beside readings report each level's learning so the constraint's cost is visible.
+  themselves; the logbook names this confound. The beside readings report each level's learning so
+  the constraint's cost is visible. The receptor-correction contrast has no such confound, since
+  both of its levels are enforced.
