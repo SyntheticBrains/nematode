@@ -30,8 +30,11 @@ From `data/neuromodulators/roaming_dwelling_circuit.json`, verified against the 
 - **PDF inhibits NSM** (Ji 2021 Fig 4E–G), modelled as a functional link, decided with the user after
   the spec review.
   - **Why it has to be added explicitly.** NSM is wired only to the pharynx in Emmons 2024: every
-    synaptic input and output is a pharyngeal neuron (I1–I6, M1–M4, MI), and it has no gap junctions.
-    No path from a receptor cell reaches it.
+    synaptic input and output is a pharyngeal neuron (I1–I6, M1–M4, MI), and its gap junctions join
+    only pharyngeal cells (I1, I2, M3) and its partner. No somatic neuron has a direct synapse or gap
+    junction onto it. A receptor cell reaches it only through the pharynx's link to the somatic
+    system (RIP to I1), four or five hops away. No such path carries an extrasynaptic modulator's
+    effect. *(Corrected at the branch review: an earlier version said NSM had no gap junctions.)*
   - **What Ji 2021 found.** PDF signalling keeps NSM inactive during roaming, acting through the
     PDFR-1 neurons. The MOD-1 neurons inhibit NSM too. The mechanism is polysynaptic or
     extrasynaptic.

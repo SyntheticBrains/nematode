@@ -195,6 +195,21 @@ class TestField:
         params = _params(0, ingested=0.01).model_copy(update={"max_food_ingested": 0.02})
         assert _brain(modulators=True).preprocess(params)[-1] == pytest.approx(0.5)
 
+    def test_the_field_rides_behind_the_other_projections(self) -> None:
+        """With thermotaxis on, the field's three inputs still come last and slice back intact."""
+        brain = _brain(modulators=True, enable_thermotaxis_projection=True)
+        params = _params(0, ingested=0.25).model_copy(
+            update={"temperature": 22.0, "cultivation_temperature": 20.0},
+        )
+        state = brain.preprocess(params)
+        assert state.shape == (3 + 3 + 3,)
+        modulators = brain._unpack_modulators(torch.from_numpy(state))
+        assert modulators is not None
+        assert modulators.tolist() == pytest.approx([0.0, 0.0, 0.25])
+        *_, thermo = brain._unpack_state(torch.from_numpy(state))
+        assert thermo is not None
+        assert thermo[0].item() == pytest.approx(2.0 / 15.0)
+
     def test_the_satiety_link_amplifies_ingestion_by_hunger(self) -> None:
         plain = _brain(modulators=True).preprocess(_params(0, ingested=0.4))
         linked = _brain(modulators=True, modulator_satiety_link=True).preprocess(

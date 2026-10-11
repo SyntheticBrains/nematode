@@ -1,4 +1,4 @@
-# 090: Removing Serotonin or PDF From the Trained Connectome Costs It Food but Does Not Shift Its Speed the Mutants' Way (Phase 8b B.3)
+# 090: Removing Serotonin From the Trained Connectome Leaves Its Speed Within the Minimum, and Removing PDFR-1 Is Unresolved (Phase 8b B.3)
 
 **Status**: completed. Both gates pass and the panel is readable, with two registered readings:
 **acute *tph-1*: no effect at the minimum; acute *pdfr-1*: unresolved at this sensitivity.**
@@ -20,14 +20,15 @@ minimum in the mutant's direction.
 
 **Beside the readings, never read as verdicts:**
 
-- **The network uses both modulators.** Removing either costs it food: −0.59 [−0.79, −0.40] per
-  episode without serotonin and −0.42 [−0.57, −0.26] without PDFR-1, against the intact network's
-  4.25.
+- **Removing either modulator costs the network food** (described, not registered): −0.59 \[−0.79,
+  −0.40\] per episode without serotonin and −0.42 [−0.57, −0.26] without PDFR-1, against the intact
+  network's 4.25. So the network uses both.
 - **On the classified dwelling share, acute *tph-1* moves the mutant's way:** +0.11 [+0.04, +0.18] less
   dwelling, carried by the seeds that switch states.
 - **Networks raised without a modulator move against the mutants:** raised without serotonin they
   are slower, raised without PDFR-1 faster.
-- **PPO weakens PDF's inhibition of NSM** on 29 of 32 seeds, to a median strength of 0.39.
+- **PDF's inhibition of NSM ends weaker than it starts** on 29 of 32 seeds, at a median strength of
+  0.39. Release is outside the gradient, so this is not PPO protecting serotonin (see below).
 
 **Date**: 2026-10-11.
 
@@ -162,8 +163,8 @@ dwell more than 0.278 above their floor, against stage 0's 13 of 19.
 | satiety link | 0.58 | 0.052 | 4.16 | 11 |
 | untrained floor | 0.013 | 0.127 | 1.53 | 0 |
 
-Paired by seed against the intact arm (80% intervals). Oriented rows read positive in the mutant's
-direction:
+Paired by seed against the intact arm (80% intervals), all described, none registered. Oriented
+rows read positive in the mutant's direction:
 
 | reading | mean [80% CI] |
 |---|---|
@@ -174,10 +175,11 @@ direction:
 | raised *tph-1*, speed, oriented | −0.019 [−0.030, −0.008] |
 | raised *pdfr-1*, speed, oriented | −0.021 [−0.038, −0.005] |
 | satiety link − intact, dwelling share | +0.09 [−0.06, +0.24] |
+| satiety link − intact, speed (mm/s) | −0.004 [−0.019, +0.011] |
 | intact − stage 0 (random signs, no field), dwelling share, seeds 2001–2019 | −0.15 [−0.32, +0.03] |
 
 **Post hoc, on the seven seeds that switch states** (at least 3 bouts of each), acute *tph-1* cuts
-dwelling on six, by +0.21 to +0.89. Their speed moves less, since dwelling is classified from turning
+dwelling on six, by +0.21 to +0.88. Their speed moves less, since dwelling is classified from turning
 as well as speed. This selection was not registered and is reported as description.
 
 **The learned strengths** start at 1. Medians across 32 seeds:
@@ -195,17 +197,26 @@ across seeds.
 
 ## What this establishes, and what it does not
 
-**Established:**
+**Established (registered):**
 
-- **The trained connectome uses both modulators.** Removing either costs it 10–14% of its intake.
-  The field is not decoration.
-- **That use is not the mutants' speed shift.** Removing serotonin leaves mean on-lawn speed within
+- **Removing serotonin does not shift speed the mutant's way.** It leaves mean on-lawn speed within
   ±0.009 mm/s, a third of the worm's dwelling-to-roaming gap, of where it was.
-- **PPO turns down PDF's inhibition of NSM, consistently.** This held on 29 of 32 seeds and in both
-  pilots. The learner keeps its serotonin source free of PDF's control. The worm's Ji et al. mechanism
-  depends on the reverse: PDF silencing NSM during roaming.
 - **The sign-grounded connectome dwells,** as stage 0's did. The positive control holds on the new
   substrate.
+
+**Described, with intervals clear of zero but not registered:**
+
+- **The trained connectome uses both modulators.** Removing either costs it 10–14% of its intake. So
+  the field is used, just not as a speed shift in the mutants' direction.
+- **PDF's inhibition of NSM ends weaker than it starts,** on 29 of 32 seeds and in both pilots. The
+  worm's mechanism in Ji et al. depends on the reverse: PDF silencing NSM during roaming.
+  - **What the gradient can and cannot see.** Release is computed outside the gradient, so no
+    gradient reaches this strength through serotonin's later effect on behaviour. It moves only
+    through NSM's activity within a step. NSM is four hops from any motor neuron, the same as the
+    settling depth, and the critic reads every neuron, NSM included. The value loss is therefore
+    the likeliest driver.
+  - **So this is not "the learner protecting its serotonin source".** Detaching the critic from NSM,
+    or letting release carry a gradient, would test it.
 
 **Not established:**
 
@@ -221,8 +232,8 @@ across seeds.
 
 - **What the learner does with the circuit is its own.** It is given the anatomy and the modulators'
   placement and signs, and it learns their strengths for reward. It weakened the one link the worm's
-  state persistence rests on. Why is not tested; a plausible reading is that on this cell a serotonin
-  source that tracks food, unchecked by PDF, serves foraging better.
+  state persistence rests on. Because release carries no gradient, that change most likely comes from
+  the critic's use of NSM's activity, not from what serotonin does to behaviour (see above).
 - **States here come from the cell's economics.** As D.1 and stage 0 found, dwelling is the best
   response to a movement cost and depleting food. Most seeds sit in one state all episode, so a
   knockout has little to switch. In the worm, states switch every few minutes. Here only 7 of 32

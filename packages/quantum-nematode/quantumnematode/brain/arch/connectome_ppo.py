@@ -351,8 +351,8 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # sign, which the post-synaptic receptor actually sets — see the connectome package's
     # neurotransmitters module. Default "random" is byte-identical to the pre-option brain.
     synapse_signs: Literal["random", "atlas"] = "random"
-    # Dale's law during plasticity: project every plastic update back onto its synapse's
-    # atlas-derived sign, leaving synapses without one unconstrained. Requires
+    # Dale's law: project every plastic update, and under PPO every optimiser step, back onto its
+    # synapse's atlas-derived sign, leaving synapses without one unconstrained. Requires
     # synapse_signs: atlas — constraining drawn signs would only freeze noise. Lives here and
     # not on the shared plasticity mixin because a dense MLP has no synapse signs to enforce.
     enforce_synapse_signs: bool = False

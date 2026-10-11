@@ -548,6 +548,11 @@ def _speed(run: dict[str, Any]) -> float | None:
     return None if speed is None else float(speed)
 
 
+def _intake(run: dict[str, Any]) -> float | None:
+    intake = run.get("evaluation_intake")
+    return None if intake is None else float(intake)
+
+
 _MEASURES: dict[str, Callable[[dict[str, Any]], float | None]] = {
     "dwelling": _dwelling,
     "speed": _speed,
@@ -674,6 +679,11 @@ def modulator_beside(
                 )
     if f"{intact}_satiety" in arms:
         out["satiety_link_minus_intact_dwelling"] = paired(runs, f"{intact}_satiety", intact)
+        out["satiety_link_minus_intact_speed"] = paired(runs, f"{intact}_satiety", intact, _speed)
+    for knockout in KNOCKOUT_DIRECTIONS["speed"]:
+        acute = f"{intact}+{knockout}"
+        if acute in arms:
+            out[f"acute_{knockout}_minus_intact_intake"] = paired(runs, acute, intact, _intake)
     out["strengths"] = {
         r["seed"]: r.get("modulator_strengths")
         for r in runs
