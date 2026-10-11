@@ -75,6 +75,7 @@ from quantumnematode.connectome.neuromodulators import ModulatorCircuit, load_ci
 from quantumnematode.connectome.neuromuscular import neuromuscular_drive_map
 from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
+from quantumnematode.connectome.signs import per_connection_signs
 from quantumnematode.env.body import N_SEGMENTS as N_BODY_SEGMENTS
 from quantumnematode.env.env import ContactZone
 from quantumnematode.logging_config import logger
@@ -219,6 +220,7 @@ def boundary_neurons(
 # the two widths consume identical randomness and start from the same policy; see
 # `_expand_over_motor_pool`. Default "pooled" is byte-identical to the pre-option brain.
 ReadoutWidth = Literal["pooled", "per_neuron"]
+SynapseSignModel = Literal["random", "atlas", "per_connection"]
 # How the chemical weights are drawn, which decides what two wirings hold in common at the same
 # seed. The scale rule (``weight_init``) is orthogonal: this setting chooses the draw's STRUCTURE.
 # - "edge_order" walks the (pre, post)-sorted edge list drawing one value per edge. Two graphs with
@@ -349,8 +351,12 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # the per-neuron scale and the RNG stream are untouched, so the two settings differ in sign
     # structure and nothing else. A transmitter is a per-neuron approximation of a synapse's
     # sign, which the post-synaptic receptor actually sets — see the connectome package's
-    # neurotransmitters module. Default "random" is byte-identical to the pre-option brain.
-    synapse_signs: Literal["random", "atlas"] = "random"
+    # neurotransmitters module. "per_connection" signs each synapse from the vendored per-connection
+    # table instead -- a physiology measurement first, then receptor-expression polarity, then the
+    # per-neuron rule -- which grounds the same synapses as "atlas" and corrects 342 of their signs;
+    # a rewired null's edges carry the sign of the wild-type edge whose place they took. Default
+    # "random" is byte-identical to the pre-option brain.
+    synapse_signs: SynapseSignModel = "random"
     # Dale's law: project every plastic update, and under PPO every optimiser step, back onto its
     # synapse's atlas-derived sign, leaving synapses without one unconstrained. Requires
     # synapse_signs: atlas — constraining drawn signs would only freeze noise. Lives here and
@@ -487,20 +493,20 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
             raise ValueError(refusal)
         if (refusal := _modulators_refusal(self)) is not None:
             raise ValueError(refusal)
-        if self.enforce_synapse_signs and self.synapse_signs != "atlas":
+        if self.enforce_synapse_signs and self.synapse_signs == "random":
             msg = (
-                "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
-                "that were drawn at random would constrain noise, not biology."
+                "enforce_synapse_signs=true requires synapse_signs='atlas' or 'per_connection': "
+                "enforcing signs that were drawn at random would constrain noise, not biology."
             )
             raise ValueError(msg)
         if self.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
-            self.synapse_signs != "atlas"
+            self.synapse_signs == "random"
         ):
             msg = (
                 "plasticity_decorrelation='anti_hebbian_inhibitory' requires "
-                "synapse_signs='atlas': the variant learns with the opposite sign at "
-                "inhibitory synapses, and where the signs were drawn there is no inhibitory "
-                "synapse to key on — only a coin flip to negate."
+                "synapse_signs='atlas' or 'per_connection': the variant learns with the "
+                "opposite sign at inhibitory synapses, and where the signs were drawn there is no "
+                "inhibitory synapse to key on — only a coin flip to negate."
             )
             raise ValueError(msg)
         return self
@@ -826,6 +832,24 @@ def _freeze_wiring_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return None
 
 
+def _per_connection_edge_signs(
+    wild_type: Connectome,
+    wiring: Connectome,
+    origins: Mapping[tuple[str, str], tuple[str, str]],
+) -> dict[tuple[str, str], int]:
+    """Sign each edge of ``wiring`` from the per-connection table defined on ``wild_type``.
+
+    On the wild type each edge takes its own sign. On a rewired null each edge takes the sign of
+    its origin, the wild-type edge whose place it took, so every neuron keeps its outgoing signs and
+    only their placement differs. An edge the table gives no sign to maps to 0.
+    """
+    table = {edge: entry.sign for edge, entry in per_connection_signs(wild_type).items()}
+    return {
+        (syn.pre, syn.post): table[origins.get((syn.pre, syn.post), (syn.pre, syn.post))]
+        for syn in wiring.chemical_synapses
+    }
+
+
 def _modulators_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     """Return why the modulator settings cannot run here, or ``None`` when they can."""
     if not config.modulators:
@@ -938,20 +962,20 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
             "and the arm measures decay rather than the perturbation dimension."
         )
         raise ValueError(msg)
-    if config.enforce_synapse_signs and config.synapse_signs != "atlas":
+    if config.enforce_synapse_signs and config.synapse_signs == "random":
         msg = (
-            "enforce_synapse_signs=true requires synapse_signs='atlas': enforcing signs "
-            "that were drawn at random would constrain noise, not biology."
+            "enforce_synapse_signs=true requires synapse_signs='atlas' or 'per_connection': "
+            "enforcing signs that were drawn at random would constrain noise, not biology."
         )
         raise ValueError(msg)
     if config.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
-        config.synapse_signs != "atlas"
+        config.synapse_signs == "random"
     ):
         msg = (
             "plasticity_decorrelation='anti_hebbian_inhibitory' requires "
-            "synapse_signs='atlas': the variant learns with the opposite sign at "
-            "inhibitory synapses, and where the signs were drawn there is no inhibitory "
-            "synapse to key on — only a coin flip to negate."
+            "synapse_signs='atlas' or 'per_connection': the variant learns with the "
+            "opposite sign at inhibitory synapses, and where the signs were drawn there is no "
+            "inhibitory synapse to key on — only a coin flip to negate."
         )
         raise ValueError(msg)
     if config.plasticity_eligibility == "node_perturbation" and config.plasticity_node_noise == 0.0:
@@ -1095,7 +1119,8 @@ class ConnectomeTopology(nn.Module):
         weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled",
         weight_draw: WeightDraw = "edge_order",
         draw_rng: np.random.Generator | None = None,
-        synapse_signs: Literal["random", "atlas"] = "random",
+        synapse_signs: SynapseSignModel = "random",
+        edge_signs: Mapping[tuple[str, str], int] | None = None,
         readout_width: ReadoutWidth = "pooled",
         measured_prior: MeasuredPriorAssignment | None = None,
         dynamics: Literal["settling", "leaky"] = "settling",
@@ -1196,10 +1221,14 @@ class ConnectomeTopology(nn.Module):
         )
         count_norm = np.sqrt(np.where(count_sq_sum > 0, count_sq_sum, 1.0))
 
-        # Per-neuron sign from the transmitter atlas, empty under "random". The matrix of
-        # per-synapse signs is registered as a buffer so Dale's law can read it on every update
-        # and it travels with the weights through persistence and `.to(device)`.
+        # Per-neuron sign from the transmitter atlas under "atlas"; per-edge signs, handed in by the
+        # brain, under "per_connection"; neither under "random". The matrix of per-synapse signs is
+        # registered as a buffer so Dale's law can read it on every update and it travels with the
+        # weights through persistence and `.to(device)`.
         self.synapse_signs = synapse_signs
+        if (synapse_signs == "per_connection") != (edge_signs is not None):
+            msg = "edge_signs are given exactly when synapse_signs='per_connection'"
+            raise ValueError(msg)
         sign_by_neuron: dict[str, int] = (
             {
                 name: sign
@@ -1279,7 +1308,11 @@ class ConnectomeTopology(nn.Module):
             # Sign grounding replaces the drawn sign where the pre-synaptic neuron's released
             # transmitter implies one, keeping the drawn magnitude — so the RNG stream, the
             # per-neuron scale and every magnitude are identical to the random-sign build.
-            sign = sign_by_neuron.get(syn.pre)
+            sign = (
+                edge_signs.get((syn.pre, syn.post), 0)
+                if edge_signs is not None
+                else sign_by_neuron.get(syn.pre)
+            )
             w_chem_np[pre_i, post_j] = np.float32(abs(drawn) * sign if sign else drawn)
             if sign:
                 sign_np[pre_i, post_j] = np.int8(sign)
@@ -3122,11 +3155,15 @@ class ConnectomePPOBrain(ClassicalBrain):
         # so the paired wild-type-vs-rewired comparison isolates topology, not an init-RNG offset.
         # Preserves every neuron's in/out degree; only which neurons connect changes, so per-post
         # fan-in (hence the strict-mask scale and gap normalisation) is intact.
+        # Each null edge's origin, the wild-type edge whose place it took: a per-connection sign
+        # travels with it, as its synapse count does.
+        origins: dict[tuple[str, str], tuple[str, str]] = {}
         if config.wiring != "wild_type":
             rewire_seed = config.rewire_seed if config.rewire_seed is not None else self.seed
             connectome = rewire_degree_preserving(
                 connectome,
                 np.random.default_rng(rewire_seed),
+                origins=origins,
                 rewire_gap_junctions=config.wiring
                 in ("rewired_degree_preserving", "rewired_gap_junctions_only"),
                 preserve_autapses=config.wiring
@@ -3180,6 +3217,11 @@ class ConnectomePPOBrain(ClassicalBrain):
             # rollout buffer shares, so the draw mode cannot move PPO's minibatch order.
             draw_rng=get_rng(self.seed),
             synapse_signs=config.synapse_signs,
+            edge_signs=(
+                _per_connection_edge_signs(wild_type, connectome, origins)
+                if config.synapse_signs == "per_connection"
+                else None
+            ),
             readout_width=config.readout_width,
             measured_prior=(
                 None
@@ -3277,7 +3319,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 # update points. The two are independent switches.
                 synapse_signs=(
                     [cast("torch.Tensor", self.topology.chem_sign)]
-                    if config.synapse_signs == "atlas"
+                    if config.synapse_signs != "random"
                     else None
                 ),
                 enforce_signs=config.enforce_synapse_signs,

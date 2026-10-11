@@ -332,6 +332,7 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
 
 - [x] **C.5** — **met 2026-10-12** (`add-body-rendering`): the kinematic body drawn from its state with reversals marked and a posture panel; lawns drawn with density shading (the refusal narrowed to the grid theme); intake, lawn and modulator status lines; `--record-frames` with `--record-every`, `--record-follow` and `--render-ppm`. Original scope: `pixel_continuous` draws the segmented body from curvature or rod state (head,
   tail, reversals and omega turns visible) with an optional posture overlay; headless unchanged.
+  *(**Started 2026-10-12**, decided with the user, so human reviewers can watch the body and the lawns: the kinematic body's segments, lawns with per-cell density (replacing the "run lawns headless" refusal), satiety, intake and the modulator concentrations in the status bar, and a PNG frame recorder. Its own change, alongside M.10.)*
 
 ### B.3 + D.1 — internal state, the modulator field, patchy lawns (SHOULD, coupled)
 
@@ -427,6 +428,8 @@ keeps the roadmap's numbering; A.4 runs first because it lands before the first 
   *(2026-10-07, [issue #423](https://github.com/SyntheticBrains/nematode/issues/423): Becker & Fauth, bioRxiv 2026.09.24.754073, find plastic coupling in a reservoir
   adds a slow timescale without node time constants: a reason this detour could supply what B.2a's
   route could not.)*
+
+- [ ] **M.10 The per-connection signs rung** *(added 2026-10-12, after B.3 and before the M.9 decision; `add-per-connection-signs-rung`)*. `synapse_signs: per_connection` signs each chemical synapse from H.2's table (physiology, then expression, then the per-neuron rule), and a null's edges carry the sign of the wild-type edge whose place they took. The table grounds the atlas's 3,176 synapses and corrects 342 of their signs, AWC → AIY among them. The rung is a 2×3 on the thermal cell at target 35 under PPO: signs {random, atlas, per-connection} × {wild type, chemical-only null}, each with a frozen floor, grounded signs enforced. Three readings at 0.058 with Holm across them: the lead under per-connection signs, grounding (per-connection − random), and receptor correction (per-connection − atlas). At random signs the chemical lead there is +0.016 (Logbook 078), so this asks whether grounded signs make the chemical wiring matter. Beside: B.3's two knockouts on per-connection signs. M.9 is decided after it.
 
 - [ ] **M.4 Reproducibility artefacts** current to the Phase 8 platform state, under A.0's rule.
 

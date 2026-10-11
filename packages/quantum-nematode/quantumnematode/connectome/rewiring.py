@@ -151,6 +151,7 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
     preserve_autapses: bool = False,
     hold_boundary: tuple[Collection[str], Collection[str]] | None = None,
     rewire_chemical: bool = True,
+    origins: dict[tuple[str, str], tuple[str, str]] | None = None,
 ) -> Connectome:
     """Return a degree-preserving rewired copy of ``connectome``.
 
@@ -177,6 +178,11 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
     * ``rewire_chemical=False`` skips the directed swap, so the chemical graph, autapses included,
       is the input's exactly; with ``rewire_gap_junctions`` left true the null differs in its gap
       junctions alone, placement and each neuron's total gap strength together.
+
+    ``origins``, if given, is filled with each rewired chemical edge's origin: the input edge whose
+    place it took. A swap edits the edge list in place, keeping each edge's pre-synaptic neuron and
+    moving its target, so an edge's origin shares its pre-synaptic neuron, and its count is the
+    origin's. Edges the swap does not touch map to themselves. Recording origins draws nothing.
 
     At their defaults the options leave the draws, and so the rewired graph, exactly as they were.
     With ``preserve_autapses`` the directed swap runs on a shorter list and draws differently, so at
@@ -208,8 +214,12 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
         chem_edges = [
             edge for edge in chem_edges if edge[0] not in sensory and edge[1] not in motor
         ]
+    slots = list(chem_edges)
     if rewire_chemical:
         _directed_double_edge_swap(chem_edges, chem_weights, rng, swaps_per_edge * len(chem_edges))
+    if origins is not None:
+        origins.update(zip(chem_edges, slots, strict=True))
+        origins.update((edge, edge) for edge in autapses + held)
     chem_edges += autapses + held
 
     gap_weights = {(g.neuron_a, g.neuron_b): g.weight for g in connectome.gap_junctions}
