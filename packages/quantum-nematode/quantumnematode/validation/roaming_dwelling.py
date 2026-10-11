@@ -266,6 +266,59 @@ def on_food_runs(on_food: np.ndarray) -> list[tuple[int, int]]:
     return [(int(a), int(b)) for a, b in zip(edges[::2], edges[1::2], strict=True)]
 
 
+# Leaving a lawn means moving, and moving reads as roaming, so the last 30 s before an exit are left
+# out of the pre-exit band; the band reaches back 180 s, the minutes over which real worms' roaming
+# runs above baseline before they leave.
+EXIT_NEAR_WINDOWS = 3
+EXIT_FAR_WINDOWS = 18
+
+
+def lawn_exits(on_lawn: np.ndarray, off_lawn: np.ndarray) -> list[int]:
+    """Return the index of each exit: the first fully off-lawn window after an on-lawn run.
+
+    ``on_lawn`` and ``off_lawn`` mark windows wholly on and wholly off a lawn; a window that is
+    neither straddles an edge. Straddling windows between an on-lawn run and a fully off window do
+    not break the exit, and a worm that straddles the edge and comes back on has not left.
+    """
+    on, off = np.asarray(on_lawn, dtype=bool), np.asarray(off_lawn, dtype=bool)
+    exits: list[int] = []
+    been_on = False
+    for k in range(len(on)):
+        if on[k]:
+            been_on = True
+        elif off[k] and been_on:
+            exits.append(k)
+            been_on = False
+    return exits
+
+
+def pre_exit_band(
+    states: np.ndarray,
+    exits: list[int],
+    near: int = EXIT_NEAR_WINDOWS,
+    far: int = EXIT_FAR_WINDOWS,
+) -> np.ndarray:
+    """Return the classified states in each exit's band, ``far`` to ``near`` windows before it."""
+    s = np.asarray(states)
+    band = [
+        s[k] for j in exits for k in range(max(0, j - far), max(0, j - near)) if s[k] != OFF_FOOD
+    ]
+    return np.asarray(band, dtype=int)
+
+
+def last_window_before_exits(states: np.ndarray, exits: list[int]) -> np.ndarray:
+    """Return the state of the last classified window before each exit, where there is one."""
+    s = np.asarray(states)
+    out = []
+    for j in exits:
+        k = j - 1
+        while k >= 0 and s[k] == OFF_FOOD:
+            k -= 1
+        if k >= 0:
+            out.append(s[k])
+    return np.asarray(out, dtype=int)
+
+
 def load_reference_hmm(path: Path = REFERENCE_HMM_PATH) -> CategoricalHMM:
     """Load the vendored reference model's parameters (see its provenance beside it)."""
     data = json.loads(path.read_text())

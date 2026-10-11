@@ -117,12 +117,17 @@ def intake_plateau(log: Path) -> float | None:
     return statistics.fmean(intakes[-tail:])
 
 
-def plateaus(log_dirs: list[Path], arm: str, seeds: tuple[int, ...]) -> dict[int, float]:
-    """Return each seed's intake plateau for one arm's runs."""
+def plateaus(
+    log_dirs: list[Path],
+    arm: str,
+    seeds: tuple[int, ...],
+    cell: str = "patch",
+) -> dict[int, float]:
+    """Return each seed's intake plateau for one arm's runs in ``cell``."""
     out: dict[int, float] = {}
     for seed in seeds:
         for log_dir in log_dirs:
-            value = intake_plateau(log_dir / f"{gen.stem(arm)}-seed{seed}.log")
+            value = intake_plateau(log_dir / f"{gen.stem(arm, cell)}-seed{seed}.log")
             if value is not None:
                 out[seed] = value
                 break
@@ -149,10 +154,11 @@ def learning_gate(learn: dict[int, float], floor: dict[int, float]) -> dict[str,
 
 @dataclass(frozen=True)
 class Episode:
-    """One evaluated episode's per-window measures, states and the density under the worm."""
+    """One evaluated episode's per-window states, the density under the worm, and its exits."""
 
     states: np.ndarray
     density: np.ndarray
+    exits: tuple[int, ...] = ()
 
 
 def episode_windows(
@@ -169,10 +175,12 @@ def episode_windows(
     x = np.array([s.x for s in steps])
     y = np.array([s.y for s in steps])
     on = np.array([bool(s.on_lawn) for s in steps])
+    off = ~on
     eaten = np.array([s.intake or 0.0 for s in steps])
     speed, angular = rd.window_measures(x, y)
     n = len(speed)
     on_window = np.array([on[2 * k : 2 * k + 3].all() for k in range(n)], dtype=bool)
+    off_window = np.array([off[2 * k : 2 * k + 3].all() for k in range(n)], dtype=bool)
     states = classifier.states(speed, angular, on_window)
     density = np.full(n, np.nan)
     for k in range(n):
@@ -180,7 +188,11 @@ def episode_windows(
         bites = bites[bites > 0]
         if bites.size:
             density[k] = float(bites.mean()) / (intake_fraction * quality)
-    return Episode(states=states, density=density)
+    return Episode(
+        states=states,
+        density=density,
+        exits=tuple(rd.lawn_exits(on_window, off_window)),
+    )
 
 
 def bout_durations(states: np.ndarray, state: int) -> list[float]:
@@ -196,6 +208,51 @@ def bout_durations(states: np.ndarray, state: int) -> list[float]:
             if complete and run[a] == state:
                 durations.append((b - a) * window_s)
     return durations
+
+
+def dwelling_ends(episodes: list[Episode]) -> dict[str, float | None]:
+    """How often a dwelling window is followed by roaming, where its spot is grazed against fresh.
+
+    It conditions on the worm already dwelling, so unlike roaming's share by density it is not
+    confounded by dwelling being what grazes a cell.
+    """
+    ends: dict[str, list[bool]] = {"grazed": [], "fresh": []}
+    for e in episodes:
+        for k in range(len(e.states) - 1):
+            if e.states[k] != rd.DWELLING or e.states[k + 1] == rd.OFF_FOOD:
+                continue
+            if np.isnan(e.density[k]):
+                continue
+            key = "grazed" if e.density[k] < GRAZED_DENSITY else "fresh"
+            ends[key].append(bool(e.states[k + 1] == rd.ROAMING))
+    return {f"dwell_end_{key}": float(np.mean(v)) if v else None for key, v in ends.items()}
+
+
+def leaving_readings(episodes: list[Episode]) -> dict[str, Any]:
+    """Pool a run's exits: their count and rate, and its band and last-window enrichment."""
+    states = [e.states for e in episodes]
+    exits = [list(e.exits) for e in episodes]
+    n_exits = sum(len(x) for x in exits)
+    on_windows = sum(int(np.sum(s != rd.OFF_FOOD)) for s in states)
+    on_hours = on_windows * rd.STEP_SECONDS * rd.WINDOW_STEPS / 3600.0
+    on_states = np.concatenate([s[s != rd.OFF_FOOD] for s in states]) if states else np.zeros(0)
+    overall = float(np.mean(on_states == rd.ROAMING)) if on_states.size else None
+    band = np.concatenate([rd.pre_exit_band(s, x) for s, x in zip(states, exits, strict=True)])
+    last = np.concatenate(
+        [rd.last_window_before_exits(s, x) for s, x in zip(states, exits, strict=True)],
+    )
+    band_share = float(np.mean(band == rd.ROAMING)) if band.size else None
+    last_share = float(np.mean(last == rd.ROAMING)) if last.size else None
+    return {
+        "exits": n_exits,
+        "exits_per_on_lawn_hour": n_exits / on_hours if on_hours else None,
+        "band_windows": int(band.size),
+        "band_roaming": band_share,
+        "band_enrichment": None if band_share is None or overall is None else band_share - overall,
+        "last_window_enrichment": None
+        if last_share is None or overall is None
+        else last_share - overall,
+    }
 
 
 def run_readings(episodes: list[Episode]) -> dict[str, Any]:
@@ -218,6 +275,8 @@ def run_readings(episodes: list[Episode]) -> dict[str, Any]:
         if grazed.any()
         else None,
         "roaming_where_fresh": float(np.mean(states[fresh] == rd.ROAMING)) if fresh.any() else None,
+        **dwelling_ends(episodes),
+        **leaving_readings(episodes),
     }
 
 
@@ -259,23 +318,17 @@ def capture(config_path: Path, seed: int, weights: Path | None, episodes: int) -
     return captured, intakes, lawns
 
 
-def evaluate_run(job: tuple[str, int, list[str], int]) -> dict[str, Any]:
+def evaluate_run(job: tuple[str, int, list[str], int, str]) -> dict[str, Any]:
     """Evaluate one run's states; a floor arm reads its seed's untrained policy."""
-    arm, seed, log_dirs, episodes = job
+    arm, seed, log_dirs, episodes, cell = job
     weights = None
     if not arm.endswith("_frozen"):
-        log = next(
-            (
-                Path(d) / f"{gen.stem(arm)}-seed{seed}.log"
-                for d in log_dirs
-                if (Path(d) / f"{gen.stem(arm)}-seed{seed}.log").is_file()
-            ),
-            None,
-        )
+        name = f"{gen.stem(arm, cell)}-seed{seed}.log"
+        log = next((Path(d) / name for d in log_dirs if (Path(d) / name).is_file()), None)
         weights = bc.final_weights(log) if log is not None else None
         if weights is None:
             return {"arm": arm, "seed": seed, "missing": True}
-    config = gen.FORAGING / f"{gen.stem(arm)}.yml"
+    config = gen.FORAGING / f"{gen.stem(arm, cell)}.yml"
     captured, intakes, lawns = capture(config, seed, weights, episodes)
     classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
     quality = float(lawns.quality[0]) if lawns.quality[0] == lawns.quality[1] else float("nan")
@@ -357,6 +410,69 @@ def read_panel(gate: dict[str, Any], runs: list[dict[str, Any]]) -> dict[str, An
     return out
 
 
+LEAVING_VERDICTS: dict[str, str] = {
+    "move_wt": "leaves_from_roaming",
+    "move_null": "leaves_from_dwelling",
+    "below": "coupling_below_minimum",
+    "no_move": "no_coupling_at_minimum",
+    "unresolved": "unresolved_at_this_sensitivity",
+}
+
+
+def read_leaving(  # noqa: PLR0913 - the gates and their registered thresholds
+    gate: dict[str, Any],
+    runs: list[dict[str, Any]],
+    *,
+    minimum: float,
+    min_exits: int,
+    min_seeds: int,
+    roaming_bounds: tuple[float, float] = (0.05, 0.95),
+) -> dict[str, Any]:
+    """Read the gates in order, then the learner's band enrichment at the minimum.
+
+    The learner must beat its floor on intake. A seed is read only if it leaves a lawn ``min_exits``
+    times and takes both states on lawns (its roaming share within ``roaming_bounds``); other seeds
+    are reported and left out, and fewer than ``min_seeds`` read seeds leave the panel unreadable.
+    The reading is a one-sample one: each read seed's enrichment, against zero.
+    """
+    learner = [r for r in runs if r["arm"] == "internal" and not r.get("missing")]
+    low, high = roaming_bounds
+
+    def both_states(run: dict[str, Any]) -> bool:
+        share = run.get("roaming_fraction")
+        return share is not None and low <= share <= high
+
+    leaving = [r for r in learner if (r.get("exits") or 0) >= min_exits and both_states(r)]
+    out: dict[str, Any] = {
+        "minimum": minimum,
+        "min_exits": min_exits,
+        "learning_gate": bool(gate["passes"]),
+        "seeds_leaving": [r["seed"] for r in leaving],
+        "seeds_too_few_exits": [r["seed"] for r in learner if (r.get("exits") or 0) < min_exits],
+        "seeds_one_state": [r["seed"] for r in learner if not both_states(r)],
+    }
+    values = {
+        r["seed"]: r["band_enrichment"] for r in leaving if r.get("band_enrichment") is not None
+    }
+    out["readable"] = out["learning_gate"] and len(values) >= min_seeds
+    if not out["readable"]:
+        out["verdict"] = "unreadable"
+        return out
+    test = wp.paired_seed_wilcoxon_bootstrap(list(values.values()))
+    q = ops.two_sided(test["wilcoxon_p"])
+    state = mc.classify(test["mean_delta"], test["ci_lo"], test["ci_hi"], q, minimum)
+    sd = statistics.stdev(values.values()) if len(values) > 1 else float("nan")
+    return out | {
+        "per_seed": values,
+        "test": test,
+        "q": q,
+        "state": state,
+        "verdict": LEAVING_VERDICTS[state],
+        "achieved_sd": sd,
+        "achieved_mde": MDE_Z * sd / math.sqrt(len(values)),
+    }
+
+
 def beside(runs: list[dict[str, Any]]) -> dict[str, Any]:
     """Return the readings reported beside the verdict, never read as one."""
 
@@ -398,6 +514,13 @@ CSV_FIELDS = (
     "roaming_where_fresh",
     "log_std_speed",
     "log_std_turn",
+    "dwell_end_grazed",
+    "dwell_end_fresh",
+    "exits",
+    "exits_per_on_lawn_hour",
+    "band_roaming",
+    "band_enrichment",
+    "last_window_enrichment",
 )
 
 
@@ -435,33 +558,57 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("--logs", type=Path, action="append", required=True)
-    ap.add_argument("--arms", nargs="+", choices=list(gen.ARMS), default=list(gen.ARMS))
+    ap.add_argument("--arms", nargs="+", choices=list(gen.ARMS), default=None)
+    ap.add_argument("--cell", choices=list(gen.CELLS), default="patch")
     ap.add_argument("--seeds", type=int, nargs="+", required=True)
     ap.add_argument("--episodes", type=int, default=20)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--out", type=Path, help="write the JSON here")
     ap.add_argument("--csv", type=Path, help="write one row per evaluated run here")
+    ap.add_argument("--leaving-minimum", type=float, help="the leaving cell's registered minimum")
+    ap.add_argument("--min-exits", type=int, help="exits a learner seed needs to be read")
+    ap.add_argument("--min-seeds", type=int, help="readable seeds the leaving panel needs")
     args = ap.parse_args(argv)
     seeds = tuple(args.seeds)
+    if args.arms is None:
+        args.arms = list(gen.ARMS if args.cell == "patch" else gen.LEAVING_ARMS)
     gates = {
         arm: learning_gate(
-            plateaus(args.logs, arm, seeds),
-            plateaus(args.logs, "internal_frozen", seeds),
+            plateaus(args.logs, arm, seeds, args.cell),
+            plateaus(args.logs, "internal_frozen", seeds, args.cell),
         )
         for arm in args.arms
         if not arm.endswith("_frozen")
     }
     jobs = [
-        (arm, seed, [str(d) for d in args.logs], args.episodes)
+        (arm, seed, [str(d) for d in args.logs], args.episodes, args.cell)
         for arm in args.arms
         for seed in seeds
     ]
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
         runs = list(pool.map(evaluate_run, jobs))
-    result: dict[str, Any] = {"episodes": args.episodes, "gates": gates, "runs": runs}
-    if "internal" in gates and {"internal", "internal_frozen"} <= set(args.arms):
+    result: dict[str, Any] = {
+        "cell": args.cell,
+        "episodes": args.episodes,
+        "gates": gates,
+        "runs": runs,
+    }
+    if (
+        args.cell == "patch"
+        and "internal" in gates
+        and {"internal", "internal_frozen"} <= set(args.arms)
+    ):
         result["panel"] = read_panel(gates["internal"], runs)
         result["beside"] = beside(runs)
+    leaving_args = (args.leaving_minimum, args.min_exits, args.min_seeds)
+    if args.cell != "patch" and "internal" in gates and None not in leaving_args:
+        result["leaving"] = read_leaving(
+            gates["internal"],
+            runs,
+            minimum=args.leaving_minimum,
+            min_exits=args.min_exits,
+            min_seeds=args.min_seeds,
+        )
     if args.csv:
         write_csv(result, args.csv)
     payload = json.dumps(result, indent=2, default=str) + "\n"

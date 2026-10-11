@@ -143,3 +143,26 @@ class TestGaussianModel:
         states = classifier.states(speed, np.zeros(16), np.ones(16, dtype=bool))
         assert states[0] == rd.ROAMING
         assert states[-1] == rd.DWELLING
+
+
+class TestLeaving:
+    def test_an_exit_after_a_lawn_run(self) -> None:
+        """Scenario "An exit is found and its preceding state read": on, edge, off is one exit."""
+        on = np.array([1, 1, 1, 0, 0, 0], dtype=bool)
+        off = np.array([0, 0, 0, 0, 1, 1], dtype=bool)
+        assert rd.lawn_exits(on, off) == [4]
+
+    def test_a_flicker_at_the_edge_is_not_an_exit(self) -> None:
+        """Scenario "A flicker at the edge is not an exit": straddling and coming back on."""
+        on = np.array([1, 1, 0, 1, 1], dtype=bool)
+        off = np.zeros(5, dtype=bool)
+        assert rd.lawn_exits(on, off) == []
+
+    def test_the_band_leaves_out_the_last_30_seconds(self) -> None:
+        """Three minutes of roaming then dwelling right before the exit: the band is all roaming."""
+        r, d, off = rd.ROAMING, rd.DWELLING, rd.OFF_FOOD
+        states = np.array([r] * 18 + [d] * 3 + [off])
+        band = rd.pre_exit_band(states, [21])
+        assert len(band) == 15
+        assert set(band) == {r}
+        assert rd.last_window_before_exits(states, [21]).tolist() == [d]

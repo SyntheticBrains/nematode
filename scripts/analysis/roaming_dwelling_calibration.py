@@ -10,7 +10,8 @@ Two stages, each a subcommand:
     animal, the midbody position is sampled every 15 frames (5 s at 3 frames/s), converted to mm
     with the animal's own scale, and measured as simulated tracks are
     (:func:`quantumnematode.validation.roaming_dwelling.window_measures`). Each 10-second window
-    keeps its speed, angular speed, whether it lies in an in-lawn run, and the authors' label
+    keeps its speed, angular speed, whether it lies in an in-lawn run or an out-of-lawn run, and the
+    authors' label
     (``RD_states_Matrix_exog``: roaming, dwelling, or masked off-lawn). The windows line up with the
     authors' 10-second bins. The result is written as a compressed ``.npz``.
 
@@ -81,6 +82,7 @@ def derive(pickle_path: Path, out: Path) -> dict[str, Any]:
     x_px, y_px = np.asarray(data["Midbody_cent_x"]), np.asarray(data["Midbody_cent_y"])
     scale = np.asarray(data["pixpermm"], dtype=float).ravel()
     in_run = np.asarray(data["InLawnRunMask"], dtype=bool)
+    out_run = np.asarray(data["OutLawnRunMask"], dtype=bool)
     labels_ma = data["RD_states_Matrix_exog"]
     raw_labels = np.where(np.ma.getdata(labels_ma), rd.ROAMING, rd.DWELLING)
     labels = np.where(np.ma.getmaskarray(labels_ma), rd.OFF_FOOD, raw_labels).astype(np.int8)
@@ -94,7 +96,14 @@ def derive(pickle_path: Path, out: Path) -> dict[str, Any]:
         speed[i, : len(s)], angular[i, : len(a)] = s, a
     on_food = in_run & np.isfinite(speed)
     out.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(out, speed=speed, angular=angular, on_food=on_food, labels=labels)
+    np.savez_compressed(
+        out,
+        speed=speed,
+        angular=angular,
+        on_food=on_food,
+        off_lawn=out_run,
+        labels=labels,
+    )
     return {
         "animals": int(n_animals),
         "windows": int(n_bins),

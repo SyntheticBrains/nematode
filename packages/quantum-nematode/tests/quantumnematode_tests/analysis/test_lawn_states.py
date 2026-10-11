@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Self
 
 import numpy as np
 import pytest
@@ -157,3 +158,145 @@ def test_the_csv_has_a_row_per_run_with_its_plateau(tmp_path: Path) -> None:
     assert first["intake_plateau"] == "3.0"
     assert first["dwelling_share"] == "0.75"
     assert first["log_std_speed"] == "-3.0"
+
+
+class TestLeaving:
+    def test_an_episode_records_its_exits(self) -> None:
+        """Three samples on, then a full window off: one exit at that window."""
+        xs = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
+        on = [True, True, True, False, False, False, False]
+        steps = _steps(xs, on, [0.0] * 7)
+        classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
+        episode = ls.episode_windows(steps, classifier, intake_fraction=0.02, quality=1.0)
+        assert episode.exits == (2,)
+
+    def test_leaving_readings_pool_the_exits(self) -> None:
+        """A band of roaming before an exit, against a run that mostly dwells."""
+        d, r, off = rd.DWELLING, rd.ROAMING, rd.OFF_FOOD
+        states = np.array([d] * 42 + [r] * 15 + [d] * 3 + [off] * 4)
+        episode = ls.Episode(states=states, density=np.full(64, np.nan), exits=(60,))
+        out = ls.leaving_readings([episode])
+        assert out["exits"] == 1
+        assert out["band_roaming"] == 1.0
+        assert out["band_enrichment"] == pytest.approx(0.75)
+
+    def test_dwelling_ends_by_the_spots_density(self) -> None:
+        """Dwelling ends into roaming on a grazed spot and persists on a fresh one."""
+        d, r = rd.DWELLING, rd.ROAMING
+        episode = ls.Episode(
+            states=np.array([d, d, r, d, d]),
+            density=np.array([0.9, 0.2, 0.2, 0.9, 0.9]),
+        )
+        out = ls.dwelling_ends([episode])
+        assert out["dwell_end_grazed"] == 1.0
+        assert out["dwell_end_fresh"] == 0.0
+
+    def _runs(self, enrichment: float, exits: int = 10) -> list[dict[str, object]]:
+        return [
+            {
+                "arm": "internal",
+                "seed": s,
+                "exits": exits,
+                "roaming_fraction": 0.4,
+                "band_enrichment": enrichment + 0.01 * (s % 3),
+            }
+            for s in range(16)
+        ]
+
+    def test_a_coupling_above_the_minimum_leaves_from_roaming(self) -> None:
+        """Enrichment of about 0.3 on every seed, minimum 0.1, reads ``leaves_from_roaming``."""
+        out = ls.read_leaving(
+            {"passes": True},
+            self._runs(0.3),
+            minimum=0.1,
+            min_exits=3,
+            min_seeds=8,
+        )
+        assert out["verdict"] == "leaves_from_roaming"
+
+    def test_too_few_leaving_seeds_is_unreadable(self) -> None:
+        """Seeds that leave less than the threshold are left out; too few left is unreadable."""
+        out = ls.read_leaving(
+            {"passes": True},
+            self._runs(0.3, exits=1),
+            minimum=0.1,
+            min_exits=3,
+            min_seeds=8,
+        )
+        assert out["verdict"] == "unreadable"
+        assert len(out["seeds_too_few_exits"]) == 16
+
+
+def test_a_seed_with_one_state_is_not_read() -> None:
+    """A seed that never roams leaves while dwelling; it is reported and left out."""
+    runs = [
+        {"arm": "internal", "seed": s, "exits": 10, "roaming_fraction": 0.0, "band_enrichment": 0.0}
+        for s in range(16)
+    ]
+    out = ls.read_leaving({"passes": True}, runs, minimum=0.1, min_exits=3, min_seeds=8)
+    assert out["verdict"] == "unreadable"
+    assert len(out["seeds_one_state"]) == 16
+
+
+def test_every_leaving_cell_gets_the_registered_reading(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The CLI reads the leaving panel for any leaving cell, not only the one named ``leaving``."""
+    learn = {s: 2.0 + 0.1 * s for s in range(4)}
+    floor = dict.fromkeys(range(4), 0.5)
+
+    def fake_plateaus(
+        _logs: object,
+        arm: str,
+        seeds: tuple[int, ...],
+        _cell: str,
+    ) -> dict[int, float]:
+        return {s: (floor if arm.endswith("_frozen") else learn)[s] for s in seeds}
+
+    def fake_evaluate(job: tuple[str, int, list[str], int, str]) -> dict[str, object]:
+        arm, seed, *_ = job
+        return {
+            "arm": arm,
+            "seed": seed,
+            "exits": 20,
+            "roaming_fraction": 0.5,
+            "band_enrichment": 0.0,
+        }
+
+    class _Pool:
+        def __init__(self, **_: object) -> None: ...
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_: object) -> None: ...
+        def map(self, fn: object, jobs: list[object]) -> list[object]:
+            return [fake_evaluate(j) for j in jobs]  # type: ignore[arg-type]
+
+    monkeypatch.setattr(ls, "plateaus", fake_plateaus)
+    monkeypatch.setattr(ls, "ProcessPoolExecutor", _Pool)
+    out = tmp_path / "panel.json"
+    ls.main(
+        [
+            "--logs",
+            str(tmp_path),
+            "--cell",
+            "leaving15x4",
+            "--seeds",
+            "0",
+            "1",
+            "2",
+            "3",
+            "--leaving-minimum",
+            "0.1",
+            "--min-exits",
+            "10",
+            "--min-seeds",
+            "4",
+            "--out",
+            str(out),
+        ],
+    )
+    import json
+
+    assert "leaving" in json.loads(out.read_text())
