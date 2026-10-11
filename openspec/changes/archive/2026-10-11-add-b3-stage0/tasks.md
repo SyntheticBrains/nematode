@@ -6,6 +6,6 @@
   D.1's MLP by seed, from D.1's committed readings. Tests.
 - [x] 3. **Pilot and registration** — **done 2026-10-11:** 0.005 chosen (gate +1.44; two of four seeds dwell, at +0.93 and +0.73); minimum 0.278 on 19 seeds (2001–2019); gate preflight passes; the connectome's action noise is read from its topology. Original scope:: both entropy levels on seeds 9301–9304; choose the level;
   `089-connectome-lawns/launch.md`; gate preflight; `/nematode-review-spec`.
-- [ ] 4. **Campaign and readout**: the panel on seeds 2001–2016; Logbook 089; tracker B.3 stage 0;
+- [x] 4. **Campaign and readout** — **done 2026-10-11:** 38 runs on seeds 2001–2019, all succeeded. The registered reading is **dwells**: +0.514 [+0.398, +0.626], q 1.6e-4. Logbook 089; the tracker's stage 0 entry; the roadmap note; the experiments index; the changelog. Original scope:: the panel on seeds 2001–2016; Logbook 089; tracker B.3 stage 0;
   roadmap.
-- [ ] 5. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
+- [x] 5. **Close-out** — **done: full suite 7580 passed; hooks over all files by exit code; validated; archived.** Original scope:: full suite; hooks by exit code; validate; archive; PR.
