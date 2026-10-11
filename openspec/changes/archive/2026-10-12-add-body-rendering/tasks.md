@@ -15,4 +15,4 @@
   of four at every-2; the headless refusal.
 - [x] 6. **Docs**: a screenshot of a lawn run with the kinematic body; the CHANGELOG; tracker C.5;
   `docs` on watching and recording a run.
-- [ ] 7. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
+- [x] 7. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
