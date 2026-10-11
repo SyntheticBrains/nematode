@@ -17,4 +17,4 @@
   gates, the knockouts' spreads and the cost; the biological speed minimum; `090-modulators/launch.md`;
   the preflight on the eight pilot seeds; `/nematode-review-spec`.
 - [x] 7. **Campaign and readout**: the panel; Logbook 090; tracker B.3; roadmap.
-- [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
+- [x] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
