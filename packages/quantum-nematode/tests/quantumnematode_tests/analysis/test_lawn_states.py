@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Self
 
 import numpy as np
 import pytest
@@ -235,3 +236,67 @@ def test_a_seed_with_one_state_is_not_read() -> None:
     out = ls.read_leaving({"passes": True}, runs, minimum=0.1, min_exits=3, min_seeds=8)
     assert out["verdict"] == "unreadable"
     assert len(out["seeds_one_state"]) == 16
+
+
+def test_every_leaving_cell_gets_the_registered_reading(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The CLI reads the leaving panel for any leaving cell, not only the one named ``leaving``."""
+    learn = {s: 2.0 + 0.1 * s for s in range(4)}
+    floor = dict.fromkeys(range(4), 0.5)
+
+    def fake_plateaus(
+        _logs: object,
+        arm: str,
+        seeds: tuple[int, ...],
+        _cell: str,
+    ) -> dict[int, float]:
+        return {s: (floor if arm.endswith("_frozen") else learn)[s] for s in seeds}
+
+    def fake_evaluate(job: tuple[str, int, list[str], int, str]) -> dict[str, object]:
+        arm, seed, *_ = job
+        return {
+            "arm": arm,
+            "seed": seed,
+            "exits": 20,
+            "roaming_fraction": 0.5,
+            "band_enrichment": 0.0,
+        }
+
+    class _Pool:
+        def __init__(self, **_: object) -> None: ...
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_: object) -> None: ...
+        def map(self, fn: object, jobs: list[object]) -> list[object]:
+            return [fake_evaluate(j) for j in jobs]  # type: ignore[arg-type]
+
+    monkeypatch.setattr(ls, "plateaus", fake_plateaus)
+    monkeypatch.setattr(ls, "ProcessPoolExecutor", _Pool)
+    out = tmp_path / "panel.json"
+    ls.main(
+        [
+            "--logs",
+            str(tmp_path),
+            "--cell",
+            "leaving15x4",
+            "--seeds",
+            "0",
+            "1",
+            "2",
+            "3",
+            "--leaving-minimum",
+            "0.1",
+            "--min-exits",
+            "10",
+            "--min-seeds",
+            "4",
+            "--out",
+            str(out),
+        ],
+    )
+    import json
+
+    assert "leaving" in json.loads(out.read_text())

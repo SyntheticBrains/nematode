@@ -28,7 +28,7 @@ out. D.1b runs before B.3, on the MLP.
   - the leaving rate;
   - the chance that a dwelling window is followed by roaming, by the density of the spot.
 - **A registered positive control**: the learner's pre-exit roaming enrichment, graded against the
-  real worms' direction, behind gates that it learns and that it leaves at all.
+  real worms' direction, behind gates that it learns, that it leaves, and that it takes both states.
 
 ## Capabilities
 

@@ -8,7 +8,7 @@
 - [x] 2. **Readings** — **done: exits per episode (all three samples off makes a window off); band and last-window enrichment; leaving rate; the dwelling-end statistic; `read_leaving` (the learning gate, the exits gate, the one-sample reading at a minimum given on the command line); the analysis takes a `--cell`. Tests.** Original scope:: exits, pre-exit enrichment, leaving rate and the dwelling-end statistic in
   `lawn_states.py`; the one-sample registered reading and the leaving gate. Tests.
 - [x] 3. **Cell** — **done: the generator's `leaving` cell (8 lawns of 1.0 mm, 5 cells each, placing on all 3,000 seeds tried) for the learner and its floor; D.1's configs unchanged. Tests.** Original scope:: the leaving cell's configs from the generator. Tests.
-- [ ] 4. **Pilot and registration**: a small sweep of lawn size and count on disjoint seeds until the
+- [x] 4. **Pilot and registration** — **done 2026-10-11:** two pilots, three cells. The four 1.5 mm lawns pass every gate on every seed and are registered: minimum 0.10, at least 10 exits, roaming 5–95%, at least 12 read seeds, seeds 2101–2116. The likeliest verdict, no coupling, is stated in advance. Gate preflight passes. Original scope:: a small sweep of lawn size and count on disjoint seeds until the
   learner learns and leaves; `088-patch-leaving/launch.md` (the minimum, the exit gate, the
   sizing); gate preflight; `/nematode-review-spec`.
 - [ ] 5. **Campaign and readout**: the panel; Logbook 088; tracker D.1b; roadmap.

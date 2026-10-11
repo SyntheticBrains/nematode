@@ -601,7 +601,7 @@ def main(argv: list[str] | None = None) -> int:
         result["panel"] = read_panel(gates["internal"], runs)
         result["beside"] = beside(runs)
     leaving_args = (args.leaving_minimum, args.min_exits, args.min_seeds)
-    if args.cell == "leaving" and "internal" in gates and None not in leaving_args:
+    if args.cell != "patch" and "internal" in gates and None not in leaving_args:
         result["leaving"] = read_leaving(
             gates["internal"],
             runs,

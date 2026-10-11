@@ -34,6 +34,16 @@ grazes inside a lawn before it travels. Two cells are piloted on fresh seeds, **
 lawns**, and the registration takes whichever passes every gate. If neither does, D.1b closes with
 its reason.
 
+**The second pilot, 2026-10-11** (seeds 9205–9208):
+
+- **Four lawns passed every gate on every seed:** learning +1.21 [+0.98, +1.44], 52–72 exits per
+  seed, and roaming of 42–93%. It is registered.
+- **Six lawns** failed one seed's states gate, and are described beside.
+- **In both cells the learners' band enrichment sat near zero** (four-lawn mean +0.020, sd 0.042).
+  The registration states its likeliest verdict before the panel runs: no coupling at the minimum.
+
+See `docs/experiments/logbooks/supporting/088-patch-leaving/launch.md`.
+
 Quality is fixed at 1.0. The quality direction (Shtonda & Avery 2006) is deferred to a later cell
 and verified against its source first.
 
