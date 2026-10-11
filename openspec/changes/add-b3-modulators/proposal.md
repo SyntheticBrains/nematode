@@ -21,10 +21,10 @@ The design was agreed with the user on 2026-10-11. The circuit is vendored from 
     activity, decaying with a fixed 60 s timescale.
   - **Gating:** a sign-fixed current on each receptor cell at every settling iteration, with a
     learnable strength per receptor.
-  - **Food:** NSM receives a sensory current proportional to the food the worm ate on its last move.
+  - **Food:** NSM receives a held current proportional to the food the worm ate on its last move.
+  - **PDF inhibits NSM** (Ji 2021), as a functional link, since NSM is wired only to the pharynx.
   - **Replay:** the concentrations are carried with the buffered states, so PPO's replay sees them.
-- **Knockouts.** A config switch removes serotonin (*tph-1*), PDF (*pdf*), MOD-1 (*mod-1*) or PDFR-1
-  (*pdfr-1*). It is applied at evaluation for the primary reading, and from the start of training for
+- **Knockouts.** A config switch removes serotonin (*tph-1*) or every PDFR-1 effect (*pdfr-1*). It is applied at evaluation for the primary reading, and from the start of training for
   the raised mutants beside it.
 - **Food ingestion reaches the brain:** `BrainParams.food_ingested`.
 - **A registered panel:**

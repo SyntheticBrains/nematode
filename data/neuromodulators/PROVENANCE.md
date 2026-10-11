@@ -23,3 +23,8 @@ figure legends (not the figure images) of its source:
   Flavell 2013's roaming/dwelling assay does. That is a different behaviour.
 - **HSN** is required for serotonin's effect too (Flavell 2013), but is not modelled as a release
   site. NSM's food-ingestion drive is the verified mechanism.
+
+**PDF's inhibition of NSM** (Ji 2021 Fig 4E–G) is recorded as a functional link: PDF signalling, acting
+through the PDFR-1 neurons, keeps NSM inactive during roaming. In Emmons 2024, NSM is wired only to
+pharyngeal neurons, so the model carries this link as an inhibitory current on NSM rather than
+through the wiring.

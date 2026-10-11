@@ -2,10 +2,12 @@
 
 - [ ] 1. **Circuit data**: `data/neuromodulators/` with provenance, and a loader that maps the classes
   to the connectome's neurons. Tests.
-- [ ] 2. **Field**: the concentrations, release, gating in rollout and replay, the NSM ingestion drive,
-  appending to the preprocessed state, episode reset, checkpoint round-trip, and byte-identity when
-  off. Tests.
-- [ ] 3. **Knockouts**: `modulator_knockout`; an evaluation override for acute knockouts. Tests.
+- [ ] 2. **Field**: the concentrations; release; the held currents (receptors, ingestion on NSM, PDF's
+  inhibition of NSM) in rollout and replay; satiety for the satiety-link arm; appending to the
+  preprocessed state; episode reset; checkpoint round-trip; byte-identity when off; an old checkpoint
+  still loading. Tests.
+- [ ] 3. **Knockouts**: `modulator_knockout` (`tph1`, `pdfr1`; *mod-1* and *pdf* would be identical to
+  them here); an evaluation override for acute knockouts. Tests.
 - [ ] 4. **Ingestion**: `BrainParams.food_ingested` from the agent. Tests.
 - [ ] 5. **Configs and analysis**: the modulated arms (intact, floor, raised *tph-1*, raised *pdfr-1*,
   satiety link); the acute knockout readings in `lawn_states.py` with Holm across the two. Tests.

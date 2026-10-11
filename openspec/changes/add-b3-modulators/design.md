@@ -27,13 +27,25 @@ From `data/neuromodulators/roaming_dwelling_circuit.json`, verified against the 
 - **Exclusions:** RIB is excluded, since its cited source does not contain it. AIY's MOD-1 role is
   contested by Dag 2023's acute-slowing assay, a different behaviour, and is kept as Flavell's
   roaming/dwelling assay supports it. HSN is not a release site.
+- **PDF inhibits NSM** (Ji 2021 Fig 4E–G), modelled as a functional link, decided with the user after
+  the spec review.
+  - **Why it has to be added explicitly.** NSM is wired only to the pharynx in Emmons 2024: every
+    synaptic input and output is a pharyngeal neuron (I1–I6, M1–M4, MI), and it has no gap junctions.
+    No path from a receptor cell reaches it.
+  - **What Ji 2021 found.** PDF signalling keeps NSM inactive during roaming, acting through the
+    PDFR-1 neurons. The MOD-1 neurons inhibit NSM too. The mechanism is polysynaptic or
+    extrasynaptic.
+  - **How it is modelled.** An inhibitory current on NSM, proportional to the PDF concentration, with
+    its own learnable strength, which the *pdfr-1* knockout removes, as in the worm.
+  - **What it gives the model** is the antagonism Ji 2021 proposes for persistent states: serotonin
+    inhibits the PDFR-1-expressing AIY, and PDF inhibits serotonin's source.
 
 ### Decision B: The concentrations
 
 Each concentration `c` is a scalar carried across steps within an episode, and reset to 0 at each
 episode's start:
 
-```
+```text
 c ← c · exp(−Δt/τ) + (1 − exp(−Δt/τ)) · r
 ```
 
@@ -47,7 +59,9 @@ c ← c · exp(−Δt/τ) + (1 − exp(−Δt/τ)) · r
 ### Decision C: Gating
 
 At every settling iteration, each receptor cell gains a current of `sign · g · c` before its tanh:
-inhibitory for MOD-1, excitatory for PDFR-1.
+inhibitory for MOD-1, excitatory for PDFR-1. NSM gains `−g_NSM · c_PDF`, PDF's inhibition of NSM.
+These currents are **held**, added at every iteration, unlike sensory inputs, which set only the
+initial state.
 
 - **The strengths are learnable,** `g = softplus(ρ)`, one per receptor, with ρ initialised so that
   g = 1. PPO decides how much to use each pathway; the knockouts ask whether it did. The learned
@@ -58,9 +72,16 @@ inhibitory for MOD-1, excitatory for PDFR-1.
 ### Decision D: Food ingestion drives NSM
 
 `BrainParams.food_ingested` carries the intake value of the worm's last move, the same quantity
-behaviour capture records. The connectome injects `γ · food_ingested` into NSML and NSMR at the
-step's initial state, as other sensory inputs enter, with γ a learnable gain initialised at 1. NSM
-detects ingested food (Rhoades 2019).
+behaviour capture records. The connectome adds `γ · food_ingested` to NSML and NSMR as a **held
+current at every settling iteration**, with γ a learnable gain initialised at 1. NSM detects
+ingested food (Rhoades 2019).
+
+**Why the current is held.** Sensory inputs set only the initial state. NSM has no self-connection,
+so an initial-state input would be gone by the end of settling, and serotonin release, read from
+NSM's final activity, would not track what the worm ate. The spec review found this.
+
+**The satiety-link arm** multiplies the drive by `(1 + (1 − s))`, where `s` is satiety as a fraction
+of its maximum. The connectome reads `s` only in that arm.
 
 ### Decision E: Replay and persistence
 
@@ -75,12 +96,17 @@ off. Replay then sees exactly what the rollout saw.
 
 ### Decision F: Knockouts
 
-`modulator_knockout` takes `none`, `tph1` (serotonin held at 0), `pdf` (PDF held at 0), `mod1` (the
-MOD-1 current removed) or `pdfr1` (the PDFR-1 current removed).
+`modulator_knockout` takes `none`, `tph1` (serotonin held at 0) or `pdfr1` (every PDFR-1 effect
+removed: the excitatory current on AIY, RIM and RIA, and the inhibition of NSM).
+
+**Why only two.** In this model each modulator acts through one receptor, so a *mod-1* knockout would
+equal *tph-1* and a *pdf* knockout would equal *pdfr-1*. In the worm, *tph-1* also removes
+serotonin's other receptors; here there are none to remove.
 
 - **Acute:** set at evaluation on a trained, intact network. This is the primary reading.
 - **Raised:** set in the training config. Reported beside.
-- **When off:** with `modulators: false`, the brain is byte-identical to before.
+- **When off:** with `modulators: false`, the brain is byte-identical to before, and a connectome
+  checkpoint saved before this change still loads.
 
 ### Decision G: The readings
 
@@ -104,7 +130,6 @@ minimum, no effect at the minimum, or unresolved.
 
 **Reported beside, never read as verdicts:**
 
-- the acute *mod-1* and *pdf* knockouts;
 - the raised *tph-1* and *pdfr-1* arms against the intact one;
 - a satiety-link arm, in which NSM's ingestion drive is amplified by hunger, `(1 + (1 − satiety))`,
   as fasting amplifies NSM's food response (Rhoades 2019);
