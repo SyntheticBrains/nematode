@@ -221,3 +221,8 @@ shared by both wirings at that level, so the wiring contrast is untouched.
 
 **Then:** a second pilot on seeds 9511–9514 with the calibrated scales, configured as the panel,
 before registration.
+
+**What the grounding contrast then reads.** Per-connection − random compares three things at once:
+the signs, PPO's sign hold, and the weight scale. The scale is set to equalise the operating point,
+but it is still part of what that contrast reads. The receptor contrast, per-connection − atlas,
+compares two grounded, held and calibrated levels, so it reads sign placement alone.

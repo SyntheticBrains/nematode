@@ -45,6 +45,14 @@ the thermal body cell.
   - At random signs that lead is +0.016 here, so the rung asks whether grounded signs make the
     chemical wiring matter. The cell's large wiring effect is gap placement, which signs do not
     touch.
+- **Each grounded level at random signs' operating point** (added after the first pilot).
+  - **The problem:** grounded signs are mostly excitatory and saturate the settled network: 30% of
+    units under the atlas, against 6% under random signs. Some seeds then never learned.
+  - **The knob:** `chemical_weight_scale` multiplies every chemical weight (default 1.0,
+    byte-identical).
+  - **The calibration:** one scale per grounded level, shared by both wirings, matches the saturated
+    fraction at initialisation to random signs'. It was chosen on disjoint seeds under a rule fixed
+    in the design: atlas 0.35, per-connection 0.42.
 - **Beside it:** B.3's two acute knockouts re-read on a modulated connectome with per-connection
   signs, on B.3's seeds, never as verdicts.
 
@@ -58,8 +66,9 @@ the thermal body cell.
 ## Impact
 
 - `connectome/rewiring.py`: the optional origin record.
-- `brain/arch/connectome_ppo.py`: the sign model, the null's signs, validators, and the three-factor
-  hand-over.
+- `brain/arch/connectome_ppo.py`: the sign model, the null's signs, the chemical weight scale,
+  validators, and the three-factor hand-over.
 - `scripts/campaigns/`: the generator for the rung's 12 arms and the per-connection modulated arms.
-- `scripts/analysis/`: the rung's analysis, in the gate preflight's shape.
+- `scripts/analysis/`: the rung's analysis, in the gate preflight's shape, and the scale
+  calibration.
 - Tests, a logbook, the tracker, the roadmap and the CHANGELOG.

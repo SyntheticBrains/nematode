@@ -39,3 +39,20 @@ model SHALL accept the per-connection model, including the sign hold under PPO. 
 
 - **WHEN** a per-connection-signed connectome with enforcement trains under PPO
 - **THEN** no grounded synapse's weight SHALL cross zero
+
+### Requirement: Chemical weight scale
+
+The connectome PPO brain SHALL accept `chemical_weight_scale`, a positive multiplier applied to every
+chemical weight once drawn, signed and placed, so a grounded sign model can be run at the same
+operating point as random signs. At its default of 1.0 the brain SHALL be byte-identical to before.
+
+#### Scenario: Unit scale is the unscaled build
+
+- **WHEN** a brain is built with `chemical_weight_scale` 1.0
+- **THEN** its chemical weights SHALL equal those of a brain built without the setting
+
+#### Scenario: A scale multiplies every weight and keeps the signs
+
+- **WHEN** a brain is built with `chemical_weight_scale` 0.42
+- **THEN** every chemical weight SHALL be 0.42 times the unscaled build's, and every synapse SHALL
+  keep its sign
