@@ -1,0 +1,124 @@
+## Overview
+
+The connectome gains two slow, global concentrations, serotonin and PDF:
+
+- each is released by its cited neurons' activity;
+- each acts on its cited receptor cells with the receptor's sign;
+- each persists across steps with a 60 s timescale.
+
+The primary reading knocks each modulator out of the trained network at evaluation and asks whether
+the worm's states shift in the mutants' published directions. The choices below were made with the
+user on 2026-10-11.
+
+## Decisions
+
+### Decision A: The circuit, as the sources support it
+
+From `data/neuromodulators/roaming_dwelling_circuit.json`, verified against the full texts:
+
+| | release | receptor | sign | target cells |
+|---|---|---|---|---|
+| serotonin | NSM, driven by food ingestion (Rhoades 2019) | MOD-1 | inhibitory | AIY, ASI, RIF (Flavell 2013) |
+| PDF | AVB, PVP, SIAV (Flavell 2013) | PDFR-1 | excitatory | AIY, RIM, RIA (Flavell 2013) |
+
+- **Each class's left and right cells are both gated or both release.** Neurons absent from the
+  connectome are reported at build and skipped.
+- **AIY carries both receptors,** the convergence point in Flavell 2013's model.
+- **Exclusions:** RIB is excluded, since its cited source does not contain it. AIY's MOD-1 role is
+  contested by Dag 2023's acute-slowing assay, a different behaviour, and is kept as Flavell's
+  roaming/dwelling assay supports it. HSN is not a release site.
+
+### Decision B: The concentrations
+
+Each concentration `c` is a scalar carried across steps within an episode, and reset to 0 at each
+episode's start:
+
+```
+c ← c · exp(−Δt/τ) + (1 − exp(−Δt/τ)) · r
+```
+
+- **The timescale:** Δt is the step's 5 worm-seconds, and τ is fixed at 60 s, the scale of NSM's
+  activity peaks. Persistence beyond it has to come from the circuit, the mechanism Ji 2021 proposes
+  (mutual inhibition).
+- **The release `r`:** the mean, over the release cells, of their settled activity above rest,
+  `max(0, h)`, at the step's end.
+- **Timing:** a step's release updates the concentration the next step sees.
+
+### Decision C: Gating
+
+At every settling iteration, each receptor cell gains a current of `sign · g · c` before its tanh:
+inhibitory for MOD-1, excitatory for PDFR-1.
+
+- **The strengths are learnable,** `g = softplus(ρ)`, one per receptor, with ρ initialised so that
+  g = 1. PPO decides how much to use each pathway; the knockouts ask whether it did. The learned
+  strengths are reported.
+- **Two code paths.** The gating is applied in the rollout loop and in PPO's batched replay loop, which
+  are separate. A test checks that they agree.
+
+### Decision D: Food ingestion drives NSM
+
+`BrainParams.food_ingested` carries the intake value of the worm's last move, the same quantity
+behaviour capture records. The connectome injects `γ · food_ingested` into NSML and NSMR at the
+step's initial state, as other sensory inputs enter, with γ a learnable gain initialised at 1. NSM
+detects ingested food (Rhoades 2019).
+
+### Decision E: Replay and persistence
+
+PPO replays from the buffered preprocessed states. The step's two concentrations and its
+`food_ingested` are therefore appended to the preprocessed state vector, and the topology splits them
+off. Replay then sees exactly what the rollout saw.
+
+- **The concentration update is outside the gradient.** It is computed from the rollout's settled
+  activity and detached, so the concentrations are part of the state the policy responds to.
+- **What learning can shape:** the receptor strengths, the ingestion gain, and through `w_chem` the
+  release cells' activity. That last effect works through returns, not through a direct gradient.
+
+### Decision F: Knockouts
+
+`modulator_knockout` takes `none`, `tph1` (serotonin held at 0), `pdf` (PDF held at 0), `mod1` (the
+MOD-1 current removed) or `pdfr1` (the PDFR-1 current removed).
+
+- **Acute:** set at evaluation on a trained, intact network. This is the primary reading.
+- **Raised:** set in the training config. Reported beside.
+- **When off:** with `modulators: false`, the brain is byte-identical to before.
+
+### Decision G: The readings
+
+The cell is D.1's lawn cell, with stage 0's settings: entropy 0.005, Emmons 2024, depth 4.
+
+**Gates, in order:**
+
+1. The modulated connectome's intake beats its untrained floor's, paired by seed.
+2. **The modulated connectome dwells:** D.1's dwelling share against its floor, at stage 0's minimum
+   of 0.278. A modulated network that no longer dwells has no state for a knockout to shift.
+
+**The primary readings.** Two, one per mutant, each the knockout's on-lawn dwelling share minus the
+intact network's, paired by seed:
+
+- **acute *tph-1*:** the published direction is less dwelling;
+- **acute *pdfr-1*:** the published direction is more dwelling.
+
+Each is classified by `mc.classify` at a minimum fixed from a pilot, with q values Holm-adjusted
+across the two. The verdicts: the mutant direction reproduced, the opposite direction, below the
+minimum, no effect at the minimum, or unresolved.
+
+**Reported beside, never read as verdicts:**
+
+- the acute *mod-1* and *pdf* knockouts;
+- the raised *tph-1* and *pdfr-1* arms against the intact one;
+- a satiety-link arm, in which NSM's ingestion drive is amplified by hunger, `(1 + (1 − satiety))`,
+  as fasting amplifies NSM's food response (Rhoades 2019);
+- the learned receptor strengths and ingestion gain;
+- the concentrations' traces around state switches;
+- the modulated connectome against stage 0's unmodulated one, paired by seed.
+
+## Risks
+
+- **The trained network may not use the pathways.** Its receptor strengths may shrink toward zero,
+  and the knockouts would then read no effect. The strengths are reported so that this is visible.
+- **Release does not have a direct gradient.** PPO shapes the release cells only through `w_chem` and
+  returns. If the field's effect comes from the NSM ingestion drive, that is the biology's sensory
+  path.
+- **The cell's economics already make dwelling optimal** (D.1, stage 0). The modulators may add
+  little to a policy that dwells without them. That is a finding about where states come from here,
+  and the knockouts measure it.
