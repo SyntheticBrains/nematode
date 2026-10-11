@@ -984,6 +984,13 @@ class QuantumNematodeAgent:
 
         return result
 
+    def _max_food_ingested(self) -> float | None:
+        """Return the largest intake value one move can yield, or None without lawns."""
+        field, lawns = self.env.lawn_field, self.env.foraging.lawns
+        if field is None or lawns is None or not len(field.qualities):
+            return None
+        return float(lawns.intake_fraction * field.qualities.max())
+
     def _capture_lawn_fields(
         self,
         position: tuple[float, float],
@@ -1320,6 +1327,11 @@ class QuantumNematodeAgent:
             # Internal state (hunger)
             satiety=self.current_satiety,
             max_satiety=self.max_satiety,
+            # What the last move ate, under the lawn food model, and the most one move can eat
+            food_ingested=(
+                None if self.env.lawn_field is None else float(self._episode_tracker.step_intake)
+            ),
+            max_food_ingested=self._max_food_ingested(),
             # Health state
             health=health,
             max_health=max_health,

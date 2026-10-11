@@ -56,14 +56,24 @@ if TYPE_CHECKING:
 EVALUATION_RUN_OFFSET = 1_000_000
 
 
-def build_brain(config_path: Path, seed: int) -> tuple[Brain, SimulationConfig, SensingConfig]:
-    """Build a run's brain, learning frozen, the way the simulation entry point builds it."""
+def build_brain(
+    config_path: Path,
+    seed: int,
+    overrides: dict[str, object] | None = None,
+) -> tuple[Brain, SimulationConfig, SensingConfig]:
+    """Build a run's brain, learning frozen, the way the simulation entry point builds it.
+
+    ``overrides`` replaces brain-config fields on top of the config's own, for an evaluation that
+    differs from training in one stated setting, such as an acute knockout.
+    """
     config = load_simulation_config(str(config_path))
     if config.brain is None:
         msg = f"{config_path} configures no brain"
         raise ValueError(msg)
     sensing_config = validate_sensing_config(configure_environment(config).get_sensing_config())
-    brain_config = configure_brain(config).model_copy(update={"seed": seed, "freeze_updates": True})
+    brain_config = configure_brain(config).model_copy(
+        update={"seed": seed, "freeze_updates": True, **(overrides or {})},
+    )
     # The sensing mode rewrites the brain's sensory modules, as the simulation entry point does, so
     # the rebuilt network has the input width the weights were trained at.
     modules = getattr(brain_config, "sensory_modules", None)

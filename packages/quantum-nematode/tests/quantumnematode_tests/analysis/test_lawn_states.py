@@ -324,3 +324,176 @@ def test_action_noise_is_found_for_either_learner() -> None:
     assert ls.log_std_of({"log_std": {"log_std": torch.tensor([-3.0, -2.0])}}) == [-3.0, -2.0]
     assert ls.log_std_of({"topology": {"log_std": torch.tensor([-5.0, 1.0])}}) == [-5.0, 1.0]
     assert ls.log_std_of({"value": {}}) is None
+
+
+# ── B.3's knockout readings ─────────────────────────────────────────────────────────────────────
+
+
+def test_holm_steps_down_and_stays_monotone() -> None:
+    """The smallest p is doubled, the next taken as is, and no adjusted q falls below an earlier."""
+    assert ls.holm({"a": 0.01, "b": 0.04}) == pytest.approx({"a": 0.02, "b": 0.04})
+    assert ls.holm({"a": 0.03, "b": 0.02}) == pytest.approx({"a": 0.04, "b": 0.04})
+
+
+def _knockout_runs(tph1_roaming: float, pdfr1_roaming: float) -> list[dict[str, object]]:
+    runs: list[dict[str, object]] = []
+    for s in range(16):
+        jitter = 0.01 * (s % 3)
+        runs += [
+            _run("modulated", s, 0.3 + jitter),
+            _run("modulated_frozen", s, 1.0),
+            _run("modulated+tph1", s, tph1_roaming + jitter + 0.002 * (s % 2)),
+            _run("modulated+pdfr1", s, pdfr1_roaming + jitter + 0.002 * (s % 2)),
+        ]
+    return runs
+
+
+class TestKnockouts:
+    def test_both_mutant_directions_reproduced(self) -> None:
+        """Without serotonin it dwells less; without PDFR-1 it dwells more: both read positive."""
+        out = ls.read_knockouts(
+            {"passes": True},
+            _knockout_runs(0.7, 0.0),
+            minimum=0.2,
+            measure="dwelling",
+        )
+        assert out["readable"]
+        assert out["tph1"]["verdict"] == "mutant_direction"
+        assert out["pdfr1"]["verdict"] == "mutant_direction"
+        assert out["tph1"]["reading"]["test"]["mean_delta"] == pytest.approx(0.4, abs=0.01)
+        assert out["pdfr1"]["reading"]["test"]["mean_delta"] == pytest.approx(0.3, abs=0.01)
+
+    def test_the_opposite_direction_is_named(self) -> None:
+        """A tph-1 knockout that dwells more moves against the mutant."""
+        out = ls.read_knockouts(
+            {"passes": True},
+            _knockout_runs(0.0, 0.7),
+            minimum=0.2,
+            measure="dwelling",
+        )
+        assert out["tph1"]["verdict"] == "opposite_direction"
+        assert out["pdfr1"]["verdict"] == "opposite_direction"
+
+    def test_on_speed_the_mutant_directions_reverse(self) -> None:
+        """Without serotonin it moves faster, without PDFR-1 slower: both read positive on speed."""
+        runs = _knockout_runs(0.7, 0.0)
+        speeds = {"modulated": 0.03, "modulated+tph1": 0.06, "modulated+pdfr1": 0.01}
+        runs = [
+            r | {"on_lawn_speed": speeds[str(r["arm"])] + 0.001 * (int(r["seed"]) % 3)}  # type: ignore[call-overload]
+            if r["arm"] in speeds
+            else r
+            for r in runs
+        ]
+        out = ls.read_knockouts({"passes": True}, runs, minimum=0.01)
+        assert out["measure"] == "speed"
+        assert out["tph1"]["reading"]["test"]["mean_delta"] == pytest.approx(0.03)
+        assert out["pdfr1"]["reading"]["test"]["mean_delta"] == pytest.approx(0.02)
+        assert out["tph1"]["verdict"] == "mutant_direction"
+        assert out["pdfr1"]["verdict"] == "mutant_direction"
+
+    def test_significant_dwelling_below_the_stage0_minimum_passes_the_gate(self) -> None:
+        """The gate asks for a dwelling state, not stage 0's size: a significant +0.1 passes."""
+        runs = _knockout_runs(0.7, 0.0)
+        runs = [
+            r | {"roaming_fraction": 0.9 - 0.001 * (int(r["seed"]) % 3)}  # type: ignore[call-overload]
+            if r["arm"] == "modulated"
+            else r
+            for r in runs
+        ]
+        out = ls.read_knockouts({"passes": True}, runs, minimum=0.01, measure="dwelling")
+        assert out["dwelling_gate"]["state"] == "below"
+        assert out["readable"]
+
+    def test_a_knockout_with_no_paired_seed_leaves_the_panel_unreadable(self) -> None:
+        """Holm needs both readings: without the pdfr-1 arm, neither is read, and it says why."""
+        runs = [r for r in _knockout_runs(0.7, 0.0) if r["arm"] != "modulated+pdfr1"]
+        out = ls.read_knockouts({"passes": True}, runs, minimum=0.2, measure="dwelling")
+        assert out["verdict"] == "unreadable"
+        assert out["missing_knockouts"] == ["pdfr1"]
+        assert "tph1" not in out
+
+    def test_an_intact_network_that_does_not_dwell_is_unreadable(self) -> None:
+        """The dwelling gate comes first: no state to shift, no knockout reading."""
+        runs = _knockout_runs(0.7, 0.0)
+        runs = [r | {"roaming_fraction": 1.0} if r["arm"] == "modulated" else r for r in runs]
+        out = ls.read_knockouts({"passes": True}, runs, minimum=0.2)
+        assert out["verdict"] == "unreadable"
+        assert "tph1" not in out
+
+
+def test_concentrations_are_read_by_state() -> None:
+    """Each window carries its steps' mean concentrations; they are pooled per state."""
+    windows = [
+        ls.Episode(
+            states=np.array([rd.ROAMING, rd.DWELLING, rd.OFF_FOOD]),
+            density=np.full(3, np.nan),
+            concentrations=np.array([[0.1, 0.5], [0.3, 0.2], [9.0, 9.0]]),
+        ),
+    ]
+    out = ls.concentrations_by_state(windows)
+    assert out == pytest.approx(
+        {
+            "serotonin_roaming": 0.1,
+            "pdf_roaming": 0.5,
+            "serotonin_dwelling": 0.3,
+            "pdf_dwelling": 0.2,
+        },
+    )
+
+
+def test_on_lawn_speed_pools_the_on_lawn_windows() -> None:
+    """Speed is averaged over on-lawn windows only; off-lawn travel does not count."""
+    episodes = [
+        ls.Episode(
+            states=np.array([rd.ROAMING, rd.DWELLING, rd.OFF_FOOD]),
+            density=np.full(3, np.nan),
+            speed=np.array([0.04, 0.02, 0.5]),
+        ),
+    ]
+    assert ls.on_lawn_speed(episodes) == pytest.approx(0.03)
+    assert ls.on_lawn_speed([]) is None
+
+
+def test_learned_strengths_are_read_from_the_weights(tmp_path: Path) -> None:
+    """The four pathway strengths are the softplus of the saved values; None without the field."""
+    import torch
+
+    path = tmp_path / "final.pt"
+    torch.save({"topology": {"modulator_rho": torch.zeros(4)}}, path)
+    strengths = ls.modulator_strengths(path)
+    assert strengths is not None
+    assert list(strengths) == list(ls.MODULATOR_PATHWAYS)
+    assert strengths["mod1"] == pytest.approx(float(np.log(2.0)))
+    torch.save({"topology": {}}, path)
+    assert ls.modulator_strengths(path) is None
+
+
+def test_an_acute_arm_evaluates_the_trained_weights_with_its_knockout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``modulated+pdfr1`` reads the intact arm's log and weights, with the knockout overridden."""
+    weights = tmp_path / "final.pt"
+    log = tmp_path / f"{ls.gen.stem('modulated')}-seed7.log"
+    log.write_text("")
+    seen: dict[str, object] = {}
+
+    def fake_capture(
+        config: Path,
+        seed: int,
+        found: Path | None,
+        episodes: int,
+        overrides: dict[str, object] | None = None,
+    ) -> tuple[object, ...]:
+        seen.update(config=config, seed=seed, weights=found, overrides=overrides)
+        return [], [], type("L", (), {"quality": (1.0, 1.0), "intake_fraction": 0.02})(), None
+
+    monkeypatch.setattr(ls.bc, "final_weights", lambda _log: weights)
+    monkeypatch.setattr(ls, "capture", fake_capture)
+    monkeypatch.setattr(ls, "modulator_strengths", lambda _w: None)
+    monkeypatch.setattr(ls, "action_log_std", lambda _w: None)
+    monkeypatch.setattr(ls, "run_readings", lambda _windows: {})
+    ls.evaluate_run(("modulated+pdfr1", 7, [str(tmp_path)], 2, "patch"))
+    assert seen["weights"] == weights
+    assert seen["overrides"] == {"modulator_knockout": "pdfr1"}
+    assert seen["config"] == ls.gen.FORAGING / f"{ls.gen.stem('modulated')}.yml"

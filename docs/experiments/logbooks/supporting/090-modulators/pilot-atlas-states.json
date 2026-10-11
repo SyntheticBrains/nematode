@@ -1,0 +1,2852 @@
+{
+  "cell": "patch",
+  "episodes": 30,
+  "floor_arm": "modulated_atlas_frozen",
+  "gates": {
+    "modulated_atlas": {
+      "n_seeds": 8,
+      "learn": {
+        "9411": 4.157574666666667,
+        "9412": 4.385368,
+        "9413": 4.8541680000000005,
+        "9414": 3.8586080000000003,
+        "9415": 3.8134599999999996,
+        "9416": 4.316586666666667,
+        "9417": 4.286829333333333,
+        "9418": 4.449896
+      },
+      "floor": {
+        "9411": 1.6341186666666665,
+        "9412": 1.7630666666666666,
+        "9413": 1.5630986666666669,
+        "9414": 1.4050426666666667,
+        "9415": 1.688932,
+        "9416": 1.7010333333333334,
+        "9417": 1.7608386666666664,
+        "9418": 1.3638613333333334
+      },
+      "learn_mean": 4.265311333333333,
+      "floor_mean": 1.609999,
+      "test": {
+        "mean_delta": 2.6553123333333337,
+        "wilcoxon_p": 0.00390625,
+        "ci_lo": 2.496651616666667,
+        "ci_hi": 2.808706,
+        "n": 8,
+        "per_seed_deltas": [
+          2.5234560000000004,
+          2.622301333333333,
+          3.2910693333333336,
+          2.4535653333333336,
+          2.1245279999999998,
+          2.6155533333333336,
+          2.525990666666667,
+          3.0860346666666665
+        ]
+      },
+      "passes": true
+    },
+    "modulated_atlas_tph1": {
+      "n_seeds": 8,
+      "learn": {
+        "9411": 4.310504,
+        "9412": 3.6595400000000002,
+        "9413": 4.377727999999999,
+        "9414": 4.2406706666666665,
+        "9415": 3.2145093333333334,
+        "9416": 4.250377333333333,
+        "9417": 4.555084,
+        "9418": 4.643385333333334
+      },
+      "floor": {
+        "9411": 1.6341186666666665,
+        "9412": 1.7630666666666666,
+        "9413": 1.5630986666666669,
+        "9414": 1.4050426666666667,
+        "9415": 1.688932,
+        "9416": 1.7010333333333334,
+        "9417": 1.7608386666666664,
+        "9418": 1.3638613333333334
+      },
+      "learn_mean": 4.156474833333333,
+      "floor_mean": 1.609999,
+      "test": {
+        "mean_delta": 2.546475833333333,
+        "wilcoxon_p": 0.00390625,
+        "ci_lo": 2.3046644000000005,
+        "ci_hi": 2.760338583333333,
+        "n": 8,
+        "per_seed_deltas": [
+          2.676385333333333,
+          1.8964733333333337,
+          2.8146293333333325,
+          2.835628,
+          1.5255773333333333,
+          2.5493439999999996,
+          2.7942453333333335,
+          3.2795240000000003
+        ]
+      },
+      "passes": true
+    },
+    "modulated_atlas_pdfr1": {
+      "n_seeds": 8,
+      "learn": {
+        "9411": 2.3295600000000003,
+        "9412": 3.594962666666667,
+        "9413": 4.034624,
+        "9414": 4.503376,
+        "9415": 2.6508906666666667,
+        "9416": 4.351086666666666,
+        "9417": 4.978698666666666,
+        "9418": 4.630449333333333
+      },
+      "floor": {
+        "9411": 1.6341186666666665,
+        "9412": 1.7630666666666666,
+        "9413": 1.5630986666666669,
+        "9414": 1.4050426666666667,
+        "9415": 1.688932,
+        "9416": 1.7010333333333334,
+        "9417": 1.7608386666666664,
+        "9418": 1.3638613333333334
+      },
+      "learn_mean": 3.884206,
+      "floor_mean": 1.609999,
+      "test": {
+        "mean_delta": 2.274207,
+        "wilcoxon_p": 0.00390625,
+        "ci_lo": 1.84590515,
+        "ci_hi": 2.6816582166666665,
+        "n": 8,
+        "per_seed_deltas": [
+          0.6954413333333338,
+          1.8318960000000004,
+          2.471525333333333,
+          3.0983333333333336,
+          0.9619586666666666,
+          2.650053333333333,
+          3.21786,
+          3.2665879999999996
+        ]
+      },
+      "passes": true
+    },
+    "modulated_atlas_satiety": {
+      "n_seeds": 8,
+      "learn": {
+        "9411": 5.182969333333333,
+        "9412": 4.384704,
+        "9413": 3.7722173333333333,
+        "9414": 3.809530666666667,
+        "9415": 4.508992,
+        "9416": 4.194,
+        "9417": 4.451773333333334,
+        "9418": 4.4485893333333335
+      },
+      "floor": {
+        "9411": 1.6341186666666665,
+        "9412": 1.7630666666666666,
+        "9413": 1.5630986666666669,
+        "9414": 1.4050426666666667,
+        "9415": 1.688932,
+        "9416": 1.7010333333333334,
+        "9417": 1.7608386666666664,
+        "9418": 1.3638613333333334
+      },
+      "learn_mean": 4.344097,
+      "floor_mean": 1.609999,
+      "test": {
+        "mean_delta": 2.7340980000000004,
+        "wilcoxon_p": 0.00390625,
+        "ci_lo": 2.5550108333333332,
+        "ci_hi": 2.9178364500000002,
+        "n": 8,
+        "per_seed_deltas": [
+          3.5488506666666666,
+          2.6216373333333336,
+          2.2091186666666665,
+          2.404488,
+          2.82006,
+          2.4929666666666668,
+          2.690934666666667,
+          3.084728
+        ]
+      },
+      "passes": true
+    }
+  },
+  "runs": [
+    {
+      "arm": "modulated_atlas",
+      "seed": 9411,
+      "evaluation_intake": 3.8479617734414218,
+      "action_log_std": [
+        -3.8154385089874268,
+        -0.3742835819721222
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9552776217460632,
+        "pdfr1": 1.1075552701950073,
+        "pdf_onto_nsm": 0.1379908174276352,
+        "ingestion_onto_nsm": 2.390231132507324
+      },
+      "on_lawn_windows": 4113,
+      "roaming_fraction": 0.7532214928276197,
+      "roaming_bout_s": 260.0,
+      "dwelling_bout_s": 178.57142857142858,
+      "n_roaming_bouts": 16,
+      "n_dwelling_bouts": 35,
+      "roaming_where_grazed": 0.9545023696682464,
+      "roaming_where_fresh": 0.68378024852845,
+      "dwell_end_grazed": 0.2903225806451613,
+      "dwell_end_fresh": 0.03678929765886288,
+      "exits": 118,
+      "exits_per_on_lawn_hour": 10.328227571115972,
+      "band_windows": 1062,
+      "band_roaming": 0.7787193973634652,
+      "band_enrichment": 0.02549790453584544,
+      "last_window_enrichment": -0.2871197979123655,
+      "serotonin_roaming": 0.38272926829072296,
+      "pdf_roaming": 0.49522436284801236,
+      "serotonin_dwelling": 0.5453447955142101,
+      "pdf_dwelling": 0.5164978032384209,
+      "on_lawn_speed": 0.03451841317327642
+    },
+    {
+      "arm": "modulated_atlas",
+      "seed": 9412,
+      "evaluation_intake": 4.97789382442704,
+      "action_log_std": [
+        -2.3743643760681152,
+        1.0975533723831177
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1697746515274048,
+        "pdfr1": 1.2021781206130981,
+        "pdf_onto_nsm": 0.12870700657367706,
+        "ingestion_onto_nsm": 2.376964807510376
+      },
+      "on_lawn_windows": 8996,
+      "roaming_fraction": 0.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 54,
+      "exits_per_on_lawn_hour": 2.1609604268563807,
+      "band_windows": 686,
+      "band_roaming": 0.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": null,
+      "pdf_roaming": null,
+      "serotonin_dwelling": 0.06247656188079826,
+      "pdf_dwelling": 0.5069591388472514,
+      "on_lawn_speed": 0.017138964510822426
+    },
+    {
+      "arm": "modulated_atlas",
+      "seed": 9413,
+      "evaluation_intake": 2.0376822432414015,
+      "action_log_std": [
+        -3.2000997066497803,
+        -0.5859766602516174
+      ],
+      "modulator_strengths": {
+        "mod1": 1.6742697954177856,
+        "pdfr1": 0.9312300682067871,
+        "pdf_onto_nsm": 0.3700563907623291,
+        "ingestion_onto_nsm": 1.3152707815170288
+      },
+      "on_lawn_windows": 1130,
+      "roaming_fraction": 0.9982300884955753,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9982300884955753,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 238,
+      "exits_per_on_lawn_hour": 75.82300884955752,
+      "band_windows": 1186,
+      "band_roaming": 1.0,
+      "band_enrichment": 0.001769911504424737,
+      "last_window_enrichment": -0.006633449840113048,
+      "serotonin_roaming": 0.3275637165402807,
+      "pdf_roaming": 0.5837371926512526,
+      "serotonin_dwelling": 0.36984867354234063,
+      "pdf_dwelling": 0.6480756203333536,
+      "on_lawn_speed": 0.15521722740831628
+    },
+    {
+      "arm": "modulated_atlas",
+      "seed": 9414,
+      "evaluation_intake": 3.144112860095262,
+      "action_log_std": [
+        -2.9549927711486816,
+        -0.5277553200721741
+      ],
+      "modulator_strengths": {
+        "mod1": 1.8542757034301758,
+        "pdfr1": 1.267668604850769,
+        "pdf_onto_nsm": 0.29175058007240295,
+        "ingestion_onto_nsm": 1.8936443328857422
+      },
+      "on_lawn_windows": 2355,
+      "roaming_fraction": 0.9936305732484076,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.9934668989547039,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 195,
+      "exits_per_on_lawn_hour": 29.808917197452228,
+      "band_windows": 1486,
+      "band_roaming": 0.9952893674293405,
+      "band_enrichment": 0.0016587941809328433,
+      "last_window_enrichment": -0.05004082965866408,
+      "serotonin_roaming": 0.035036450602422484,
+      "pdf_roaming": 0.03272581482996859,
+      "serotonin_dwelling": 0.0791375404637721,
+      "pdf_dwelling": 0.06683812885716583,
+      "on_lawn_speed": 0.07989529774174284
+    },
+    {
+      "arm": "modulated_atlas",
+      "seed": 9415,
+      "evaluation_intake": 3.9137076788830445,
+      "action_log_std": [
+        -2.540045976638794,
+        0.7820374369621277
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9840673208236694,
+        "pdfr1": 1.1412467956542969,
+        "pdf_onto_nsm": 0.40466833114624023,
+        "ingestion_onto_nsm": 1.4122952222824097
+      },
+      "on_lawn_windows": 5923,
+      "roaming_fraction": 0.03309133884855647,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.06838799720865317,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 53,
+      "exits_per_on_lawn_hour": 3.2213405368900894,
+      "band_windows": 638,
+      "band_roaming": 0.0,
+      "band_enrichment": -0.03309133884855647,
+      "last_window_enrichment": -0.03309133884855647,
+      "serotonin_roaming": 0.4928143114409074,
+      "pdf_roaming": 0.39400172938092226,
+      "serotonin_dwelling": 0.4904963083169635,
+      "pdf_dwelling": 0.8173589180584929,
+      "on_lawn_speed": 0.023429236797789122
+    },
+    {
+      "arm": "modulated_atlas",
+      "seed": 9416,
+      "evaluation_intake": 3.6244510984194718,
+      "action_log_std": [
+        -2.153705358505249,
+        0.614948034286499
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1042330265045166,
+        "pdfr1": 1.202579140663147,
+        "pdf_onto_nsm": 1.0731984376907349,
+        "ingestion_onto_nsm": 0.5733716487884521
+      },
+      "on_lawn_windows": 4361,
+      "roaming_fraction": 0.15959642283879844,
+      "roaming_bout_s": 225.45454545454547,
+      "dwelling_bout_s": 360.0,
+      "n_roaming_bouts": 11,
+      "n_dwelling_bouts": 6,
+      "roaming_where_grazed": 0.114,
+      "roaming_where_fresh": 0.1835022719328906,
+      "dwell_end_grazed": 0.0038402457757296467,
+      "dwell_end_fresh": 0.007439824945295405,
+      "exits": 64,
+      "exits_per_on_lawn_hour": 5.283191928456776,
+      "band_windows": 750,
+      "band_roaming": 0.208,
+      "band_enrichment": 0.048403577161201555,
+      "last_window_enrichment": -0.034596422838798435,
+      "serotonin_roaming": 0.29311480202223267,
+      "pdf_roaming": 0.5885766175231214,
+      "serotonin_dwelling": 0.2741035602179425,
+      "pdf_dwelling": 0.585346008420309,
+      "on_lawn_speed": 0.02685441698250772
+    },
+    {
+      "arm": "modulated_atlas",
+      "seed": 9417,
+      "evaluation_intake": 3.9801988720180517,
+      "action_log_std": [
+        -2.9350626468658447,
+        -0.5681146383285522
+      ],
+      "modulator_strengths": {
+        "mod1": 1.3665590286254883,
+        "pdfr1": 0.9728053212165833,
+        "pdf_onto_nsm": 0.1828499138355255,
+        "ingestion_onto_nsm": 2.1271767616271973
+      },
+      "on_lawn_windows": 6931,
+      "roaming_fraction": 0.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 35,
+      "exits_per_on_lawn_hour": 1.817919492136777,
+      "band_windows": 402,
+      "band_roaming": 0.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": null,
+      "pdf_roaming": null,
+      "serotonin_dwelling": 0.2539247465220357,
+      "pdf_dwelling": 0.45844863980041245,
+      "on_lawn_speed": 0.03491410890185067
+    },
+    {
+      "arm": "modulated_atlas",
+      "seed": 9418,
+      "evaluation_intake": 5.037385054996603,
+      "action_log_std": [
+        -3.1082379817962646,
+        -0.3751020133495331
+      ],
+      "modulator_strengths": {
+        "mod1": 1.2187840938568115,
+        "pdfr1": 1.4162797927856445,
+        "pdf_onto_nsm": 0.7416675686836243,
+        "ingestion_onto_nsm": 0.7492222189903259
+      },
+      "on_lawn_windows": 4980,
+      "roaming_fraction": 0.9899598393574297,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9700520833333334,
+      "roaming_where_fresh": 0.9935897435897436,
+      "dwell_end_grazed": 0.1,
+      "dwell_end_fresh": 0.0,
+      "exits": 64,
+      "exits_per_on_lawn_hour": 4.626506024096385,
+      "band_windows": 483,
+      "band_roaming": 0.9461697722567288,
+      "band_enrichment": -0.04379006710070088,
+      "last_window_enrichment": -0.1618348393574297,
+      "serotonin_roaming": 0.51279427424077,
+      "pdf_roaming": 0.33170847536333564,
+      "serotonin_dwelling": 0.3065485204259554,
+      "pdf_dwelling": 0.3320574742555618,
+      "on_lawn_speed": 0.1686044446481172
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9411,
+      "evaluation_intake": 1.6246548167295045,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 1033,
+      "roaming_fraction": 0.9816069699903195,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9816069699903195,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.5,
+      "exits": 142,
+      "exits_per_on_lawn_hour": 49.48693126815102,
+      "band_windows": 875,
+      "band_roaming": 0.9874285714285714,
+      "band_enrichment": 0.005821601438251944,
+      "last_window_enrichment": -0.08019851928609412,
+      "serotonin_roaming": 0.5518381709328989,
+      "pdf_roaming": 0.5190429516370434,
+      "serotonin_dwelling": 0.3741773132790338,
+      "pdf_dwelling": 0.6383271115390879,
+      "on_lawn_speed": 0.10954940581098871
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9412,
+      "evaluation_intake": 1.818230623953645,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 1185,
+      "roaming_fraction": 0.9881856540084388,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9881856540084388,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 137,
+      "exits_per_on_lawn_hour": 41.620253164556964,
+      "band_windows": 913,
+      "band_roaming": 0.9912376779846659,
+      "band_enrichment": 0.0030520239762270585,
+      "last_window_enrichment": -0.046579814592380475,
+      "serotonin_roaming": 0.5496421676984797,
+      "pdf_roaming": 0.49103163654202586,
+      "serotonin_dwelling": 0.3342483006861238,
+      "pdf_dwelling": 0.5824201433431535,
+      "on_lawn_speed": 0.10860840913380608
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9413,
+      "evaluation_intake": 1.4789658945769146,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 882,
+      "roaming_fraction": 0.9965986394557823,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9965986394557823,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 128,
+      "exits_per_on_lawn_hour": 52.24489795918367,
+      "band_windows": 723,
+      "band_roaming": 0.995850622406639,
+      "band_enrichment": -0.0007480170491432903,
+      "last_window_enrichment": -0.02003613945578231,
+      "serotonin_roaming": 0.5255687332595338,
+      "pdf_roaming": 0.41779723101156735,
+      "serotonin_dwelling": 0.4212646716170841,
+      "pdf_dwelling": 0.4667227640748024,
+      "on_lawn_speed": 0.1292410336704101
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9414,
+      "evaluation_intake": 1.3282810284692748,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 838,
+      "roaming_fraction": 0.9856801909307876,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9856801909307876,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 98,
+      "exits_per_on_lawn_hour": 42.10023866348448,
+      "band_windows": 633,
+      "band_roaming": 0.9936808846761453,
+      "band_enrichment": 0.008000693745357723,
+      "last_window_enrichment": -0.0673128439920121,
+      "serotonin_roaming": 0.5327866391058328,
+      "pdf_roaming": 0.3219171733819358,
+      "serotonin_dwelling": 0.508749903490146,
+      "pdf_dwelling": 0.2569183156212805,
+      "on_lawn_speed": 0.12339103676907041
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9415,
+      "evaluation_intake": 1.836964541497079,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 1147,
+      "roaming_fraction": 0.983435047951177,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.983435047951177,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.5,
+      "exits": 118,
+      "exits_per_on_lawn_hour": 37.0357454228422,
+      "band_windows": 845,
+      "band_roaming": 0.9857988165680474,
+      "band_enrichment": 0.0023637686168703764,
+      "last_window_enrichment": -0.05970623439185496,
+      "serotonin_roaming": 0.1224454045101259,
+      "pdf_roaming": 0.8906543284949645,
+      "serotonin_dwelling": 0.12231785159466405,
+      "pdf_dwelling": 0.9712848119568407,
+      "on_lawn_speed": 0.1437069463400688
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9416,
+      "evaluation_intake": 1.6561202003899451,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 1066,
+      "roaming_fraction": 0.9812382739212008,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.9821596244131455,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 126,
+      "exits_per_on_lawn_hour": 42.551594746716695,
+      "band_windows": 841,
+      "band_roaming": 0.9881093935790726,
+      "band_enrichment": 0.006871119657871794,
+      "last_window_enrichment": -0.09234938503231194,
+      "serotonin_roaming": 0.6628293530140249,
+      "pdf_roaming": 0.005172708861087712,
+      "serotonin_dwelling": 0.462116162913541,
+      "pdf_dwelling": 0.016745043439355817,
+      "on_lawn_speed": 0.11416354076668189
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9417,
+      "evaluation_intake": 1.355779430509035,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 840,
+      "roaming_fraction": 0.9821428571428571,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9821428571428571,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 95,
+      "exits_per_on_lawn_hour": 40.71428571428571,
+      "band_windows": 614,
+      "band_roaming": 0.993485342019544,
+      "band_enrichment": 0.011342484876686876,
+      "last_window_enrichment": -0.09793233082706765,
+      "serotonin_roaming": 0.1766307660386645,
+      "pdf_roaming": 0.8367531903614901,
+      "serotonin_dwelling": 0.0774855380343676,
+      "pdf_dwelling": 0.9461628662215337,
+      "on_lawn_speed": 0.1342522805447585
+    },
+    {
+      "arm": "modulated_atlas_frozen",
+      "seed": 9418,
+      "evaluation_intake": 1.382333217098157,
+      "action_log_std": null,
+      "modulator_strengths": null,
+      "on_lawn_windows": 812,
+      "roaming_fraction": 0.9913793103448276,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9913793103448276,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 131,
+      "exits_per_on_lawn_hour": 58.07881773399015,
+      "band_windows": 658,
+      "band_roaming": 0.9954407294832827,
+      "band_enrichment": 0.004061419138455036,
+      "last_window_enrichment": -0.021913661489865843,
+      "serotonin_roaming": 0.5364223002238827,
+      "pdf_roaming": 0.35423474401596156,
+      "serotonin_dwelling": 0.5736321272949378,
+      "pdf_dwelling": 0.4143564523685545,
+      "on_lawn_speed": 0.13852734992909563
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9411,
+      "evaluation_intake": 2.744631107199333,
+      "action_log_std": [
+        -3.8154385089874268,
+        -0.3742835819721222
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9552776217460632,
+        "pdfr1": 1.1075552701950073,
+        "pdf_onto_nsm": 0.1379908174276352,
+        "ingestion_onto_nsm": 2.390231132507324
+      },
+      "on_lawn_windows": 2170,
+      "roaming_fraction": 0.9723502304147466,
+      "roaming_bout_s": 155.0,
+      "dwelling_bout_s": 38.0,
+      "n_roaming_bouts": 2,
+      "n_dwelling_bouts": 5,
+      "roaming_where_grazed": 0.9655172413793104,
+      "roaming_where_fresh": 0.9726356216994719,
+      "dwell_end_grazed": 1.0,
+      "dwell_end_fresh": 0.14705882352941177,
+      "exits": 141,
+      "exits_per_on_lawn_hour": 23.391705069124423,
+      "band_windows": 1186,
+      "band_roaming": 0.9856661045531198,
+      "band_enrichment": 0.013315874138373207,
+      "last_window_enrichment": -0.10710200346439191,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.11242416132398121,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.39188088635306406,
+      "on_lawn_speed": 0.07107599971330299
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9412,
+      "evaluation_intake": 4.080582932087956,
+      "action_log_std": [
+        -2.3743643760681152,
+        1.0975533723831177
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1697746515274048,
+        "pdfr1": 1.2021781206130981,
+        "pdf_onto_nsm": 0.12870700657367706,
+        "ingestion_onto_nsm": 2.376964807510376
+      },
+      "on_lawn_windows": 6419,
+      "roaming_fraction": 0.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 58,
+      "exits_per_on_lawn_hour": 3.252843121981617,
+      "band_windows": 615,
+      "band_roaming": 0.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": null,
+      "pdf_roaming": null,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.7195790222885483,
+      "on_lawn_speed": 0.01472776384196915
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9413,
+      "evaluation_intake": 2.0392416118349392,
+      "action_log_std": [
+        -3.2000997066497803,
+        -0.5859766602516174
+      ],
+      "modulator_strengths": {
+        "mod1": 1.6742697954177856,
+        "pdfr1": 0.9312300682067871,
+        "pdf_onto_nsm": 0.3700563907623291,
+        "ingestion_onto_nsm": 1.3152707815170288
+      },
+      "on_lawn_windows": 1144,
+      "roaming_fraction": 1.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 1.0,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 233,
+      "exits_per_on_lawn_hour": 73.32167832167832,
+      "band_windows": 1113,
+      "band_roaming": 1.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.6679092266581657,
+      "serotonin_dwelling": null,
+      "pdf_dwelling": null,
+      "on_lawn_speed": 0.16588728137158015
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9414,
+      "evaluation_intake": 2.1396361997922844,
+      "action_log_std": [
+        -2.9549927711486816,
+        -0.5277553200721741
+      ],
+      "modulator_strengths": {
+        "mod1": 1.8542757034301758,
+        "pdfr1": 1.267668604850769,
+        "pdf_onto_nsm": 0.29175058007240295,
+        "ingestion_onto_nsm": 1.8936443328857422
+      },
+      "on_lawn_windows": 1533,
+      "roaming_fraction": 0.9882583170254403,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.9882352941176471,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 119,
+      "exits_per_on_lawn_hour": 27.945205479452053,
+      "band_windows": 1079,
+      "band_roaming": 0.9879518072289156,
+      "band_enrichment": -0.0003065097965246899,
+      "last_window_enrichment": -0.08909865315989407,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.08637531361411227,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.09781860219124981,
+      "on_lawn_speed": 0.07736992026063044
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9415,
+      "evaluation_intake": 4.443070145307404,
+      "action_log_std": [
+        -2.540045976638794,
+        0.7820374369621277
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9840673208236694,
+        "pdfr1": 1.1412467956542969,
+        "pdf_onto_nsm": 0.40466833114624023,
+        "ingestion_onto_nsm": 1.4122952222824097
+      },
+      "on_lawn_windows": 7893,
+      "roaming_fraction": 0.014949955656911188,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.038499184339314846,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 41,
+      "exits_per_on_lawn_hour": 1.870011402508552,
+      "band_windows": 436,
+      "band_roaming": 0.0,
+      "band_enrichment": -0.014949955656911188,
+      "last_window_enrichment": -0.014949955656911188,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.40045345902948054,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.8178227585648352,
+      "on_lawn_speed": 0.02413437677025384
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9416,
+      "evaluation_intake": 3.9118539624467035,
+      "action_log_std": [
+        -2.153705358505249,
+        0.614948034286499
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1042330265045166,
+        "pdfr1": 1.202579140663147,
+        "pdf_onto_nsm": 1.0731984376907349,
+        "ingestion_onto_nsm": 0.5733716487884521
+      },
+      "on_lawn_windows": 5250,
+      "roaming_fraction": 0.0020952380952380953,
+      "roaming_bout_s": 110.0,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 1,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0037199864727764627,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0003454231433506045,
+      "exits": 83,
+      "exits_per_on_lawn_hour": 5.691428571428571,
+      "band_windows": 887,
+      "band_roaming": 0.0011273957158962795,
+      "band_enrichment": -0.0009678423793418158,
+      "last_window_enrichment": -0.0020952380952380953,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.5497980524193157,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.6280671053856333,
+      "on_lawn_speed": 0.01992887737574943
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9417,
+      "evaluation_intake": 2.714387973698678,
+      "action_log_std": [
+        -2.9350626468658447,
+        -0.5681146383285522
+      ],
+      "modulator_strengths": {
+        "mod1": 1.3665590286254883,
+        "pdfr1": 0.9728053212165833,
+        "pdf_onto_nsm": 0.1828499138355255,
+        "ingestion_onto_nsm": 2.1271767616271973
+      },
+      "on_lawn_windows": 4577,
+      "roaming_fraction": 0.005243609351103343,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.012332990750256937,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 32,
+      "exits_per_on_lawn_hour": 2.5169324885296045,
+      "band_windows": 382,
+      "band_roaming": 0.01832460732984293,
+      "band_enrichment": 0.013080997978739586,
+      "last_window_enrichment": 0.026006390648896656,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.15064714940833962,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.7468584053003177,
+      "on_lawn_speed": 0.03689845528871535
+    },
+    {
+      "arm": "modulated_atlas+tph1",
+      "seed": 9418,
+      "evaluation_intake": 2.335484068358461,
+      "action_log_std": [
+        -3.1082379817962646,
+        -0.3751020133495331
+      ],
+      "modulator_strengths": {
+        "mod1": 1.2187840938568115,
+        "pdfr1": 1.4162797927856445,
+        "pdf_onto_nsm": 0.7416675686836243,
+        "ingestion_onto_nsm": 0.7492222189903259
+      },
+      "on_lawn_windows": 1548,
+      "roaming_fraction": 0.9935400516795866,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.9935316946959897,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 146,
+      "exits_per_on_lawn_hour": 33.95348837209303,
+      "band_windows": 1003,
+      "band_roaming": 0.9930209371884346,
+      "band_enrichment": -0.0005191144911519396,
+      "last_window_enrichment": -0.027786627022052368,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.19247051147383962,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.22741393223404885,
+      "on_lawn_speed": 0.13269659418083884
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9411,
+      "evaluation_intake": 2.8011140803472405,
+      "action_log_std": [
+        -3.8154385089874268,
+        -0.3742835819721222
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9552776217460632,
+        "pdfr1": 1.1075552701950073,
+        "pdf_onto_nsm": 0.1379908174276352,
+        "ingestion_onto_nsm": 2.390231132507324
+      },
+      "on_lawn_windows": 2092,
+      "roaming_fraction": 0.9894837476099426,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.9892630551488532,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.6666666666666666,
+      "exits": 173,
+      "exits_per_on_lawn_hour": 29.77055449330784,
+      "band_windows": 1335,
+      "band_roaming": 0.9887640449438202,
+      "band_enrichment": -0.0007197026661224237,
+      "last_window_enrichment": -0.07618894992208136,
+      "serotonin_roaming": 0.5255849082039401,
+      "pdf_roaming": 0.08808094622953146,
+      "serotonin_dwelling": 0.2931851278426069,
+      "pdf_dwelling": 0.06659484268025016,
+      "on_lawn_speed": 0.0804501282744244
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9412,
+      "evaluation_intake": 3.58866467516922,
+      "action_log_std": [
+        -2.3743643760681152,
+        1.0975533723831177
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1697746515274048,
+        "pdfr1": 1.2021781206130981,
+        "pdf_onto_nsm": 0.12870700657367706,
+        "ingestion_onto_nsm": 2.376964807510376
+      },
+      "on_lawn_windows": 5014,
+      "roaming_fraction": 0.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 61,
+      "exits_per_on_lawn_hour": 4.379736737136019,
+      "band_windows": 713,
+      "band_roaming": 0.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": null,
+      "pdf_roaming": null,
+      "serotonin_dwelling": 0.0741455995213315,
+      "pdf_dwelling": 0.18714185666576602,
+      "on_lawn_speed": 0.02521119620903039
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9413,
+      "evaluation_intake": 2.632965143907701,
+      "action_log_std": [
+        -3.2000997066497803,
+        -0.5859766602516174
+      ],
+      "modulator_strengths": {
+        "mod1": 1.6742697954177856,
+        "pdfr1": 0.9312300682067871,
+        "pdf_onto_nsm": 0.3700563907623291,
+        "ingestion_onto_nsm": 1.3152707815170288
+      },
+      "on_lawn_windows": 1815,
+      "roaming_fraction": 0.9895316804407713,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9895316804407713,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 156,
+      "exits_per_on_lawn_hour": 30.942148760330575,
+      "band_windows": 1299,
+      "band_roaming": 0.9946112394149346,
+      "band_enrichment": 0.005079558974163234,
+      "last_window_enrichment": -0.05363424454333543,
+      "serotonin_roaming": 0.28282999186086466,
+      "pdf_roaming": 0.4936649632842765,
+      "serotonin_dwelling": 0.19230738106559503,
+      "pdf_dwelling": 0.5310639922033276,
+      "on_lawn_speed": 0.09144260627857713
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9414,
+      "evaluation_intake": 2.7877023210265914,
+      "action_log_std": [
+        -2.9549927711486816,
+        -0.5277553200721741
+      ],
+      "modulator_strengths": {
+        "mod1": 1.8542757034301758,
+        "pdfr1": 1.267668604850769,
+        "pdf_onto_nsm": 0.29175058007240295,
+        "ingestion_onto_nsm": 1.8936443328857422
+      },
+      "on_lawn_windows": 2076,
+      "roaming_fraction": 0.9951830443159922,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9655172413793104,
+      "roaming_where_fresh": 0.9956033219345384,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 180,
+      "exits_per_on_lawn_hour": 31.213872832369944,
+      "band_windows": 1418,
+      "band_roaming": 0.995768688293371,
+      "band_enrichment": 0.0005856439773787026,
+      "last_window_enrichment": -0.03407193320488111,
+      "serotonin_roaming": 0.018065273832063567,
+      "pdf_roaming": 0.012548314739791159,
+      "serotonin_dwelling": 0.027964438932637375,
+      "pdf_dwelling": 0.018110023570867877,
+      "on_lawn_speed": 0.0796937271739089
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9415,
+      "evaluation_intake": 4.127013887399837,
+      "action_log_std": [
+        -2.540045976638794,
+        0.7820374369621277
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9840673208236694,
+        "pdfr1": 1.1412467956542969,
+        "pdf_onto_nsm": 0.40466833114624023,
+        "ingestion_onto_nsm": 1.4122952222824097
+      },
+      "on_lawn_windows": 5417,
+      "roaming_fraction": 0.9850470740262137,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.986784140969163,
+      "roaming_where_fresh": 0.9837940896091516,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.038461538461538464,
+      "exits": 71,
+      "exits_per_on_lawn_hour": 4.71847886283921,
+      "band_windows": 757,
+      "band_roaming": 0.9484808454425363,
+      "band_enrichment": -0.03656622858367742,
+      "last_window_enrichment": -0.3371597500825517,
+      "serotonin_roaming": 0.7248136665217573,
+      "pdf_roaming": 0.35066887398663704,
+      "serotonin_dwelling": 0.5469120143234362,
+      "pdf_dwelling": 0.3618336798922147,
+      "on_lawn_speed": 0.04237975257997446
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9416,
+      "evaluation_intake": 4.097196378944077,
+      "action_log_std": [
+        -2.153705358505249,
+        0.614948034286499
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1042330265045166,
+        "pdfr1": 1.202579140663147,
+        "pdf_onto_nsm": 1.0731984376907349,
+        "ingestion_onto_nsm": 0.5733716487884521
+      },
+      "on_lawn_windows": 4559,
+      "roaming_fraction": 0.957227462162755,
+      "roaming_bout_s": 330.0,
+      "dwelling_bout_s": 45.0,
+      "n_roaming_bouts": 4,
+      "n_dwelling_bouts": 4,
+      "roaming_where_grazed": 0.9629629629629629,
+      "roaming_where_fresh": 0.9550798914681942,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.10091743119266056,
+      "exits": 86,
+      "exits_per_on_lawn_hour": 6.790962930467208,
+      "band_windows": 904,
+      "band_roaming": 0.8904867256637168,
+      "band_enrichment": -0.06674073649903822,
+      "last_window_enrichment": -0.32932048541856895,
+      "serotonin_roaming": 0.46035395433959897,
+      "pdf_roaming": 0.23683168773083807,
+      "serotonin_dwelling": 0.3409603800302409,
+      "pdf_dwelling": 0.22643627236541516,
+      "on_lawn_speed": 0.04223739645396373
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9417,
+      "evaluation_intake": 3.773291378346524,
+      "action_log_std": [
+        -2.9350626468658447,
+        -0.5681146383285522
+      ],
+      "modulator_strengths": {
+        "mod1": 1.3665590286254883,
+        "pdfr1": 0.9728053212165833,
+        "pdf_onto_nsm": 0.1828499138355255,
+        "ingestion_onto_nsm": 2.1271767616271973
+      },
+      "on_lawn_windows": 5167,
+      "roaming_fraction": 0.06638281401199922,
+      "roaming_bout_s": 160.0,
+      "dwelling_bout_s": 490.0,
+      "n_roaming_bouts": 5,
+      "n_dwelling_bouts": 4,
+      "roaming_where_grazed": 0.13311421528348397,
+      "roaming_where_fresh": 0.006952067325283571,
+      "dwell_end_grazed": 0.0064039408866995075,
+      "dwell_end_fresh": 0.0,
+      "exits": 120,
+      "exits_per_on_lawn_hour": 8.36075091929553,
+      "band_windows": 1074,
+      "band_roaming": 0.08193668528864059,
+      "band_enrichment": 0.015553871276641373,
+      "last_window_enrichment": 0.00028385265466744636,
+      "serotonin_roaming": 0.0324341933531899,
+      "pdf_roaming": 0.2106286463399207,
+      "serotonin_dwelling": 0.3495782750694791,
+      "pdf_dwelling": 0.25695914880730647,
+      "on_lawn_speed": 0.020967529025843885
+    },
+    {
+      "arm": "modulated_atlas+pdfr1",
+      "seed": 9418,
+      "evaluation_intake": 2.224873717986229,
+      "action_log_std": [
+        -3.1082379817962646,
+        -0.3751020133495331
+      ],
+      "modulator_strengths": {
+        "mod1": 1.2187840938568115,
+        "pdfr1": 1.4162797927856445,
+        "pdf_onto_nsm": 0.7416675686836243,
+        "ingestion_onto_nsm": 0.7492222189903259
+      },
+      "on_lawn_windows": 1686,
+      "roaming_fraction": 0.9911032028469751,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.9908256880733946,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 77,
+      "exits_per_on_lawn_hour": 16.441281138790035,
+      "band_windows": 620,
+      "band_roaming": 0.9870967741935484,
+      "band_enrichment": -0.004006428653426708,
+      "last_window_enrichment": -0.12097333271710498,
+      "serotonin_roaming": 0.6779123465410746,
+      "pdf_roaming": 0.36637689234622367,
+      "serotonin_dwelling": 0.517172372341156,
+      "pdf_dwelling": 0.3982342150476244,
+      "on_lawn_speed": 0.16914309934704108
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9411,
+      "evaluation_intake": 4.899862960638028,
+      "action_log_std": [
+        -3.9149904251098633,
+        -0.10803455114364624
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 1.0412282943725586,
+        "pdf_onto_nsm": 0.11523997783660889,
+        "ingestion_onto_nsm": 1.9703750610351562
+      },
+      "on_lawn_windows": 6346,
+      "roaming_fraction": 0.9774661203907974,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9950115118956255,
+      "roaming_where_fresh": 0.9652406417112299,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.13725490196078433,
+      "exits": 75,
+      "exits_per_on_lawn_hour": 4.254648597541759,
+      "band_windows": 762,
+      "band_roaming": 0.9566929133858267,
+      "band_enrichment": -0.02077320700497065,
+      "last_window_enrichment": -0.2707994537241307,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.4751195709439119,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.198842862102101,
+      "on_lawn_speed": 0.03717940294671319
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9412,
+      "evaluation_intake": 2.7441173443772344,
+      "action_log_std": [
+        -3.0809643268585205,
+        0.8620911836624146
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 1.017783761024475,
+        "pdf_onto_nsm": 0.2087128758430481,
+        "ingestion_onto_nsm": 3.5312917232513428
+      },
+      "on_lawn_windows": 3200,
+      "roaming_fraction": 0.766875,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9278242677824268,
+      "roaming_where_fresh": 0.698306595365419,
+      "dwell_end_grazed": 0.03333333333333333,
+      "dwell_end_fresh": 0.035114503816793895,
+      "exits": 52,
+      "exits_per_on_lawn_hour": 5.85,
+      "band_windows": 617,
+      "band_roaming": 0.8314424635332253,
+      "band_enrichment": 0.06456746353322529,
+      "last_window_enrichment": -0.1322596153846154,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.45070882539723556,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.28969069242509043,
+      "on_lawn_speed": 0.03314337521730613
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9413,
+      "evaluation_intake": 3.3202032882658963,
+      "action_log_std": [
+        -2.214695453643799,
+        0.38618552684783936
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 0.922420084476471,
+        "pdf_onto_nsm": 0.1090727224946022,
+        "ingestion_onto_nsm": 2.5848915576934814
+      },
+      "on_lawn_windows": 4389,
+      "roaming_fraction": 0.003417634996582365,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.002175095160413268,
+      "roaming_where_fresh": 0.004313725490196078,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.00040290088638195,
+      "exits": 78,
+      "exits_per_on_lawn_hour": 6.397812713602187,
+      "band_windows": 833,
+      "band_roaming": 0.009603841536614645,
+      "band_enrichment": 0.006186206540032281,
+      "last_window_enrichment": 0.009402877823930456,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.11248993095424441,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.09880666238528481,
+      "on_lawn_speed": 0.01850104750484822
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9414,
+      "evaluation_intake": 4.477616657882706,
+      "action_log_std": [
+        -2.1457679271698,
+        0.26400795578956604
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 1.3734245300292969,
+        "pdf_onto_nsm": 0.06422896683216095,
+        "ingestion_onto_nsm": 2.5948703289031982
+      },
+      "on_lawn_windows": 6801,
+      "roaming_fraction": 0.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 66,
+      "exits_per_on_lawn_hour": 3.493603881782091,
+      "band_windows": 718,
+      "band_roaming": 0.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": null,
+      "pdf_roaming": null,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.038972408580382166,
+      "on_lawn_speed": 0.019543442463027468
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9415,
+      "evaluation_intake": 3.3221827173239213,
+      "action_log_std": [
+        -4.474292755126953,
+        -0.260827898979187
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 1.1622546911239624,
+        "pdf_onto_nsm": 0.32747721672058105,
+        "ingestion_onto_nsm": 1.6594797372817993
+      },
+      "on_lawn_windows": 8524,
+      "roaming_fraction": 0.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 29,
+      "exits_per_on_lawn_hour": 1.2247770999530736,
+      "band_windows": 308,
+      "band_roaming": 0.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": null,
+      "pdf_roaming": null,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.4366812598039337,
+      "on_lawn_speed": 0.005804451926988369
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9416,
+      "evaluation_intake": 4.2131373810509105,
+      "action_log_std": [
+        -3.705960512161255,
+        -0.021428626030683517
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 1.0860353708267212,
+        "pdf_onto_nsm": 0.3208346962928772,
+        "ingestion_onto_nsm": 1.187191128730774
+      },
+      "on_lawn_windows": 4745,
+      "roaming_fraction": 0.9831401475237092,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9876543209876543,
+      "roaming_where_fresh": 0.9811378156373592,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 110,
+      "exits_per_on_lawn_hour": 8.345626975763961,
+      "band_windows": 1066,
+      "band_roaming": 0.9409005628517824,
+      "band_enrichment": -0.04223958467192679,
+      "last_window_enrichment": -0.19223105661461826,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.03592007819820353,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.036004699394106866,
+      "on_lawn_speed": 0.04638531127463471
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9417,
+      "evaluation_intake": 4.357108650546555,
+      "action_log_std": [
+        -2.6111948490142822,
+        0.0594443678855896
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 1.044502854347229,
+        "pdf_onto_nsm": 0.15587608516216278,
+        "ingestion_onto_nsm": 2.1472275257110596
+      },
+      "on_lawn_windows": 7383,
+      "roaming_fraction": 0.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.0,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 61,
+      "exits_per_on_lawn_hour": 2.974400650142219,
+      "band_windows": 647,
+      "band_roaming": 0.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": null,
+      "pdf_roaming": null,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.3516111095322009,
+      "on_lawn_speed": 0.01787655757607515
+    },
+    {
+      "arm": "modulated_atlas_tph1",
+      "seed": 9418,
+      "evaluation_intake": 4.379927723613779,
+      "action_log_std": [
+        -2.005810022354126,
+        0.6600024700164795
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0,
+        "pdfr1": 1.427868127822876,
+        "pdf_onto_nsm": 0.23832197487354279,
+        "ingestion_onto_nsm": 1.2493849992752075
+      },
+      "on_lawn_windows": 6395,
+      "roaming_fraction": 0.05347928068803753,
+      "roaming_bout_s": 150.0,
+      "dwelling_bout_s": 770.0,
+      "n_roaming_bouts": 12,
+      "n_dwelling_bouts": 3,
+      "roaming_where_grazed": 0.03678304239401496,
+      "roaming_where_fresh": 0.07028553498588014,
+      "dwell_end_grazed": 0.0033156498673740055,
+      "dwell_end_fresh": 0.0017247326664367024,
+      "exits": 91,
+      "exits_per_on_lawn_hour": 5.122752150117279,
+      "band_windows": 912,
+      "band_roaming": 0.03837719298245614,
+      "band_enrichment": -0.015102087705581385,
+      "last_window_enrichment": 0.0014657742570174173,
+      "serotonin_roaming": 0.0,
+      "pdf_roaming": 0.008094439463423054,
+      "serotonin_dwelling": 0.0,
+      "pdf_dwelling": 0.009057525122310546,
+      "on_lawn_speed": 0.02473646382308904
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9411,
+      "evaluation_intake": 2.2412355254740794,
+      "action_log_std": [
+        -3.4807887077331543,
+        0.5236695408821106
+      ],
+      "modulator_strengths": {
+        "mod1": 1.6666243076324463,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 0.7631945013999939
+      },
+      "on_lawn_windows": 1518,
+      "roaming_fraction": 0.9927536231884058,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.9927055702917772,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 89,
+      "exits_per_on_lawn_hour": 21.106719367588934,
+      "band_windows": 858,
+      "band_roaming": 0.9941724941724942,
+      "band_enrichment": 0.0014188709840884384,
+      "last_window_enrichment": -0.04893339846930467,
+      "serotonin_roaming": 0.38514929960211547,
+      "pdf_roaming": 0.20491120770633048,
+      "serotonin_dwelling": 0.2486583064451362,
+      "pdf_dwelling": 0.19925426894968207,
+      "on_lawn_speed": 0.16878484409886543
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9412,
+      "evaluation_intake": 4.173510528179736,
+      "action_log_std": [
+        -2.806278705596924,
+        -0.2567370533943176
+      ],
+      "modulator_strengths": {
+        "mod1": 1.3267574310302734,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 1.0138649940490723
+      },
+      "on_lawn_windows": 3506,
+      "roaming_fraction": 0.9962920707358813,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9912663755458515,
+      "roaming_where_fresh": 0.9966432712847116,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 152,
+      "exits_per_on_lawn_hour": 15.60752994865944,
+      "band_windows": 1285,
+      "band_roaming": 0.9968871595330739,
+      "band_enrichment": 0.0005950887971926111,
+      "last_window_enrichment": -0.03576575494640766,
+      "serotonin_roaming": 0.21396516388310088,
+      "pdf_roaming": 0.11472246946749376,
+      "serotonin_dwelling": 0.1756340614878214,
+      "pdf_dwelling": 0.167412964006265,
+      "on_lawn_speed": 0.09368106966452534
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9413,
+      "evaluation_intake": 4.962355701550698,
+      "action_log_std": [
+        -3.3534059524536133,
+        -0.3746930658817291
+      ],
+      "modulator_strengths": {
+        "mod1": 1.4736747741699219,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 0.9503170251846313
+      },
+      "on_lawn_windows": 8075,
+      "roaming_fraction": 0.02526315789473684,
+      "roaming_bout_s": 218.57142857142858,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 7,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.03755765429387217,
+      "roaming_where_fresh": 0.009369676320272573,
+      "dwell_end_grazed": 0.0020891364902506965,
+      "dwell_end_fresh": 0.0002886002886002886,
+      "exits": 59,
+      "exits_per_on_lawn_hour": 2.6303405572755416,
+      "band_windows": 712,
+      "band_roaming": 0.060393258426966294,
+      "band_enrichment": 0.03513010053222945,
+      "last_window_enrichment": 0.025584299732381806,
+      "serotonin_roaming": 0.0029294836121705513,
+      "pdf_roaming": 0.18649550724555464,
+      "serotonin_dwelling": 0.049565562035128755,
+      "pdf_dwelling": 0.09639301660458029,
+      "on_lawn_speed": 0.01812070344319645
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9414,
+      "evaluation_intake": 3.0771916215103583,
+      "action_log_std": [
+        -2.9051513671875,
+        -1.5244137048721313
+      ],
+      "modulator_strengths": {
+        "mod1": 1.3544847965240479,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 0.8626067042350769
+      },
+      "on_lawn_windows": 2110,
+      "roaming_fraction": 1.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 1.0,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 223,
+      "exits_per_on_lawn_hour": 38.047393364928915,
+      "band_windows": 1586,
+      "band_roaming": 1.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": 0.017492288443131436,
+      "pdf_roaming": 0.4447734757280934,
+      "serotonin_dwelling": null,
+      "pdf_dwelling": null,
+      "on_lawn_speed": 0.09478661483286116
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9415,
+      "evaluation_intake": 3.013926503296033,
+      "action_log_std": [
+        -3.266263246536255,
+        -0.44584596157073975
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1819740533828735,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 0.49834275245666504
+      },
+      "on_lawn_windows": 2651,
+      "roaming_fraction": 0.995473406261788,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.995085995085995,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 54,
+      "exits_per_on_lawn_hour": 7.3330818559034325,
+      "band_windows": 565,
+      "band_roaming": 0.9858407079646018,
+      "band_enrichment": -0.00963269829718627,
+      "last_window_enrichment": -0.14362155440993618,
+      "serotonin_roaming": 0.611406132151126,
+      "pdf_roaming": 0.11673045946346064,
+      "serotonin_dwelling": 0.4616203159093856,
+      "pdf_dwelling": 0.1276247673150566,
+      "on_lawn_speed": 0.1238322231453439
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9416,
+      "evaluation_intake": 6.798160265071639,
+      "action_log_std": [
+        -3.8227615356445312,
+        -1.6204224824905396
+      ],
+      "modulator_strengths": {
+        "mod1": 1.4210408926010132,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 0.7699657678604126
+      },
+      "on_lawn_windows": 6457,
+      "roaming_fraction": 0.8855505652779929,
+      "roaming_bout_s": 251.8181818181818,
+      "dwelling_bout_s": 61.07142857142857,
+      "n_roaming_bouts": 11,
+      "n_dwelling_bouts": 28,
+      "roaming_where_grazed": 0.8703481392557023,
+      "roaming_where_fresh": 0.8878022759601707,
+      "dwell_end_grazed": 0.07865168539325842,
+      "dwell_end_fresh": 0.08935361216730038,
+      "exits": 309,
+      "exits_per_on_lawn_hour": 17.22781477466316,
+      "band_windows": 2796,
+      "band_roaming": 0.8344062947067239,
+      "band_enrichment": -0.051144270571269024,
+      "last_window_enrichment": -0.17034020929093785,
+      "serotonin_roaming": 0.11113664307049902,
+      "pdf_roaming": 0.004614209718226247,
+      "serotonin_dwelling": 0.07685221360631991,
+      "pdf_dwelling": 0.005301204183392846,
+      "on_lawn_speed": 0.05155441940097848
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9417,
+      "evaluation_intake": 5.374360200380682,
+      "action_log_std": [
+        -3.257863998413086,
+        -2.17206072807312
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9208280444145203,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 0.67508465051651
+      },
+      "on_lawn_windows": 4445,
+      "roaming_fraction": 1.0,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 1.0,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": null,
+      "exits": 291,
+      "exits_per_on_lawn_hour": 23.568053993250846,
+      "band_windows": 2073,
+      "band_roaming": 1.0,
+      "band_enrichment": 0.0,
+      "last_window_enrichment": 0.0,
+      "serotonin_roaming": 0.5043114479620486,
+      "pdf_roaming": 0.3672294441986317,
+      "serotonin_dwelling": null,
+      "pdf_dwelling": null,
+      "on_lawn_speed": 0.1244132843295152
+    },
+    {
+      "arm": "modulated_atlas_pdfr1",
+      "seed": 9418,
+      "evaluation_intake": 4.302864574051954,
+      "action_log_std": [
+        -1.996828556060791,
+        1.1957380771636963
+      ],
+      "modulator_strengths": {
+        "mod1": 0.5901004076004028,
+        "pdfr1": 1.0,
+        "pdf_onto_nsm": 1.0,
+        "ingestion_onto_nsm": 0.5644842982292175
+      },
+      "on_lawn_windows": 6362,
+      "roaming_fraction": 0.022791574976422507,
+      "roaming_bout_s": 194.28571428571428,
+      "dwelling_bout_s": 565.0,
+      "n_roaming_bouts": 7,
+      "n_dwelling_bouts": 2,
+      "roaming_where_grazed": 0.00857843137254902,
+      "roaming_where_fresh": 0.03776630083925113,
+      "dwell_end_grazed": 0.000315059861373661,
+      "dwell_end_fresh": 0.0020554984583761563,
+      "exits": 83,
+      "exits_per_on_lawn_hour": 4.696636277900032,
+      "band_windows": 932,
+      "band_roaming": 0.004291845493562232,
+      "band_enrichment": -0.018499729482860276,
+      "last_window_enrichment": -0.022791574976422507,
+      "serotonin_roaming": 0.47500306224000866,
+      "pdf_roaming": 0.0021101282631688025,
+      "serotonin_dwelling": 0.4625764241361491,
+      "pdf_dwelling": 0.0014665608717046674,
+      "on_lawn_speed": 0.024323761953215783
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9411,
+      "evaluation_intake": 5.161979578308565,
+      "action_log_std": [
+        -4.682128429412842,
+        -0.2264481782913208
+      ],
+      "modulator_strengths": {
+        "mod1": 1.1423068046569824,
+        "pdfr1": 1.0056090354919434,
+        "pdf_onto_nsm": 0.38564062118530273,
+        "ingestion_onto_nsm": 1.0872517824172974
+      },
+      "on_lawn_windows": 5928,
+      "roaming_fraction": 0.7832321187584346,
+      "roaming_bout_s": 228.46153846153845,
+      "dwelling_bout_s": 154.84848484848484,
+      "n_roaming_bouts": 13,
+      "n_dwelling_bouts": 33,
+      "roaming_where_grazed": 0.5852601156069365,
+      "roaming_where_fresh": 0.8899273104880582,
+      "dwell_end_grazed": 0.019464720194647202,
+      "dwell_end_fresh": 0.0855614973262032,
+      "exits": 162,
+      "exits_per_on_lawn_hour": 9.838056680161944,
+      "band_windows": 1756,
+      "band_roaming": 0.7556947608200456,
+      "band_enrichment": -0.027537357938388962,
+      "last_window_enrichment": -0.15360248912880492,
+      "serotonin_roaming": 0.6749448996016459,
+      "pdf_roaming": 0.1851688278123066,
+      "serotonin_dwelling": 0.511067446617255,
+      "pdf_dwelling": 0.18516066734970157,
+      "on_lawn_speed": 0.04054974630023139
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9412,
+      "evaluation_intake": 4.159598925744447,
+      "action_log_std": [
+        -2.6725969314575195,
+        -0.18705828487873077
+      ],
+      "modulator_strengths": {
+        "mod1": 0.9343488812446594,
+        "pdfr1": 1.159645915031433,
+        "pdf_onto_nsm": 0.06924185901880264,
+        "ingestion_onto_nsm": 1.4703326225280762
+      },
+      "on_lawn_windows": 4093,
+      "roaming_fraction": 0.9584656731004153,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9905913978494624,
+      "roaming_where_fresh": 0.9513287548521947,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.2116788321167883,
+      "exits": 97,
+      "exits_per_on_lawn_hour": 8.531639384314683,
+      "band_windows": 991,
+      "band_roaming": 0.9808274470232089,
+      "band_enrichment": 0.022361773922793593,
+      "last_window_enrichment": -0.14403268340969366,
+      "serotonin_roaming": 0.9179476952248722,
+      "pdf_roaming": 0.2970376078878065,
+      "serotonin_dwelling": 0.31404805117172324,
+      "pdf_dwelling": 0.10219503122418387,
+      "on_lawn_speed": 0.059958120261655395
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9413,
+      "evaluation_intake": 4.1479677613619055,
+      "action_log_std": [
+        -3.147430181503296,
+        -0.22821272909641266
+      ],
+      "modulator_strengths": {
+        "mod1": 1.021409273147583,
+        "pdfr1": 1.0251109600067139,
+        "pdf_onto_nsm": 0.12318017333745956,
+        "ingestion_onto_nsm": 2.663599729537964
+      },
+      "on_lawn_windows": 5828,
+      "roaming_fraction": 0.5173301304049417,
+      "roaming_bout_s": 193.92857142857142,
+      "dwelling_bout_s": 294.6808510638298,
+      "n_roaming_bouts": 28,
+      "n_dwelling_bouts": 47,
+      "roaming_where_grazed": 0.5003355704697987,
+      "roaming_where_fresh": 0.5351123595505618,
+      "dwell_end_grazed": 0.03971631205673759,
+      "dwell_end_fresh": 0.000777000777000777,
+      "exits": 151,
+      "exits_per_on_lawn_hour": 9.327385037748797,
+      "band_windows": 1488,
+      "band_roaming": 0.584005376344086,
+      "band_enrichment": 0.06667524593914431,
+      "last_window_enrichment": 0.038961260323535085,
+      "serotonin_roaming": 0.4415995463297029,
+      "pdf_roaming": 0.5444742483407621,
+      "serotonin_dwelling": 0.516789986017539,
+      "pdf_dwelling": 0.5595532298763031,
+      "on_lawn_speed": 0.033159591010786874
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9414,
+      "evaluation_intake": 3.149471093445233,
+      "action_log_std": [
+        -2.6543028354644775,
+        0.6473010182380676
+      ],
+      "modulator_strengths": {
+        "mod1": 0.86997389793396,
+        "pdfr1": 1.6182178258895874,
+        "pdf_onto_nsm": 0.06660445034503937,
+        "ingestion_onto_nsm": 1.426268458366394
+      },
+      "on_lawn_windows": 3762,
+      "roaming_fraction": 0.02046783625730994,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.0,
+      "roaming_where_fresh": 0.030243519245875882,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0012422360248447205,
+      "exits": 62,
+      "exits_per_on_lawn_hour": 5.933014354066986,
+      "band_windows": 810,
+      "band_roaming": 0.043209876543209874,
+      "band_enrichment": 0.022742040285899934,
+      "last_window_enrichment": 0.027919260516883607,
+      "serotonin_roaming": 0.8396070616478044,
+      "pdf_roaming": 0.2027952083390513,
+      "serotonin_dwelling": 0.894329330327709,
+      "pdf_dwelling": 0.12816777350272454,
+      "on_lawn_speed": 0.014454086647990775
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9415,
+      "evaluation_intake": 4.679549825015708,
+      "action_log_std": [
+        -2.0710558891296387,
+        0.6562201976776123
+      ],
+      "modulator_strengths": {
+        "mod1": 1.2472999095916748,
+        "pdfr1": 1.46785569190979,
+        "pdf_onto_nsm": 0.3781895935535431,
+        "ingestion_onto_nsm": 1.048516035079956
+      },
+      "on_lawn_windows": 7064,
+      "roaming_fraction": 0.09017553793884485,
+      "roaming_bout_s": 206.36363636363637,
+      "dwelling_bout_s": 440.0,
+      "n_roaming_bouts": 11,
+      "n_dwelling_bouts": 2,
+      "roaming_where_grazed": 0.08501479687920366,
+      "roaming_where_fresh": 0.09590678219300866,
+      "dwell_end_grazed": 0.0027010804321728693,
+      "dwell_end_fresh": 0.0013472549680026945,
+      "exits": 77,
+      "exits_per_on_lawn_hour": 3.9241223103057754,
+      "band_windows": 863,
+      "band_roaming": 0.1436848203939745,
+      "band_enrichment": 0.05350928245512966,
+      "last_window_enrichment": 0.0007335529702460625,
+      "serotonin_roaming": 0.8052119106436387,
+      "pdf_roaming": 0.10502173161127278,
+      "serotonin_dwelling": 0.9408206349282359,
+      "pdf_dwelling": 0.01678294241226971,
+      "on_lawn_speed": 0.02566204869254964
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9416,
+      "evaluation_intake": 2.7917131758446585,
+      "action_log_std": [
+        -2.589045763015747,
+        1.2974292039871216
+      ],
+      "modulator_strengths": {
+        "mod1": 1.0728617906570435,
+        "pdfr1": 1.5952266454696655,
+        "pdf_onto_nsm": 0.8583069443702698,
+        "ingestion_onto_nsm": 1.1430531740188599
+      },
+      "on_lawn_windows": 3310,
+      "roaming_fraction": 0.5377643504531722,
+      "roaming_bout_s": 605.0,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 12,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.25544554455445545,
+      "roaming_where_fresh": 0.6617391304347826,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.03877005347593583,
+      "exits": 54,
+      "exits_per_on_lawn_hour": 5.873111782477341,
+      "band_windows": 639,
+      "band_roaming": 0.352112676056338,
+      "band_enrichment": -0.18565167439683417,
+      "last_window_enrichment": -0.29702360971243147,
+      "serotonin_roaming": 0.7747394906894098,
+      "pdf_roaming": 0.15168679536848717,
+      "serotonin_dwelling": 0.4355773697835272,
+      "pdf_dwelling": 0.40783920107330224,
+      "on_lawn_speed": 0.04157190037699061
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9417,
+      "evaluation_intake": 4.213864192858257,
+      "action_log_std": [
+        -2.8987555503845215,
+        -1.0608596801757812
+      ],
+      "modulator_strengths": {
+        "mod1": 0.958571195602417,
+        "pdfr1": 0.8510863780975342,
+        "pdf_onto_nsm": 0.22377771139144897,
+        "ingestion_onto_nsm": 1.5234638452529907
+      },
+      "on_lawn_windows": 4884,
+      "roaming_fraction": 0.9936527436527437,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9955629506378258,
+      "roaming_where_fresh": 0.9925348912690685,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.8181818181818182,
+      "exits": 80,
+      "exits_per_on_lawn_hour": 5.896805896805897,
+      "band_windows": 633,
+      "band_roaming": 0.9842022116903634,
+      "band_enrichment": -0.009450531962380326,
+      "last_window_enrichment": -0.09365274365274368,
+      "serotonin_roaming": 0.8762254119946609,
+      "pdf_roaming": 0.25149020716369874,
+      "serotonin_dwelling": 0.39727441042815637,
+      "pdf_dwelling": 0.2199373669842238,
+      "on_lawn_speed": 0.11004567364942307
+    },
+    {
+      "arm": "modulated_atlas_satiety",
+      "seed": 9418,
+      "evaluation_intake": 4.7108040060121485,
+      "action_log_std": [
+        -3.432595729827881,
+        -0.3220006823539734
+      ],
+      "modulator_strengths": {
+        "mod1": 1.069374442100525,
+        "pdfr1": 1.3092708587646484,
+        "pdf_onto_nsm": 0.5899360179901123,
+        "ingestion_onto_nsm": 1.0454596281051636
+      },
+      "on_lawn_windows": 4386,
+      "roaming_fraction": 0.9790241678066576,
+      "roaming_bout_s": 170.0,
+      "dwelling_bout_s": 35.0,
+      "n_roaming_bouts": 2,
+      "n_dwelling_bouts": 2,
+      "roaming_where_grazed": 0.9886845827439887,
+      "roaming_where_fresh": 0.9771677086164718,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.14,
+      "exits": 195,
+      "exits_per_on_lawn_hour": 16.00547195622435,
+      "band_windows": 1661,
+      "band_roaming": 0.9686935580975317,
+      "band_enrichment": -0.010330609709125915,
+      "last_window_enrichment": -0.12774211652460632,
+      "serotonin_roaming": 0.7978779840167622,
+      "pdf_roaming": 0.21920409260008328,
+      "serotonin_dwelling": 0.6227770768526935,
+      "pdf_dwelling": 0.27407796114035277,
+      "on_lawn_speed": 0.060381791878185764
+    }
+  ],
+  "panel": {
+    "minimum": 0.278,
+    "readable": true,
+    "reading": {
+      "arm": "modulated_atlas",
+      "against": "modulated_atlas_frozen",
+      "per_seed": {
+        "9411": 0.22838547716269975,
+        "9412": 0.9881856540084388,
+        "9413": -0.0016314490397929537,
+        "9414": -0.00795038231762002,
+        "9415": 0.9503437091026204,
+        "9416": 0.8216418510824023,
+        "9417": 0.9821428571428571,
+        "9418": 0.0014194709873979194
+      },
+      "test": {
+        "mean_delta": 0.4953171485161254,
+        "wilcoxon_p": 0.0390625,
+        "ci_lo": 0.29742951218998054,
+        "ci_hi": 0.708152350778048,
+        "n": 8,
+        "per_seed_deltas": [
+          0.22838547716269975,
+          0.9881856540084388,
+          -0.0016314490397929537,
+          -0.00795038231762002,
+          0.9503437091026204,
+          0.8216418510824023,
+          0.9821428571428571,
+          0.0014194709873979194
+        ]
+      }
+    },
+    "q": 0.078125,
+    "state": "unresolved",
+    "verdict": "unresolved_at_this_sensitivity",
+    "achieved_sd": 0.47941618750225534,
+    "achieved_mde": 0.42154455665005025
+  },
+  "knockouts": {
+    "minimum": 0.009,
+    "measure": "speed",
+    "dwelling_gate": {
+      "minimum": 0.278,
+      "readable": true,
+      "reading": {
+        "arm": "modulated_atlas",
+        "against": "modulated_atlas_frozen",
+        "per_seed": {
+          "9411": 0.22838547716269975,
+          "9412": 0.9881856540084388,
+          "9413": -0.0016314490397929537,
+          "9414": -0.00795038231762002,
+          "9415": 0.9503437091026204,
+          "9416": 0.8216418510824023,
+          "9417": 0.9821428571428571,
+          "9418": 0.0014194709873979194
+        },
+        "test": {
+          "mean_delta": 0.4953171485161254,
+          "wilcoxon_p": 0.0390625,
+          "ci_lo": 0.29742951218998054,
+          "ci_hi": 0.708152350778048,
+          "n": 8,
+          "per_seed_deltas": [
+            0.22838547716269975,
+            0.9881856540084388,
+            -0.0016314490397929537,
+            -0.00795038231762002,
+            0.9503437091026204,
+            0.8216418510824023,
+            0.9821428571428571,
+            0.0014194709873979194
+          ]
+        }
+      },
+      "q": 0.078125,
+      "state": "unresolved",
+      "verdict": "unresolved_at_this_sensitivity",
+      "achieved_sd": 0.47941618750225534,
+      "achieved_mde": 0.42154455665005025
+    },
+    "readable": false,
+    "verdict": "unreadable"
+  },
+  "modulator_beside": {
+    "raised_tph1_dwelling_oriented": {
+      "arm": "modulated_atlas_tph1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": 0.22424462756317765,
+        "9412": 0.766875,
+        "9413": -0.9948124534989929,
+        "9414": -0.9936305732484076,
+        "9415": -0.03309133884855653,
+        "9416": 0.8235437246849107,
+        "9417": 0.0,
+        "9418": -0.9364805586693922
+      },
+      "test": {
+        "mean_delta": -0.1429189465021576,
+        "wilcoxon_p": 0.8125,
+        "ci_lo": -0.4691930865304292,
+        "ci_hi": 0.16585738243927853,
+        "n": 8,
+        "per_seed_deltas": [
+          0.22424462756317765,
+          0.766875,
+          -0.9948124534989929,
+          -0.9936305732484076,
+          -0.03309133884855653,
+          0.8235437246849107,
+          0.0,
+          -0.9364805586693922
+        ]
+      }
+    },
+    "raised_pdfr1_dwelling_oriented": {
+      "arm": "modulated_atlas_pdfr1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": -0.23953213036078602,
+        "9412": -0.9962920707358813,
+        "9413": 0.9729669306008384,
+        "9414": -0.006369426751592355,
+        "9415": -0.9623820674132315,
+        "9416": -0.7259541424391944,
+        "9417": -1.0,
+        "9418": 0.9671682643810072
+      },
+      "test": {
+        "mean_delta": -0.24879933033985502,
+        "wilcoxon_p": 0.84375,
+        "ci_lo": -0.590029393897785,
+        "ci_hi": 0.08771982080753157,
+        "n": 8,
+        "per_seed_deltas": [
+          -0.23953213036078602,
+          -0.9962920707358813,
+          0.9729669306008384,
+          -0.006369426751592355,
+          -0.9623820674132315,
+          -0.7259541424391944,
+          -1.0,
+          0.9671682643810072
+        ]
+      }
+    },
+    "acute_tph1_dwelling_oriented": {
+      "arm": "modulated_atlas+tph1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": 0.2191287375871268,
+        "9412": 0.0,
+        "9413": 0.001769911504424737,
+        "9414": -0.005372256222967331,
+        "9415": -0.018141383191645377,
+        "9416": -0.15750118474356034,
+        "9417": 0.005243609351103351,
+        "9418": 0.003580212322156884
+      },
+      "test": {
+        "mean_delta": 0.006088455825829842,
+        "wilcoxon_p": 0.59375,
+        "ci_lo": -0.03761103631299872,
+        "ci_hi": 0.05345285924714255,
+        "n": 8,
+        "per_seed_deltas": [
+          0.2191287375871268,
+          0.0,
+          0.001769911504424737,
+          -0.005372256222967331,
+          -0.018141383191645377,
+          -0.15750118474356034,
+          0.005243609351103351,
+          0.003580212322156884
+        ]
+      }
+    },
+    "acute_pdfr1_dwelling_oriented": {
+      "arm": "modulated_atlas+pdfr1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": -0.23626225478232288,
+        "9412": 0.0,
+        "9413": 0.00869840805480393,
+        "9414": -0.0015524710675846043,
+        "9415": -0.9519557351776572,
+        "9416": -0.7976310393239565,
+        "9417": -0.06638281401199919,
+        "9418": -0.001143363489545357
+      },
+      "test": {
+        "mean_delta": -0.2557786587247827,
+        "wilcoxon_p": 0.9765625,
+        "ci_lo": -0.4348606481248469,
+        "ci_hi": -0.09785196517781551,
+        "n": 8,
+        "per_seed_deltas": [
+          -0.23626225478232288,
+          0.0,
+          0.00869840805480393,
+          -0.0015524710675846043,
+          -0.9519557351776572,
+          -0.7976310393239565,
+          -0.06638281401199919,
+          -0.001143363489545357
+        ]
+      }
+    },
+    "raised_tph1_speed_oriented": {
+      "arm": "modulated_atlas_tph1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": 0.0026609897734367685,
+        "9412": 0.0160044107064837,
+        "9413": -0.13671617990346807,
+        "9414": -0.060351855278715366,
+        "9415": -0.017624784870800752,
+        "9416": 0.01953089429212699,
+        "9417": -0.01703755132577552,
+        "9418": -0.14386798082502816
+      },
+      "test": {
+        "mean_delta": -0.04217525717896756,
+        "wilcoxon_p": 0.92578125,
+        "ci_lo": -0.06958284781793037,
+        "ci_hi": -0.016046304731254773,
+        "n": 8,
+        "per_seed_deltas": [
+          0.0026609897734367685,
+          0.0160044107064837,
+          -0.13671617990346807,
+          -0.060351855278715366,
+          -0.017624784870800752,
+          0.01953089429212699,
+          -0.01703755132577552,
+          -0.14386798082502816
+        ]
+      }
+    },
+    "raised_pdfr1_speed_oriented": {
+      "arm": "modulated_atlas_pdfr1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": -0.13426643092558901,
+        "9412": -0.07654210515370291,
+        "9413": 0.13709652396511984,
+        "9414": -0.014891317091118322,
+        "9415": -0.10040298634755478,
+        "9416": -0.024700002418470757,
+        "9417": -0.08949917542766453,
+        "9418": 0.1442806826949014
+      },
+      "test": {
+        "mean_delta": -0.019865601338009884,
+        "wilcoxon_p": 0.6796875,
+        "ci_lo": -0.06436833247811971,
+        "ci_hi": 0.02236387713014778,
+        "n": 8,
+        "per_seed_deltas": [
+          -0.13426643092558901,
+          -0.07654210515370291,
+          0.13709652396511984,
+          -0.014891317091118322,
+          -0.10040298634755478,
+          -0.024700002418470757,
+          -0.08949917542766453,
+          0.1442806826949014
+        ]
+      }
+    },
+    "acute_tph1_speed_oriented": {
+      "arm": "modulated_atlas+tph1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": 0.03655758654002657,
+        "9412": -0.0024112006688532753,
+        "9413": 0.01067005396326387,
+        "9414": -0.0025253774811123952,
+        "9415": 0.0007051399724647169,
+        "9416": -0.006925539606758291,
+        "9417": 0.001984346386864677,
+        "9418": -0.035907850467278346
+      },
+      "test": {
+        "mean_delta": 0.0002683948298271904,
+        "wilcoxon_p": 0.578125,
+        "ci_lo": -0.008095290805251398,
+        "ci_hi": 0.00865649401857311,
+        "n": 8,
+        "per_seed_deltas": [
+          0.03655758654002657,
+          -0.0024112006688532753,
+          0.01067005396326387,
+          -0.0025253774811123952,
+          0.0007051399724647169,
+          -0.006925539606758291,
+          0.001984346386864677,
+          -0.035907850467278346
+        ]
+      }
+    },
+    "acute_pdfr1_speed_oriented": {
+      "arm": "modulated_atlas+pdfr1",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": -0.04593171510114798,
+        "9412": -0.008072231698207963,
+        "9413": 0.06377462112973915,
+        "9414": 0.00020157056783394467,
+        "9415": -0.018950515782185335,
+        "9416": -0.015382979471456011,
+        "9417": 0.013946579876006785,
+        "9418": -0.0005386546989238905
+      },
+      "test": {
+        "mean_delta": -0.001369165647292662,
+        "wilcoxon_p": 0.76953125,
+        "ci_lo": -0.013955704234553586,
+        "ci_hi": 0.013143549679318295,
+        "n": 8,
+        "per_seed_deltas": [
+          -0.04593171510114798,
+          -0.008072231698207963,
+          0.06377462112973915,
+          0.00020157056783394467,
+          -0.018950515782185335,
+          -0.015382979471456011,
+          0.013946579876006785,
+          -0.0005386546989238905
+        ]
+      }
+    },
+    "satiety_link_minus_intact_dwelling": {
+      "arm": "modulated_atlas_satiety",
+      "against": "modulated_atlas",
+      "per_seed": {
+        "9411": -0.030010625930814827,
+        "9412": -0.9584656731004153,
+        "9413": 0.4808999580906336,
+        "9414": 0.9731627369910977,
+        "9415": -0.05708419909028828,
+        "9416": -0.3781679276143737,
+        "9417": -0.9936527436527437,
+        "9418": 0.01093567155077213
+      },
+      "test": {
+        "mean_delta": -0.11904785034451656,
+        "wilcoxon_p": 0.76953125,
+        "ci_lo": -0.39943419468610114,
+        "ci_hi": 0.15948117432964648,
+        "n": 8,
+        "per_seed_deltas": [
+          -0.030010625930814827,
+          -0.9584656731004153,
+          0.4808999580906336,
+          0.9731627369910977,
+          -0.05708419909028828,
+          -0.3781679276143737,
+          -0.9936527436527437,
+          0.01093567155077213
+        ]
+      }
+    },
+    "strengths": {
+      "9411": {
+        "mod1": 0.9552776217460632,
+        "pdfr1": 1.1075552701950073,
+        "pdf_onto_nsm": 0.1379908174276352,
+        "ingestion_onto_nsm": 2.390231132507324
+      },
+      "9412": {
+        "mod1": 1.1697746515274048,
+        "pdfr1": 1.2021781206130981,
+        "pdf_onto_nsm": 0.12870700657367706,
+        "ingestion_onto_nsm": 2.376964807510376
+      },
+      "9413": {
+        "mod1": 1.6742697954177856,
+        "pdfr1": 0.9312300682067871,
+        "pdf_onto_nsm": 0.3700563907623291,
+        "ingestion_onto_nsm": 1.3152707815170288
+      },
+      "9414": {
+        "mod1": 1.8542757034301758,
+        "pdfr1": 1.267668604850769,
+        "pdf_onto_nsm": 0.29175058007240295,
+        "ingestion_onto_nsm": 1.8936443328857422
+      },
+      "9415": {
+        "mod1": 0.9840673208236694,
+        "pdfr1": 1.1412467956542969,
+        "pdf_onto_nsm": 0.40466833114624023,
+        "ingestion_onto_nsm": 1.4122952222824097
+      },
+      "9416": {
+        "mod1": 1.1042330265045166,
+        "pdfr1": 1.202579140663147,
+        "pdf_onto_nsm": 1.0731984376907349,
+        "ingestion_onto_nsm": 0.5733716487884521
+      },
+      "9417": {
+        "mod1": 1.3665590286254883,
+        "pdfr1": 0.9728053212165833,
+        "pdf_onto_nsm": 0.1828499138355255,
+        "ingestion_onto_nsm": 2.1271767616271973
+      },
+      "9418": {
+        "mod1": 1.2187840938568115,
+        "pdfr1": 1.4162797927856445,
+        "pdf_onto_nsm": 0.7416675686836243,
+        "ingestion_onto_nsm": 0.7492222189903259
+      }
+    },
+    "concentrations_by_state": {
+      "modulated_atlas": {
+        "9411": {
+          "serotonin_roaming": 0.38272926829072296,
+          "serotonin_dwelling": 0.5453447955142101,
+          "pdf_roaming": 0.49522436284801236,
+          "pdf_dwelling": 0.5164978032384209
+        },
+        "9412": {
+          "serotonin_roaming": null,
+          "serotonin_dwelling": 0.06247656188079826,
+          "pdf_roaming": null,
+          "pdf_dwelling": 0.5069591388472514
+        },
+        "9413": {
+          "serotonin_roaming": 0.3275637165402807,
+          "serotonin_dwelling": 0.36984867354234063,
+          "pdf_roaming": 0.5837371926512526,
+          "pdf_dwelling": 0.6480756203333536
+        },
+        "9414": {
+          "serotonin_roaming": 0.035036450602422484,
+          "serotonin_dwelling": 0.0791375404637721,
+          "pdf_roaming": 0.03272581482996859,
+          "pdf_dwelling": 0.06683812885716583
+        },
+        "9415": {
+          "serotonin_roaming": 0.4928143114409074,
+          "serotonin_dwelling": 0.4904963083169635,
+          "pdf_roaming": 0.39400172938092226,
+          "pdf_dwelling": 0.8173589180584929
+        },
+        "9416": {
+          "serotonin_roaming": 0.29311480202223267,
+          "serotonin_dwelling": 0.2741035602179425,
+          "pdf_roaming": 0.5885766175231214,
+          "pdf_dwelling": 0.585346008420309
+        },
+        "9417": {
+          "serotonin_roaming": null,
+          "serotonin_dwelling": 0.2539247465220357,
+          "pdf_roaming": null,
+          "pdf_dwelling": 0.45844863980041245
+        },
+        "9418": {
+          "serotonin_roaming": 0.51279427424077,
+          "serotonin_dwelling": 0.3065485204259554,
+          "pdf_roaming": 0.33170847536333564,
+          "pdf_dwelling": 0.3320574742555618
+        }
+      },
+      "modulated_atlas+pdfr1": {
+        "9411": {
+          "serotonin_roaming": 0.5255849082039401,
+          "serotonin_dwelling": 0.2931851278426069,
+          "pdf_roaming": 0.08808094622953146,
+          "pdf_dwelling": 0.06659484268025016
+        },
+        "9412": {
+          "serotonin_roaming": null,
+          "serotonin_dwelling": 0.0741455995213315,
+          "pdf_roaming": null,
+          "pdf_dwelling": 0.18714185666576602
+        },
+        "9413": {
+          "serotonin_roaming": 0.28282999186086466,
+          "serotonin_dwelling": 0.19230738106559503,
+          "pdf_roaming": 0.4936649632842765,
+          "pdf_dwelling": 0.5310639922033276
+        },
+        "9414": {
+          "serotonin_roaming": 0.018065273832063567,
+          "serotonin_dwelling": 0.027964438932637375,
+          "pdf_roaming": 0.012548314739791159,
+          "pdf_dwelling": 0.018110023570867877
+        },
+        "9415": {
+          "serotonin_roaming": 0.7248136665217573,
+          "serotonin_dwelling": 0.5469120143234362,
+          "pdf_roaming": 0.35066887398663704,
+          "pdf_dwelling": 0.3618336798922147
+        },
+        "9416": {
+          "serotonin_roaming": 0.46035395433959897,
+          "serotonin_dwelling": 0.3409603800302409,
+          "pdf_roaming": 0.23683168773083807,
+          "pdf_dwelling": 0.22643627236541516
+        },
+        "9417": {
+          "serotonin_roaming": 0.0324341933531899,
+          "serotonin_dwelling": 0.3495782750694791,
+          "pdf_roaming": 0.2106286463399207,
+          "pdf_dwelling": 0.25695914880730647
+        },
+        "9418": {
+          "serotonin_roaming": 0.6779123465410746,
+          "serotonin_dwelling": 0.517172372341156,
+          "pdf_roaming": 0.36637689234622367,
+          "pdf_dwelling": 0.3982342150476244
+        }
+      },
+      "modulated_atlas+tph1": {
+        "9411": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.11242416132398121,
+          "pdf_dwelling": 0.39188088635306406
+        },
+        "9412": {
+          "serotonin_roaming": null,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": null,
+          "pdf_dwelling": 0.7195790222885483
+        },
+        "9413": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": null,
+          "pdf_roaming": 0.6679092266581657,
+          "pdf_dwelling": null
+        },
+        "9414": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.08637531361411227,
+          "pdf_dwelling": 0.09781860219124981
+        },
+        "9415": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.40045345902948054,
+          "pdf_dwelling": 0.8178227585648352
+        },
+        "9416": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.5497980524193157,
+          "pdf_dwelling": 0.6280671053856333
+        },
+        "9417": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.15064714940833962,
+          "pdf_dwelling": 0.7468584053003177
+        },
+        "9418": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.19247051147383962,
+          "pdf_dwelling": 0.22741393223404885
+        }
+      },
+      "modulated_atlas_pdfr1": {
+        "9411": {
+          "serotonin_roaming": 0.38514929960211547,
+          "serotonin_dwelling": 0.2486583064451362,
+          "pdf_roaming": 0.20491120770633048,
+          "pdf_dwelling": 0.19925426894968207
+        },
+        "9412": {
+          "serotonin_roaming": 0.21396516388310088,
+          "serotonin_dwelling": 0.1756340614878214,
+          "pdf_roaming": 0.11472246946749376,
+          "pdf_dwelling": 0.167412964006265
+        },
+        "9413": {
+          "serotonin_roaming": 0.0029294836121705513,
+          "serotonin_dwelling": 0.049565562035128755,
+          "pdf_roaming": 0.18649550724555464,
+          "pdf_dwelling": 0.09639301660458029
+        },
+        "9414": {
+          "serotonin_roaming": 0.017492288443131436,
+          "serotonin_dwelling": null,
+          "pdf_roaming": 0.4447734757280934,
+          "pdf_dwelling": null
+        },
+        "9415": {
+          "serotonin_roaming": 0.611406132151126,
+          "serotonin_dwelling": 0.4616203159093856,
+          "pdf_roaming": 0.11673045946346064,
+          "pdf_dwelling": 0.1276247673150566
+        },
+        "9416": {
+          "serotonin_roaming": 0.11113664307049902,
+          "serotonin_dwelling": 0.07685221360631991,
+          "pdf_roaming": 0.004614209718226247,
+          "pdf_dwelling": 0.005301204183392846
+        },
+        "9417": {
+          "serotonin_roaming": 0.5043114479620486,
+          "serotonin_dwelling": null,
+          "pdf_roaming": 0.3672294441986317,
+          "pdf_dwelling": null
+        },
+        "9418": {
+          "serotonin_roaming": 0.47500306224000866,
+          "serotonin_dwelling": 0.4625764241361491,
+          "pdf_roaming": 0.0021101282631688025,
+          "pdf_dwelling": 0.0014665608717046674
+        }
+      },
+      "modulated_atlas_satiety": {
+        "9411": {
+          "serotonin_roaming": 0.6749448996016459,
+          "serotonin_dwelling": 0.511067446617255,
+          "pdf_roaming": 0.1851688278123066,
+          "pdf_dwelling": 0.18516066734970157
+        },
+        "9412": {
+          "serotonin_roaming": 0.9179476952248722,
+          "serotonin_dwelling": 0.31404805117172324,
+          "pdf_roaming": 0.2970376078878065,
+          "pdf_dwelling": 0.10219503122418387
+        },
+        "9413": {
+          "serotonin_roaming": 0.4415995463297029,
+          "serotonin_dwelling": 0.516789986017539,
+          "pdf_roaming": 0.5444742483407621,
+          "pdf_dwelling": 0.5595532298763031
+        },
+        "9414": {
+          "serotonin_roaming": 0.8396070616478044,
+          "serotonin_dwelling": 0.894329330327709,
+          "pdf_roaming": 0.2027952083390513,
+          "pdf_dwelling": 0.12816777350272454
+        },
+        "9415": {
+          "serotonin_roaming": 0.8052119106436387,
+          "serotonin_dwelling": 0.9408206349282359,
+          "pdf_roaming": 0.10502173161127278,
+          "pdf_dwelling": 0.01678294241226971
+        },
+        "9416": {
+          "serotonin_roaming": 0.7747394906894098,
+          "serotonin_dwelling": 0.4355773697835272,
+          "pdf_roaming": 0.15168679536848717,
+          "pdf_dwelling": 0.40783920107330224
+        },
+        "9417": {
+          "serotonin_roaming": 0.8762254119946609,
+          "serotonin_dwelling": 0.39727441042815637,
+          "pdf_roaming": 0.25149020716369874,
+          "pdf_dwelling": 0.2199373669842238
+        },
+        "9418": {
+          "serotonin_roaming": 0.7978779840167622,
+          "serotonin_dwelling": 0.6227770768526935,
+          "pdf_roaming": 0.21920409260008328,
+          "pdf_dwelling": 0.27407796114035277
+        }
+      },
+      "modulated_atlas_tph1": {
+        "9411": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.4751195709439119,
+          "pdf_dwelling": 0.198842862102101
+        },
+        "9412": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.45070882539723556,
+          "pdf_dwelling": 0.28969069242509043
+        },
+        "9413": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.11248993095424441,
+          "pdf_dwelling": 0.09880666238528481
+        },
+        "9414": {
+          "serotonin_roaming": null,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": null,
+          "pdf_dwelling": 0.038972408580382166
+        },
+        "9415": {
+          "serotonin_roaming": null,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": null,
+          "pdf_dwelling": 0.4366812598039337
+        },
+        "9416": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.03592007819820353,
+          "pdf_dwelling": 0.036004699394106866
+        },
+        "9417": {
+          "serotonin_roaming": null,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": null,
+          "pdf_dwelling": 0.3516111095322009
+        },
+        "9418": {
+          "serotonin_roaming": 0.0,
+          "serotonin_dwelling": 0.0,
+          "pdf_roaming": 0.008094439463423054,
+          "pdf_dwelling": 0.009057525122310546
+        }
+      }
+    }
+  }
+}

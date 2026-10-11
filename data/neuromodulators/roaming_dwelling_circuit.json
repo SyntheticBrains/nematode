@@ -1,0 +1,79 @@
+{
+  "description": "The serotonin and PDF roaming/dwelling circuit, as the cited sources support it. Neuron classes; left/right members are both gated.",
+  "serotonin": {
+    "release": {
+      "neurons": [
+        "NSM"
+      ],
+      "drive": "food ingestion",
+      "sources": [
+        "Flavell 2013 Fig 3A-B (NSM required; HSN also required, not modelled as a release site here)",
+        "Rhoades 2019 Fig 1-3 (NSM senses ingested food via DEL-3/DEL-7)"
+      ]
+    },
+    "receptor": {
+      "name": "MOD-1",
+      "sign": -1,
+      "kind": "serotonin-gated chloride channel (inhibitory)",
+      "neurons": [
+        "AIY",
+        "ASI",
+        "RIF"
+      ],
+      "sources": [
+        "Flavell 2013 Fig 3D-G (AIY+ASI+RID rescue together; RIF alone sufficient; ablating AIY, ASI or RIF reduces exploration)"
+      ],
+      "conflict": "Dag 2023 Fig 5G-I: in an acute-slowing assay, mod-1 rescue in RIF gives sustained slowing but rescue in AIY does not; a different behaviour from roaming/dwelling"
+    }
+  },
+  "pdf": {
+    "release": {
+      "neurons": [
+        "AVB",
+        "PVP",
+        "SIAV"
+      ],
+      "drive": "network activity",
+      "sources": [
+        "Flavell 2013 Fig 6E (Cre deletion of pdf-1 in AVB, PVP and SIAV removes rescue)"
+      ]
+    },
+    "receptor": {
+      "name": "PDFR-1",
+      "sign": 1,
+      "kind": "Galpha-s / cAMP (excitatory)",
+      "neurons": [
+        "AIY",
+        "RIM",
+        "RIA"
+      ],
+      "sources": [
+        "Flavell 2013 Fig 6G-H (partial rescue in AIY, RIM and RIA), Fig 7A-D (cAMP; adenylyl cyclase drives roaming)"
+      ],
+      "excluded": "RIB: Ji 2021 cites Rhoades 2019 for it, and Rhoades 2019 does not contain it"
+    },
+    "inhibits_release_of": {
+      "neurons": [
+        "NSM"
+      ],
+      "via": "PDFR-1 neurons",
+      "sign": -1,
+      "sources": [
+        "Ji 2021 Fig 4E-G: 'PDF signaling is necessary and sufficient to keep NSM inactive during roaming'; pdfr-1::acy-1gf and pdf-1::Chrimson inhibit NSM"
+      ],
+      "modelled_as": "a functional inhibitory current on NSM proportional to the PDF concentration; NSM has no synapses from somatic neurons in the wiring, so the link is extrasynaptic or polysynaptic, as Ji 2021 leaves it"
+    }
+  },
+  "timescale_s": {
+    "value": 60,
+    "basis": "NSM calcium peaks last about 60 s (Flavell 2013 Fig 4; Ji 2021 Fig 2); the circuit, not the concentration, is to carry persistence beyond it (Ji 2021, mutual inhibition)"
+  },
+  "mutant_directions": {
+    "tph-1": "more roaming (Flavell 2013 Fig 2C-D; Ji 2021 Fig 3A-B; Ji 2021 patch assay)",
+    "mod-1": "more roaming (Flavell 2013 Fig 2C-D)",
+    "pdfr-1": "more dwelling (Flavell 2013 Fig 6A-C; Ji 2021 patch assay)",
+    "pdf-1;pdf-2": "more dwelling (Flavell 2013 Fig 6A-C)"
+  },
+  "satiety": "after 1 h starvation, worms on food roam about half as much (Ben Arous 2009 Fig 1); fasting increases NSM's response to food (Rhoades 2019 Fig 5)",
+  "verified": "2026-10-11, against the full texts: Flavell 2013 (PMC3942133), Ji 2021 (PMC8660023), Dag 2023 (PMC10484565), Rhoades 2019 (PMC6526957), Ben Arous 2009 (PMC2762077); figure images were not read, only text and legends"
+}

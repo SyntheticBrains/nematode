@@ -82,3 +82,31 @@ def test_the_committed_connectome_lawn_configs_are_the_generators(arm: str) -> N
     assert patch.environment is not None
     assert config.environment.foraging == patch.environment.foraging
     assert config.reward == patch.reward
+
+
+@pytest.mark.parametrize("arm", list(gen.MODULATED_ARMS))
+def test_the_committed_modulated_configs_are_the_generators(arm: str) -> None:
+    """Each modulated arm is stage 0's entropy-0.005 connectome with the field on, and loads."""
+    path, text = gen.derive_modulated(arm)
+    assert path.read_text() == text
+    config = load_simulation_config(str(path))
+    assert config.brain is not None
+    brain = config.brain.config
+    assert getattr(brain, "modulators", False) is True
+    for key, value in gen.MODULATED_ARMS[arm].items():
+        assert getattr(brain, key) == value
+    stage0 = load_simulation_config(str(gen.derive_connectome("connectome_e005")[0]))
+    assert stage0.brain is not None
+    expected = stage0.brain.config.model_copy(
+        update={"modulators": True, **gen.MODULATED_ARMS[arm]},
+    )
+    assert brain == expected
+    assert config.environment == stage0.environment
+    assert config.reward == stage0.reward
+
+
+def test_an_acute_arm_runs_its_trained_arm_s_config() -> None:
+    """``modulated+tph1`` has the intact arm's stem: its config and its training log."""
+    for arm in gen.ACUTE_ARMS:
+        assert gen.stem(arm) == gen.stem(arm.split("+")[0])
+    assert gen.stem("modulated_atlas+pdfr1") == gen.stem("modulated_atlas")
