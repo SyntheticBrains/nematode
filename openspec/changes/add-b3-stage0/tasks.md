@@ -4,7 +4,7 @@
   the generator. Tests.
 - [x] 2. **Analysis** — **done: `--learner-arm`, `--floor-arm` and `--minimum`; `--compare-mlp` pairs the learner with D.1's MLP by seed from D.1's committed panel. D.1's verdict reproduces exactly under the new code. Tests.** Original scope:: named learner and floor arms in `lawn_states.py`; the connectome paired with
   D.1's MLP by seed, from D.1's committed readings. Tests.
-- [ ] 3. **Pilot and registration**: both entropy levels on seeds 9301–9304; choose the level;
+- [x] 3. **Pilot and registration** — **done 2026-10-11:** 0.005 chosen (gate +1.44; two of four seeds dwell, at +0.93 and +0.73); minimum 0.278 on 19 seeds (2001–2019); gate preflight passes; the connectome's action noise is read from its topology. Original scope:: both entropy levels on seeds 9301–9304; choose the level;
   `089-connectome-lawns/launch.md`; gate preflight; `/nematode-review-spec`.
 - [ ] 4. **Campaign and readout**: the panel on seeds 2001–2016; Logbook 089; tracker B.3 stage 0;
   roadmap.

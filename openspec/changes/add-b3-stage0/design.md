@@ -40,6 +40,17 @@ The registration takes the level where the connectome passes the learning gate a
 dwelling state. If both do, it takes the one with the larger dwelling share over its floor. If
 neither does, stage 0 stops for a decision before B.3.
 
+**The pilot, 2026-10-11** (seeds 9301–9304):
+
+| level | gate | dwelling over floor, per seed |
+|---|---|---|
+| 0.005 | passes, +1.44 [+1.12, +1.77] | −0.01, +0.01, +0.93, +0.73 |
+| 0.05 | passes barely, +0.14 [+0.04, +0.24] | none |
+
+**0.005 is registered.** The spread is bimodal: seeds either dwell or roam throughout. So the panel is
+sized at **19** seeds (minimum 0.278, MDE 0.277): D.1's 2001–2016, so the learners pair, plus
+2017–2019.
+
 ### Decision C: The registered reading
 
 D.1's reading: **the learner's on-lawn dwelling share minus its floor's**, paired by seed, classified

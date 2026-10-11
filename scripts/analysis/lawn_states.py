@@ -354,9 +354,18 @@ def action_log_std(weights: Path | None) -> list[float] | None:
     import torch
 
     state = torch.load(weights, map_location="cpu", weights_only=True)
-    log_std = state.get("log_std") if isinstance(state, dict) else None
+    return log_std_of(state)
+
+
+def log_std_of(state: object) -> list[float] | None:
+    """Find a saved policy's ``log_std``: at the top level (MLP-PPO) or in its topology (connectome)."""
+    if not isinstance(state, dict):
+        return None
+    log_std = state.get("log_std")
     if isinstance(log_std, dict):
         log_std = log_std.get("log_std")
+    if log_std is None and isinstance(state.get("topology"), dict):
+        log_std = state["topology"].get("log_std")
     return [float(v) for v in log_std.tolist()] if log_std is not None else None
 
 

@@ -1,0 +1,260 @@
+{
+  "cell": "patch",
+  "episodes": 30,
+  "floor_arm": "connectome_e005_frozen",
+  "gates": {
+    "connectome_e005": {
+      "n_seeds": 4,
+      "learn": {
+        "9301": 2.647164,
+        "9302": 3.107365333333333,
+        "9303": 2.955909333333333,
+        "9304": 3.887752
+      },
+      "floor": {
+        "9301": 1.7371053333333333,
+        "9302": 1.7794560000000001,
+        "9303": 1.6279320000000002,
+        "9304": 1.6811559999999999
+      },
+      "learn_mean": 3.1495476666666664,
+      "floor_mean": 1.7064123333333334,
+      "test": {
+        "mean_delta": 1.4431353333333332,
+        "wilcoxon_p": 0.0625,
+        "ci_lo": 1.119001,
+        "ci_hi": 1.7672696666666665,
+        "n": 4,
+        "per_seed_deltas": [
+          0.9100586666666668,
+          1.327909333333333,
+          1.327977333333333,
+          2.2065960000000002
+        ]
+      },
+      "passes": true
+    }
+  },
+  "runs": [
+    {
+      "arm": "connectome_e005",
+      "seed": 9301,
+      "evaluation_intake": 2.5996763688597553,
+      "action_log_std": [
+        -3.8021018505096436,
+        0.06408441066741943
+      ],
+      "on_lawn_windows": 1803,
+      "roaming_fraction": 0.9916805324459235,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 1.0,
+      "roaming_where_fresh": 0.9916759156492786,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 1.0,
+      "exits": 144,
+      "exits_per_on_lawn_hour": 28.75207986688852,
+      "band_windows": 1125,
+      "band_roaming": 0.9911111111111112,
+      "band_enrichment": -0.0005694213348123034,
+      "last_window_enrichment": -0.04029164355703463
+    },
+    {
+      "arm": "connectome_e005",
+      "seed": 9302,
+      "evaluation_intake": 3.2728296769967526,
+      "action_log_std": [
+        -4.254570960998535,
+        -0.1606629490852356
+      ],
+      "on_lawn_windows": 3373,
+      "roaming_fraction": 0.9810257930625556,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.9825625473843821,
+      "roaming_where_fresh": 0.9800389483933788,
+      "dwell_end_grazed": 0.5,
+      "dwell_end_fresh": 0.14285714285714285,
+      "exits": 231,
+      "exits_per_on_lawn_hour": 24.654610139341834,
+      "band_windows": 1686,
+      "band_roaming": 0.9733096085409253,
+      "band_enrichment": -0.007716184521630254,
+      "last_window_enrichment": -0.11522492726168976
+    },
+    {
+      "arm": "connectome_e005",
+      "seed": 9303,
+      "evaluation_intake": 3.3524152514282544,
+      "action_log_std": [
+        -5.003966331481934,
+        0.9517951607704163
+      ],
+      "on_lawn_windows": 4075,
+      "roaming_fraction": 0.04760736196319018,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.007751937984496124,
+      "roaming_where_fresh": 0.06890060240963855,
+      "dwell_end_grazed": 0.0,
+      "dwell_end_fresh": 0.0,
+      "exits": 60,
+      "exits_per_on_lawn_hour": 5.300613496932515,
+      "band_windows": 796,
+      "band_roaming": 0.07537688442211055,
+      "band_enrichment": 0.027769522458920365,
+      "last_window_enrichment": 0.0023926380368098216
+    },
+    {
+      "arm": "connectome_e005",
+      "seed": 9304,
+      "evaluation_intake": 4.856780607552809,
+      "action_log_std": [
+        -4.742959499359131,
+        -0.7249511480331421
+      ],
+      "on_lawn_windows": 7018,
+      "roaming_fraction": 0.25520091194072386,
+      "roaming_bout_s": 530.0,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 3,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": 0.25663466967814796,
+      "roaming_where_fresh": 0.2537399309551208,
+      "dwell_end_grazed": 0.001184834123222749,
+      "dwell_end_fresh": 0.0043426766679826295,
+      "exits": 136,
+      "exits_per_on_lawn_hour": 6.976346537475065,
+      "band_windows": 1474,
+      "band_roaming": 0.3229308005427408,
+      "band_enrichment": 0.06772988860201695,
+      "last_window_enrichment": -0.04196561782307681
+    },
+    {
+      "arm": "connectome_e005_frozen",
+      "seed": 9301,
+      "evaluation_intake": 1.543836054128445,
+      "action_log_std": null,
+      "on_lawn_windows": 1007,
+      "roaming_fraction": 0.9860973187686196,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9860973187686196,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.5,
+      "exits": 119,
+      "exits_per_on_lawn_hour": 42.542204568023834,
+      "band_windows": 786,
+      "band_roaming": 0.9923664122137404,
+      "band_enrichment": 0.0062690934451208324,
+      "last_window_enrichment": -0.07853429355853558
+    },
+    {
+      "arm": "connectome_e005_frozen",
+      "seed": 9302,
+      "evaluation_intake": 1.3213321187207374,
+      "action_log_std": null,
+      "on_lawn_windows": 833,
+      "roaming_fraction": 0.9903961584633854,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9903961584633854,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 1.0,
+      "exits": 112,
+      "exits_per_on_lawn_hour": 48.403361344537814,
+      "band_windows": 703,
+      "band_roaming": 0.9914651493598862,
+      "band_enrichment": 0.00106899089650081,
+      "last_window_enrichment": -0.026110444177671055
+    },
+    {
+      "arm": "connectome_e005_frozen",
+      "seed": 9303,
+      "evaluation_intake": 1.9221323104487598,
+      "action_log_std": null,
+      "on_lawn_windows": 1222,
+      "roaming_fraction": 0.9819967266775778,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": null,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 0,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9819967266775778,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.0,
+      "exits": 148,
+      "exits_per_on_lawn_hour": 43.60065466448445,
+      "band_windows": 962,
+      "band_roaming": 0.9937629937629938,
+      "band_enrichment": 0.01176626708541606,
+      "last_window_enrichment": -0.09010483478568587
+    },
+    {
+      "arm": "connectome_e005_frozen",
+      "seed": 9304,
+      "evaluation_intake": 1.9008955951203348,
+      "action_log_std": null,
+      "on_lawn_windows": 1240,
+      "roaming_fraction": 0.9830645161290322,
+      "roaming_bout_s": null,
+      "dwelling_bout_s": 10.0,
+      "n_roaming_bouts": 0,
+      "n_dwelling_bouts": 1,
+      "roaming_where_grazed": null,
+      "roaming_where_fresh": 0.9830645161290322,
+      "dwell_end_grazed": null,
+      "dwell_end_fresh": 0.3333333333333333,
+      "exits": 153,
+      "exits_per_on_lawn_hour": 44.41935483870967,
+      "band_windows": 1050,
+      "band_roaming": 0.9885714285714285,
+      "band_enrichment": 0.005506912442396317,
+      "last_window_enrichment": -0.08110373181530672
+    }
+  ],
+  "panel": {
+    "minimum": 0.394,
+    "readable": true,
+    "reading": {
+      "arm": "connectome_e005",
+      "against": "connectome_e005_frozen",
+      "per_seed": {
+        "9301": -0.005583213677303855,
+        "9302": 0.009370365400829805,
+        "9303": 0.9343893647143876,
+        "9304": 0.7278636041883083
+      },
+      "test": {
+        "mean_delta": 0.41651003015655547,
+        "wilcoxon_p": 0.125,
+        "ci_lo": 0.1815168855586326,
+        "ci_hi": 0.6515031747544784,
+        "n": 4,
+        "per_seed_deltas": [
+          -0.005583213677303855,
+          0.009370365400829805,
+          0.9343893647143876,
+          0.7278636041883083
+        ]
+      }
+    },
+    "q": 0.25,
+    "state": "unresolved",
+    "verdict": "unresolved_at_this_sensitivity",
+    "achieved_sd": 0.48616371259484314,
+    "achieved_mde": 0.6045445766116875
+  }
+}

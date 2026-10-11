@@ -315,3 +315,12 @@ def test_a_named_learner_is_read_against_its_floor(tmp_path: Path) -> None:
     mlp.write_text(json.dumps({"runs": [_run("internal", s, 0.5) for s in range(16)]}))
     pairing = ls.against_mlp(runs, "connectome_e005", mlp)
     assert pairing["test"]["mean_delta"] == pytest.approx(0.2)
+
+
+def test_action_noise_is_found_for_either_learner() -> None:
+    """MLP-PPO keeps log_std at the top level; the connectome keeps it in its topology."""
+    import torch
+
+    assert ls.log_std_of({"log_std": {"log_std": torch.tensor([-3.0, -2.0])}}) == [-3.0, -2.0]
+    assert ls.log_std_of({"topology": {"log_std": torch.tensor([-5.0, 1.0])}}) == [-5.0, 1.0]
+    assert ls.log_std_of({"value": {}}) is None
