@@ -31,6 +31,8 @@ from quantumnematode.env.sprites import (
 from quantumnematode.logging_config import logger
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from quantumnematode.env.env import DynamicForagingEnvironment, Viewport
 
 
@@ -93,6 +95,30 @@ class ContinuousRenderState:
     zone_name: str | None
     oxygen: float | None
     oxygen_zone_name: str | None
+    # The kinematic body, when one runs: its world-frame joints (mm) head first, its segment
+    # curvatures head to tail, and whether its last step ran tail-to-head. None for the point worm.
+    body_midline: tuple[tuple[float, float], ...] | None = None
+    body_curvature: tuple[float, ...] | None = None
+    body_reversed: bool | None = None
+    # Under the lawn food model: the last step's intake and whether the worm is on a lawn.
+    intake: float | None = None
+    on_lawn: bool | None = None
+    # With the modulator field: the serotonin and PDF concentrations the brain carries.
+    modulators: tuple[float, float] | None = None
+
+
+@dataclass
+class FrameRecorder:
+    """Where and how often the continuous renderer saves frames, and the run they belong to."""
+
+    directory: Path
+    every: int = 1
+    run: int = 1
+    # Prepended to every file name, such as the session ID, so recordings of separate sessions
+    # into one directory neither mix nor overwrite one another.
+    prefix: str = ""
+    # Start the camera following the worm, so a recorded body fills the frame.
+    follow: bool = False
 
 
 # Minimum pheromone concentration to render an overlay cell
@@ -1133,6 +1159,20 @@ WORM_HEADING_COLOR = (
     70,
 )  # heading indicator: a contrasting hue, not blended into the body
 KLINOTAXIS_SAMPLE_COLOR = (120, 200, 255)
+# The kinematic body's half-width as a fraction of its length: a worm is about 15 times longer
+# than it is wide.
+_KINEMATIC_RADIUS_FRAC = 0.04
+# A body whose last step ran tail-to-head is drawn in this tint, with a marker at its tail.
+WORM_REVERSAL_COLOR = (150, 175, 220)
+WORM_TAIL_MARKER_COLOR = (90, 130, 210)
+# Lawn cells blend from the soil toward this colour by their remaining density.
+LAWN_FULL_COLOR = (96, 140, 62)
+LAWN_EDGE_COLOR = (70, 105, 45)
+# The posture panel: its size in pixels and its colours.
+_POSTURE_PANEL = (150, 92)
+POSTURE_PANEL_BG = (20, 18, 16)
+POSTURE_BAR_COLOR = (230, 200, 120)
+POSTURE_TEXT_COLOR = (220, 220, 220)
 
 # Path-following undulating body geometry.
 _WORM_BODY_SEGMENTS = 12  # recent positions kept; the body is a stylised trail over this path
@@ -1237,6 +1277,10 @@ class Continuous2DRenderer:
         self._last_worm_pos: tuple[float, float] | None = None
         self._undulation_phase: float = 0.0
 
+        # The posture panel, off by default; `P` toggles it.
+        self._posture_enabled = False
+        self._eigenworms: Any = None
+
         self._closed = False
         self._last_status_line_count = 0
         logger.info(
@@ -1338,6 +1382,8 @@ class Continuous2DRenderer:
                 self._quiver_enabled = not self._quiver_enabled
             elif event.key == self._pg.K_c:
                 self._follow_enabled = not self._follow_enabled
+            elif event.key == self._pg.K_p:
+                self._posture_enabled = not self._posture_enabled
             elif event.key == self._pg.K_f:
                 self._heatmap_field_idx = (self._heatmap_field_idx + 1) % len(HEATMAP_FIELDS)
                 self._heatmap_cache = None  # field changed → invalidate cache
@@ -1369,14 +1415,99 @@ class Continuous2DRenderer:
         self._render_toxic_zones(env)
         if self._heatmap_enabled:
             self._render_heatmap(env, state)
+        # Above the odour heatmap, so a lawn's grazing stays readable; the odour shows around it.
+        self._render_lawns(env)
         if self._quiver_enabled:
             self._render_quiver(env)
         self._render_sensor_zones(env, state)
         self._render_entities(env, state)
+        if self._posture_enabled and state.body_curvature is not None:
+            self._render_posture(state.body_curvature)
         self._blit_status_lines(status_lines)
 
         self._pg.display.flip()
         self._clock.tick(30)
+
+    def follow(self, *, enabled: bool = True) -> None:
+        """Set the agent-following camera, as the ``C`` key does."""
+        self._follow_enabled = enabled
+
+    def save_frame(self, path: Path) -> None:
+        """Save the frame on screen as a PNG, creating its directory."""
+        if self._closed:
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self._pg.image.save(self._screen, str(path))
+
+    def _render_lawns(self, env: DynamicForagingEnvironment) -> None:
+        """Draw each lawn's cells shaded by remaining density, then each lawn's edge."""
+        field = getattr(env, "lawn_field", None)
+        if field is None:
+            return
+        half = field.cell_mm / 2.0
+        for (x, y), density in zip(field.cells, field.density, strict=True):
+            left, top = self._world_to_pixel(float(x) - half, float(y) + half)
+            right, bottom = self._world_to_pixel(float(x) + half, float(y) - half)
+            share = float(min(max(density, 0.0), 1.0))
+            colour = tuple(
+                round(soil + share * (full - soil))
+                for soil, full in zip(SOIL_COLOR, LAWN_FULL_COLOR, strict=True)
+            )
+            self._screen.fill(colour, (left, top, max(1, right - left), max(1, bottom - top)))
+        radius_px = max(1, round(field.radius_mm * self._active_ppm))
+        for cx, cy in field.centres:
+            centre = self._world_to_pixel(float(cx), float(cy))
+            self._pg.draw.circle(self._screen, LAWN_EDGE_COLOR, centre, radius_px, 2)
+
+    def _draw_kinematic_body(self, state: ContinuousRenderState, worm_radius: int) -> None:
+        """Draw the body the simulation runs: a tube through its joints, head to tail."""
+        import math
+
+        assert state.body_midline is not None  # noqa: S101 - the caller checked
+        joints = [self._world_to_pixel(x, y) for x, y in state.body_midline]
+        reversed_ = bool(state.body_reversed)
+        colour = WORM_REVERSAL_COLOR if reversed_ else WORM_BODY_COLOR
+        n = len(joints)
+        radii = [max(2, round(worm_radius * (1.0 - 0.6 * i / (n - 1)))) for i in range(n)]
+        for (p0, r0), (p1, r1) in pairwise(zip(joints, radii, strict=True)):
+            self._pg.draw.line(self._screen, colour, p0, p1, max(2, r0 + r1))
+        for point, radius in zip(joints, radii, strict=True):
+            self._pg.draw.circle(self._screen, colour, point, radius)
+        if reversed_:
+            # An arrowhead at the tail, pointing tail-ward: the direction the body moved.
+            (tx, ty), (px, py) = joints[-1], joints[-2]
+            angle = math.atan2(ty - py, tx - px)
+            size = max(4, worm_radius)
+            tip = (tx + math.cos(angle) * size, ty + math.sin(angle) * size)
+            left = (tx + math.cos(angle + 2.5) * size, ty + math.sin(angle + 2.5) * size)
+            right = (tx + math.cos(angle - 2.5) * size, ty + math.sin(angle - 2.5) * size)
+            self._pg.draw.polygon(self._screen, WORM_TAIL_MARKER_COLOR, [tip, left, right])
+
+    def _render_posture(self, curvature: tuple[float, ...]) -> None:
+        """Draw the posture panel: segment curvatures head to tail, and the first two eigenworms."""
+        import numpy as np
+
+        from quantumnematode.validation import posture
+
+        if self._eigenworms is None:
+            self._eigenworms = posture.load_eigenworms()
+        values = np.asarray(curvature, dtype=float)
+        a1, a2 = (posture.body_tangent_angles(values) @ self._eigenworms[:, :2]).tolist()
+        width, height = _POSTURE_PANEL
+        x0, y0 = self._arena_px - width - 6, 6
+        self._screen.fill(POSTURE_PANEL_BG, (x0, y0, width, height))
+        scale = max(1.0, float(np.abs(values).max()))
+        mid = y0 + 30
+        bar_w = max(2, (width - 12) // len(values))
+        for i, k in enumerate(values):
+            length = round(24 * float(k) / scale)
+            top = mid - max(length, 0)
+            self._screen.fill(
+                POSTURE_BAR_COLOR,
+                (x0 + 6 + i * bar_w, top, bar_w - 1, max(1, abs(length))),
+            )
+        label = self._font.render(f"a1 {a1:+.2f}  a2 {a2:+.2f}", True, POSTURE_TEXT_COLOR)  # noqa: FBT003
+        self._screen.blit(label, (x0 + 6, y0 + height - 20))
 
     def _update_body_history(self, pos: tuple[float, float]) -> None:
         """Accumulate the worm's recent positions for the trailing body.
@@ -1526,6 +1657,11 @@ class Continuous2DRenderer:
                 )
             else:
                 sig = tuple(sorted((round(fx, 3), round(fy, 3)) for fx, fy in env.foods))
+            lawns = getattr(env, "lawn_field", None)
+            if lawns is not None:
+                # Lawn odour follows each cell's remaining density, so grazing or regrowth must
+                # rebuild the heatmap too.
+                sig = (sig, lawns.density.round(3).tobytes())
         elif field_name == "predator":
             sig = tuple(sorted((p.position[0], p.position[1]) for p in env.predators))
         elif field_name == "pheromone":
@@ -1730,12 +1866,24 @@ class Continuous2DRenderer:
                     assert_never(pred.predator_type)
                 self._screen.blit(sprite, (cx - half, cy - half))
 
+        self._render_worm(env, state)
+
+    def _render_worm(self, env: DynamicForagingEnvironment, state: ContinuousRenderState) -> None:
+        """Draw the worm: the kinematic body, or the point worm's trail; then its head."""
+        import math
+
         # Worm: a path-following, tapered, undulating body trailing the head, then a
         # distinct head marker + a contrasting heading indicator. Sized to the active
         # (camera) zoom; width scales with body_length_mm. The body is a stylised visual
         # overlay (the worm is a point kinematically) — it does not affect the simulation.
         body_len_mm = getattr(getattr(env, "continuous", None), "body_length_mm", 1.0)
-        worm_radius = max(4, round(0.6 * body_len_mm * self._active_ppm))
+        # The kinematic body is drawn at a worm's width, about a fifteenth of its length; the point
+        # worm's stylised trail keeps its broader marker.
+        width_frac = _KINEMATIC_RADIUS_FRAC if state.body_midline is not None else 0.6
+        worm_radius = max(
+            2 if state.body_midline is not None else 4,
+            round(width_frac * body_len_mm * self._active_ppm),
+        )
         wx, wy = self._world_to_pixel(state.pos[0], state.pos[1])
 
         # Body backbone = recent positions (tail→head) in pixel space, with a travelling
@@ -1744,7 +1892,9 @@ class Continuous2DRenderer:
         # joints (so it reads as one continuous worm, not disjoint balls).
         backbone = [self._world_to_pixel(hx_w, hy_w) for hx_w, hy_w in self._body_history]
         n = len(backbone)
-        if n >= 2:  # noqa: PLR2004 — need at least two points to define a backbone direction
+        if state.body_midline is not None:
+            self._draw_kinematic_body(state, worm_radius)
+        elif n >= 2:  # noqa: PLR2004 — need at least two points to define a backbone direction
             wave_k = 2.0 * math.pi / _WORM_UNDULATION_WAVELENGTH_SEG
             amp = _WORM_UNDULATION_AMPLITUDE_FRAC * worm_radius
             # Undulated pixel point + local radius (thin tail → full head) per segment.
@@ -1812,6 +1962,18 @@ class Continuous2DRenderer:
             ),
         )
 
+        # Internal state, each line only where it applies.
+        if state.intake is not None:
+            where = "on a lawn" if state.on_lawn else "off lawns"
+            lines.append((f"Intake: {state.intake:.4f}  ({where})", STATUS_TEXT_COLOR))
+        if state.modulators is not None:
+            serotonin, pdf = state.modulators
+            lines.append((f"Serotonin: {serotonin:.3f}  PDF: {pdf:.3f}", STATUS_TEXT_COLOR))
+        # Always present with a body, so the status bar, and a recorded frame, keep one height.
+        if state.body_reversed is not None:
+            body_state = "reversing" if state.body_reversed else "forward"
+            lines.append((f"Body: {body_state}", STATUS_TEXT_COLOR))
+
         # Adaptive-sensor readout (omitted when the sensor is disabled).
         if state.adaptive_mode is not None:
             bg = state.adaptive_background if state.adaptive_background is not None else 0.0
@@ -1834,6 +1996,11 @@ class Continuous2DRenderer:
                 (
                     f"[H]eatmap: {heatmap_state}  [F]ield  [G]radient: {quiver_state}  "
                     f"[C]amera: {camera_state}"
+                    + (
+                        f"  [P]osture: {'ON' if self._posture_enabled else 'OFF'}"
+                        if state.body_curvature is not None
+                        else ""
+                    )
                 ),
                 STATUS_OVERLAY_HINT_COLOR,
             ),

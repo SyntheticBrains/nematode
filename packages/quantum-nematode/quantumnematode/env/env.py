@@ -1806,8 +1806,11 @@ class DynamicForagingEnvironment(BaseEnvironment):
         if params is None:
             msg = "food_model 'lawns' needs a lawns configuration"
             raise ValueError(msg)
-        if self.theme in {Theme.PIXEL, Theme.PIXEL_CONTINUOUS}:
-            msg = f"the {self.theme} renderer does not draw lawns; run lawns headless"
+        if self.theme == Theme.PIXEL:
+            msg = (
+                f"the {self.theme} renderer does not draw lawns; run lawns headless or with "
+                "pixel_continuous"
+            )
             raise ValueError(msg)
         starts = [
             (float(state.position[0]), float(state.position[1])) for state in self.agents.values()

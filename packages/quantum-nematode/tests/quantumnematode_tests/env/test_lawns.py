@@ -127,16 +127,26 @@ class TestPlacement:
         with pytest.raises(ValueError, match="too small"):
             _env(LawnParams(count=12, radius_mm=3.0, min_separation_mm=2.0))
 
-    def test_a_pixel_renderer_is_refused(self) -> None:
-        """The pixel renderers would draw no lawns."""
+    def test_the_grid_renderer_is_refused(self) -> None:
+        """The grid pixel renderer draws no lawns, so it is refused."""
         params = ForagingParams(food_model="lawns", lawns=LawnParams())
         with pytest.raises(ValueError, match="does not draw lawns"):
             Continuous2DEnvironment(
                 continuous=Continuous2DParams(world_size_mm=WORLD_MM),
                 foraging=params,
                 seed=1,
-                theme=Theme.PIXEL_CONTINUOUS,
+                theme=Theme.PIXEL,
             )
+
+    def test_the_continuous_renderer_runs_lawns(self) -> None:
+        """Scenario "The continuous renderer runs lawns": pixel_continuous places them."""
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=WORLD_MM),
+            foraging=ForagingParams(food_model="lawns", lawns=LawnParams()),
+            seed=1,
+            theme=Theme.PIXEL_CONTINUOUS,
+        )
+        assert env.lawn_field is not None
 
     def test_a_copy_is_independent(self) -> None:
         """Grazing a copy leaves the original's lawns full."""

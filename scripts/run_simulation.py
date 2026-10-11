@@ -205,6 +205,33 @@ def parse_arguments() -> argparse.Namespace:
         "or 'headless' (no rendering — fastest for batch training).",
     )
     parser.add_argument(
+        "--record-frames",
+        type=Path,
+        default=None,
+        help="Save the continuous renderer's frames as PNGs in this directory, named by run and "
+        "step. Implies --theme pixel_continuous and is refused with headless; set "
+        "SDL_VIDEODRIVER=dummy to record without a window. Frames add up fast: use "
+        "--record-every and a few --runs.",
+    )
+    parser.add_argument(
+        "--record-every",
+        type=int,
+        default=1,
+        help="With --record-frames, save every n-th rendered step (default 1).",
+    )
+    parser.add_argument(
+        "--record-follow",
+        action="store_true",
+        help="With --record-frames, start the camera following the worm, so its body fills the "
+        "frame.",
+    )
+    parser.add_argument(
+        "--render-ppm",
+        type=float,
+        default=None,
+        help="The pixel_continuous renderer's scale in pixels per mm (default 12), live or recorded.",
+    )
+    parser.add_argument(
         "--optimize",
         action="store_true",
         help="Enable Q-CTRL's Fire Opal error suppression techniques on QPUs.",
@@ -311,6 +338,34 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     manyworlds_mode_config = ManyworldsModeConfig()
     track_per_run = args.track_per_run
     theme = Theme(args.theme)
+    if args.record_frames is not None:
+        if theme == Theme.HEADLESS:
+            print(
+                "error: --record-frames records rendered frames; --theme headless renders none",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        if args.record_every < 1:
+            print("error: --record-every must be at least 1", file=sys.stderr)
+            raise SystemExit(2)
+        if args.manyworlds:
+            print(
+                "error: --record-frames records the continuous renderer; --manyworlds renders text",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        theme = Theme.PIXEL_CONTINUOUS
+    if args.render_ppm is not None:
+        if args.render_ppm <= 0:
+            print("error: --render-ppm must be positive", file=sys.stderr)
+            raise SystemExit(2)
+        if theme != Theme.PIXEL_CONTINUOUS:
+            print(
+                "error: --render-ppm scales the pixel_continuous renderer; pass --theme "
+                "pixel_continuous or --record-frames",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
     optimize_quantum_performance = args.optimize
 
     # CLI-default brain config: registry-driven, with NO per-architecture branch —
@@ -455,6 +510,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             unsupported_flags.append("--load-weights/--save-weights")
         if args.record_rollouts:
             unsupported_flags.append("--record-rollouts")
+        if args.record_frames is not None or args.render_ppm is not None:
+            unsupported_flags.append("--record-frames/--render-ppm")
         if args.manyworlds:
             unsupported_flags.append("--manyworlds")
         if args.track_per_run:
@@ -625,6 +682,25 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         satiety_config=satiety_config,
         sensing_config=sensing_config,
     )
+    if args.record_frames is not None:
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+        from quantumnematode.env.pygame_renderer import FrameRecorder
+
+        if not isinstance(env, Continuous2DEnvironment):
+            print(
+                "error: --record-frames records the continuous renderer; this config runs the "
+                "grid substrate",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        agent.frame_recorder = FrameRecorder(
+            args.record_frames,
+            every=args.record_every,
+            follow=args.record_follow,
+            prefix=f"{session_id}-",
+        )
+    if args.render_ppm is not None:
+        agent.render_pixels_per_mm = args.render_ppm
     rollout_recorder: RolloutRecorder | None = None
     if args.record_rollouts:
         if args.manyworlds:
@@ -716,6 +792,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             logger.debug(f"Run {run_num} using derived seed: {run_seed}")
 
             logger.info(f"Starting run {run_num} of {runs}")
+            if agent.frame_recorder is not None:
+                agent.frame_recorder.run = run_num
 
             # Log full initial environment state
             logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")

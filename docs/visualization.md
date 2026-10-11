@@ -29,6 +29,15 @@ The worm moves at sub-cell resolution on a plate view of the whole arena. The he
 | `F` | Cycle the heatmap field (food → predator → temperature → oxygen → pheromone) |
 | `G` | Toggle the gradient quiver (up-gradient arrows; off by default) |
 | `C` | Toggle the camera (full-arena plate ↔ agent-following zoom) |
+| `P` | Toggle the posture panel: segment curvatures head to tail, and the first two eigenworm amplitudes (kinematic body only) |
+
+**The body.** Under `body_model: kinematic` the renderer draws the body the simulation runs: its 12 segments through their world-frame joints, at a worm's proportions. The head is marked, a step run tail-to-head draws the body in a blue tint with an arrow at the tail, and an omega turn shows as the coiled posture it is. The point worm keeps its stylised trail.
+
+![Kinematic body, following camera](assets/images/pixel_continuous_body.png)
+
+**Lawns.** Under `food_model: lawns` each lawn's cells are shaded from lawn green toward the soil as the worm grazes them, inside the lawn's outline. The odour heatmap shows around them. The status bar adds the last step's intake and whether the worm is on a lawn, and, for a brain with the serotonin and PDF field, the two concentrations.
+
+![Lawns, with a grazed patch on the top-left lawn](assets/images/pixel_continuous_lawns.png)
 
 ## Grid renderer
 
@@ -95,5 +104,26 @@ Success rate: 60.00%
 ```
 
 ## Exporting frames
+
+### Recording a run
+
+`--record-frames <dir>` saves the continuous renderer's frames as PNGs named by session, run and
+step (`<session>-run0001-step00120.png`), so separate recordings into one directory never mix. It implies `--theme pixel_continuous`. With `SDL_VIDEODRIVER=dummy` it
+runs without a window, so a run can be recorded on a headless machine.
+
+- **`--record-every <n>`** saves every n-th step.
+- **`--record-follow`** starts the camera following the worm, so a body fills the frame.
+- **`--render-ppm <pixels per mm>`** scales the window, live or recorded; the default is 12.
+
+```bash
+SDL_VIDEODRIVER=dummy uv run ./scripts/run_simulation.py \
+  --config configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_atlas.yml \
+  --runs 1 --record-frames frames/ --record-every 10 --render-ppm 22
+ffmpeg -framerate 10 -pattern_type glob -i 'frames/<session>-run0001-*.png' run1.mp4
+```
+
+Recording needs a continuous-substrate, single-agent run: it is refused with `headless`, `--manyworlds`, multi-agent configs and grid configs. Frames add up fast, so record a few runs at a time. Assembling them into a video is left to `ffmpeg` or similar; no animation dependency is added.
+
+### Staged screenshots
 
 `scripts/export_screenshot.py` renders staged frames of the grid, multi-agent and continuous renderers to PNG — the images on this page. The README's hero animation is a recording of a live `--theme pixel_continuous` session, re-encoded from `docs/assets/images/demo-hi-fi.mov`.
