@@ -69,6 +69,8 @@ class ConnectomePPOBatch:
         ],
     ]
     last_value: torch.Tensor | None
+    # The brain's slicer for the modulator field's inputs, ``None`` per state without the field.
+    unpack_modulators: Callable[[torch.Tensor], torch.Tensor | None] | None = None
     # Set when the topology carries state across steps: the buffer is then a
     # ``ChunkedRolloutBuffer`` and the update replays contiguous chunks of this many steps from
     # their stored starting states. ``None`` keeps the shuffled single-step replay.
@@ -326,6 +328,11 @@ class ConnectomePPORule:
                 predator_mechano_features=mechano_b,
                 contact_zone_onehot=zone_onehot_b,
                 thermotaxis_features=thermo_b,
+                modulators=(
+                    None
+                    if ppo_batch.unpack_modulators is None
+                    else ppo_batch.unpack_modulators(minibatch["states"])
+                ),
             )
             return head_out, hidden, minibatch
         states = minibatch["states"]

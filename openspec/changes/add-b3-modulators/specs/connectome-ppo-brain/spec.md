@@ -6,8 +6,9 @@ The connectome PPO brain SHALL offer an opt-in modulator field: serotonin releas
 AIY, ASI and RIF with an inhibitory current, and PDF released by AVB, PVP and SIAV and acting on AIY,
 RIM and RIA with an excitatory current. Each concentration is carried across steps, decaying with a
 60 s timescale toward its release cells' activity above rest, and is reset at each episode's start.
-NSM SHALL receive a held current proportional to the food ingested on the worm's last move, and an
-inhibitory current proportional to the PDF concentration. With the field off, the brain SHALL be
+NSM SHALL receive a held current proportional to the food ingested on the worm's last move, as a
+fraction of the largest one move can yield, and an inhibitory current proportional to the PDF
+concentration. With the field off, the brain SHALL be
 byte-identical to before, and checkpoints saved before the field existed SHALL still load.
 
 #### Scenario: Off is unchanged

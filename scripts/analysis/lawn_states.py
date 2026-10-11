@@ -30,6 +30,15 @@ untrained floor's, paired by seed, classified at the minimum the fourth pilot fi
 learning gate. Beside it, never as verdicts: the same against the arm without internal state, bouts
 of both states, and roaming where grazed against fresh.
 
+**The knockout readings** (``read_knockouts``), for the connectome with serotonin and PDF: after the
+learning gate and a dwelling gate (the intact network's dwelling share against its floor, at stage
+0's minimum), each acute knockout's dwelling share against the intact network's, paired by seed and
+oriented so the mutant's published direction is positive: less dwelling without serotonin (*tph-1*),
+more without PDFR-1 (*pdfr-1*). An acute arm, ``modulated+<knockout>``, evaluates the intact arm's
+trained weights with that modulator removed, on the intact arm's evaluation episodes. The two are
+Holm-adjusted together. Beside them: the raised mutants and the satiety link against the intact
+arm, the concentrations in each state, the learned pathway strengths, and stage 0's connectome.
+
 Usage::
 
     uv run python scripts/analysis/lawn_states.py --logs campaigns/d1-panel/logs \\
@@ -98,6 +107,18 @@ VERDICTS: dict[str, str] = {
     "no_move": "no_dwelling_at_minimum",
     "unresolved": "unresolved_at_this_sensitivity",
 }
+# B.3: the dwelling gate's minimum is stage 0's registered one; each knockout's published direction
+# is the sign of its dwelling share minus the intact network's.
+STAGE0_DWELLING_MINIMUM = 0.278
+KNOCKOUT_DIRECTIONS: dict[str, int] = {"tph1": -1, "pdfr1": 1}
+KNOCKOUT_VERDICTS: dict[str, str] = {
+    "move_wt": "mutant_direction",
+    "move_null": "opposite_direction",
+    "below": "below_minimum",
+    "no_move": "no_effect_at_minimum",
+    "unresolved": "unresolved_at_this_sensitivity",
+}
+MODULATOR_PATHWAYS: tuple[str, ...] = ("mod1", "pdfr1", "pdf_onto_nsm", "ingestion_onto_nsm")
 PLATEAU_FRACTION = 0.25
 GRAZED_DENSITY = 0.5
 _RUN_LINE = re.compile(r"Run:\s+(\d+)\s+Status:.*?Intake:\s+([-\d.]+)")
@@ -159,6 +180,8 @@ class Episode:
     states: np.ndarray
     density: np.ndarray
     exits: tuple[int, ...] = ()
+    # Per window, the mean serotonin and PDF concentrations the worm's brain saw; None without them.
+    concentrations: np.ndarray | None = None
 
 
 def episode_windows(
@@ -166,11 +189,13 @@ def episode_windows(
     classifier: rd.GaussianClassifier,
     intake_fraction: float,
     quality: float,
+    concentrations: np.ndarray | None = None,
 ) -> Episode:
     """Cut one episode's captured steps into windows; classify them; recover the cell's density.
 
     A window spans three position samples, two steps. It is on a lawn when all three are. Its
     density is the mean density of the cells eaten from in it, or NaN where the worm ate nothing.
+    ``concentrations``, one ``(serotonin, PDF)`` row per captured step, is averaged the same way.
     """
     x = np.array([s.x for s in steps])
     y = np.array([s.y for s in steps])
@@ -188,11 +213,30 @@ def episode_windows(
         bites = bites[bites > 0]
         if bites.size:
             density[k] = float(bites.mean()) / (intake_fraction * quality)
+    per_window = None
+    if concentrations is not None and len(concentrations) >= len(steps):
+        per_window = np.array([concentrations[2 * k : 2 * k + 3].mean(axis=0) for k in range(n)])
     return Episode(
         states=states,
         density=density,
         exits=tuple(rd.lawn_exits(on_window, off_window)),
+        concentrations=per_window,
     )
+
+
+def concentrations_by_state(episodes: list[Episode]) -> dict[str, float | None]:
+    """Return the mean serotonin and PDF concentrations in on-lawn roaming and dwelling windows."""
+    pairs = [(e.states, e.concentrations) for e in episodes if e.concentrations is not None]
+    if not pairs:
+        return {}
+    states = np.concatenate([s for s, _ in pairs])
+    values = np.concatenate([c for _, c in pairs])
+    out: dict[str, float | None] = {}
+    for name, state in (("roaming", rd.ROAMING), ("dwelling", rd.DWELLING)):
+        mask = states == state
+        for column, modulator in enumerate(("serotonin", "pdf")):
+            out[f"{modulator}_{name}"] = float(values[mask, column].mean()) if mask.any() else None
+    return out
 
 
 def bout_durations(states: np.ndarray, state: int) -> list[float]:
@@ -277,12 +321,24 @@ def run_readings(episodes: list[Episode]) -> dict[str, Any]:
         "roaming_where_fresh": float(np.mean(states[fresh] == rd.ROAMING)) if fresh.any() else None,
         **dwelling_ends(episodes),
         **leaving_readings(episodes),
+        **concentrations_by_state(episodes),
     }
 
 
-def capture(config_path: Path, seed: int, weights: Path | None, episodes: int) -> tuple[Any, ...]:
-    """Run ``episodes`` frozen held-out episodes with behaviour capture; return them and the lawns."""
-    brain, config, sensing = harness.build_brain(config_path, seed)
+def capture(
+    config_path: Path,
+    seed: int,
+    weights: Path | None,
+    episodes: int,
+    overrides: dict[str, object] | None = None,
+) -> tuple[Any, ...]:
+    """Run ``episodes`` frozen held-out episodes with behaviour capture.
+
+    Returns the captured steps, each episode's intake, the lawns, and, for a brain with modulators,
+    each episode's ``(serotonin, PDF)`` concentrations as each step saw them (otherwise None).
+    ``overrides`` replaces brain-config fields for the evaluation, as an acute knockout does.
+    """
+    brain, config, sensing = harness.build_brain(config_path, seed, overrides)
     if weights is not None:
         load_weights(brain, weights)
     sensing = sensing.model_copy(update={"capture_behaviour": True})
@@ -304,6 +360,18 @@ def capture(config_path: Path, seed: int, weights: Path | None, episodes: int) -
     reward = configure_reward(config)
     captured: list[list[BehaviourStep]] = []
     intakes: list[float] = []
+    seen: list[tuple[float, float]] = []
+    traced: list[np.ndarray] | None = None
+    if getattr(brain, "modulator_concentrations", None) is not None:
+        traced = []
+        act = brain.run_brain
+
+        def run_brain(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401 - the brain's signature
+            # The concentrations this step's state carries, read before the step updates them.
+            seen.append(brain.modulator_concentrations)  # type: ignore[attr-defined]
+            return act(*args, **kwargs)
+
+        brain.run_brain = run_brain  # type: ignore[method-assign]
     for episode in range(episodes):
         run_seed = derive_run_seed(seed, EVALUATION_RUN_OFFSET + episode)
         set_global_seed(run_seed)
@@ -315,12 +383,21 @@ def capture(config_path: Path, seed: int, weights: Path | None, episodes: int) -
         result = agent.run_episode(reward, max_steps=config.max_steps or DEFAULT_MAX_STEPS)
         captured.append(list(result.behaviour or []))
         intakes.append(agent._episode_tracker.intake)
-    return captured, intakes, lawns
+        if traced is not None:
+            traced.append(np.array(seen, dtype=float).reshape(-1, 2))
+            seen.clear()
+    return captured, intakes, lawns, traced
 
 
 def evaluate_run(job: tuple[str, int, list[str], int, str]) -> dict[str, Any]:
-    """Evaluate one run's states; a floor arm reads its seed's untrained policy."""
+    """Evaluate one run's states; a floor arm reads its seed's untrained policy.
+
+    An acute arm, ``<arm>+<knockout>``, reads its trained arm's weights and config with that
+    knockout set at evaluation.
+    """
     arm, seed, log_dirs, episodes, cell = job
+    knockout = arm.partition("+")[2]
+    overrides: dict[str, object] = {"modulator_knockout": knockout} if knockout else {}
     weights = None
     if not arm.endswith("_frozen"):
         name = f"{gen.stem(arm, cell)}-seed{seed}.log"
@@ -329,17 +406,25 @@ def evaluate_run(job: tuple[str, int, list[str], int, str]) -> dict[str, Any]:
         if weights is None:
             return {"arm": arm, "seed": seed, "missing": True}
     config = gen.FORAGING / f"{gen.stem(arm, cell)}.yml"
-    captured, intakes, lawns = capture(config, seed, weights, episodes)
+    captured, intakes, lawns, traced = capture(config, seed, weights, episodes, overrides)
     classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
     quality = float(lawns.quality[0]) if lawns.quality[0] == lawns.quality[1] else float("nan")
     windows = [
-        episode_windows(steps, classifier, lawns.intake_fraction, quality) for steps in captured
+        episode_windows(
+            steps,
+            classifier,
+            lawns.intake_fraction,
+            quality,
+            None if traced is None else traced[i],
+        )
+        for i, steps in enumerate(captured)
     ]
     return {
         "arm": arm,
         "seed": seed,
         "evaluation_intake": statistics.fmean(intakes) if intakes else None,
         "action_log_std": action_log_std(weights),
+        "modulator_strengths": modulator_strengths(weights),
         **run_readings(windows),
     }
 
@@ -355,6 +440,21 @@ def action_log_std(weights: Path | None) -> list[float] | None:
 
     state = torch.load(weights, map_location="cpu", weights_only=True)
     return log_std_of(state)
+
+
+def modulator_strengths(weights: Path | None) -> dict[str, float] | None:
+    """Return a trained connectome's four learned pathway strengths, or None without the field."""
+    if weights is None:
+        return None
+    import torch
+
+    state = torch.load(weights, map_location="cpu", weights_only=True)
+    topology = state.get("topology") if isinstance(state, dict) else None
+    rho = topology.get("modulator_rho") if isinstance(topology, dict) else None
+    if rho is None:
+        return None
+    strengths = torch.nn.functional.softplus(rho).tolist()
+    return dict(zip(MODULATOR_PATHWAYS, (float(v) for v in strengths), strict=True))
 
 
 def log_std_of(state: object) -> list[float] | None:
@@ -423,6 +523,126 @@ def read_panel(
         "achieved_mde": MDE_Z * sd / math.sqrt(len(per_seed)) if per_seed else None,
     }
     return out
+
+
+def _oriented(direction: int) -> Callable[[dict[str, Any]], float | None]:
+    """Return a run's dwelling share times ``direction``, so a mutant's direction reads positive."""
+
+    def key(run: dict[str, Any]) -> float | None:
+        dwelling = _dwelling(run)
+        return None if dwelling is None else direction * dwelling
+
+    return key
+
+
+def holm(p_values: dict[str, float]) -> dict[str, float]:
+    """Holm-adjust a family of p values: step down from the smallest, monotone, capped at 1."""
+    ordered = sorted(p_values, key=p_values.__getitem__)
+    adjusted: dict[str, float] = {}
+    running = 0.0
+    for rank, name in enumerate(ordered):
+        running = max(running, min(1.0, (len(ordered) - rank) * p_values[name]))
+        adjusted[name] = running
+    return adjusted
+
+
+def read_knockouts(
+    gate: dict[str, Any],
+    runs: list[dict[str, Any]],
+    minimum: float,
+    intact: str = "modulated",
+    floor: str = "modulated_frozen",
+) -> dict[str, Any]:
+    """Read the two gates, then each acute knockout's state at the minimum, Holm across the two.
+
+    Each reading is the knockout's on-lawn dwelling share minus the intact network's, paired by
+    seed, times the mutant's published direction, so a reproduced mutant reads positive.
+    """
+    dwells = read_panel(gate, runs, intact, floor, STAGE0_DWELLING_MINIMUM)
+    out: dict[str, Any] = {
+        "minimum": minimum,
+        "dwelling_gate": dwells,
+        "readable": bool(gate["passes"]) and dwells.get("state") == "move_wt",
+    }
+    if not out["readable"]:
+        out["verdict"] = "unreadable"
+        return out
+    readings = {
+        knockout: paired(
+            runs,
+            f"{intact}+{knockout}",
+            intact,
+            key=_oriented(direction),
+        )
+        for knockout, direction in KNOCKOUT_DIRECTIONS.items()
+    }
+    qs = holm({k: ops.two_sided(r["test"]["wilcoxon_p"]) for k, r in readings.items()})
+    for knockout, reading in readings.items():
+        test = reading["test"]
+        state = mc.classify(test["mean_delta"], test["ci_lo"], test["ci_hi"], qs[knockout], minimum)
+        per_seed = list(reading["per_seed"].values())
+        sd = statistics.stdev(per_seed) if len(per_seed) > 1 else float("nan")
+        out[knockout] = {
+            "reading": reading,
+            "direction": KNOCKOUT_DIRECTIONS[knockout],
+            "holm_q": qs[knockout],
+            "state": state,
+            "verdict": KNOCKOUT_VERDICTS[state],
+            "achieved_sd": sd,
+            "achieved_mde": MDE_Z * sd / math.sqrt(len(per_seed)) if per_seed else None,
+        }
+    return out
+
+
+def modulator_beside(
+    runs: list[dict[str, Any]],
+    intact: str = "modulated",
+) -> dict[str, Any]:
+    """Return the modulator readings reported beside the verdicts, never read as one."""
+    arms = {r["arm"] for r in runs}
+    out: dict[str, Any] = {}
+    for knockout, direction in KNOCKOUT_DIRECTIONS.items():
+        raised = f"{intact}_{knockout}"
+        if raised in arms:
+            out[f"raised_{knockout}_oriented"] = paired(
+                runs,
+                raised,
+                intact,
+                key=_oriented(direction),
+            )
+    if f"{intact}_satiety" in arms:
+        out["satiety_link_minus_intact_dwelling"] = paired(runs, f"{intact}_satiety", intact)
+    out["strengths"] = {
+        r["seed"]: r.get("modulator_strengths")
+        for r in runs
+        if r["arm"] == intact and not r.get("missing")
+    }
+    out["concentrations_by_state"] = {
+        arm: {
+            r["seed"]: {k: r.get(k) for k in MODULATOR_CSV_FIELDS[:4]}
+            for r in runs
+            if r["arm"] == arm and not r.get("missing")
+        }
+        for arm in sorted(arms)
+        if arm.startswith(intact) and not arm.endswith("_frozen")
+    }
+    return out
+
+
+def against_panel(
+    runs: list[dict[str, Any]],
+    learner: str,
+    panel: Path,
+    arm: str,
+    label: str,
+) -> dict[str, Any]:
+    """Pair a learner's dwelling share with another panel's arm by seed, from its readings."""
+    other = [
+        r | {"arm": label}
+        for r in json.loads(panel.read_text())["runs"]
+        if r["arm"] == arm and not r.get("missing")
+    ]
+    return paired([*runs, *other], learner, label)
 
 
 LEAVING_VERDICTS: dict[str, str] = {
@@ -547,6 +767,13 @@ CSV_FIELDS = (
     "band_enrichment",
     "last_window_enrichment",
 )
+MODULATOR_CSV_FIELDS = (
+    "serotonin_roaming",
+    "serotonin_dwelling",
+    "pdf_roaming",
+    "pdf_dwelling",
+    *(f"strength_{p}" for p in MODULATOR_PATHWAYS),
+)
 
 
 def write_csv(result: dict[str, Any], path: Path) -> Path:
@@ -556,13 +783,20 @@ def write_csv(result: dict[str, Any], path: Path) -> Path:
         plateau |= {(arm, int(s)): v for s, v in gate["learn"].items()}
         floor_arm = result.get("floor_arm", "internal_frozen")
         plateau |= {(floor_arm, int(s)): v for s, v in gate["floor"].items()}
+    modulated = any(
+        r.get("modulator_strengths") or r.get("serotonin_roaming") is not None
+        for r in result["runs"]
+    )
+    fields = CSV_FIELDS + MODULATOR_CSV_FIELDS if modulated else CSV_FIELDS
     rows = []
     for run in sorted(result["runs"], key=lambda r: (r["arm"], r["seed"])):
         log_std = run.get("action_log_std") or [None, None]
         roaming = run.get("roaming_fraction")
+        strengths = run.get("modulator_strengths") or {}
         rows.append(
             {
-                **{k: run.get(k) for k in CSV_FIELDS if k in run},
+                **{k: run.get(k) for k in fields if k in run},
+                **{f"strength_{p}": v for p, v in strengths.items()},
                 "intake_plateau": plateau.get((run["arm"], run["seed"])),
                 "dwelling_share": None if roaming is None else 1.0 - roaming,
                 "log_std_speed": log_std[0],
@@ -571,10 +805,35 @@ def write_csv(result: dict[str, Any], path: Path) -> Path:
         )
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, lineterminator="\n")
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     return path
+
+
+def modulator_results(
+    args: argparse.Namespace,
+    gates: dict[str, Any],
+    runs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return the knockout readings and what is reported beside them, when the panel has them."""
+    learner, floor = args.learner_arm, args.floor_arm
+    acute = [arm for arm in args.arms if "+" in arm]
+    if args.knockout_minimum is None or not acute or learner not in gates or floor not in args.arms:
+        return {}
+    out: dict[str, Any] = {
+        "knockouts": read_knockouts(gates[learner], runs, args.knockout_minimum, learner, floor),
+        "modulator_beside": modulator_beside(runs, learner),
+    }
+    if args.compare_stage0 is not None:
+        out["against_stage0"] = against_panel(
+            runs,
+            learner,
+            args.compare_stage0,
+            "connectome_e005",
+            "stage0",
+        )
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -587,13 +846,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--arms",
         nargs="+",
-        choices=[*gen.ARMS, *gen.CONNECTOME_ARMS],
+        choices=[*gen.ARMS, *gen.CONNECTOME_ARMS, *gen.MODULATED_ARMS, *gen.ACUTE_ARMS],
         default=None,
     )
     ap.add_argument("--learner-arm", default="internal", help="the registered learner arm")
     ap.add_argument("--floor-arm", default="internal_frozen", help="its untrained floor")
     ap.add_argument("--minimum", type=float, default=PANEL_MINIMUM, help="the registered minimum")
     ap.add_argument("--compare-mlp", type=Path, help="D.1's panel.json, to pair against its MLP")
+    ap.add_argument(
+        "--compare-stage0",
+        type=Path,
+        help="stage 0's panel.json, to pair the modulated learner against its connectome",
+    )
+    ap.add_argument("--knockout-minimum", type=float, help="the knockouts' registered minimum")
     ap.add_argument("--cell", choices=list(gen.CELLS), default="patch")
     ap.add_argument("--seeds", type=int, nargs="+", required=True)
     ap.add_argument("--episodes", type=int, default=20)
@@ -613,7 +878,7 @@ def main(argv: list[str] | None = None) -> int:
             plateaus(args.logs, args.floor_arm, seeds, args.cell),
         )
         for arm in args.arms
-        if not arm.endswith("_frozen")
+        if not arm.endswith("_frozen") and "+" not in arm
     }
     jobs = [
         (arm, seed, [str(d) for d in args.logs], args.episodes, args.cell)
@@ -636,6 +901,7 @@ def main(argv: list[str] | None = None) -> int:
             result["beside"] = beside(runs)
         if args.compare_mlp is not None:
             result["against_mlp"] = against_mlp(runs, learner, args.compare_mlp)
+    result |= modulator_results(args, gates, runs)
     leaving_args = (args.leaving_minimum, args.min_exits, args.min_seeds)
     if args.cell != "patch" and "internal" in gates and None not in leaving_args:
         result["leaving"] = read_leaving(

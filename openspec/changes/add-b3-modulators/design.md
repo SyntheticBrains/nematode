@@ -72,9 +72,18 @@ initial state.
 ### Decision D: Food ingestion drives NSM
 
 `BrainParams.food_ingested` carries the intake value of the worm's last move, the same quantity
-behaviour capture records. The connectome adds `γ · food_ingested` to NSML and NSMR as a **held
-current at every settling iteration**, with γ a learnable gain initialised at 1. NSM detects
-ingested food (Rhoades 2019).
+behaviour capture records, and `BrainParams.max_food_ingested` the largest one move can yield (a
+full cell's bite at the best lawn's quality). The ingestion drive is their ratio, the last move's
+bite as a fraction of a full one, read the way satiety is read against its maximum. The connectome
+adds `γ · drive` to NSML and NSMR as a **held current at every settling iteration**, with γ a
+learnable gain initialised at 1. NSM detects ingested food (Rhoades 2019).
+
+**Why the drive is a fraction of a full bite** (found in implementation, 2026-10-11). On D.1's
+cell a full bite is worth 0.02 of intake value, while the PDF concentration settles near 0.3 to
+0.45. Taken raw, the drive was some twenty times weaker than PDF's inhibition of NSM, so NSM stayed
+below rest, serotonin never formed, and the MOD-1 strength took no gradient. As a fraction, a full
+bite drives NSM at 1 on any cell, and in a check on the cell's untrained network both
+concentrations formed (serotonin mean 0.16, peak 0.85; PDF about 0.3).
 
 **Why the current is held.** Sensory inputs set only the initial state. NSM has no self-connection,
 so an initial-state input would be gone by the end of settling, and serotonin release, read from

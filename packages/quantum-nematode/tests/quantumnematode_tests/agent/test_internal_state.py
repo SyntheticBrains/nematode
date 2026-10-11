@@ -1,7 +1,7 @@
 """The internal-state sensory module, and behaviour capture's lawn fields.
 
-Covers the brain-architecture scenario "Satiety reaches the brain" and the realworm-behavioural-
-validation scenario "A lawn step is recorded".
+Covers the brain-architecture scenarios "Satiety reaches the brain" and "A lawn step reports what
+was eaten", and the realworm-behavioural-validation scenario "A lawn step is recorded".
 """
 
 from __future__ import annotations
@@ -87,6 +87,40 @@ def test_a_lawn_step_is_recorded() -> None:
     assert first.intake is not None
     assert first.intake > 0
     assert agent._episode_tracker.intake >= first.intake
+
+
+@pytest.mark.parametrize("lawns", [True, False])
+def test_a_lawn_step_reports_what_was_eaten(lawns: bool) -> None:  # noqa: FBT001
+    """Each step's ``food_ingested`` is the last move's intake on lawns, and None without them."""
+    agent = _agent(lawns=lawns)
+    seen: list[float | None] = []
+    original = agent.brain.run_brain
+
+    def record(params: BrainParams, *args: object, **kwargs: object) -> object:
+        seen.append(params.food_ingested)
+        return original(params, *args, **kwargs)  # type: ignore[arg-type]
+
+    agent.brain.run_brain = record  # type: ignore[method-assign]
+    reward = RewardConfig(
+        penalty_stuck_position=0.0,
+        penalty_anti_dithering=0.0,
+        reward_exploration=0.0,
+        reward_distance_scale=0.0,
+    )
+    agent.run_episode(reward, max_steps=6)
+    params = agent._create_brain_params()
+    full_bite = None
+    if lawns:
+        assert agent.env.lawn_field is not None
+        full_bite = LawnParams().intake_fraction * float(agent.env.lawn_field.qualities.max())
+    assert params.max_food_ingested == (None if full_bite is None else pytest.approx(full_bite))
+    if not lawns:
+        assert seen
+        assert all(value is None for value in seen)
+        return
+    assert seen == [step.intake for step in agent.behaviour[: len(seen)]]
+    assert seen[0] == 0.0  # nothing eaten before the first move
+    assert any(value is not None and value > 0 for value in seen[1:])
 
 
 def test_point_food_captures_leave_the_lawn_fields_out() -> None:

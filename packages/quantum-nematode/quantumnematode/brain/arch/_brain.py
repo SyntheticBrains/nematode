@@ -384,6 +384,20 @@ class BrainParams(BaseModel):
         default=None,
         description="Satiety's maximum, so internal state can be read as a fraction.",
     )
+    food_ingested: float | None = Field(
+        default=None,
+        description=(
+            "Intake value of the worm's last move under the lawn food model, weighted by its "
+            "lawn's quality; None without lawns."
+        ),
+    )
+    max_food_ingested: float | None = Field(
+        default=None,
+        description=(
+            "The largest intake value one move can yield: a full cell's bite at the best lawn's "
+            "quality, so ingestion can be read as a fraction of a full bite; None without lawns."
+        ),
+    )
     health: float | None = Field(
         default=None,
         description="Current HP (decreases from damage events).",

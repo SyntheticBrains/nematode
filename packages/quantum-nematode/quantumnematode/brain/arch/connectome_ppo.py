@@ -71,6 +71,7 @@ from quantumnematode.connectome.loader import (
     load_emmons_2024_neuromuscular,
 )
 from quantumnematode.connectome.measured_weights import coverage, measured_weights
+from quantumnematode.connectome.neuromodulators import ModulatorCircuit, load_circuit
 from quantumnematode.connectome.neuromuscular import neuromuscular_drive_map
 from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
@@ -155,6 +156,20 @@ _SENSOR_NEURONS_THERMOTAXIS: tuple[str, ...] = ("AFDL", "AFDR")
 # Thermotaxis feature count (klinotaxis head-sweep, mirrors the env-side
 # thermotaxis_klinotaxis sensory module): [temp_deviation, lateral, dT/dt].
 _N_THERMOTAXIS_FEATURES: int = 3
+
+# The modulator field. The state vector carries the step's serotonin and PDF concentrations and
+# its ingestion drive; the current map has one row per pathway: MOD-1, PDFR-1, PDF onto NSM, and
+# ingestion onto NSM.
+_N_CONCENTRATIONS: int = 2
+_N_MODULATOR_FEATURES: int = _N_CONCENTRATIONS + 1
+N_MODULATOR_PATHWAYS: int = 4
+ModulatorKnockout = Literal["none", "tph1", "pdfr1"]
+# The pathway rows each knockout zeroes: without serotonin nothing flows through MOD-1; without
+# PDFR-1 neither its receptor current nor PDF's inhibition of NSM, which acts through the PDFR-1
+# neurons.
+_KNOCKED_OUT_PATHWAYS: dict[str, tuple[int, ...]] = {"none": (), "tph1": (0,), "pdfr1": (1, 2)}
+# softplus(log(e - 1)) == 1: each strength starts at 1.
+_SOFTPLUS_INVERSE_OF_ONE: float = float(np.log(np.expm1(1.0)))
 
 # Motor-neuron class prefixes for the readout (matches the connectome
 # neurons table: VB/DB/VA/DA all carry numeric suffixes).
@@ -414,6 +429,22 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # projection; constructed after the predator block so flipping it on
     # perturbs neither the food nor the predator RNG-stream order.
     enable_thermotaxis_projection: bool = False
+    # Opt-in serotonin and PDF field. Serotonin is released by NSM, which is driven by the food the
+    # worm ingested on its last move, as a fraction of a full bite, and inhibits AIY, ASI and RIF
+    # through MOD-1. PDF is released by AVB, PVP and SIAV, excites AIY, RIM and RIA through PDFR-1,
+    # and inhibits NSM. Each concentration is carried across the steps of an episode and decays
+    # toward its release cells' activity with the circuit's timescale. Off by default, with nothing
+    # allocated, so the off path is byte-identical.
+    modulators: bool = False
+    # Remove one modulator's effect: "tph1" holds serotonin at zero; "pdfr1" removes every PDFR-1
+    # effect, its receptor current and its inhibition of NSM. Set in a training config for a
+    # raised mutant, or at evaluation on a trained network for an acute one. Requires modulators.
+    modulator_knockout: ModulatorKnockout = "none"
+    # Scale NSM's ingestion drive by (1 + hunger), hunger being one minus satiety's fraction of its
+    # maximum: fasting amplifies NSM's response to food. Requires modulators.
+    modulator_satiety_link: bool = False
+    # Worm-seconds per environment step, which sets the concentrations' per-step decay.
+    modulator_step_seconds: float = Field(default=5.0, gt=0.0)
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
@@ -453,6 +484,8 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
         if (refusal := _body_drive_refusal(self)) is not None:
             raise ValueError(refusal)
         if (refusal := _freeze_wiring_refusal(self)) is not None:
+            raise ValueError(refusal)
+        if (refusal := _modulators_refusal(self)) is not None:
             raise ValueError(refusal)
         if self.enforce_synapse_signs and self.synapse_signs != "atlas":
             msg = (
@@ -793,8 +826,33 @@ def _freeze_wiring_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return None
 
 
+def _modulators_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why the modulator settings cannot run here, or ``None`` when they can."""
+    if not config.modulators:
+        if config.modulator_knockout != "none" or config.modulator_satiety_link:
+            return (
+                "modulator_knockout and modulator_satiety_link require modulators: without the "
+                "field there is nothing to knock out or to link to satiety."
+            )
+        return None
+    if config.learning_rule != "ppo":
+        return (
+            f"modulators requires learning_rule='ppo', got {config.learning_rule!r}: the plastic "
+            "rules define no update for the modulator strengths."
+        )
+    if config.dynamics != "settling":
+        return (
+            "modulators requires dynamics='settling': the field's currents are held through each "
+            "step's settling, and leaky dynamics replays from stored potentials that do not "
+            "carry the concentrations."
+        )
+    return None
+
+
 def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     """Refuse a dynamics configuration at construction; ``model_copy`` skips validators."""
+    if (refusal := _modulators_refusal(config)) is not None:
+        raise ValueError(refusal)
     if (refusal := _dynamics_refusal(config)) is not None:
         raise ValueError(refusal)
     if (refusal := _plastic_gaps_refusal(config)) is not None:
@@ -1002,6 +1060,9 @@ class ConnectomeTopology(nn.Module):
     implicit_inverse: torch.Tensor
     nmj_indices: torch.Tensor
     nmj_map: torch.Tensor
+    modulator_map: torch.Tensor
+    _serotonin_release_indices: torch.Tensor
+    _pdf_release_indices: torch.Tensor
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -1043,6 +1104,8 @@ class ConnectomeTopology(nn.Module):
         plastic_gaps: bool = False,
         body_drive: bool = False,
         freeze_wiring: bool = False,
+        modulator_circuit: ModulatorCircuit | None = None,
+        modulator_knockout: ModulatorKnockout = "none",
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
@@ -1628,6 +1691,72 @@ class ConnectomeTopology(nn.Module):
                         "pooled_motor",
                         torch.zeros(self.readout.shape[1], device=device),
                     )
+
+        # ── Neuromodulator field (opt-in) ───────────────────────────────
+        # Built last and drawing no random numbers, so turning it on moves no other tensor.
+        self.modulators = modulator_circuit is not None
+        if modulator_circuit is not None:
+            self._build_modulators(modulator_circuit, modulator_knockout, device)
+
+    def _build_modulators(
+        self,
+        circuit: ModulatorCircuit,
+        knockout: ModulatorKnockout,
+        device: torch.device,
+    ) -> None:
+        """Register the field's current map, its release cells and its learnable strengths.
+
+        The map has one row per pathway, over every neuron: serotonin through MOD-1, PDF through
+        PDFR-1, PDF's inhibition of NSM, and the ingestion drive onto NSM, each carrying its sign
+        on its cells. A knocked-out pathway's row is zero, so no current flows through it. The map
+        and the release indices are rebuilt from the circuit, never persisted, so a trained
+        network loads unchanged into a knockout brain. Each strength is the softplus of a learned
+        value starting where the strength is 1.
+        """
+        rows = torch.zeros(N_MODULATOR_PATHWAYS, self.n_neurons)
+        pathways = (
+            (circuit.mod1, circuit.mod1_sign),
+            (circuit.pdfr1, circuit.pdfr1_sign),
+            (circuit.pdf_inhibits, -1),
+            (circuit.serotonin_release, 1),
+        )
+        for row, (cells, sign) in enumerate(pathways):
+            for name in cells:
+                rows[row, self._idx[name]] = float(sign)
+        for row in _KNOCKED_OUT_PATHWAYS[knockout]:
+            rows[row] = 0.0
+        self.modulator_knockout = knockout
+        self.modulator_timescale_s = circuit.timescale_s
+        self.register_buffer("modulator_map", rows.to(device), persistent=False)
+        for name, cells in (
+            ("_serotonin_release_indices", circuit.serotonin_release),
+            ("_pdf_release_indices", circuit.pdf_release),
+        ):
+            self.register_buffer(
+                name,
+                torch.tensor([self._idx[c] for c in cells], dtype=torch.long, device=device),
+                persistent=False,
+            )
+        self.modulator_rho = nn.Parameter(
+            torch.full((N_MODULATOR_PATHWAYS,), _SOFTPLUS_INVERSE_OF_ONE, device=device),
+        )
+
+    def modulator_strengths(self) -> torch.Tensor:
+        """Return the four pathway strengths: MOD-1, PDFR-1, PDF onto NSM, ingestion onto NSM."""
+        return nn.functional.softplus(self.modulator_rho)
+
+    def modulator_current(self, modulators: torch.Tensor) -> torch.Tensor:
+        """Map ``[serotonin, PDF, ingestion drive]`` ``(..., 3)`` to a held current ``(..., N)``."""
+        serotonin, pdf, drive = modulators.unbind(-1)
+        pathway = torch.stack([serotonin, pdf, pdf, drive], dim=-1) * self.modulator_strengths()
+        return pathway @ self.modulator_map
+
+    def modulator_release(self, h: torch.Tensor) -> tuple[float, float]:
+        """Return each modulator's release from settled rates ``(N,)``: its cells' mean rate > 0."""
+        return (
+            float(h.index_select(-1, self._serotonin_release_indices).clamp_min(0.0).mean()),
+            float(h.index_select(-1, self._pdf_release_indices).clamp_min(0.0).mean()),
+        )
 
     def _build_leaky(self, membrane_tau_steps: float, device: torch.device) -> None:
         """Precompute the implicit operator and allocate the membrane for leaky dynamics.
@@ -2490,13 +2619,14 @@ class ConnectomeTopology(nn.Module):
             h = h.index_add(0, self._thermotaxis_neuron_indices, thermo_inj)
         return h
 
-    def forward_with_hidden(
+    def forward_with_hidden(  # noqa: C901, PLR0913 — one input per sensory projection
         self,
         food_features: torch.Tensor,
         predator_distal_features: torch.Tensor | None = None,
         predator_mechano_features: torch.Tensor | None = None,
         predator_contact_zone: ContactZone | None = None,
         thermotaxis_features: torch.Tensor | None = None,
+        modulators: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute action logits AND the post-K hidden state in one pass.
 
@@ -2526,6 +2656,10 @@ class ConnectomeTopology(nn.Module):
         constructed with ``enable_thermotaxis_projection=True`` AND the
         tensor is non-None; it injects the 3-feature temperature vector
         onto the AFD pair.
+
+        ``modulators`` is ``[serotonin, PDF, ingestion drive]``, consumed only when the topology
+        was built with the modulator field: its current is added to the pre-activation at every
+        settling step, held through the settling rather than setting only the initial state.
         """
         if food_features.shape != (self.n_food_features,):
             msg = (
@@ -2563,8 +2697,11 @@ class ConnectomeTopology(nn.Module):
         # One scale for the whole episode's settling steps: the schedule is indexed by
         # episode, so every step within one draws at the same magnitude.
         scale = self.current_node_noise
+        held = self._held_current(modulators)
         for settling_step in range(self.forward_pass_depth):
             preact = chem_mat.T @ h + gap_mat.T @ h
+            if held is not None:
+                preact = preact + held
             if self.node_noise > 0.0:
                 # Into the PRE-activation, at EVERY settling step. Perturbing only the settled
                 # state leaves a synapse's effect through the later steps uncredited, and
@@ -2706,13 +2843,14 @@ class ConnectomeTopology(nn.Module):
             h = h.index_add(1, self._thermotaxis_neuron_indices, thermo_inj)
         return h
 
-    def forward_with_hidden_batched(
+    def forward_with_hidden_batched(  # noqa: PLR0913 — one input per sensory projection
         self,
         food_features: torch.Tensor,
         predator_distal_features: torch.Tensor | None = None,
         predator_mechano_features: torch.Tensor | None = None,
         contact_zone_onehot: torch.Tensor | None = None,
         thermotaxis_features: torch.Tensor | None = None,
+        modulators: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Batched analogue of :meth:`forward_with_hidden`.
 
@@ -2762,8 +2900,11 @@ class ConnectomeTopology(nn.Module):
         # If gap junctions ever become directional, transpose ``gap_mat`` here.
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.gap_matrix()
+        held = self._held_current(modulators)
         for _ in range(self.forward_pass_depth):
             preact = h @ chem_mat + h @ gap_mat
+            if held is not None:
+                preact = preact + held
             h = torch.tanh(preact)
 
         if self.body_drive:
@@ -2772,6 +2913,12 @@ class ConnectomeTopology(nn.Module):
         # (B, num_actions) discrete logits, or (B, 2) continuous Gaussian mean.
         logits = motor_acts @ self.readout.T
         return logits, h
+
+    def _held_current(self, modulators: torch.Tensor | None) -> torch.Tensor | None:
+        """Return the modulator field's held current, or ``None`` without the field or its input."""
+        if not self.modulators or modulators is None:
+            return None
+        return self.modulator_current(modulators)
 
     def _forward_leaky(self, current: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """One environment step under leaky dynamics, from the carried membrane.
@@ -2889,6 +3036,8 @@ class ConnectomeTopology(nn.Module):
         # Last, so the parameters before it keep their order with plastic gaps on or off.
         if self.plastic_gaps:
             params.append(self.gap_log_multiplier)
+        if self.modulators:
+            params.append(self.modulator_rho)
         return params
 
 
@@ -2922,7 +3071,7 @@ class ConnectomePPOBrain(ClassicalBrain):
     them.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0915 — one-time brain construction
         self,
         config: ConnectomePPOBrainConfig,
         device: DeviceType = DeviceType.CPU,
@@ -3054,7 +3203,18 @@ class ConnectomePPOBrain(ClassicalBrain):
             plastic_gaps=config.plastic_gaps,
             body_drive=config.action_space == "body_drive",
             freeze_wiring=config.freeze_wiring,
+            modulator_circuit=(
+                load_circuit(sorted(connectome.neurons)) if config.modulators else None
+            ),
+            modulator_knockout=config.modulator_knockout,
         ).to(self.device)
+        # The two concentrations, serotonin then PDF, carried across an episode's steps.
+        self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)
+        self._modulator_decay = (
+            float(np.exp(-config.modulator_step_seconds / self.topology.modulator_timescale_s))
+            if config.modulators
+            else 1.0
+        )
 
         # Learning rule: owns the critic (constructed inside the rule at this
         # exact point — same torch-RNG draw order as the pre-extraction
@@ -3244,15 +3404,66 @@ class ConnectomePPOBrain(ClassicalBrain):
         (3 features), appended AFTER any predator slots. Same zero-default
         semantics: an isothermal / no-thermal-stimulus step produces a
         zero-filled thermo block.
+
+        With the modulator field, the vector ends with ``[serotonin, PDF, ingestion drive]``: the
+        concentrations this step sees and the drive onto NSM from the last move's ingestion. They
+        are part of the state, so PPO's replay sees exactly what the rollout saw.
         """
         parts = [self._extract_food_features(params)]
         if self.config.enable_predator_projection:
             parts.append(self._extract_predator_features(params))
         if self.config.enable_thermotaxis_projection:
             parts.append(self._extract_thermotaxis_features(params))
+        if self.config.modulators:
+            parts.append(self._modulator_features(params))
         if len(parts) == 1:
             return parts[0]
         return np.concatenate(parts).astype(np.float32)
+
+    def _modulator_features(self, params: BrainParams) -> np.ndarray:
+        """Pack ``[serotonin, PDF, ingestion drive]``; the drive is 0 when nothing was eaten.
+
+        The drive is the last move's intake as a fraction of the largest one move can yield, so a
+        full bite drives NSM at 1 whatever the cell's intake rate; an intake reported without its
+        maximum is taken as it is. Under the satiety link the drive is scaled by ``1 + hunger``,
+        hunger being one minus satiety's fraction of its maximum, clipped to ``[0, 1]``; with no
+        satiety reported the scale is 1.
+        """
+        drive = float(params.food_ingested or 0.0)
+        if params.max_food_ingested:
+            drive /= params.max_food_ingested
+        if self.config.modulator_satiety_link and params.satiety is not None and params.max_satiety:
+            fullness = float(np.clip(params.satiety / params.max_satiety, 0.0, 1.0))
+            drive *= 2.0 - fullness
+        return np.array([*self._concentrations, drive], dtype=np.float32)
+
+    def _update_concentrations(self, hidden: torch.Tensor) -> None:
+        """Move each concentration toward its release cells' settled activity, for the next step.
+
+        Computed from the rollout's settled rates outside the gradient: the concentrations are
+        state the policy responds to, not a path credit flows back through. Under the ``tph1``
+        knockout serotonin is never made, so it stays at zero.
+        """
+        release = np.array(self.topology.modulator_release(hidden.detach()), dtype=np.float32)
+        if self.config.modulator_knockout == "tph1":
+            release[0] = 0.0
+        decay = self._modulator_decay
+        self._concentrations = (decay * self._concentrations + (1.0 - decay) * release).astype(
+            np.float32,
+        )
+
+    @property
+    def modulator_concentrations(self) -> tuple[float, float] | None:
+        """Return the current ``(serotonin, PDF)`` concentrations, or None without the field."""
+        if not self.config.modulators:
+            return None
+        return float(self._concentrations[0]), float(self._concentrations[1])
+
+    def _unpack_modulators(self, states: torch.Tensor) -> torch.Tensor | None:
+        """Slice ``[serotonin, PDF, ingestion drive]`` off the end of one state or a batch."""
+        if not self.config.modulators:
+            return None
+        return states[..., -_N_MODULATOR_FEATURES:]
 
     def _extract_food_features(self, params: BrainParams) -> np.ndarray:
         if self.config.sensing_mode == "oracle":
@@ -3425,7 +3636,10 @@ class ConnectomePPOBrain(ClassicalBrain):
             predator_mechano_features=mechano,
             predator_contact_zone=zone,
             thermotaxis_features=thermo,
+            modulators=self._unpack_modulators(state_t),
         )
+        if self.config.modulators:
+            self._update_concentrations(hidden)
         # The plastic rule owns no critic, so there is nothing to ask and
         # nothing that would consume the answer: it updates from the
         # eligibility trace and the reward alone, and never fills the
@@ -3620,6 +3834,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 ConnectomePPOBatch(
                     buffer=self.buffer,
                     unpack_batched=self._unpack_state_batched,
+                    unpack_modulators=self._unpack_modulators,
                     last_value=self.last_value,
                     chunk_length=self.config.bptt_chunk_length if self._leaky else None,
                 ),
@@ -3929,6 +4144,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         """
         self.topology.reset_traces()
         self.topology.reset_membrane()
+        self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)
         # Separate from the trace reset: the rule's load-time reset also clears the traces,
         # and a load must restart the perturbation schedule rather than advance it.
         self.topology.advance_schedule()
