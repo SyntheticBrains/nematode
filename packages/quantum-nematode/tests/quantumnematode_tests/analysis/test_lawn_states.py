@@ -300,3 +300,18 @@ def test_every_leaving_cell_gets_the_registered_reading(
     import json
 
     assert "leaving" in json.loads(out.read_text())
+
+
+def test_a_named_learner_is_read_against_its_floor(tmp_path: Path) -> None:
+    """Scenario "A connectome arm is read against its floor": the same reading, other arm names."""
+    runs = [_run("connectome_e005", s, 0.3) for s in range(16)]
+    runs += [_run("connectome_e005_frozen", s, 1.0) for s in range(16)]
+    out = ls.read_panel({"passes": True}, runs, "connectome_e005", "connectome_e005_frozen", 0.3)
+    assert out["minimum"] == 0.3
+    assert out["verdict"] == "dwells"
+    mlp = tmp_path / "d1.json"
+    import json
+
+    mlp.write_text(json.dumps({"runs": [_run("internal", s, 0.5) for s in range(16)]}))
+    pairing = ls.against_mlp(runs, "connectome_e005", mlp)
+    assert pairing["test"]["mean_delta"] == pytest.approx(0.2)

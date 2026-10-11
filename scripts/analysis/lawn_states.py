@@ -383,21 +383,27 @@ def paired(
     return {"arm": arm, "against": other, "per_seed": values, "test": test}
 
 
-def read_panel(gate: dict[str, Any], runs: list[dict[str, Any]]) -> dict[str, Any]:
+def read_panel(
+    gate: dict[str, Any],
+    runs: list[dict[str, Any]],
+    learner: str = "internal",
+    floor: str = "internal_frozen",
+    minimum: float = PANEL_MINIMUM,
+) -> dict[str, Any]:
     """Read the gate first, then the registered reading's state at the minimum, then its verdict.
 
     The reading is the learner's on-lawn dwelling share minus its untrained floor's, paired by
     seed. A learner that does not beat its floor on intake leaves the panel unreadable.
     """
-    out: dict[str, Any] = {"minimum": PANEL_MINIMUM, "readable": bool(gate["passes"])}
+    out: dict[str, Any] = {"minimum": minimum, "readable": bool(gate["passes"])}
     if not out["readable"]:
         out["verdict"] = "unreadable"
         return out
-    reading = paired(runs, "internal", "internal_frozen")
+    reading = paired(runs, learner, floor)
     test = reading["test"]
     per_seed = list(reading["per_seed"].values())
     q = ops.two_sided(test["wilcoxon_p"])
-    state = mc.classify(test["mean_delta"], test["ci_lo"], test["ci_hi"], q, PANEL_MINIMUM)
+    state = mc.classify(test["mean_delta"], test["ci_lo"], test["ci_hi"], q, minimum)
     sd = statistics.stdev(per_seed) if len(per_seed) > 1 else float("nan")
     out |= {
         "reading": reading,
@@ -498,6 +504,16 @@ def beside(runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def against_mlp(runs: list[dict[str, Any]], learner: str, mlp_panel: Path) -> dict[str, Any]:
+    """Pair a learner's dwelling share with D.1's MLP's by seed, from D.1's committed readings."""
+    mlp_runs = [
+        r | {"arm": "mlp"}
+        for r in json.loads(mlp_panel.read_text())["runs"]
+        if r["arm"] == "internal" and not r.get("missing")
+    ]
+    return paired([*runs, *mlp_runs], learner, "mlp")
+
+
 CSV_FIELDS = (
     "arm",
     "seed",
@@ -529,7 +545,8 @@ def write_csv(result: dict[str, Any], path: Path) -> Path:
     plateau: dict[tuple[str, int], float] = {}
     for arm, gate in result["gates"].items():
         plateau |= {(arm, int(s)): v for s, v in gate["learn"].items()}
-        plateau |= {("internal_frozen", int(s)): v for s, v in gate["floor"].items()}
+        floor_arm = result.get("floor_arm", "internal_frozen")
+        plateau |= {(floor_arm, int(s)): v for s, v in gate["floor"].items()}
     rows = []
     for run in sorted(result["runs"], key=lambda r: (r["arm"], r["seed"])):
         log_std = run.get("action_log_std") or [None, None]
@@ -558,7 +575,16 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("--logs", type=Path, action="append", required=True)
-    ap.add_argument("--arms", nargs="+", choices=list(gen.ARMS), default=None)
+    ap.add_argument(
+        "--arms",
+        nargs="+",
+        choices=[*gen.ARMS, *gen.CONNECTOME_ARMS],
+        default=None,
+    )
+    ap.add_argument("--learner-arm", default="internal", help="the registered learner arm")
+    ap.add_argument("--floor-arm", default="internal_frozen", help="its untrained floor")
+    ap.add_argument("--minimum", type=float, default=PANEL_MINIMUM, help="the registered minimum")
+    ap.add_argument("--compare-mlp", type=Path, help="D.1's panel.json, to pair against its MLP")
     ap.add_argument("--cell", choices=list(gen.CELLS), default="patch")
     ap.add_argument("--seeds", type=int, nargs="+", required=True)
     ap.add_argument("--episodes", type=int, default=20)
@@ -575,7 +601,7 @@ def main(argv: list[str] | None = None) -> int:
     gates = {
         arm: learning_gate(
             plateaus(args.logs, arm, seeds, args.cell),
-            plateaus(args.logs, "internal_frozen", seeds, args.cell),
+            plateaus(args.logs, args.floor_arm, seeds, args.cell),
         )
         for arm in args.arms
         if not arm.endswith("_frozen")
@@ -590,16 +616,17 @@ def main(argv: list[str] | None = None) -> int:
     result: dict[str, Any] = {
         "cell": args.cell,
         "episodes": args.episodes,
+        "floor_arm": args.floor_arm,
         "gates": gates,
         "runs": runs,
     }
-    if (
-        args.cell == "patch"
-        and "internal" in gates
-        and {"internal", "internal_frozen"} <= set(args.arms)
-    ):
-        result["panel"] = read_panel(gates["internal"], runs)
-        result["beside"] = beside(runs)
+    learner, floor = args.learner_arm, args.floor_arm
+    if args.cell == "patch" and learner in gates and floor in args.arms:
+        result["panel"] = read_panel(gates[learner], runs, learner, floor, args.minimum)
+        if "blind" in args.arms:
+            result["beside"] = beside(runs)
+        if args.compare_mlp is not None:
+            result["against_mlp"] = against_mlp(runs, learner, args.compare_mlp)
     leaving_args = (args.leaving_minimum, args.min_exits, args.min_seeds)
     if args.cell != "patch" and "internal" in gates and None not in leaving_args:
         result["leaving"] = read_leaving(
