@@ -175,3 +175,21 @@ class TestEnforcement:
             wild["per_connection"].load_weight_components(
                 wild["atlas"].get_weight_components(),
             )
+
+
+class TestChemicalWeightScale:
+    def test_unit_scale_is_the_unscaled_build(self, wild: dict[str, ConnectomePPOBrain]) -> None:
+        scaled = _brain(synapse_signs="atlas", chemical_weight_scale=1.0)
+        assert torch.equal(_tensor(scaled, "w_chem"), _tensor(wild["atlas"], "w_chem"))
+
+    def test_a_scale_multiplies_every_weight_and_keeps_the_signs(
+        self,
+        wild: dict[str, ConnectomePPOBrain],
+    ) -> None:
+        scaled = _brain(synapse_signs="per_connection", chemical_weight_scale=0.42)
+        base = _tensor(wild["per_connection"], "w_chem")
+        assert torch.allclose(_tensor(scaled, "w_chem"), base * 0.42)
+        assert torch.equal(
+            _tensor(scaled, "chem_sign"),
+            _tensor(wild["per_connection"], "chem_sign"),
+        )

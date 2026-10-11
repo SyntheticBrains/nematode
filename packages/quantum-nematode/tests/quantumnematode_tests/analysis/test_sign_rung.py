@@ -68,6 +68,7 @@ class TestConfigs:
                 brain = _loaded(stem)["brain"]["config"]
                 assert brain["synapse_signs"] == level
                 assert brain["enforce_synapse_signs"] is True
+                assert brain["chemical_weight_scale"] == gen.SIGNS[level]["chemical_weight_scale"]
                 expected = "rewired_chemical_only" if arm.startswith("rn") else "wild_type"
                 assert brain["wiring"] == expected
 
@@ -112,3 +113,14 @@ class TestReadings:
         assert out["grounding"]["verdict"] == "lead_grows"
         assert out["receptor"]["verdict"] == "no_change_at_minimum"
         assert out["receptor"]["holm_q"] == pytest.approx(1.0)
+
+
+class TestCalibration:
+    def test_the_configs_carry_the_calibrated_scales(self) -> None:
+        import json
+
+        path = _root / "docs/experiments/logbooks/supporting/091-per-connection-signs"
+        calibration = json.loads((path / "scale-calibration.json").read_text())
+        for level in (sr.ATLAS, sr.PER_CONNECTION):
+            chosen = calibration["levels"][level]["chosen_scale"]
+            assert gen.SIGNS[level]["chemical_weight_scale"] == chosen

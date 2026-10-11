@@ -344,6 +344,11 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # Multiplier on a measured value after it is matched to the draw's magnitude. Read only by the
     # priors that place measured magnitudes, and refused away from 1.0 under the others.
     measured_weight_scale: float = Field(default=1.0, gt=0.0)
+    # Multiplier on every chemical weight once drawn, signed and placed. The draw's scale suits
+    # random signs, whose excitation and inhibition largely cancel; grounded signs are mostly
+    # excitatory, add coherently and saturate much of the settled network, so a grounded arm can set
+    # this to bring its operating point back. Default 1.0 is byte-identical to the pre-option brain.
+    chemical_weight_scale: float = Field(default=1.0, gt=0.0)
     # Chemical-synapse signs. "random" keeps the sign each weight drew, so half the network is
     # inhibitory by construction. "atlas" replaces it with the sign the pre-synaptic neuron's
     # released transmitter implies (acetylcholine and glutamate excitatory, GABA inhibitory),
@@ -1131,6 +1136,7 @@ class ConnectomeTopology(nn.Module):
         freeze_wiring: bool = False,
         modulator_circuit: ModulatorCircuit | None = None,
         modulator_knockout: ModulatorKnockout = "none",
+        chemical_weight_scale: float = 1.0,
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
@@ -1350,6 +1356,8 @@ class ConnectomeTopology(nn.Module):
         )
         edges = int(m_chem_np.astype(bool).sum())
         self.instructed_fraction: float = float(pathway_np.sum()) / edges if edges else 0.0
+        if chemical_weight_scale != 1.0:
+            w_chem_np *= np.float32(chemical_weight_scale)
         self.w_chem = nn.Parameter(torch.from_numpy(w_chem_np).to(device=device))
         # A frozen wiring takes no gradient: outside the optimiser nothing would clear one, and it
         # would accumulate across every update.
@@ -3249,6 +3257,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 load_circuit(sorted(connectome.neurons)) if config.modulators else None
             ),
             modulator_knockout=config.modulator_knockout,
+            chemical_weight_scale=config.chemical_weight_scale,
         ).to(self.device)
         # The two concentrations, serotonin then PDF, carried across an episode's steps.
         self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)

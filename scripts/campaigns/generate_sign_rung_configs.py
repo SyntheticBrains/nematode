@@ -24,10 +24,21 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 THERMAL = PROJECT_ROOT / "configs" / "scenarios" / "thermal_foraging"
 _T = "connectomeppo_small_continuous2d_thermal_klinotaxis"
 _NULL = {"wiring": "rewired_chemical_only"}
+# Each grounded level runs at random signs' operating point: its chemical weights are scaled so the
+# fraction of saturated units at initialisation matches random signs' (sign_scale_calibration.py,
+# seeds 9601-9616). Grounded signs are mostly excitatory and otherwise saturate the settled network.
 SIGNS: dict[str, dict[str, Any]] = {
     "random": {},
-    "atlas": {"synapse_signs": "atlas", "enforce_synapse_signs": True},
-    "per_connection": {"synapse_signs": "per_connection", "enforce_synapse_signs": True},
+    "atlas": {
+        "synapse_signs": "atlas",
+        "enforce_synapse_signs": True,
+        "chemical_weight_scale": 0.35,
+    },
+    "per_connection": {
+        "synapse_signs": "per_connection",
+        "enforce_synapse_signs": True,
+        "chemical_weight_scale": 0.42,
+    },
 }
 _TAG = {"random": "", "atlas": "_atlas_signs", "per_connection": "_per_connection_signs"}
 
