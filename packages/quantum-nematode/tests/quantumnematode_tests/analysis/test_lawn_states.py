@@ -404,6 +404,14 @@ class TestKnockouts:
         assert out["dwelling_gate"]["state"] == "below"
         assert out["readable"]
 
+    def test_a_knockout_with_no_paired_seed_leaves_the_panel_unreadable(self) -> None:
+        """Holm needs both readings: without the pdfr-1 arm, neither is read, and it says why."""
+        runs = [r for r in _knockout_runs(0.7, 0.0) if r["arm"] != "modulated+pdfr1"]
+        out = ls.read_knockouts({"passes": True}, runs, minimum=0.2, measure="dwelling")
+        assert out["verdict"] == "unreadable"
+        assert out["missing_knockouts"] == ["pdfr1"]
+        assert "tph1" not in out
+
     def test_an_intact_network_that_does_not_dwell_is_unreadable(self) -> None:
         """The dwelling gate comes first: no state to shift, no knockout reading."""
         runs = _knockout_runs(0.7, 0.0)

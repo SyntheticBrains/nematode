@@ -633,6 +633,11 @@ def read_knockouts(  # noqa: PLR0913 - the gate, the runs and the registered rea
         )
         for knockout, direction in KNOCKOUT_DIRECTIONS[measure].items()
     }
+    # Holm adjusts the two together, so a knockout with no paired seed leaves both unread.
+    missing = [knockout for knockout, reading in readings.items() if reading["test"] is None]
+    if missing:
+        out |= {"readable": False, "verdict": "unreadable", "missing_knockouts": missing}
+        return out
     qs = holm({k: ops.two_sided(r["test"]["wilcoxon_p"]) for k, r in readings.items()})
     for knockout, reading in readings.items():
         test = reading["test"]
