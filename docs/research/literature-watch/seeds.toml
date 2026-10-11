@@ -156,6 +156,16 @@ label = "Kunert-Graf et al. 2017, multistability and long transients in the C. e
 id = "W4405419531"
 label = "Zhao et al. 2024, BAAIWorm integrative brain-body model"
 
+# B.3's modulator field is built on these two (Logbook 090): new work on serotonin and PDF states,
+# and on models of them, cites one or both.
+[[openalex.seeds]]
+id = "W2154700649"
+label = "Flavell et al. 2013, serotonin and PDF initiate and extend roaming and dwelling"
+
+[[openalex.seeds]]
+id = "W3214251916"
+label = "Ji et al. 2021, a neural circuit for flexible control of persistent behavioral states"
+
 # --- Keyword search ------------------------------------------------------------------------------
 # Preprints whose title or abstract carries a term, on the listed servers, through OpenAlex. Added
 # 2026-10-03 for two reasons found by hand that week. arXiv's query API returns HTTP 406 to GitHub

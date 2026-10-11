@@ -73,6 +73,11 @@ Score 2, not 3: useful without settling anything above.
   weights did not move the wiring effect under gradient learning here, and the result under the
   local learner was unresolved, so the rung is closed for this phase; new data or a per-connection
   sign resource is still worth seeing.*
+- **Neuromodulators on connectome models** — serotonin, PDF and other extrasynaptic signalling
+  placed on wired networks, in-silico mutants graded against published phenotypes, and models of
+  roaming/dwelling persistence (NSM, mutual inhibition). *Added 2026-10-11 after B.3 (Logbook 090):
+  the trained connectome used both modulators, but not in the mutants' way, and weakened PDF's
+  inhibition of NSM; work that constrains or imposes these pathways is what a follow-up builds on.*
 - **Placed plasticity** — a learning rule at an anatomically identified site against a matched
   random subset — and diagnosed failures of local rules.
 - New connectome datasets or releases for any organism, and the tooling to use them.
