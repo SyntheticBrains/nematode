@@ -20,6 +20,20 @@ step, a start on a lawn, `entropy_coef` 0.005, and no state-shaping reward. Only
 - **The pilot decides,** on disjoint seeds, choosing the cell where the learner both learns and
   leaves.
 
+**The first pilot, 2026-10-11** (8 lawns of 1.0 mm, seeds 9201–9204):
+
+- **The learner learned and left:** the learning gate passed (+1.09 [+0.97, +1.21]), with 33–49 exits
+  per seed over 30 held-out episodes.
+- **Three of four seeds never roamed.** They crept from lawn to lawn and left while classified as
+  dwelling. On a 1 mm lawn a worm is always near an edge, so leaving is incidental to moving, not a
+  change of state.
+- **They also foraged poorly,** about 1.5 intake against about 3.1 needed to survive.
+
+With the user, the sweep moves to **1.5 mm lawns** (9 cells, grazed out in about 470 steps), so a worm
+grazes inside a lawn before it travels. Two cells are piloted on fresh seeds, **4 lawns and 6
+lawns**, and the registration takes whichever passes every gate. If neither does, D.1b closes with
+its reason.
+
 Quality is fixed at 1.0. The quality direction (Shtonda & Avery 2006) is deferred to a later cell
 and verified against its source first.
 
@@ -75,8 +89,12 @@ the data.
 
 1. **The learner learns.** Its intake plateau beats its untrained floor's, paired by seed.
 2. **The learner leaves.** Every seed has at least a minimum number of exits over its evaluation
-   episodes, set in the registration from the pilot. A seed below it is reported, and too few
-   readable seeds leave the panel unreadable.
+   episodes, set in the registration from the pilot.
+3. **The learner takes both states.** Each read seed's on-lawn roaming share lies between 5% and 95%.
+   Without both states there is nothing for the coupling to measure, as the first pilot showed.
+
+A seed failing gate 2 or 3 is reported and left out, and too few readable seeds leave the panel
+unreadable.
 
 **Beside, never read as verdicts:**
 

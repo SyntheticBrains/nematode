@@ -45,16 +45,17 @@ def test_the_committed_lawn_configs_are_the_generators(arm: str) -> None:
     assert getattr(brain, "freeze_updates", False) is (arm == "internal_frozen")
 
 
+@pytest.mark.parametrize("cell", [c for c in gen.CELLS if c != "patch"])
 @pytest.mark.parametrize("arm", gen.LEAVING_ARMS)
-def test_the_committed_leaving_configs_are_the_generators(arm: str) -> None:
-    """The leaving cell is D.1's cell with smaller, more numerous lawns, and loads."""
-    path, text = gen.derive(arm, "leaving")
+def test_the_committed_leaving_configs_are_the_generators(arm: str, cell: str) -> None:
+    """Each leaving cell is D.1's cell with its own lawns, and loads."""
+    path, text = gen.derive(arm, cell)
     assert path.read_text() == text
     config = load_simulation_config(str(path))
     assert config.environment is not None
     assert config.environment.foraging is not None
     lawns = config.environment.foraging.lawns
     assert lawns is not None
-    assert lawns.radius_mm == gen.CELLS["leaving"]["radius_mm"]
-    assert lawns.count == gen.CELLS["leaving"]["count"]
+    assert lawns.radius_mm == gen.CELLS[cell]["radius_mm"]
+    assert lawns.count == gen.CELLS[cell]["count"]
     assert lawns.start_on_lawn

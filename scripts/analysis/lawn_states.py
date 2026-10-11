@@ -419,28 +419,37 @@ LEAVING_VERDICTS: dict[str, str] = {
 }
 
 
-def read_leaving(
+def read_leaving(  # noqa: PLR0913 - the gates and their registered thresholds
     gate: dict[str, Any],
     runs: list[dict[str, Any]],
     *,
     minimum: float,
     min_exits: int,
     min_seeds: int,
+    roaming_bounds: tuple[float, float] = (0.05, 0.95),
 ) -> dict[str, Any]:
     """Read the gates in order, then the learner's band enrichment at the minimum.
 
-    The learner must beat its floor on intake, and at least ``min_seeds`` seeds must each leave a
-    lawn ``min_exits`` times; seeds that leave less are reported and left out. The reading is a
-    one-sample one: each readable seed's enrichment, against zero.
+    The learner must beat its floor on intake. A seed is read only if it leaves a lawn ``min_exits``
+    times and takes both states on lawns (its roaming share within ``roaming_bounds``); other seeds
+    are reported and left out, and fewer than ``min_seeds`` read seeds leave the panel unreadable.
+    The reading is a one-sample one: each read seed's enrichment, against zero.
     """
     learner = [r for r in runs if r["arm"] == "internal" and not r.get("missing")]
-    leaving = [r for r in learner if (r.get("exits") or 0) >= min_exits]
+    low, high = roaming_bounds
+
+    def both_states(run: dict[str, Any]) -> bool:
+        share = run.get("roaming_fraction")
+        return share is not None and low <= share <= high
+
+    leaving = [r for r in learner if (r.get("exits") or 0) >= min_exits and both_states(r)]
     out: dict[str, Any] = {
         "minimum": minimum,
         "min_exits": min_exits,
         "learning_gate": bool(gate["passes"]),
         "seeds_leaving": [r["seed"] for r in leaving],
-        "seeds_too_few_exits": [r["seed"] for r in learner if r not in leaving],
+        "seeds_too_few_exits": [r["seed"] for r in learner if (r.get("exits") or 0) < min_exits],
+        "seeds_one_state": [r["seed"] for r in learner if not both_states(r)],
     }
     values = {
         r["seed"]: r["band_enrichment"] for r in leaving if r.get("band_enrichment") is not None

@@ -196,6 +196,7 @@ class TestLeaving:
                 "arm": "internal",
                 "seed": s,
                 "exits": exits,
+                "roaming_fraction": 0.4,
                 "band_enrichment": enrichment + 0.01 * (s % 3),
             }
             for s in range(16)
@@ -223,3 +224,14 @@ class TestLeaving:
         )
         assert out["verdict"] == "unreadable"
         assert len(out["seeds_too_few_exits"]) == 16
+
+
+def test_a_seed_with_one_state_is_not_read() -> None:
+    """A seed that never roams leaves while dwelling; it is reported and left out."""
+    runs = [
+        {"arm": "internal", "seed": s, "exits": 10, "roaming_fraction": 0.0, "band_enrichment": 0.0}
+        for s in range(16)
+    ]
+    out = ls.read_leaving({"passes": True}, runs, minimum=0.1, min_exits=3, min_seeds=8)
+    assert out["verdict"] == "unreadable"
+    assert len(out["seeds_one_state"]) == 16

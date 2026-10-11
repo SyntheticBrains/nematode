@@ -52,6 +52,9 @@ LEAVING_ARMS: tuple[str, ...] = ("internal", "internal_frozen")
 CELLS: dict[str, dict[str, object]] = {
     "patch": {},
     "leaving": {"radius_mm": 1.0, "count": 8, "min_separation_mm": 2.0},
+    # The second sweep: lawns large enough to graze inside before travelling.
+    "leaving15x4": {"radius_mm": 1.5, "count": 4, "min_separation_mm": 2.0},
+    "leaving15x6": {"radius_mm": 1.5, "count": 6, "min_separation_mm": 2.0},
 }
 
 MAX_STEPS = 720
@@ -136,7 +139,7 @@ def derive(arm: str, cell: str = "patch") -> tuple[Path, str]:
 def main() -> int:
     """CLI: write every arm's config if missing."""
     written = kept = 0
-    for cell, arms in (("patch", ARMS), ("leaving", LEAVING_ARMS)):
+    for cell, arms in [("patch", ARMS)] + [(c, LEAVING_ARMS) for c in CELLS if c != "patch"]:
         for arm in arms:
             path, text = derive(arm, cell)
             if path.exists():
