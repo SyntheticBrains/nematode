@@ -3248,6 +3248,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             strict_mask=(config.chemical_mask_mode == "strict"),
             freeze_updates=config.freeze_updates,
             device=self.device,
+            enforce_signs=config.enforce_synapse_signs,
         )
         self._uses_ppo = config.learning_rule == "ppo"
         if self._uses_ppo:

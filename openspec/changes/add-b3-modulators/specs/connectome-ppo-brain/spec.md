@@ -62,3 +62,13 @@ training.
 
 - **WHEN** a trained network is evaluated with the `pdfr1` knockout
 - **THEN** no PDFR-1 current SHALL flow on AIY, RIM or RIA, and PDF SHALL not inhibit NSM
+
+### Requirement: Grounded signs held under PPO
+
+When synapse signs are grounded in the transmitter atlas and enforced, PPO SHALL keep each grounded
+chemical synapse at its sign after every update, and SHALL leave ungrounded synapses free.
+
+#### Scenario: PPO keeps grounded signs
+
+- **WHEN** a sign-grounded, enforced connectome trains under PPO
+- **THEN** no grounded synapse's weight SHALL cross zero

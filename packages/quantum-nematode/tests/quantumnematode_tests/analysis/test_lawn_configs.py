@@ -108,4 +108,5 @@ def test_the_committed_modulated_configs_are_the_generators(arm: str) -> None:
 def test_an_acute_arm_runs_its_trained_arm_s_config() -> None:
     """``modulated+tph1`` has the intact arm's stem: its config and its training log."""
     for arm in gen.ACUTE_ARMS:
-        assert gen.stem(arm) == gen.stem("modulated")
+        assert gen.stem(arm) == gen.stem(arm.split("+")[0])
+    assert gen.stem("modulated_atlas+pdfr1") == gen.stem("modulated_atlas")

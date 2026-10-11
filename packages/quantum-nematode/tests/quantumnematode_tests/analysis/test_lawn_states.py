@@ -351,7 +351,12 @@ def _knockout_runs(tph1_roaming: float, pdfr1_roaming: float) -> list[dict[str, 
 class TestKnockouts:
     def test_both_mutant_directions_reproduced(self) -> None:
         """Without serotonin it dwells less; without PDFR-1 it dwells more: both read positive."""
-        out = ls.read_knockouts({"passes": True}, _knockout_runs(0.7, 0.0), minimum=0.2)
+        out = ls.read_knockouts(
+            {"passes": True},
+            _knockout_runs(0.7, 0.0),
+            minimum=0.2,
+            measure="dwelling",
+        )
         assert out["readable"]
         assert out["tph1"]["verdict"] == "mutant_direction"
         assert out["pdfr1"]["verdict"] == "mutant_direction"
@@ -360,9 +365,31 @@ class TestKnockouts:
 
     def test_the_opposite_direction_is_named(self) -> None:
         """A tph-1 knockout that dwells more moves against the mutant."""
-        out = ls.read_knockouts({"passes": True}, _knockout_runs(0.0, 0.7), minimum=0.2)
+        out = ls.read_knockouts(
+            {"passes": True},
+            _knockout_runs(0.0, 0.7),
+            minimum=0.2,
+            measure="dwelling",
+        )
         assert out["tph1"]["verdict"] == "opposite_direction"
         assert out["pdfr1"]["verdict"] == "opposite_direction"
+
+    def test_on_speed_the_mutant_directions_reverse(self) -> None:
+        """Without serotonin it moves faster, without PDFR-1 slower: both read positive on speed."""
+        runs = _knockout_runs(0.7, 0.0)
+        speeds = {"modulated": 0.03, "modulated+tph1": 0.06, "modulated+pdfr1": 0.01}
+        runs = [
+            r | {"on_lawn_speed": speeds[str(r["arm"])] + 0.001 * (int(r["seed"]) % 3)}  # type: ignore[call-overload]
+            if r["arm"] in speeds
+            else r
+            for r in runs
+        ]
+        out = ls.read_knockouts({"passes": True}, runs, minimum=0.01)
+        assert out["measure"] == "speed"
+        assert out["tph1"]["reading"]["test"]["mean_delta"] == pytest.approx(0.03)
+        assert out["pdfr1"]["reading"]["test"]["mean_delta"] == pytest.approx(0.02)
+        assert out["tph1"]["verdict"] == "mutant_direction"
+        assert out["pdfr1"]["verdict"] == "mutant_direction"
 
     def test_an_intact_network_that_does_not_dwell_is_unreadable(self) -> None:
         """The dwelling gate comes first: no state to shift, no knockout reading."""
@@ -391,6 +418,19 @@ def test_concentrations_are_read_by_state() -> None:
             "pdf_dwelling": 0.2,
         },
     )
+
+
+def test_on_lawn_speed_pools_the_on_lawn_windows() -> None:
+    """Speed is averaged over on-lawn windows only; off-lawn travel does not count."""
+    episodes = [
+        ls.Episode(
+            states=np.array([rd.ROAMING, rd.DWELLING, rd.OFF_FOOD]),
+            density=np.full(3, np.nan),
+            speed=np.array([0.04, 0.02, 0.5]),
+        ),
+    ]
+    assert ls.on_lawn_speed(episodes) == pytest.approx(0.03)
+    assert ls.on_lawn_speed([]) is None
 
 
 def test_learned_strengths_are_read_from_the_weights(tmp_path: Path) -> None:

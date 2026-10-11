@@ -119,7 +119,8 @@ serotonin's other receptors; here there are none to remove.
 
 ### Decision G: The readings
 
-The cell is D.1's lawn cell, with stage 0's settings: entropy 0.005, Emmons 2024, depth 4.
+The cell is D.1's lawn cell, with stage 0's settings: entropy 0.005, Emmons 2024, depth 4. The
+substrate's synapse signs are grounded in the transmitter atlas and held under PPO (Decision H).
 
 **Gates, in order:**
 
@@ -127,24 +128,60 @@ The cell is D.1's lawn cell, with stage 0's settings: entropy 0.005, Emmons 2024
 2. **The modulated connectome dwells:** D.1's dwelling share against its floor, at stage 0's minimum
    of 0.278. A modulated network that no longer dwells has no state for a knockout to shift.
 
-**The primary readings.** Two, one per mutant, each the knockout's on-lawn dwelling share minus the
+**The primary readings.** Two, one per mutant, each the knockout's **mean on-lawn speed** minus the
 intact network's, paired by seed:
 
-- **acute *tph-1*:** the published direction is less dwelling;
-- **acute *pdfr-1*:** the published direction is more dwelling.
+- **acute *tph-1*:** the published direction is faster, since the mutant roams more;
+- **acute *pdfr-1*:** the published direction is slower, since the mutant dwells more.
 
-Each is classified by `mc.classify` at a minimum fixed from a pilot, with q values Holm-adjusted
-across the two. The verdicts: the mutant direction reproduced, the opposite direction, below the
-minimum, no effect at the minimum, or unresolved.
+Each is classified by `mc.classify` at a minimum fixed at registration from the sign-grounded pilot,
+with q values Holm-adjusted across the two. The verdicts: the mutant direction reproduced, the
+opposite direction, below the minimum, no effect at the minimum, or unresolved.
+
+**Why speed, not the dwelling share** (decided with the user after the first pilot, 2026-10-11). The
+first pilot's policies sat near one state per seed: two seeds dwelt in every window and two roamed
+with brief dwells. On the classifier's share, a dwelling seed cannot dwell more and a roaming seed
+cannot dwell less, so each knockout could move only on half the seeds, and the all-seed difference
+was diluted by the rest. Speed is the continuous quantity the states are classified from. It shows
+shifts the classifier's threshold hides, and real worms' calibrated states give it a scale: about
+0.014 mm/s dwelling and 0.042 mm/s roaming. The dwelling share stays as the gate and is reported
+beside the speed readings.
 
 **Reported beside, never read as verdicts:**
 
-- the raised *tph-1* and *pdfr-1* arms against the intact one;
+- each acute knockout on the dwelling share;
+- the raised *tph-1* and *pdfr-1* arms against the intact one, on both measures;
 - a satiety-link arm, in which NSM's ingestion drive is amplified by hunger, `(1 + (1 − satiety))`,
   as fasting amplifies NSM's food response (Rhoades 2019);
 - the learned receptor strengths and ingestion gain;
-- the concentrations' traces around state switches;
-- the modulated connectome against stage 0's unmodulated one, paired by seed.
+- the concentrations in each state;
+- the modulated connectome against stage 0's unmodulated one, paired by seed, noting that stage 0's
+  signs were random.
+
+### Decision H: Grounded signs, held under PPO
+
+**The finding** (the first pilot, seeds 9401–9404, random signs). Stage 0 and the first modulated
+arms drew every synapse's sign at random. What a receptor cell does to locomotion was then arbitrary
+per seed, and nothing tied a knockout's direction to the worm's. Acute *tph-1* slowed both roaming
+seeds, the opposite of the mutant, which fits an arbitrary direction. Acute *pdfr-1* slowed one, the
+mutant's direction.
+
+**The change.** The modulated arms ground signs in the transmitter atlas (`synapse_signs: atlas`) and
+enforce them (`enforce_synapse_signs: true`).
+
+- **The atlas's reach.** It grounds 3,176 of the 3,709 chemical synapses by the presynaptic cell's
+  transmitter, including every output of AIY, RIF, RIM, RIA and the PDF release cells, but none of
+  ASI's or NSM's.
+- **Enforcement is new under PPO.** It was implemented only by the plastic rules, and under PPO the
+  flag was ignored. PPO now clamps each grounded synapse back to its sign after every optimiser
+  step, as the plastic rules do.
+- **What grounding does not settle.** Grounding is necessary for a knockout's direction to mean
+  anything, not sufficient: ungrounded synapses and learned magnitudes can still route around it.
+- **A positive control first.** The sign-grounded connectome has not been tested on the cell. The
+  pilot reads its gates before anything is registered: it must learn and dwell.
+
+The random-sign arms and their pilot stay as committed. They are the record of why the reading
+changed.
 
 ## Risks
 

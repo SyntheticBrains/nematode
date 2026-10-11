@@ -123,6 +123,7 @@ class ConnectomePPORule:
         strict_mask: bool,
         freeze_updates: bool,
         device: torch.device,
+        enforce_signs: bool = False,
     ) -> None:
         # Critic: scalar value head over the same 302-dim activation vector.
         # Same construction + init calls as pre-extraction (byte-equivalence).
@@ -152,6 +153,28 @@ class ConnectomePPORule:
         self.strict_mask = strict_mask
         self.freeze_updates = freeze_updates
         self.device = device
+        self.enforce_signs = enforce_signs
+
+    def _project(self, topo: ConnectomeTopology) -> None:
+        """Return the chemical weights to the constraints the optimiser step may have broken.
+
+        Under the strict mask, any edge the step created where none exists is zeroed; under the
+        soft prior the weights stay as the optimiser left them, the mask being only an initial
+        prior that PPO may grow from. Under Dale's law each grounded synapse is clamped back to
+        its sign, as the plastic rules clamp theirs; ungrounded synapses move freely.
+        """
+        with torch.no_grad():
+            if self.strict_mask:
+                topo.w_chem.data.copy_(topo.apply_weight_mask(topo.w_chem.data))
+            if self.enforce_signs:
+                signs, weights = cast("torch.Tensor", topo.chem_sign), topo.w_chem.data
+                topo.w_chem.data.copy_(
+                    torch.where(
+                        signs > 0,
+                        weights.clamp_min(0.0),
+                        torch.where(signs < 0, weights.clamp_max(0.0), weights),
+                    ),
+                )
 
     def step(
         self,
@@ -256,16 +279,7 @@ class ConnectomePPORule:
                 )
                 self.optimizer.step()
 
-                # Strict-mask projection: under "strict" mode, zero out any
-                # non-existent edges that the optimiser step would have
-                # created. Under "soft_prior" mode, leave the weights as
-                # the optimiser left them (the mask is then only an
-                # initial-weight prior, and PPO is free to grow new edges).
-                if self.strict_mask:
-                    with torch.no_grad():
-                        topo.w_chem.data.copy_(
-                            topo.apply_weight_mask(topo.w_chem.data),
-                        )
+                self._project(topo)
 
                 policy_losses.append(policy_loss.item())
                 value_losses.append(value_loss.item())

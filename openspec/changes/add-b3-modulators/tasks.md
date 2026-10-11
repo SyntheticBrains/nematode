@@ -11,6 +11,8 @@
 - [x] 4. **Ingestion**: `BrainParams.food_ingested` from the agent. Tests.
 - [x] 5. **Configs and analysis**: the modulated arms (intact, floor, raised *tph-1*, raised *pdfr-1*,
   satiety link); the acute knockout readings in `lawn_states.py` with Holm across the two. Tests.
+- [x] 5a. **Re-plan after the first pilot**: atlas signs held under PPO; the speed readout; the
+  sign-grounded arms. Tests.
 - [ ] 6. **Pilot and registration**: a pilot on disjoint seeds for the gates, the knockouts' effect
   size and the minimum; `090-modulators/launch.md`; gate preflight; `/nematode-review-spec`.
 - [ ] 7. **Campaign and readout**: the panel; Logbook 090; tracker B.3; roadmap.

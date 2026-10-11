@@ -10,6 +10,7 @@ removes every PDFR-1 effect).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
@@ -245,6 +246,42 @@ class TestReplay:
             _act(brain, params)
             brain.learn(params, reward=0.1 * (step % 3), episode_done=False)
         assert not torch.equal(before, brain.topology.modulator_rho.detach())
+
+
+# ── Signs under PPO ──────────────────────────────────────────────────────────────────────────
+
+
+class TestSignsUnderPPO:
+    def test_ppo_holds_every_grounded_synapse_to_its_sign(self) -> None:
+        """Scenario "PPO keeps grounded signs": after updates no grounded weight crosses zero."""
+        brain = _brain(
+            modulators=True,
+            synapse_signs="atlas",
+            enforce_synapse_signs=True,
+            learning_rate=0.05,
+        )
+        signs = cast("torch.Tensor", brain.topology.chem_sign)
+        torch.manual_seed(0)
+        for step in range(32):
+            params = _params(step, ingested=0.5 * (step % 2))
+            _act(brain, params)
+            brain.learn(params, reward=float(step % 3) - 1.0, episode_done=False)
+        weights = brain.topology.w_chem.detach()
+        assert bool((weights[signs > 0] >= 0).all())
+        assert bool((weights[signs < 0] <= 0).all())
+
+    def test_without_enforcement_ppo_may_cross_zero(self) -> None:
+        """The same run unenforced lets some grounded weight change sign, so the test bites."""
+        brain = _brain(modulators=True, synapse_signs="atlas", learning_rate=0.05)
+        signs = cast("torch.Tensor", brain.topology.chem_sign)
+        torch.manual_seed(0)
+        for step in range(32):
+            params = _params(step, ingested=0.5 * (step % 2))
+            _act(brain, params)
+            brain.learn(params, reward=float(step % 3) - 1.0, episode_done=False)
+        weights = brain.topology.w_chem.detach()
+        crossed = (weights[signs > 0] < 0).sum() + (weights[signs < 0] > 0).sum()
+        assert int(crossed) > 0
 
 
 # ── Checkpoints ──────────────────────────────────────────────────────────────────────────────

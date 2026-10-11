@@ -58,19 +58,32 @@ CONNECTOME_ENTROPY: dict[str, float] = {"e005": 0.005, "e05": 0.05}
 CONNECTOME_ARMS: tuple[str, ...] = tuple(
     f"connectome_{level}{floor}" for level in CONNECTOME_ENTROPY for floor in ("", "_frozen")
 )
-# B.3: the connectome at stage 0's settings (entropy 0.005) with the serotonin and PDF field. The
-# intact learner and its untrained floor; the raised mutants, knocked out from the start of
-# training; and the satiety link, NSM's ingestion drive amplified by hunger.
-MODULATED_ARMS: dict[str, dict[str, object]] = {
+# B.3: the connectome at stage 0's settings (entropy 0.005) with the serotonin and PDF field. Each
+# substrate has the intact learner and its untrained floor; the raised mutants, knocked out from
+# the start of training; and the satiety link, NSM's ingestion drive amplified by hunger.
+_MODULATED_ROLES: dict[str, dict[str, object]] = {
+    "": {},
+    "_frozen": {"freeze_updates": True},
+    "_tph1": {"modulator_knockout": "tph1"},
+    "_pdfr1": {"modulator_knockout": "pdfr1"},
+    "_satiety": {"modulator_satiety_link": True},
+}
+# Two substrates: stage 0's random synapse signs, and signs grounded in the transmitter atlas and
+# held under PPO, so that what a receptor cell does downstream carries its biological sign.
+MODULATED_SUBSTRATES: dict[str, dict[str, object]] = {
     "modulated": {},
-    "modulated_frozen": {"freeze_updates": True},
-    "modulated_tph1": {"modulator_knockout": "tph1"},
-    "modulated_pdfr1": {"modulator_knockout": "pdfr1"},
-    "modulated_satiety": {"modulator_satiety_link": True},
+    "modulated_atlas": {"synapse_signs": "atlas", "enforce_synapse_signs": True},
+}
+MODULATED_ARMS: dict[str, dict[str, object]] = {
+    f"{base}{role}": {**signs, **settings}
+    for base, signs in MODULATED_SUBSTRATES.items()
+    for role, settings in _MODULATED_ROLES.items()
 }
 # The acute knockouts: the intact learner's trained weights evaluated with one modulator removed.
 KNOCKOUTS: tuple[str, ...] = ("tph1", "pdfr1")
-ACUTE_ARMS: tuple[str, ...] = tuple(f"modulated+{k}" for k in KNOCKOUTS)
+ACUTE_ARMS: tuple[str, ...] = tuple(
+    f"{base}+{k}" for base in MODULATED_SUBSTRATES for k in KNOCKOUTS
+)
 CELLS: dict[str, dict[str, object]] = {
     "patch": {},
     "leaving": {"radius_mm": 1.0, "count": 8, "min_separation_mm": 2.0},

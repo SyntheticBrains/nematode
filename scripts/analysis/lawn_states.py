@@ -107,10 +107,14 @@ VERDICTS: dict[str, str] = {
     "no_move": "no_dwelling_at_minimum",
     "unresolved": "unresolved_at_this_sensitivity",
 }
-# B.3: the dwelling gate's minimum is stage 0's registered one; each knockout's published direction
-# is the sign of its dwelling share minus the intact network's.
+# B.3: the dwelling gate's minimum is stage 0's registered one. Each knockout's published direction
+# is the sign of its reading minus the intact network's: on dwelling share, less without serotonin
+# and more without PDFR-1; on on-lawn speed, the reverse, since roaming is the faster state.
 STAGE0_DWELLING_MINIMUM = 0.278
-KNOCKOUT_DIRECTIONS: dict[str, int] = {"tph1": -1, "pdfr1": 1}
+KNOCKOUT_DIRECTIONS: dict[str, dict[str, int]] = {
+    "dwelling": {"tph1": -1, "pdfr1": 1},
+    "speed": {"tph1": 1, "pdfr1": -1},
+}
 KNOCKOUT_VERDICTS: dict[str, str] = {
     "move_wt": "mutant_direction",
     "move_null": "opposite_direction",
@@ -182,6 +186,8 @@ class Episode:
     exits: tuple[int, ...] = ()
     # Per window, the mean serotonin and PDF concentrations the worm's brain saw; None without them.
     concentrations: np.ndarray | None = None
+    # Per window, the mean speed (mm/s); None where not recorded.
+    speed: np.ndarray | None = None
 
 
 def episode_windows(
@@ -221,7 +227,15 @@ def episode_windows(
         density=density,
         exits=tuple(rd.lawn_exits(on_window, off_window)),
         concentrations=per_window,
+        speed=speed,
     )
+
+
+def on_lawn_speed(episodes: list[Episode]) -> float | None:
+    """Return the mean speed (mm/s) over every on-lawn window, the states' continuous measure."""
+    speeds = [e.speed[e.states != rd.OFF_FOOD] for e in episodes if e.speed is not None]
+    pooled = np.concatenate(speeds) if speeds else np.zeros(0)
+    return float(pooled.mean()) if pooled.size else None
 
 
 def concentrations_by_state(episodes: list[Episode]) -> dict[str, float | None]:
@@ -322,6 +336,7 @@ def run_readings(episodes: list[Episode]) -> dict[str, Any]:
         **dwelling_ends(episodes),
         **leaving_readings(episodes),
         **concentrations_by_state(episodes),
+        "on_lawn_speed": on_lawn_speed(episodes),
     }
 
 
@@ -525,12 +540,27 @@ def read_panel(
     return out
 
 
-def _oriented(direction: int) -> Callable[[dict[str, Any]], float | None]:
-    """Return a run's dwelling share times ``direction``, so a mutant's direction reads positive."""
+def _speed(run: dict[str, Any]) -> float | None:
+    speed = run.get("on_lawn_speed")
+    return None if speed is None else float(speed)
+
+
+_MEASURES: dict[str, Callable[[dict[str, Any]], float | None]] = {
+    "dwelling": _dwelling,
+    "speed": _speed,
+}
+
+
+def _oriented(
+    direction: int,
+    measure: str = "dwelling",
+) -> Callable[[dict[str, Any]], float | None]:
+    """Return a run's reading on ``measure`` times ``direction``, so a mutant's direction is positive."""
+    read = _MEASURES[measure]
 
     def key(run: dict[str, Any]) -> float | None:
-        dwelling = _dwelling(run)
-        return None if dwelling is None else direction * dwelling
+        value = read(run)
+        return None if value is None else direction * value
 
     return key
 
@@ -546,21 +576,24 @@ def holm(p_values: dict[str, float]) -> dict[str, float]:
     return adjusted
 
 
-def read_knockouts(
+def read_knockouts(  # noqa: PLR0913 - the gate, the runs and the registered reading
     gate: dict[str, Any],
     runs: list[dict[str, Any]],
     minimum: float,
     intact: str = "modulated",
     floor: str = "modulated_frozen",
+    measure: str = "speed",
 ) -> dict[str, Any]:
     """Read the two gates, then each acute knockout's state at the minimum, Holm across the two.
 
-    Each reading is the knockout's on-lawn dwelling share minus the intact network's, paired by
-    seed, times the mutant's published direction, so a reproduced mutant reads positive.
+    Each reading is the knockout's ``measure`` -- on-lawn speed (mm/s) or dwelling share -- minus
+    the intact network's, paired by seed, times the mutant's published direction, so a reproduced
+    mutant reads positive. The dwelling gate is read on dwelling share whatever the measure.
     """
     dwells = read_panel(gate, runs, intact, floor, STAGE0_DWELLING_MINIMUM)
     out: dict[str, Any] = {
         "minimum": minimum,
+        "measure": measure,
         "dwelling_gate": dwells,
         "readable": bool(gate["passes"]) and dwells.get("state") == "move_wt",
     }
@@ -572,9 +605,9 @@ def read_knockouts(
             runs,
             f"{intact}+{knockout}",
             intact,
-            key=_oriented(direction),
+            key=_oriented(direction, measure),
         )
-        for knockout, direction in KNOCKOUT_DIRECTIONS.items()
+        for knockout, direction in KNOCKOUT_DIRECTIONS[measure].items()
     }
     qs = holm({k: ops.two_sided(r["test"]["wilcoxon_p"]) for k, r in readings.items()})
     for knockout, reading in readings.items():
@@ -584,7 +617,7 @@ def read_knockouts(
         sd = statistics.stdev(per_seed) if len(per_seed) > 1 else float("nan")
         out[knockout] = {
             "reading": reading,
-            "direction": KNOCKOUT_DIRECTIONS[knockout],
+            "direction": KNOCKOUT_DIRECTIONS[measure][knockout],
             "holm_q": qs[knockout],
             "state": state,
             "verdict": KNOCKOUT_VERDICTS[state],
@@ -601,15 +634,25 @@ def modulator_beside(
     """Return the modulator readings reported beside the verdicts, never read as one."""
     arms = {r["arm"] for r in runs}
     out: dict[str, Any] = {}
-    for knockout, direction in KNOCKOUT_DIRECTIONS.items():
-        raised = f"{intact}_{knockout}"
-        if raised in arms:
-            out[f"raised_{knockout}_oriented"] = paired(
-                runs,
-                raised,
-                intact,
-                key=_oriented(direction),
-            )
+    for measure, directions in KNOCKOUT_DIRECTIONS.items():
+        for knockout, direction in directions.items():
+            raised = f"{intact}_{knockout}"
+            if raised in arms:
+                out[f"raised_{knockout}_{measure}_oriented"] = paired(
+                    runs,
+                    raised,
+                    intact,
+                    key=_oriented(direction, measure),
+                )
+        for knockout, direction in directions.items():
+            acute = f"{intact}+{knockout}"
+            if acute in arms:
+                out[f"acute_{knockout}_{measure}_oriented"] = paired(
+                    runs,
+                    acute,
+                    intact,
+                    key=_oriented(direction, measure),
+                )
     if f"{intact}_satiety" in arms:
         out["satiety_link_minus_intact_dwelling"] = paired(runs, f"{intact}_satiety", intact)
     out["strengths"] = {
@@ -624,7 +667,7 @@ def modulator_beside(
             if r["arm"] == arm and not r.get("missing")
         }
         for arm in sorted(arms)
-        if arm.startswith(intact) and not arm.endswith("_frozen")
+        if arm.split("+")[0] in {intact, *(f"{intact}{r}" for r in ("_tph1", "_pdfr1", "_satiety"))}
     }
     return out
 
@@ -766,6 +809,7 @@ CSV_FIELDS = (
     "band_roaming",
     "band_enrichment",
     "last_window_enrichment",
+    "on_lawn_speed",
 )
 MODULATOR_CSV_FIELDS = (
     "serotonin_roaming",
@@ -822,7 +866,14 @@ def modulator_results(
     if args.knockout_minimum is None or not acute or learner not in gates or floor not in args.arms:
         return {}
     out: dict[str, Any] = {
-        "knockouts": read_knockouts(gates[learner], runs, args.knockout_minimum, learner, floor),
+        "knockouts": read_knockouts(
+            gates[learner],
+            runs,
+            args.knockout_minimum,
+            learner,
+            floor,
+            args.knockout_measure,
+        ),
         "modulator_beside": modulator_beside(runs, learner),
     }
     if args.compare_stage0 is not None:
@@ -859,6 +910,12 @@ def main(argv: list[str] | None = None) -> int:
         help="stage 0's panel.json, to pair the modulated learner against its connectome",
     )
     ap.add_argument("--knockout-minimum", type=float, help="the knockouts' registered minimum")
+    ap.add_argument(
+        "--knockout-measure",
+        choices=list(KNOCKOUT_DIRECTIONS),
+        default="speed",
+        help="what the knockouts are read on: on-lawn speed (mm/s) or dwelling share",
+    )
     ap.add_argument("--cell", choices=list(gen.CELLS), default="patch")
     ap.add_argument("--seeds", type=int, nargs="+", required=True)
     ap.add_argument("--episodes", type=int, default=20)
