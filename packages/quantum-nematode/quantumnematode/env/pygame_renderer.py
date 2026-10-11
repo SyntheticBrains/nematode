@@ -1961,8 +1961,10 @@ class Continuous2DRenderer:
         if state.modulators is not None:
             serotonin, pdf = state.modulators
             lines.append((f"Serotonin: {serotonin:.3f}  PDF: {pdf:.3f}", STATUS_TEXT_COLOR))
-        if state.body_reversed:
-            lines.append(("Body: reversing", STATUS_TEXT_COLOR))
+        # Always present with a body, so the status bar, and a recorded frame, keep one height.
+        if state.body_reversed is not None:
+            body_state = "reversing" if state.body_reversed else "forward"
+            lines.append((f"Body: {body_state}", STATUS_TEXT_COLOR))
 
         # Adaptive-sensor readout (omitted when the sensor is disabled).
         if state.adaptive_mode is not None:

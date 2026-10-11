@@ -93,11 +93,21 @@ class TestMidline:
             theme=Theme.HEADLESS,
         )
         assert env.body_midline() is None
-        env.move_agent_body(np.zeros(25))
+        rng = np.random.default_rng(4)
+        for _ in range(6):
+            env.move_agent_body(rng.uniform(-1.0, 1.0, 25))
         points = env.body_midline()
         assert points is not None
-        assert points == pytest.approx(midline(env.bodies["default"], env._body.params))
-        assert env.body_reversed() is False
+        body = env.bodies["default"]
+        assert points[0] == pytest.approx(np.asarray(body.head))
+        # The body's heading runs from its middle segment's midpoint to its head: the midline is
+        # the physics'.
+        middle = (points[N_SEGMENTS // 2] + points[N_SEGMENTS // 2 + 1]) / 2
+        middle_to_head = points[0] - middle
+        assert math.atan2(middle_to_head[1], middle_to_head[0]) == pytest.approx(
+            env._body.heading(body),
+        )
+        assert env.body_reversed() in (True, False)
         curvature = env.body_curvature()
         assert curvature is not None
         assert curvature.shape == (N_SEGMENTS,)
@@ -122,22 +132,35 @@ def _lawn_env() -> Continuous2DEnvironment:
     )
 
 
+def _arc() -> tuple[tuple[float, float], ...]:
+    """Build a curved midline: joints on a quarter circle of radius 1 mm behind (10, 10)."""
+    angles = np.linspace(0.0, math.pi / 2, N_SEGMENTS + 1)
+    return tuple((10.0 - math.sin(a), 9.0 + math.cos(a)) for a in angles)
+
+
 @requires_pygame
 class TestRendering:
     def test_the_kinematic_body_is_drawn_through_its_joints(self, renderer: Any) -> None:
-        """Scenario "The kinematic body is drawn from its state": its pixels sit on the joints."""
-        renderer._heatmap_enabled = False
-        joints = tuple((10.0 - 0.1 * i, 10.0) for i in range(N_SEGMENTS + 1))
-        env = Continuous2DEnvironment(continuous=Continuous2DParams(world_size_mm=20.0), seed=1)
-        renderer.render_frame(env, _state(body_midline=joints, body_reversed=False))
+        """Scenario "The kinematic body is drawn from its state": a curved body, on its joints."""
         from quantumnematode.env.pygame_renderer import WORM_BODY_COLOR
 
-        mid = renderer._world_to_pixel(*joints[N_SEGMENTS // 2])
-        assert tuple(renderer._screen.get_at(mid))[:3] == WORM_BODY_COLOR
+        renderer._heatmap_enabled = False
+        joints = _arc()
+        env = Continuous2DEnvironment(continuous=Continuous2DParams(world_size_mm=20.0), seed=1)
+        renderer.render_frame(env, _state(body_midline=joints, body_reversed=False))
+        for index in (4, 8):
+            pixel = renderer._world_to_pixel(*joints[index])
+            assert tuple(renderer._screen.get_at(pixel))[:3] == WORM_BODY_COLOR
+        # A straight head-to-tail stroke would pass here; the curved body does not.
+        chord = renderer._world_to_pixel(
+            (joints[0][0] + joints[-1][0]) / 2,
+            (joints[0][1] + joints[-1][1]) / 2,
+        )
+        assert tuple(renderer._screen.get_at(chord))[:3] != WORM_BODY_COLOR
 
     def test_a_reversal_is_marked(self, renderer: Any) -> None:
-        """Scenario "A reversal is marked": the reversal tint, and a status line."""
-        from quantumnematode.env.pygame_renderer import WORM_REVERSAL_COLOR
+        """Scenario "A reversal is marked": the reversal tint, the tail marker, a status line."""
+        from quantumnematode.env.pygame_renderer import WORM_REVERSAL_COLOR, WORM_TAIL_MARKER_COLOR
 
         renderer._heatmap_enabled = False
         joints = tuple((10.0 - 0.1 * i, 10.0) for i in range(N_SEGMENTS + 1))
@@ -146,8 +169,15 @@ class TestRendering:
         renderer.render_frame(env, state)
         mid = renderer._world_to_pixel(*joints[N_SEGMENTS // 2])
         assert tuple(renderer._screen.get_at(mid))[:3] == WORM_REVERSAL_COLOR
+        tail_x, tail_y = renderer._world_to_pixel(*joints[-1])
+        beyond = (tail_x - 3, tail_y)  # the marker points tail-ward, here toward -x
+        assert tuple(renderer._screen.get_at(beyond))[:3] == WORM_TAIL_MARKER_COLOR
         text = " ".join(t for t, _ in renderer._build_status_lines(state, None))
         assert "Body: reversing" in text
+        forward = _state(body_midline=joints, body_reversed=False)
+        assert "Body: forward" in " ".join(
+            t for t, _ in renderer._build_status_lines(forward, None)
+        )
 
     def test_grazing_shows(self, renderer: Any) -> None:
         """Scenario "Grazing shows": a grazed cell is drawn closer to the soil."""
@@ -218,6 +248,7 @@ def test_frames_are_saved(tmp_path: Path) -> None:
     agent._continuous_renderer.close()
 
 
+@pytest.mark.smoke
 def test_headless_refuses_recording(tmp_path: Path) -> None:
     """Scenario "Headless refuses recording"."""
     result = subprocess.run(  # noqa: S603 - fixed arguments
@@ -236,3 +267,52 @@ def test_headless_refuses_recording(tmp_path: Path) -> None:
     )
     assert result.returncode == 2
     assert "headless renders none" in result.stderr
+
+
+class TestSnapshotExtras:
+    """The agent fills the snapshot's optional fields from the run, and leaves out the rest."""
+
+    @staticmethod
+    def _agent(env: Continuous2DEnvironment, **brain: Any) -> Any:
+        from quantumnematode.agent import QuantumNematodeAgent
+        from quantumnematode.brain.arch import ConnectomePPOBrain, ConnectomePPOBrainConfig
+        from quantumnematode.brain.arch.dtypes import DeviceType
+
+        config = ConnectomePPOBrainConfig(seed=0, action_mode="continuous", **brain)
+        return QuantumNematodeAgent(
+            brain=ConnectomePPOBrain(config=config, device=DeviceType.CPU),
+            env=env,
+            theme=Theme.HEADLESS,
+        )
+
+    def test_a_point_worm_on_point_food_adds_nothing(self) -> None:
+        env = Continuous2DEnvironment(continuous=Continuous2DParams(world_size_mm=20.0), seed=1)
+        assert self._agent(env)._continuous_render_extras((5.0, 5.0)) == {}
+
+    def test_the_kinematic_body_reaches_the_snapshot(self) -> None:
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=20.0, body_model="kinematic"),
+            seed=1,
+        )
+        env.move_agent_body(np.full(25, 0.3))
+        extras = self._agent(env)._continuous_render_extras((5.0, 5.0))
+        expected = env.body_midline()
+        assert expected is not None
+        assert np.array(extras["body_midline"]) == pytest.approx(expected)
+        assert len(extras["body_curvature"]) == N_SEGMENTS
+        assert extras["body_reversed"] is env.body_reversed()
+
+    def test_lawns_and_modulators_reach_the_snapshot(self) -> None:
+        env = Continuous2DEnvironment(
+            continuous=Continuous2DParams(world_size_mm=20.0),
+            foraging=ForagingParams(food_model="lawns", lawns=LawnParams(count=1, radius_mm=3.0)),
+            seed=2,
+        )
+        field = env.lawn_field
+        assert field is not None
+        agent = self._agent(env, modulators=True)
+        centre = (float(field.centres[0][0]), float(field.centres[0][1]))
+        extras = agent._continuous_render_extras(centre)
+        assert extras["on_lawn"] is True
+        assert extras["intake"] == 0.0
+        assert extras["modulators"] == agent.brain.modulator_concentrations

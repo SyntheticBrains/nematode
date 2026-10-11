@@ -348,7 +348,24 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         if args.record_every < 1:
             print("error: --record-every must be at least 1", file=sys.stderr)
             raise SystemExit(2)
+        if args.manyworlds:
+            print(
+                "error: --record-frames records the continuous renderer; --manyworlds renders text",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
         theme = Theme.PIXEL_CONTINUOUS
+    if args.render_ppm is not None:
+        if args.render_ppm <= 0:
+            print("error: --render-ppm must be positive", file=sys.stderr)
+            raise SystemExit(2)
+        if theme != Theme.PIXEL_CONTINUOUS:
+            print(
+                "error: --render-ppm scales the pixel_continuous renderer; pass --theme "
+                "pixel_continuous or --record-frames",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
     optimize_quantum_performance = args.optimize
 
     # CLI-default brain config: registry-driven, with NO per-architecture branch —
@@ -493,6 +510,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             unsupported_flags.append("--load-weights/--save-weights")
         if args.record_rollouts:
             unsupported_flags.append("--record-rollouts")
+        if args.record_frames is not None or args.render_ppm is not None:
+            unsupported_flags.append("--record-frames/--render-ppm")
         if args.manyworlds:
             unsupported_flags.append("--manyworlds")
         if args.track_per_run:
@@ -664,17 +683,22 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         sensing_config=sensing_config,
     )
     if args.record_frames is not None:
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
         from quantumnematode.env.pygame_renderer import FrameRecorder
 
+        if not isinstance(env, Continuous2DEnvironment):
+            print(
+                "error: --record-frames records the continuous renderer; this config runs the "
+                "grid substrate",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
         agent.frame_recorder = FrameRecorder(
             args.record_frames,
             every=args.record_every,
             follow=args.record_follow,
         )
     if args.render_ppm is not None:
-        if args.render_ppm <= 0:
-            print("error: --render-ppm must be positive", file=sys.stderr)
-            raise SystemExit(2)
         agent.render_pixels_per_mm = args.render_ppm
     rollout_recorder: RolloutRecorder | None = None
     if args.record_rollouts:

@@ -122,7 +122,7 @@ SDL_VIDEODRIVER=dummy uv run ./scripts/run_simulation.py \
 ffmpeg -framerate 10 -pattern_type glob -i 'frames/run0001-*.png' run1.mp4
 ```
 
-Frames add up fast, so record a few runs at a time. Assembling them into a video is left to `ffmpeg` or similar; no animation dependency is added.
+Recording needs a continuous-substrate, single-agent run: it is refused with `headless`, `--manyworlds`, multi-agent configs and grid configs. Frames add up fast, so record a few runs at a time. Assembling them into a video is left to `ffmpeg` or similar; no animation dependency is added.
 
 ### Staged screenshots
 
