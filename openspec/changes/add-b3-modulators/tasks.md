@@ -16,5 +16,5 @@
 - [x] 6. **Pilot and registration**: the sign-grounded pilot on disjoint seeds (9411–9418) for the
   gates, the knockouts' spreads and the cost; the biological speed minimum; `090-modulators/launch.md`;
   the preflight on the eight pilot seeds; `/nematode-review-spec`.
-- [ ] 7. **Campaign and readout**: the panel; Logbook 090; tracker B.3; roadmap.
+- [x] 7. **Campaign and readout**: the panel; Logbook 090; tracker B.3; roadmap.
 - [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
