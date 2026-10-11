@@ -107,10 +107,13 @@ VERDICTS: dict[str, str] = {
     "no_move": "no_dwelling_at_minimum",
     "unresolved": "unresolved_at_this_sensitivity",
 }
-# B.3: the dwelling gate's minimum is stage 0's registered one. Each knockout's published direction
+# B.3: the dwelling gate is classified at stage 0's registered minimum and passes on any significant
+# dwelling; the speed readings' minimum is a third of the 0.028 mm/s between real worms' calibrated
+# dwelling and roaming speeds. Each knockout's published direction
 # is the sign of its reading minus the intact network's: on dwelling share, less without serotonin
 # and more without PDFR-1; on on-lawn speed, the reverse, since roaming is the faster state.
 STAGE0_DWELLING_MINIMUM = 0.278
+KNOCKOUT_SPEED_MINIMUM = 0.009
 KNOCKOUT_DIRECTIONS: dict[str, dict[str, int]] = {
     "dwelling": {"tph1": -1, "pdfr1": 1},
     "speed": {"tph1": 1, "pdfr1": -1},
@@ -576,6 +579,20 @@ def holm(p_values: dict[str, float]) -> dict[str, float]:
     return adjusted
 
 
+def dwells_significantly(dwells: dict[str, Any]) -> bool:
+    """Whether a dwelling reading is significantly above its floor, at any size.
+
+    The knockout readings need only a dwelling state for the knockouts to shift, so the gate is the
+    reading's significant positive states: ``move_wt``, or ``below`` with a positive mean.
+    """
+    state = dwells.get("state")
+    if state == "move_wt":
+        return True
+    reading = dwells.get("reading") or {}
+    test = reading.get("test") or {}
+    return state == "below" and float(test.get("mean_delta", 0.0)) > 0.0
+
+
 def read_knockouts(  # noqa: PLR0913 - the gate, the runs and the registered reading
     gate: dict[str, Any],
     runs: list[dict[str, Any]],
@@ -588,14 +605,16 @@ def read_knockouts(  # noqa: PLR0913 - the gate, the runs and the registered rea
 
     Each reading is the knockout's ``measure`` -- on-lawn speed (mm/s) or dwelling share -- minus
     the intact network's, paired by seed, times the mutant's published direction, so a reproduced
-    mutant reads positive. The dwelling gate is read on dwelling share whatever the measure.
+    mutant reads positive. The dwelling gate is read on dwelling share whatever the measure, at
+    stage 0's minimum, and passes on significant dwelling of any size
+    (:func:`dwells_significantly`).
     """
     dwells = read_panel(gate, runs, intact, floor, STAGE0_DWELLING_MINIMUM)
     out: dict[str, Any] = {
         "minimum": minimum,
         "measure": measure,
         "dwelling_gate": dwells,
-        "readable": bool(gate["passes"]) and dwells.get("state") == "move_wt",
+        "readable": bool(gate["passes"]) and dwells_significantly(dwells),
     }
     if not out["readable"]:
         out["verdict"] = "unreadable"

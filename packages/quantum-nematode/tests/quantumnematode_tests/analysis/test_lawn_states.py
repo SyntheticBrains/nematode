@@ -391,6 +391,19 @@ class TestKnockouts:
         assert out["tph1"]["verdict"] == "mutant_direction"
         assert out["pdfr1"]["verdict"] == "mutant_direction"
 
+    def test_significant_dwelling_below_the_stage0_minimum_passes_the_gate(self) -> None:
+        """The gate asks for a dwelling state, not stage 0's size: a significant +0.1 passes."""
+        runs = _knockout_runs(0.7, 0.0)
+        runs = [
+            r | {"roaming_fraction": 0.9 - 0.001 * (int(r["seed"]) % 3)}  # type: ignore[call-overload]
+            if r["arm"] == "modulated"
+            else r
+            for r in runs
+        ]
+        out = ls.read_knockouts({"passes": True}, runs, minimum=0.01, measure="dwelling")
+        assert out["dwelling_gate"]["state"] == "below"
+        assert out["readable"]
+
     def test_an_intact_network_that_does_not_dwell_is_unreadable(self) -> None:
         """The dwelling gate comes first: no state to shift, no knockout reading."""
         runs = _knockout_runs(0.7, 0.0)

@@ -125,8 +125,11 @@ substrate's synapse signs are grounded in the transmitter atlas and held under P
 **Gates, in order:**
 
 1. The modulated connectome's intake beats its untrained floor's, paired by seed.
-2. **The modulated connectome dwells:** D.1's dwelling share against its floor, at stage 0's minimum
-   of 0.278. A modulated network that no longer dwells has no state for a knockout to shift.
+2. **The modulated connectome dwells:** D.1's dwelling share against its floor, classified at stage
+   0's minimum of 0.278, passing on significant dwelling of any size (`move_wt`, or `below` with a
+   positive mean). A modulated network that does not dwell has no state for a knockout to shift; it
+   need not dwell as much as stage 0 did. This was decided with the user after the sign-grounded
+   pilot put the panel near stage 0's bar.
 
 **The primary readings.** Two, one per mutant, each the knockout's **mean on-lawn speed** minus the
 intact network's, paired by seed:
@@ -134,8 +137,10 @@ intact network's, paired by seed:
 - **acute *tph-1*:** the published direction is faster, since the mutant roams more;
 - **acute *pdfr-1*:** the published direction is slower, since the mutant dwells more.
 
-Each is classified by `mc.classify` at a minimum fixed at registration from the sign-grounded pilot,
-with q values Holm-adjusted across the two. The verdicts: the mutant direction reproduced, the
+Each is classified by `mc.classify` at **0.009 mm/s**, a third of the 0.028 mm/s between real worms'
+calibrated states' typical dwelling and roaming speeds. It is set from the biology, not from the pilots' effects:
+those were too small and too mixed in sign to anchor one. The q values are Holm-adjusted across the
+two. The verdicts: the mutant direction reproduced, the
 opposite direction, below the minimum, no effect at the minimum, or unresolved.
 
 **Why speed, not the dwelling share** (decided with the user after the first pilot, 2026-10-11). The
@@ -143,8 +148,10 @@ first pilot's policies sat near one state per seed: two seeds dwelt in every win
 with brief dwells. On the classifier's share, a dwelling seed cannot dwell more and a roaming seed
 cannot dwell less, so each knockout could move only on half the seeds, and the all-seed difference
 was diluted by the rest. Speed is the continuous quantity the states are classified from. It shows
-shifts the classifier's threshold hides, and real worms' calibrated states give it a scale: about
-0.014 mm/s dwelling and 0.042 mm/s roaming. The dwelling share stays as the gate and is reported
+shifts the classifier's threshold hides, and real worms' calibrated states give it a scale. Their
+typical speeds, the exponentiated means of the HMM's log-speed emissions less its 0.001 mm/s floor,
+are 0.013 mm/s dwelling and 0.041 mm/s roaming. Those are close to geometric means, while the
+reading is the arithmetic mean of on-lawn window speed. The dwelling share stays as the gate and is reported
 beside the speed readings.
 
 **Reported beside, never read as verdicts:**
@@ -177,6 +184,12 @@ enforce them (`enforce_synapse_signs: true`).
   step, as the plastic rules do.
 - **What grounding does not settle.** Grounding is necessary for a knockout's direction to mean
   anything, not sufficient: ungrounded synapses and learned magnitudes can still route around it.
+- **Glutamate is graded excitatory throughout.** The atlas rule signs a synapse by its presynaptic
+  cell's transmitter, and makes every glutamatergic synapse excitatory. In this circuit the
+  best-known exception lands on a receptor cell: AWC's glutamatergic input to AIY is inhibitory,
+  through the GLC-3 chloride channel (Chalasani et al. 2007). AIY carries both receptors, so its
+  sensory drive here has the wrong sign at that synapse. Per-synapse receptor signs would fix it, and
+  are outside this change.
 - **A positive control first.** The sign-grounded connectome has not been tested on the cell. The
   pilot reads its gates before anything is registered: it must learn and dwell.
 

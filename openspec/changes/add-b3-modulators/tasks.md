@@ -13,7 +13,8 @@
   satiety link); the acute knockout readings in `lawn_states.py` with Holm across the two. Tests.
 - [x] 5a. **Re-plan after the first pilot**: atlas signs held under PPO; the speed readout; the
   sign-grounded arms. Tests.
-- [ ] 6. **Pilot and registration**: a pilot on disjoint seeds for the gates, the knockouts' effect
-  size and the minimum; `090-modulators/launch.md`; gate preflight; `/nematode-review-spec`.
+- [x] 6. **Pilot and registration**: the sign-grounded pilot on disjoint seeds (9411–9418) for the
+  gates, the knockouts' spreads and the cost; the biological speed minimum; `090-modulators/launch.md`;
+  the preflight on the eight pilot seeds; `/nematode-review-spec`.
 - [ ] 7. **Campaign and readout**: the panel; Logbook 090; tracker B.3; roadmap.
 - [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
