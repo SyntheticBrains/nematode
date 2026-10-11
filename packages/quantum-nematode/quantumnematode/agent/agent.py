@@ -1696,7 +1696,8 @@ class QuantumNematodeAgent:
         recorder = self.frame_recorder
         step = self._episode_tracker.steps
         if recorder is not None and step % recorder.every == 0:
-            renderer.save_frame(recorder.directory / f"run{recorder.run:04d}-step{step:05d}.png")
+            name = f"{recorder.prefix}run{recorder.run:04d}-step{step:05d}.png"
+            renderer.save_frame(recorder.directory / name)
 
     def _continuous_render_extras(self, pos: tuple[float, float]) -> dict[str, Any]:
         """Return the snapshot's optional fields: the kinematic body, lawn state and modulators.

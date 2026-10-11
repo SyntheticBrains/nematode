@@ -107,8 +107,8 @@ Success rate: 60.00%
 
 ### Recording a run
 
-`--record-frames <dir>` saves the continuous renderer's frames as PNGs named by run and step
-(`run0001-step00120.png`). It implies `--theme pixel_continuous`. With `SDL_VIDEODRIVER=dummy` it
+`--record-frames <dir>` saves the continuous renderer's frames as PNGs named by session, run and
+step (`<session>-run0001-step00120.png`), so separate recordings into one directory never mix. It implies `--theme pixel_continuous`. With `SDL_VIDEODRIVER=dummy` it
 runs without a window, so a run can be recorded on a headless machine.
 
 - **`--record-every <n>`** saves every n-th step.
@@ -119,7 +119,7 @@ runs without a window, so a run can be recorded on a headless machine.
 SDL_VIDEODRIVER=dummy uv run ./scripts/run_simulation.py \
   --config configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_atlas.yml \
   --runs 1 --record-frames frames/ --record-every 10 --render-ppm 22
-ffmpeg -framerate 10 -pattern_type glob -i 'frames/run0001-*.png' run1.mp4
+ffmpeg -framerate 10 -pattern_type glob -i 'frames/<session>-run0001-*.png' run1.mp4
 ```
 
 Recording needs a continuous-substrate, single-agent run: it is refused with `headless`, `--manyworlds`, multi-agent configs and grid configs. Frames add up fast, so record a few runs at a time. Assembling them into a video is left to `ffmpeg` or similar; no animation dependency is added.

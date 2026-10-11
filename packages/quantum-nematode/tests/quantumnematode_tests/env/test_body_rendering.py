@@ -199,6 +199,15 @@ class TestRendering:
         soil = np.array(SOIL_COLOR, dtype=float)
         assert np.linalg.norm(grazed - soil) < np.linalg.norm(full - soil)
 
+    def test_grazing_rebuilds_the_odour_heatmap(self, renderer: Any) -> None:
+        """The food heatmap's cache key follows lawn density, so grazing invalidates it."""
+        env = _lawn_env()
+        field = env.lawn_field
+        assert field is not None
+        before = renderer._heatmap_cache_key(env, "food", 1)
+        field.density[0] = 0.2
+        assert renderer._heatmap_cache_key(env, "food", 2) != before
+
     def test_lines_appear_only_where_they_apply(self, renderer: Any) -> None:
         """Scenario "Lines appear only where they apply"."""
         plain = [t for t, _ in renderer._build_status_lines(_state(), None)]
@@ -241,10 +250,10 @@ def test_frames_are_saved(tmp_path: Path) -> None:
         device=DeviceType.CPU,
     )
     agent = QuantumNematodeAgent(brain=brain, env=env, theme=Theme.PIXEL_CONTINUOUS)
-    agent.frame_recorder = FrameRecorder(tmp_path, every=2, run=3)
+    agent.frame_recorder = FrameRecorder(tmp_path, every=2, run=3, prefix="s1-")
     agent.run_episode(RewardConfig(), max_steps=4)
     names = sorted(p.name for p in tmp_path.glob("*.png"))
-    assert names == ["run0003-step00002.png", "run0003-step00004.png"]
+    assert names == ["s1-run0003-step00002.png", "s1-run0003-step00004.png"]
     agent._continuous_renderer.close()
 
 

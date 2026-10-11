@@ -697,6 +697,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             args.record_frames,
             every=args.record_every,
             follow=args.record_follow,
+            prefix=f"{session_id}-",
         )
     if args.render_ppm is not None:
         agent.render_pixels_per_mm = args.render_ppm

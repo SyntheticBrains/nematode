@@ -114,6 +114,9 @@ class FrameRecorder:
     directory: Path
     every: int = 1
     run: int = 1
+    # Prepended to every file name, such as the session ID, so recordings of separate sessions
+    # into one directory neither mix nor overwrite one another.
+    prefix: str = ""
     # Start the camera following the worm, so a recorded body fills the frame.
     follow: bool = False
 
@@ -1654,6 +1657,11 @@ class Continuous2DRenderer:
                 )
             else:
                 sig = tuple(sorted((round(fx, 3), round(fy, 3)) for fx, fy in env.foods))
+            lawns = getattr(env, "lawn_field", None)
+            if lawns is not None:
+                # Lawn odour follows each cell's remaining density, so grazing or regrowth must
+                # rebuild the heatmap too.
+                sig = (sig, lawns.density.round(3).tobytes())
         elif field_name == "predator":
             sig = tuple(sorted((p.position[0], p.position[1]) for p in env.predators))
         elif field_name == "pheromone":
