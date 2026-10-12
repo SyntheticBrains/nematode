@@ -20,4 +20,4 @@ Phase 8, run before the M.9 decision. Registered in
 - [x] 6. **Registration**: `launch.md`, the gate preflight, `/nematode-review-spec`.
 - [x] 7. **Campaign and readout**: the panel from a worktree at the registration commit; the modulated
   arms; the logbook; tracker; roadmap; CHANGELOG.
-- [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
+- [x] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
