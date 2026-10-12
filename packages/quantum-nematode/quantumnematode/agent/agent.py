@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         FrameRecorder,
         PygameRenderer,
     )
+    from quantumnematode.report.replay import ReplayRecorder
     from quantumnematode.utils.config_loader import SensingConfig
 
 # Defaults
@@ -441,6 +442,8 @@ class QuantumNematodeAgent:
         self.rollout_recorder: RolloutRecorder | None = None
         # When set, the continuous renderer saves frames here (a reviewer's recording).
         self.frame_recorder: FrameRecorder | None = None
+        # When set, each step's status is recorded for a replay of the run.
+        self.replay_recorder: ReplayRecorder | None = None
         # The continuous renderer's scale in pixels per mm; None keeps its default.
         self.render_pixels_per_mm: float | None = None
         self.satiety_config = satiety_config or SatietyConfig()
@@ -1312,6 +1315,16 @@ class QuantumNematodeAgent:
                     intake=_intake,
                     on_lawn=_on_lawn,
                 ),
+            )
+
+        if self.replay_recorder is not None:
+            field = self.env.lawn_field
+            modulators = getattr(self.brain, "modulator_concentrations", None)
+            self.replay_recorder.snapshot(
+                intake=float(self._episode_tracker.step_intake),
+                on_lawn=field is not None and field.lawn_at(agent_pos) is not None,
+                satiety=float(self.current_satiety),
+                modulators=modulators,
             )
 
         # --- Memory-task cue/outcome/go channels (0 when off; at most one task is active,

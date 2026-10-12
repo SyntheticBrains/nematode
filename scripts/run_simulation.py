@@ -226,6 +226,14 @@ def parse_arguments() -> argparse.Namespace:
         "frame.",
     )
     parser.add_argument(
+        "--record-replay",
+        type=Path,
+        default=None,
+        help="Record each run of a kinematic-body simulation, at the body's sub-step resolution, "
+        "to <dir>/<session>-run<NNNN>.npz for scripts/replay_viewer.py. Requires "
+        "continuous.body_model: kinematic. About 1.5 MB per 500-step run: record a few runs.",
+    )
+    parser.add_argument(
         "--render-ppm",
         type=float,
         default=None,
@@ -355,6 +363,13 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             )
             raise SystemExit(2)
         theme = Theme.PIXEL_CONTINUOUS
+    if args.record_replay is not None and args.manyworlds:
+        print(
+            "error: --record-replay records the standard single-agent runner; it cannot be "
+            "combined with --manyworlds",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
     if args.render_ppm is not None:
         if args.render_ppm <= 0:
             print("error: --render-ppm must be positive", file=sys.stderr)
@@ -512,6 +527,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             unsupported_flags.append("--record-rollouts")
         if args.record_frames is not None or args.render_ppm is not None:
             unsupported_flags.append("--record-frames/--render-ppm")
+        if args.record_replay is not None:
+            unsupported_flags.append("--record-replay")
         if args.manyworlds:
             unsupported_flags.append("--manyworlds")
         if args.track_per_run:
@@ -701,6 +718,28 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         )
     if args.render_ppm is not None:
         agent.render_pixels_per_mm = args.render_ppm
+    if args.record_replay is not None:
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+        from quantumnematode.report.replay import ReplayRecorder
+
+        if not (
+            isinstance(env, Continuous2DEnvironment) and env.continuous.body_model == "kinematic"
+        ):
+            print(
+                "error: --record-replay records the kinematic body; this config runs a point worm "
+                "or the grid (set continuous.body_model: kinematic)",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        agent.replay_recorder = ReplayRecorder(
+            args.record_replay,
+            prefix=f"{session_id}-",
+            meta={
+                "config": str(args.config),
+                "seed": simulation_seed,
+                "weights": None if load_weights_path is None else str(load_weights_path),
+            },
+        )
     rollout_recorder: RolloutRecorder | None = None
     if args.record_rollouts:
         if args.manyworlds:
@@ -794,6 +833,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             logger.info(f"Starting run {run_num} of {runs}")
             if agent.frame_recorder is not None:
                 agent.frame_recorder.run = run_num
+            if agent.replay_recorder is not None:
+                agent.replay_recorder.begin_run(agent.env, run_num)  # type: ignore[arg-type]
 
             # Log full initial environment state
             logger.info(f"Initial agent position: {tuple(agent.env.agent_pos)}")
@@ -828,6 +869,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             )
             if rollout_recorder is not None:
                 rollout_recorder.end_episode()
+            if agent.replay_recorder is not None:
+                logger.info(f"Replay recorded: {agent.replay_recorder.end_run()}")
 
             steps_taken = agent._episode_tracker.steps
             total_reward = agent._episode_tracker.rewards

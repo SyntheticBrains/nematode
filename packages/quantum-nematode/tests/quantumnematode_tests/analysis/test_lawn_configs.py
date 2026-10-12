@@ -110,3 +110,19 @@ def test_an_acute_arm_runs_its_trained_arm_s_config() -> None:
     for arm in gen.ACUTE_ARMS:
         assert gen.stem(arm) == gen.stem(arm.split("+")[0])
     assert gen.stem("modulated_atlas+pdfr1") == gen.stem("modulated_atlas")
+
+
+@pytest.mark.parametrize("arm", gen.BODY_ARMS)
+def test_the_body_demo_configs_are_the_generators(arm: str) -> None:
+    """Each body demo arm is D.1's lawn arm through the kinematic body, and loads."""
+    path, text = gen.derive_body(arm)
+    assert path.read_text() == text
+    config = load_simulation_config(str(path))
+    assert config.environment is not None
+    assert config.environment.continuous is not None
+    assert config.environment.foraging is not None
+    assert config.environment.continuous.body_model == "kinematic"
+    assert config.environment.foraging.food_model == "lawns"
+    assert config.brain is not None
+    assert config.brain.config.action_space == "body_drive"
+    assert getattr(config.brain.config, "freeze_updates", False) is arm.endswith("_frozen")

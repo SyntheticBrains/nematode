@@ -174,6 +174,11 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         new_env.bodies = _copy.deepcopy(self.bodies)
         return new_env
 
+    @property
+    def body_params(self) -> BodyParams:
+        """Return the kinematic body's parameters: its length, step duration and sub-steps."""
+        return self._body.params
+
     def body_midline(self, agent_id: str = "default") -> np.ndarray | None:
         """Return an agent's kinematic body as world-frame joints (mm), head first; None otherwise.
 
