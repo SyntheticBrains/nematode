@@ -21,10 +21,12 @@ panel run.
   6,000 episodes. Fail: M.9 stops, deferred-with-destination.
   *(Read 2026-10-13: `passes`, every seed competent, 57–95% against 0% floors; record in
   `supporting/092-thermal-body/retry/`; `TARGET` is 20.)*
-- [ ] 5. **Stage 2**: the six connectome arms on seeds 9711–9714 at the chosen target and 6,000 episodes; the gate
+- [x] 5. **Stage 2**: the six connectome arms on seeds 9711–9714 at the chosen target and 6,000 episodes; the gate
   preflight per null; the spread and the cost, re-measured here for the registration; the body's median episodes to 30% beside the anchor's (Decision G). At target 20,
   the point-worm gap-only check on the same seeds.
-- [ ] 6. **Registration**: `launch.md`; `/nematode-review-spec`.
+  *(Read 2026-10-13: gates pass on both nulls; the preflight reads `near_bar`, accepted with the
+  user and documented in `launch.md`; the anchor saturates at 20; 32 seeds chosen with the user.)*
+- [x] 6. **Registration**: `launch.md`; `/nematode-review-spec`. *(2026-10-13: 32 seeds, 2301–2332.)*
 - [ ] 7. **Campaign and readout**: the panel from a worktree at the registration commit; the
   kinematics; the logbook; tracker; roadmap; CHANGELOG.
 - [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.

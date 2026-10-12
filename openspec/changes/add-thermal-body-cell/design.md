@@ -95,6 +95,13 @@ connectome arm runs.
 - **It sets** the spread of the primary reading, which sizes the panel between 16 and 64 seeds, and
   the cost. A size over 64 goes back to the user.
 
+- **Read 2026-10-13** (seeds 9711–9714, target 20, 6,000 episodes): both levels' gates pass, but the
+  preflight reads `near_bar`, from the wild type's plateau alone (86.1%; the gap-only null 82.0%).
+  The user accepted it on the grounds recorded in the registration: the gate needs both learners at
+  the bar, the reading is `auc_success`, and a ceiling would bias toward `no_move`. A level that
+  saturates in the panel reads unreadable and is not re-run. The panel is 32 seeds, chosen with the
+  user, above the pilot's 16.
+
 ### Decision E: Stage 3, the registered panel
 
 **One reading:** the wild type's lead over the gap-only null, `gap = wild type − gap-only null`, on
