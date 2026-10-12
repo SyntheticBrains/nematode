@@ -34,6 +34,7 @@ if TYPE_CHECKING:
         FrameRecorder,
         PygameRenderer,
     )
+    from quantumnematode.report.replay import ReplayRecorder
     from quantumnematode.utils.config_loader import SensingConfig
 
 # Defaults
@@ -441,6 +442,8 @@ class QuantumNematodeAgent:
         self.rollout_recorder: RolloutRecorder | None = None
         # When set, the continuous renderer saves frames here (a reviewer's recording).
         self.frame_recorder: FrameRecorder | None = None
+        # When set, each step's status is recorded for a replay of the run.
+        self.replay_recorder: ReplayRecorder | None = None
         # The continuous renderer's scale in pixels per mm; None keeps its default.
         self.render_pixels_per_mm: float | None = None
         self.satiety_config = satiety_config or SatietyConfig()
@@ -992,6 +995,23 @@ class QuantumNematodeAgent:
 
         return result
 
+    def snapshot_replay(self) -> None:
+        """Record the state the last move left, for a replay; a no-op without a recorder.
+
+        Called as each step's brain parameters are built, which is after the previous step's move
+        and its intake, and once more when a run ends, so every move's status is recorded.
+        """
+        if self.replay_recorder is None:
+            return
+        field = self.env.lawn_field
+        position = self.env.agent_sensing_position(self.agent_id)
+        self.replay_recorder.snapshot(
+            intake=float(self._episode_tracker.step_intake),
+            on_lawn=field is not None and field.lawn_at(position) is not None,
+            satiety=float(self.current_satiety),
+            modulators=getattr(self.brain, "modulator_concentrations", None),
+        )
+
     def _max_food_ingested(self) -> float | None:
         """Return the largest intake value one move can yield, or None without lawns."""
         field, lawns = self.env.lawn_field, self.env.foraging.lawns
@@ -1313,6 +1333,8 @@ class QuantumNematodeAgent:
                     on_lawn=_on_lawn,
                 ),
             )
+
+        self.snapshot_replay()
 
         # --- Memory-task cue/outcome/go channels (0 when off; at most one task is active,
         # enforced by EnvironmentConfig._validate_memory_tasks_mutually_exclusive) ---

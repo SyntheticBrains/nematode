@@ -103,6 +103,58 @@ Average temperature comfort: 0.68
 Success rate: 60.00%
 ```
 
+## Realistic replay
+
+A kinematic-body run can be recorded at the body's sub-step resolution and replayed as a worm on an
+agar plate under a bright-field microscope:
+
+- a smooth, translucent body with its pharyngeal bulbs;
+- lawns that thin where they are grazed and are thickest at their rim;
+- playback at 1×, 10× or 60× worm time.
+
+A label always names the model, a 12-segment kinematic body, and the playback speed. The picture
+claims no more than that.
+
+![Realistic replay: the body up close](assets/images/replay_body.png)
+
+![Realistic replay: the plate and its lawns](assets/images/replay_plate.png)
+
+```bash
+# Record each run (any kinematic-body config; frozen weights replay a trained worm)
+uv run ./scripts/run_simulation.py \
+  --config configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_body_internal_frozen.yml \
+  --runs 1 --theme headless --record-replay recordings/
+
+# Replay one in a window
+uv run python scripts/replay_viewer.py recordings/<session>-run0001.npz
+
+# Or save its frames without a window
+SDL_VIDEODRIVER=dummy uv run python scripts/replay_viewer.py recordings/<file>.npz \
+  --frames frames/ --speed 10 --fps 30
+```
+
+| Key | Action |
+|---|---|
+| `1` `2` `3` | 1×, 10×, 60× worm time |
+| space | Pause; `→` steps one sub-step while paused |
+| `R` | Restart |
+| `C` | Follow the worm ↔ the whole plate |
+| `+` `−` | Zoom the followed view |
+| `Esc` | Quit |
+
+**Recordings:**
+
+- Each recording is a compressed `.npz`, about 0.4–1.5 MB per run.
+- `--record-replay` needs `continuous.body_model: kinematic`, and is refused with `--manyworlds` and
+  for multi-agent runs.
+- The two `..._lawns_body_internal[_frozen]` configs put D.1's lawn cell on the kinematic body, to
+  train and replay.
+
+**Credit:** the look is adapted from [Wormlight](https://github.com/chrisjz/wormlight) (Apache-2.0):
+
+- its tube shading, agar, lawn rim and pacing formulas, inverted for bright-field;
+- the body's elliptical width profile, from Boyle, Berri & Cohen (2012).
+
 ## Exporting frames
 
 ### Recording a run
