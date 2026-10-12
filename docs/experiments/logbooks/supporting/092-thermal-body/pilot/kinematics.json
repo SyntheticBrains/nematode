@@ -1,0 +1,30 @@
+{
+  "wt_ppo": {
+    "n_seeds": 4,
+    "frequency_hz": 0.2997363877149081,
+    "wavelength_bl": 0.6505493252081797,
+    "speed_bl_per_s": 0.11472689711895258,
+    "reversal_fraction": 0.002373090534074609
+  },
+  "wt_frozen": {
+    "n_seeds": 4,
+    "frequency_hz": 0.3011832852654358,
+    "wavelength_bl": 0.6440901553472854,
+    "speed_bl_per_s": 0.10935504306453062,
+    "reversal_fraction": 0.20959682631105164
+  },
+  "gaponly_ppo": {
+    "n_seeds": 4,
+    "frequency_hz": 0.29977793889281834,
+    "wavelength_bl": 0.6492484688831328,
+    "speed_bl_per_s": 0.11414469741344564,
+    "reversal_fraction": 0.0004812789122851407
+  },
+  "gaponly_frozen": {
+    "n_seeds": 4,
+    "frequency_hz": 0.30087452758727073,
+    "wavelength_bl": 0.6448996801249077,
+    "speed_bl_per_s": 0.10840627785476199,
+    "reversal_fraction": 0.21479081394282123
+  }
+}

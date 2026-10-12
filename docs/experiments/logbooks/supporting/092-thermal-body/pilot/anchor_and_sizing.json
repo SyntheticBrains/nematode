@@ -1,0 +1,146 @@
+{
+  "horizon_episodes": 6000,
+  "target": 20,
+  "arms": {
+    "point_wt": {
+      "9711": {
+        "auc_success": 0.8803333333333333,
+        "auc_foods": 19.091833333333334,
+        "episodes_to_30pct_success": 308.0,
+        "episodes_to_90pct_foods_plateau": 396.0,
+        "plateau_success_pct": 96.8
+      },
+      "9712": {
+        "auc_success": 0.884,
+        "auc_foods": 19.057833333333335,
+        "episodes_to_30pct_success": 305.0,
+        "episodes_to_90pct_foods_plateau": 434.0,
+        "plateau_success_pct": 97.13333333333334
+      },
+      "9713": {
+        "auc_success": 0.8993333333333333,
+        "auc_foods": 19.233333333333334,
+        "episodes_to_30pct_success": 341.0,
+        "episodes_to_90pct_foods_plateau": 464.0,
+        "plateau_success_pct": 98.66666666666667
+      },
+      "9714": {
+        "auc_success": 0.682,
+        "auc_foods": 15.731166666666667,
+        "episodes_to_30pct_success": 1862.0,
+        "episodes_to_90pct_foods_plateau": 1950.0,
+        "plateau_success_pct": 98.53333333333333
+      }
+    },
+    "point_gaponly": {
+      "9711": {
+        "auc_success": 0.8385,
+        "auc_foods": 19.054,
+        "episodes_to_30pct_success": 230.0,
+        "episodes_to_90pct_foods_plateau": 412.0,
+        "plateau_success_pct": 98.46666666666667
+      },
+      "9712": {
+        "auc_success": 0.8826666666666667,
+        "auc_foods": 19.0475,
+        "episodes_to_30pct_success": 328.0,
+        "episodes_to_90pct_foods_plateau": 411.0,
+        "plateau_success_pct": 97.53333333333333
+      },
+      "9713": {
+        "auc_success": 0.9113333333333333,
+        "auc_foods": 19.1895,
+        "episodes_to_30pct_success": 289.0,
+        "episodes_to_90pct_foods_plateau": 430.0,
+        "plateau_success_pct": 98.13333333333333
+      },
+      "9714": {
+        "auc_success": 0.8963333333333333,
+        "auc_foods": 19.136833333333332,
+        "episodes_to_30pct_success": 152.0,
+        "episodes_to_90pct_foods_plateau": 276.0,
+        "plateau_success_pct": 97.73333333333333
+      }
+    },
+    "body_wt": {
+      "9711": {
+        "auc_success": 0.6435,
+        "auc_foods": 17.109833333333334,
+        "episodes_to_30pct_success": 1325.0,
+        "episodes_to_90pct_foods_plateau": 1377.0,
+        "plateau_success_pct": 81.8
+      },
+      "9712": {
+        "auc_success": 0.6501666666666667,
+        "auc_foods": 17.3245,
+        "episodes_to_30pct_success": 999.0,
+        "episodes_to_90pct_foods_plateau": 1063.0,
+        "plateau_success_pct": 86.0
+      },
+      "9713": {
+        "auc_success": 0.7931666666666667,
+        "auc_foods": 18.552833333333332,
+        "episodes_to_30pct_success": 615.0,
+        "episodes_to_90pct_foods_plateau": 647.0,
+        "plateau_success_pct": 88.26666666666667
+      },
+      "9714": {
+        "auc_success": 0.5853333333333334,
+        "auc_foods": 15.691,
+        "episodes_to_30pct_success": 1824.0,
+        "episodes_to_90pct_foods_plateau": 1926.0,
+        "plateau_success_pct": 88.4
+      }
+    },
+    "body_gaponly": {
+      "9711": {
+        "auc_success": 0.5636666666666666,
+        "auc_foods": 16.093166666666665,
+        "episodes_to_30pct_success": 1458.0,
+        "episodes_to_90pct_foods_plateau": 1669.0,
+        "plateau_success_pct": 85.26666666666667
+      },
+      "9712": {
+        "auc_success": 0.514,
+        "auc_foods": 15.2555,
+        "episodes_to_30pct_success": 1336.0,
+        "episodes_to_90pct_foods_plateau": 1397.0,
+        "plateau_success_pct": 78.53333333333333
+      },
+      "9713": {
+        "auc_success": 0.5523333333333333,
+        "auc_foods": 15.495333333333333,
+        "episodes_to_30pct_success": 1880.0,
+        "episodes_to_90pct_foods_plateau": 1915.0,
+        "plateau_success_pct": 85.26666666666667
+      },
+      "9714": {
+        "auc_success": 0.4533333333333333,
+        "auc_foods": 14.012,
+        "episodes_to_30pct_success": 2061.0,
+        "episodes_to_90pct_foods_plateau": 2001.0,
+        "plateau_success_pct": 79.0
+      }
+    }
+  },
+  "anchor_lead_auc_success": {
+    "per_seed": {
+      "9711": 0.04183333333333328,
+      "9712": 0.0013333333333332975,
+      "9713": -0.01200000000000001,
+      "9714": -0.21433333333333326
+    },
+    "mean": -0.045791666666666675
+  },
+  "horizon_check": {
+    "body_median_episodes_to_30pct": 1397.0,
+    "point_median_episodes_to_30pct": 306.5,
+    "ratio": 4.557911908646004
+  },
+  "sizing": {
+    "gap_mean": 0.14720833333333333,
+    "gap_sd": 0.06747405193987675,
+    "minimum": 0.0576528,
+    "n_for_mde_at_minimum": 8.471968729089225
+  }
+}

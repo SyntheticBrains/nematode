@@ -1,0 +1,292 @@
+{
+  "cell": "thermal",
+  "target": 20,
+  "seeds": [
+    9711,
+    9712,
+    9713,
+    9714
+  ],
+  "primary_metric": "auc_success",
+  "beside_metric": "episodes_to_30pct_success",
+  "gates": {
+    "gap_only": {
+      "floor_level": "gap_only",
+      "wt": {
+        "plateau_success": 86.11666666666667,
+        "floor_success": 0.0,
+        "beats_floor_seeds": 4,
+        "n_seeds": 4,
+        "vs_floor": {
+          "mean_delta": 86.11666666666667,
+          "wilcoxon_p": 0.0625,
+          "ci_lo": 84.46666666666667,
+          "ci_hi": 87.76666666666667,
+          "n": 4,
+          "per_seed_deltas": [
+            81.8,
+            86.0,
+            88.26666666666667,
+            88.4
+          ]
+        },
+        "per_seed": {
+          "9711": {
+            "learn": 81.8,
+            "floor": 0.0
+          },
+          "9712": {
+            "learn": 86.0,
+            "floor": 0.0
+          },
+          "9713": {
+            "learn": 88.26666666666667,
+            "floor": 0.0
+          },
+          "9714": {
+            "learn": 88.4,
+            "floor": 0.0
+          }
+        }
+      },
+      "rn": {
+        "plateau_success": 82.01666666666667,
+        "floor_success": 0.0,
+        "beats_floor_seeds": 4,
+        "n_seeds": 4,
+        "vs_floor": {
+          "mean_delta": 82.01666666666667,
+          "wilcoxon_p": 0.0625,
+          "ci_lo": 80.33333333333333,
+          "ci_hi": 83.7,
+          "n": 4,
+          "per_seed_deltas": [
+            85.26666666666667,
+            78.53333333333333,
+            85.26666666666667,
+            79.0
+          ]
+        },
+        "per_seed": {
+          "9711": {
+            "learn": 85.26666666666667,
+            "floor": 0.0
+          },
+          "9712": {
+            "learn": 78.53333333333333,
+            "floor": 0.0
+          },
+          "9713": {
+            "learn": 85.26666666666667,
+            "floor": 0.0
+          },
+          "9714": {
+            "learn": 79.0,
+            "floor": 0.0
+          }
+        }
+      },
+      "gate_passes": true,
+      "saturated": false,
+      "saturation_bar": 90.0
+    },
+    "chemical_only": {
+      "floor_level": "chemical_only",
+      "wt": {
+        "plateau_success": 86.11666666666667,
+        "floor_success": 0.0,
+        "beats_floor_seeds": 4,
+        "n_seeds": 4,
+        "vs_floor": {
+          "mean_delta": 86.11666666666667,
+          "wilcoxon_p": 0.0625,
+          "ci_lo": 84.46666666666667,
+          "ci_hi": 87.76666666666667,
+          "n": 4,
+          "per_seed_deltas": [
+            81.8,
+            86.0,
+            88.26666666666667,
+            88.4
+          ]
+        },
+        "per_seed": {
+          "9711": {
+            "learn": 81.8,
+            "floor": 0.0
+          },
+          "9712": {
+            "learn": 86.0,
+            "floor": 0.0
+          },
+          "9713": {
+            "learn": 88.26666666666667,
+            "floor": 0.0
+          },
+          "9714": {
+            "learn": 88.4,
+            "floor": 0.0
+          }
+        }
+      },
+      "rn": {
+        "plateau_success": 73.23333333333333,
+        "floor_success": 0.0,
+        "beats_floor_seeds": 4,
+        "n_seeds": 4,
+        "vs_floor": {
+          "mean_delta": 73.23333333333333,
+          "wilcoxon_p": 0.0625,
+          "ci_lo": 59.93333333333334,
+          "ci_hi": 86.53333333333333,
+          "n": 4,
+          "per_seed_deltas": [
+            33.86666666666667,
+            87.06666666666666,
+            85.8,
+            86.2
+          ]
+        },
+        "per_seed": {
+          "9711": {
+            "learn": 33.86666666666667,
+            "floor": 0.0
+          },
+          "9712": {
+            "learn": 87.06666666666666,
+            "floor": 0.0
+          },
+          "9713": {
+            "learn": 85.8,
+            "floor": 0.0
+          },
+          "9714": {
+            "learn": 86.2,
+            "floor": 0.0
+          }
+        }
+      },
+      "gate_passes": true,
+      "saturated": false,
+      "saturation_bar": 90.0
+    }
+  },
+  "gaps": {
+    "auc_success": {
+      "gap_only": {
+        "metric": "auc_success",
+        "n_seeds": 4,
+        "gap_mean": 0.14720833333333333,
+        "per_seed": {
+          "9711": 0.07983333333333331,
+          "9712": 0.13616666666666666,
+          "9713": 0.24083333333333334,
+          "9714": 0.13200000000000006
+        },
+        "test": {
+          "mean_delta": 0.14720833333333333,
+          "wilcoxon_p": 0.0625,
+          "ci_lo": 0.10695833333333334,
+          "ci_hi": 0.18745833333333337,
+          "n": 4,
+          "per_seed_deltas": [
+            0.07983333333333331,
+            0.13616666666666666,
+            0.24083333333333334,
+            0.13200000000000006
+          ]
+        }
+      },
+      "chemical_only": {
+        "metric": "auc_success",
+        "n_seeds": 4,
+        "gap_mean": 0.12875,
+        "per_seed": {
+          "9711": 0.4708333333333333,
+          "9712": 0.05449999999999999,
+          "9713": 0.125,
+          "9714": -0.1353333333333333
+        },
+        "test": {
+          "mean_delta": 0.12875,
+          "wilcoxon_p": 0.3125,
+          "ci_lo": -0.005166666666666653,
+          "ci_hi": 0.28029166666666666,
+          "n": 4,
+          "per_seed_deltas": [
+            0.4708333333333333,
+            0.05449999999999999,
+            0.125,
+            -0.1353333333333333
+          ]
+        }
+      }
+    },
+    "episodes_to_30pct_success": {
+      "gap_only": {
+        "metric": "episodes_to_30pct_success",
+        "n_seeds": 4,
+        "gap_mean": 493.0,
+        "per_seed": {
+          "9711": 133.0,
+          "9712": 337.0,
+          "9713": 1265.0,
+          "9714": 237.0
+        },
+        "test": {
+          "mean_delta": 493.0,
+          "wilcoxon_p": 0.0625,
+          "ci_lo": 210.0,
+          "ci_hi": 776.0,
+          "n": 4,
+          "per_seed_deltas": [
+            133.0,
+            337.0,
+            1265.0,
+            237.0
+          ]
+        }
+      },
+      "chemical_only": {
+        "metric": "episodes_to_30pct_success",
+        "n_seeds": 4,
+        "gap_mean": 554.25,
+        "per_seed": {
+          "9711": 2083.0,
+          "9712": 638.0,
+          "9713": 605.0,
+          "9714": -1109.0
+        },
+        "test": {
+          "mean_delta": 554.25,
+          "wilcoxon_p": 0.3125,
+          "ci_lo": -243.75,
+          "ci_hi": 1352.25,
+          "n": 4,
+          "per_seed_deltas": [
+            2083.0,
+            638.0,
+            605.0,
+            -1109.0
+          ]
+        }
+      }
+    }
+  },
+  "reading": {
+    "minimum": 0.057652777777777775,
+    "reference_effect": 0.08647916666666666,
+    "level_readable": {
+      "gap_only": true,
+      "chemical_only": true
+    },
+    "mean": 0.14720833333333333,
+    "ci": [
+      0.10695833333333334,
+      0.18745833333333337
+    ],
+    "q": 0.125,
+    "state": "unresolved",
+    "verdict": "unresolved"
+  }
+}
