@@ -32,8 +32,9 @@ each learning and frozen. That is **12 arms.**
   model this is the same as signing by presynaptic transmitter.
 
 **Each grounded level is calibrated to random signs' operating point** (design Decision F). Grounded
-signs are mostly excitatory and saturate the settled network: at the draw's scale, 30–34% of units
-under the atlas and 18–22% under per-connection signs, against random signs' 6%.
+signs are mostly excitatory and saturate the settled network. At the draw's scale the calibration
+measures 35.0% of units saturated under the atlas and 24.4% under per-connection signs, against
+random signs' 8.5%. A first, uncommitted check on the pilot's seeds read 30–34%, 18–22% and 6%.
 
 - **The fix:** `chemical_weight_scale` multiplies every chemical weight. One scale per level, shared
   by both wirings, matches the fraction of saturated units at initialisation to random signs'.
@@ -122,7 +123,8 @@ signs.
 
 **First pilot, uncalibrated** (seeds 9501–9504; [pilot.json](pilot.json)):
 
-- **Failures:** 5 of 16 grounded learning runs never learned, with or without the sign hold (a
+- **Failures:** 4 of 16 grounded learning runs never learned (plateau under 5%; a fifth reached
+  5.3%), with or without the sign hold (a
   6-run check with enforcement off).
 - **The lead,** on the seeds that learned: per-connection +0.10 to +0.14, atlas +0.05, random −0.03.
 

@@ -18,7 +18,7 @@ committed wiring effect.
 **Beside them, never read as verdicts:**
 
 - **Grounded signs often fail to learn at all,** even at a calibrated operating point. Runs with no
-  learning: about a fifth of seeds under grounded signs, against 3 of 100 runs under random signs.
+  learning: about a fifth of runs under grounded signs, against 3 of 100 runs under random signs.
 - **Under per-connection signs the wild type fails more often than the null:** 10 of 50 seeds against
   3 (Fisher p = 0.07).
 - **The first pilot's per-connection lead was an operating-point artefact.** +0.10 to +0.14
@@ -80,8 +80,10 @@ each learning and frozen. That is 12 arms on seeds 2201–2250, 600 runs, and al
 
 **The operating point.** This decision came after the first pilot (design Decision F).
 
-- **The problem.** At the draw's scale, grounded signs saturate the settled network: 30–34% of units
-  under the atlas and 18–22% under per-connection signs, against 6% under random signs. Mostly
+- **The problem.** At the draw's scale, grounded signs saturate the settled network. The committed
+  calibration at scale 1.0 has 35.0% of units saturated under the atlas and 24.4% under per-connection
+  signs, against 8.5% under random signs. A first check on the pilot's seeds, with a different input
+  set and not committed, read 30–34%, 18–22% and 6%. Mostly
   excitatory synapses add coherently.
 - **The knob.** `chemical_weight_scale` multiplies every chemical weight. It is shared by both
   wirings at a level.
@@ -107,7 +109,7 @@ the three.
 
 **The first pilot was uncalibrated** (seeds 9501–9504).
 
-- 5 of 16 grounded learning runs never learned.
+- 4 of 16 grounded learning runs never learned (plateau under 5%), and a fifth barely did (5.3%).
 - A 6-run check with the sign hold off still left 2 that never learned, so the starting signs were
   the cause, not the hold.
 - On the seeds that learned, the per-connection lead was **+0.10 to +0.14**. Per-connection signs
@@ -156,7 +158,7 @@ The grounding reading's achieved MDE is above the minimum, but its interval stil
 | atlas | −0.008 [−0.034, +0.016] | −0.014 (34 seeds) | −75 |
 | per-connection | −0.012 [−0.036, +0.011] | +0.018 (37 seeds) | −86 |
 
-atlas − random: −0.015 [−0.048, +0.016].
+atlas − random: −0.014 [−0.048, +0.015].
 
 **Runs that never learn** (plateau under 5% after 3,000 episodes):
 

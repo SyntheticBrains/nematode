@@ -363,9 +363,10 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # "random" is byte-identical to the pre-option brain.
     synapse_signs: SynapseSignModel = "random"
     # Dale's law: project every plastic update, and under PPO every optimiser step, back onto its
-    # synapse's atlas-derived sign, leaving synapses without one unconstrained. Requires
-    # synapse_signs: atlas — constraining drawn signs would only freeze noise. Lives here and
-    # not on the shared plasticity mixin because a dense MLP has no synapse signs to enforce.
+    # synapse's grounded sign, leaving synapses without one unconstrained. Requires grounded signs,
+    # synapse_signs: atlas or per_connection — constraining drawn signs would only freeze noise.
+    # Lives here and not on the shared plasticity mixin because a dense MLP has no synapse signs to
+    # enforce.
     enforce_synapse_signs: bool = False
     enable_gap_junctions: bool = True
     # Learnable gap-junction strengths: every existing gap pair carries a positive multiplier,
@@ -475,7 +476,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
 
         Dale's law on random signs would freeze noise into a constraint — the reason the
         rule review withdrew it when signs carried no biology. It becomes meaningful only
-        once the signs come from the transmitter atlas.
+        once the signs are grounded, in the transmitter atlas or the per-connection table.
         """
         if self.weight_draw != "edge_order" and self.weight_init != "degree_scaled":
             msg = (
@@ -570,7 +571,7 @@ def _weight_prior_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     if config.synapse_signs != "random":
         return (
             f"weight_prior={config.weight_prior!r} with synapse_signs={config.synapse_signs!r} "
-            "gives one edge two sign sources, the fitted table and the transmitter atlas; the "
+            "gives one edge two sign sources, the fitted table and the grounded sign model; the "
             "pairing is not defined"
         )
     if config.weight_draw == "dense_mask":
@@ -1311,8 +1312,9 @@ class ConnectomeTopology(nn.Module):
                         if measured_prior.is_sign
                         else placed * float(chem_scale[post_j]) * measured_prior.scale
                     )
-            # Sign grounding replaces the drawn sign where the pre-synaptic neuron's released
-            # transmitter implies one, keeping the drawn magnitude — so the RNG stream, the
+            # Sign grounding replaces the drawn sign where the sign model gives one -- the
+            # per-connection table's sign for this edge, or the sign the pre-synaptic neuron's
+            # released transmitter implies -- keeping the drawn magnitude, so the RNG stream, the
             # per-neuron scale and every magnitude are identical to the random-sign build.
             sign = (
                 edge_signs.get((syn.pre, syn.post), 0)
@@ -3969,6 +3971,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "weight_draw": self.config.weight_draw,
                     "weight_prior": self.config.weight_prior,
                     "measured_weight_scale": self.config.measured_weight_scale,
+                    "chemical_weight_scale": self.config.chemical_weight_scale,
                     "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
                     # The plasticity identity, ENFORCED on load below. Two checkpoints can differ

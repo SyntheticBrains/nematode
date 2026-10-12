@@ -22,7 +22,7 @@ sign:
 3. **Rule** — the per-neuron transmitter rule.
 4. **None** — no fast sign: the presynaptic cell releases nothing the rule signs.
 
-Nothing in the package reads these signs yet.
+The connectome brain reads them under ``synapse_signs: per_connection``; nothing else does.
 """
 
 from __future__ import annotations

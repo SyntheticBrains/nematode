@@ -192,11 +192,14 @@ comparing knockout effects across the two substrates is description only.
 **What the pilot found** (seeds 9501–9504). Grounded signs pushed the settling network off its
 operating point.
 
-- **Saturation at initialisation.** Over a fixed set of inputs, 30–34% of units saturated (|h| > 0.99)
-  under the atlas model and 18–22% under per-connection signs, against **6%** under random signs.
+- **Saturation at initialisation.** In a first, uncommitted check over a fixed set of inputs, 30–34%
+  of units saturated (|h| > 0.99) under the atlas model and 18–22% under per-connection signs,
+  against **6%** under random signs. The committed calibration at scale 1.0 reads 35.0%, 24.4% and
+  8.5% on its own seeds and inputs.
 - **The cause.** The chemical weights are drawn for random signs, whose excitation and inhibition
   largely cancel. Grounded signs are mostly excitatory and add coherently.
-- **What it did to learning.** 5 of 16 grounded learning runs never learned in 3,000 episodes, and
+- **What it did to learning.** 4 of 16 grounded learning runs never learned in 3,000 episodes
+  (plateau under 5%; a fifth reached 5.3%), and
   the others took off late. With enforcement off, 2 of 6 still never learned, so it is the starting
   signs, not the sign hold.
 - **A confound.** Per-connection signs, with their extra inhibition, sat closer to the operating point
