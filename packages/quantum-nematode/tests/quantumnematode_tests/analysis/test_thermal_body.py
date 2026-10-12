@@ -74,6 +74,13 @@ class TestConfigs:
             for arms in tb.stems(target).values():
                 assert set(arms) == set(gp.ARMS)
 
+    def test_the_preflight_table_follows_the_chosen_target(self) -> None:
+        """Decision G: the table the gate preflight reads names the arms at ``TARGET``."""
+        assert tb.stems(tb.TARGET) == tb.STEMS
+        for target in gen.TARGETS:
+            for arms in tb.stems(target).values():
+                assert all(stem.endswith(f"_t{target}") for stem in arms.values())
+
 
 class TestRegistration:
     @pytest.mark.parametrize(
@@ -87,11 +94,46 @@ class TestRegistration:
     def test_the_target_rule(self, verdicts: dict[int, str], expected: int | None) -> None:
         assert tb.choose_target(verdicts) == expected
 
+    @pytest.mark.parametrize(
+        ("verdict", "expected"),
+        [("passes", 20), ("fallback", None), ("fails", None)],
+    )
+    def test_the_retry_reads_target_20_alone(self, verdict: str, expected: int | None) -> None:
+        """Decision G: the retry gates target 20 alone, on the same rule."""
+        assert tb.RETRY_TARGETS == (20,)
+        assert tb.choose_target({20: verdict}) == expected
+
+    def test_the_retry_gate_reads_only_its_seeds_and_target(self, tmp_path: Path) -> None:
+        """Decision G: ``mlp_gate`` on the retry's seeds and target 20 alone."""
+
+        def write(stem: str, seed: int, successes: int) -> None:
+            lines = [
+                f"Run: {i + 1:5d} Status: {'SUCCESS' if i < successes else 'FAILED'} Eaten: 1/20"
+                for i in range(40)
+            ]
+            (tmp_path / f"{stem}-seed{seed}.log").write_text("\n".join(lines) + "\n")
+
+        for seed in tb.RETRY_SEEDS:
+            # The last quarter (runs 31-40) all succeed for the learner, none for the floor.
+            write(gen.stem("mlp", "ppo", 20), seed, 0)
+            write(gen.stem("mlp", "frozen", 20), seed, 0)
+            log = tmp_path / f"{gen.stem('mlp', 'ppo', 20)}-seed{seed}.log"
+            log.write_text(log.read_text().replace("FAILED", "SUCCESS"))
+        result = tb.mlp_gate([tmp_path], tb.RETRY_SEEDS, tb.RETRY_TARGETS)
+        assert set(result["gates"]) == {20}
+        assert result["gates"][20]["verdict"] == "passes"
+        assert result["target"] == 20
+
     def test_the_minimum_is_m8_s(self) -> None:
         assert pytest.approx(2 / 3 * 0.08647916666666666) == tb.MINIMUM
 
     def test_the_seed_bands_are_disjoint(self) -> None:
         assert not set(tb.STAGE1_SEEDS) & set(tb.PILOT_SEEDS)
+        assert not set(tb.RETRY_SEEDS) & (set(tb.STAGE1_SEEDS) | set(tb.PILOT_SEEDS))
+        assert (
+            max(tb.RETRY_SEEDS) < tb.PANEL_FIRST_SEED
+            or min(tb.RETRY_SEEDS) > tb.PANEL_FIRST_SEED + 64
+        )
         assert (
             max(tb.PILOT_SEEDS) < tb.PANEL_FIRST_SEED
             or min(tb.PILOT_SEEDS) > tb.PANEL_FIRST_SEED + 64

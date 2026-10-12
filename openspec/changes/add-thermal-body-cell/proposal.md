@@ -41,6 +41,12 @@ Decided with the user on 2026-10-12:
     parallel: 35 if it passes, else 20, else M.9 closes deferred-with-destination. At 20, a
     point-worm gap-only check restores the anchor.
 
+  - **The retry** *(added 2026-10-13)*. Stage 1 read `fallback` at both targets: at 20, two seeds
+    began learning late and were still climbing at 3,000 episodes. By the fixed rule M.9 stops; it
+    is retried under a new registration (design Decision G): target 20, **6,000 episodes at every
+    stage**, new seeds 9721–9728, the same rule. If it fails, M.9 stops for good; stop points also
+    sit before the panel.
+
 - **Stage 2, a connectome pilot** on disjoint seeds: the gates per null, the spreads, the cost, and
   the panel's size.
 

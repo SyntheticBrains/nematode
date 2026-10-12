@@ -54,6 +54,9 @@ HALF = "ppo"
 CELL = ts.CELL
 STAGE1_SEEDS: tuple[int, ...] = tuple(range(9701, 9709))
 PILOT_SEEDS: tuple[int, ...] = tuple(range(9711, 9715))
+# The positive control's retry at a doubled budget: target 20 only, on seeds disjoint from stage 1's.
+RETRY_SEEDS: tuple[int, ...] = tuple(range(9721, 9729))
+RETRY_TARGETS: tuple[int, ...] = (20,)
 PANEL_FIRST_SEED = 2301
 # The target the panel runs at, set by stage 1's rule before stage 2 runs.
 TARGET = 35
@@ -98,15 +101,19 @@ class ThermalBodyError(ValueError):
 
 
 # ── Stage 1 ──────────────────────────────────────────────────────────────────────────────────
-def mlp_gate(log_dirs: list[Path], seeds: tuple[int, ...] = STAGE1_SEEDS) -> dict[str, Any]:
-    """Gate the MLP at each target on C.1d's rule, then choose the target by the fixed rule."""
+def mlp_gate(
+    log_dirs: list[Path],
+    seeds: tuple[int, ...] = STAGE1_SEEDS,
+    targets: tuple[int, ...] = gen.TARGETS,
+) -> dict[str, Any]:
+    """Gate the MLP at each of ``targets`` on C.1d's rule, then choose the target by the fixed rule."""
     gates = {
         target: bc.control_gate(
             bc.plateaus(log_dirs, gen.stem("mlp", "ppo", target), seeds),
             bc.plateaus(log_dirs, gen.stem("mlp", "frozen", target), seeds),
             seeds,
         )
-        for target in gen.TARGETS
+        for target in targets
     }
     return {"gates": gates, "target": choose_target({t: g["verdict"] for t, g in gates.items()})}
 
@@ -273,11 +280,19 @@ def main(argv: list[str] | None = None) -> int:
     for parser in (sc, kin):
         parser.add_argument("--seeds", type=int, nargs="+", required=True)
         parser.add_argument("--target", type=int, choices=gen.TARGETS, default=TARGET)
+    gate.add_argument("--seeds", type=int, nargs="+", default=list(STAGE1_SEEDS))
+    gate.add_argument(
+        "--targets",
+        type=int,
+        nargs="+",
+        choices=gen.TARGETS,
+        default=list(gen.TARGETS),
+    )
     sc.add_argument("--out-dir", type=Path, required=True)
     sc.add_argument("--csv", type=Path)
     args = ap.parse_args(argv)
     if args.command == "mlp-gate":
-        result = mlp_gate(args.logs)
+        result = mlp_gate(args.logs, tuple(args.seeds), tuple(args.targets))
     elif args.command == "score":
         result = score(args.logs, args.out_dir, tuple(args.seeds), args.target)
         if args.csv:

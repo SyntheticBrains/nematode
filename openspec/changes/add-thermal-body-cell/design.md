@@ -15,7 +15,7 @@ The thermal t35 cell as M.8 and M.10 ran it, through the kinematic body:
   - settling to depth 4;
   - 500 steps, a target of 35 foods;
   - the thermotaxis block (Tc 20, gradient 1.25, the zone deltas and damage);
-  - 3,000 episodes.
+  - 3,000 episodes *(6,000 from 2026-10-13, every arm at every stage; Decision G)*.
 - **Added:** `continuous.body_model: kinematic` and `allow_reversal: true`, which the body requires;
   `action_space: body_drive`; and, for the connectome arms, `entropy_coef` 0.004. That entropy is the per-dimension pressure the
   point worm's 0.05 gives over two action numbers, summed over the body drive's 25, as C.1e set it.
@@ -49,24 +49,35 @@ The thermal cell through a body is a new component, so it gets its own positive 
 connectome arm runs.
 
 - **Seeds and arms:** MLP-PPO and its frozen floor on seeds 9701–9708.
+
 - **It passes on C.1d's rule:**
+
   - the plateau (last quarter of episodes, success %) beats the floor's, paired by seed, with the
     80% interval above zero;
   - every seed's plateau reaches 30%.
+
 - **Saturation still passes.** A plateau at or above the 90% bar passes as a positive control. Only
   the connectome arms are gated on saturation.
+
 - **A target rule, fixed before it runs** (added at the spec review). C.1d's body MLP reached only
   41.7% on 20 foods at 350 steps, and this cell asks for 35 foods in 500 steps with a body slower than
   the point worm. So stage 1 runs the MLP and its floor at **targets 35 and 20 in parallel** on the
   same seeds:
+
   - **35 if it passes** C.1d's rule;
   - otherwise **20 if it passes**;
   - otherwise **M.9 stops.** It closes deferred-with-destination with the reason, and no connectome
     arm runs.
+
 - **If target 20 is taken,** the point worm's +0.096 was measured at 35 and is no longer a pairing.
   A point-worm check (the wild type and the gap-only null, learning and frozen, at target 20 on
   stage 2's seeds) restores the anchor at the cell actually run. Its lead is reported as the anchor
   beside the body reading.
+
+- **Read 2026-10-12: no target passes, so by this rule M.9 stops.** Both targets read `fallback`:
+  each beats its floor, but not every seed reaches 30%
+  ([stage1/](../../../docs/experiments/logbooks/supporting/092-thermal-body/stage1/)). That verdict
+  stands as recorded; Decision G is a new registration, not a re-reading of it.
 
 ### Decision D: Stage 2, the connectome pilot
 
@@ -128,6 +139,62 @@ D21 makes the chemical-only null the primary null for wiring contrasts. A dated 
 - **Why:** the null must differ from the wild type in the layer under question.
 - **Precedent:** M.8 did the same on the point worm.
 
+### Decision G: The retry at 6,000 episodes *(added 2026-10-13, after stage 1)*
+
+**What stage 1 showed.**
+
+- **Target 35:** the MLP collects 25–29 of 35 foods in the last quarter, and its plateau is 5% (at
+  most 15% on a seed).
+- **Target 20:** six of eight seeds plateau at 58–87%. Seeds 9704 and 9708 begin learning only after
+  about 1,500–2,250 episodes, and are still climbing at 3,000 (11% and 0%).
+
+So through the body the cell is learnable at target 20, and 3,000 episodes is too short a budget for
+late-starting seeds. The user chose a retry at a doubled budget over closing M.9 (2026-10-13).
+
+**The retry, fixed before it runs:**
+
+- **Target 20 only.** Target 35 is not retried: at 3,000 episodes no seed came near 30%.
+- **6,000 episodes** for every arm at every stage: the MLP and its floor, the connectome pilot, the
+  point-worm anchor and the panel. The budget is part of the cell, so all stages share it.
+- **It runs from a worktree pinned at this amendment's commit**, as every campaign here does.
+- **New seeds 9721–9728** for the MLP and its floor. They are disjoint from stage 1's seeds, whose
+  data have been seen, from the pilot's 9711–9714 and from the panel's band from 2301.
+- **The same rule**, C.1d's: the plateau (the last quarter, episodes 4,501–6,000) beats the floor's,
+  paired by seed, with the 80% interval above zero, and every seed reaches 30%. `fallback` fails.
+- **If it fails, M.9 stops.** It closes deferred-with-destination with both stage-1 readings, and
+  there is no further retry.
+- **If it passes,** stage 2 and the panel run as Decisions D and E describe, at target 20 and 6,000
+  episodes. The point-worm anchor (Decision C) also runs at 6,000 episodes.
+
+**The minimum stays 0.058 `auc_success`.** It was measured over 3,000 point-worm episodes. Over a
+horizon twice as long, the same lead in episodes is half the `auc_success`. The two cancel only if
+the body learns about twice as slowly as the point worm, which is the reason the budget is doubled.
+
+**What is reported beside the reading, to check that:** the median `episodes_to_30pct_success` of the
+body's learners (pilot and panel) and of the point-worm anchor's, both at target 20 and 6,000
+episodes, and their ratio. It is description only: not a gate, and the verdict is never re-read
+against it. At 6,000 episodes the point worm may saturate at target 20, and its own lead in
+`auc_success` would then shrink for a reason that has nothing to do with the body; the logbook says
+so if it does.
+
+**Stop points:**
+
+1. the MLP retry fails its rule: M.9 stops;
+2. the pilot's gap-only level fails its gates: M.9 stops, unreadable;
+3. the pilot projects more than 64 seeds: back to the user.
+
+**Cost**, from stage 1's measured run times doubled, on 16 workers:
+
+| stage | runs | estimate |
+|---|---|---|
+| MLP retry and floor | 16 | about 2 h |
+| connectome pilot (24 runs) and point-worm anchor (16 runs) | 40 | about 5–6 h |
+| panel, 6 arms × 16–64 seeds | 96–384 | about 13–55 h |
+
+The total is up to about 65 h. Each later stage waits on the stop points before it. These are upper
+bounds: an episode ends when the target is met, so once a learner succeeds its episodes are shorter,
+and the second 3,000 episodes cost less than the first.
+
 ## Risks
 
 - **The positive control may fail.** Thermal sensing through a body that turns by undulating, with
@@ -135,6 +202,7 @@ D21 makes the chemical-only null the primary null for wiring contrasts. A dated 
 - **Cost.** A body learning run takes about 70–80 minutes and a frozen one about 60, roughly three
   times the point worm. A 6-arm panel at 64 seeds is about 28 hours on 16 workers. The pilot sizes it
   and may cut it.
+  *(At 6,000 episodes, Decision G, the 64-seed panel is about 55 hours.)*
 - **Locomotion confound.** Gap rewiring touches motor-neuron coupling. The kinematic comparison is
   beside to separate that, but cannot remove it.
 - **Saturation.** The point worm plateaued at 66% on this cell. Through the body it could saturate

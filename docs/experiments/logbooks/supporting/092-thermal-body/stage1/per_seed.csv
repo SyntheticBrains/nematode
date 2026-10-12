@@ -1,0 +1,17 @@
+target,seed,mlp_plateau_pct,floor_plateau_pct,competent,verdict
+35,9701,12.0,0.0,False,fallback
+35,9702,2.933,0.0,False,fallback
+35,9703,4.667,0.0,False,fallback
+35,9704,0.0,0.0,False,fallback
+35,9705,0.0,0.0,False,fallback
+35,9706,15.333,0.0,False,fallback
+35,9707,4.933,0.0,False,fallback
+35,9708,0.0,0.0,False,fallback
+20,9701,67.6,0.0,True,fallback
+20,9702,87.067,0.0,True,fallback
+20,9703,80.133,0.0,True,fallback
+20,9704,10.667,0.0,False,fallback
+20,9705,83.067,0.0,True,fallback
+20,9706,58.4,0.0,True,fallback
+20,9707,75.867,0.0,True,fallback
+20,9708,0.0,0.0,False,fallback
