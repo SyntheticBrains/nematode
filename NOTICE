@@ -2,7 +2,8 @@ Quantum Nematode
 ================
 
 This product includes rendering formulas adapted from Wormlight
-(https://github.com/chrisjz/wormlight), licensed under the Apache License, Version 2.0
+(https://github.com/chrisjz/wormlight), Copyright 2026 Chris Julian Zaharia, licensed under the
+Apache License, Version 2.0
 (http://www.apache.org/licenses/LICENSE-2.0): the worm's tube shading and width profile, the agar,
 lawn-rim and meniscus shading, and the playback pacer, as adapted in
 packages/quantum-nematode/quantumnematode/env/realistic_renderer.py. The adaptations invert the

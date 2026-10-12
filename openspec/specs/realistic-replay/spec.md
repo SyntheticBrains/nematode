@@ -1,7 +1,9 @@
 # realistic-replay Specification
 
 ## Purpose
-TBD - created by archiving change add-realistic-replay. Update Purpose after archive.
+
+Record kinematic-body runs at the body's sub-step resolution, and replay them as a worm on an agar
+plate, in worm time at a chosen speed, with a label that names the model and the speed.
 
 ## Requirements
 

@@ -870,6 +870,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             if rollout_recorder is not None:
                 rollout_recorder.end_episode()
             if agent.replay_recorder is not None:
+                agent.snapshot_replay()
                 logger.info(f"Replay recorded: {agent.replay_recorder.end_run()}")
 
             steps_taken = agent._episode_tracker.steps
@@ -1116,6 +1117,10 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 agent.reset_brain()
 
     except KeyboardInterrupt:
+        if agent.replay_recorder is not None and agent.replay_recorder.active:
+            # Keep the interrupted run's recording, up to its last completed step.
+            agent.snapshot_replay()
+            logger.info(f"Replay recorded (interrupted): {agent.replay_recorder.end_run()}")
         total_interrupted = runs - total_runs_done
         manage_simulation_halt(
             max_steps=max_steps,

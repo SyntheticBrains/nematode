@@ -48,8 +48,17 @@ sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
 sys.path.insert(0, str(_REPO / "scripts"))
 
 
-def _run(steps: int, recorder: ReplayRecorder | None, seed: int = 4) -> Any:
-    """Run the body-on-lawns demo for ``steps`` steps, optionally recorded; return the agent."""
+def _run(
+    steps: int,
+    recorder: ReplayRecorder | None,
+    seed: int = 4,
+    *,
+    log_posture: bool = False,
+) -> Any:
+    """Run the body-on-lawns demo for ``steps`` steps, optionally recorded; return the agent.
+
+    ``log_posture`` turns the body's posture log on for an unrecorded run, to compare its drives.
+    """
     import body_kinematics_eval as harness  # pyright: ignore[reportMissingImports]
     from quantumnematode.agent import QuantumNematodeAgent
     from quantumnematode.env.theme import Theme
@@ -79,7 +88,10 @@ def _run(steps: int, recorder: ReplayRecorder | None, seed: int = 4) -> Any:
     if recorder is not None:
         agent.replay_recorder = recorder
         recorder.begin_run(env, 1)  # type: ignore[arg-type]
+    elif log_posture:
+        env.posture_log = []  # type: ignore[attr-defined]
     agent.run_episode(configure_reward(config), max_steps=steps)
+    agent.snapshot_replay()
     return agent
 
 
@@ -105,14 +117,36 @@ class TestRecording:
 
     def test_recording_does_not_change_the_run(self, tmp_path: Path) -> None:
         """Scenario "Recording does not change the run"."""
-        plain = _run(5, None)
+        plain = _run(5, None, log_posture=True)
+        drives = [entry["drive"] for entry in plain.env.posture_log]
         recorder = ReplayRecorder(tmp_path)
         recorded = _run(5, recorder)
+        recorded_drives = [entry["drive"] for entry in recorded.env.posture_log]
         recorder.end_run()
+        assert len(drives) == len(recorded_drives) == 5
+        for ours, theirs in zip(drives, recorded_drives, strict=True):
+            np.testing.assert_array_equal(ours, theirs)
         assert plain.env.bodies["default"].head == pytest.approx(
             recorded.env.bodies["default"].head,
         )
         assert plain._episode_tracker.intake == recorded._episode_tracker.intake
+
+    def test_each_steps_status_is_the_state_its_move_left(self, tmp_path: Path) -> None:
+        """Scenario "A run is recorded at sub-step resolution": status aligns with the moves."""
+        recorder = ReplayRecorder(tmp_path)
+        agent = _run(6, recorder)
+        replay = load_replay(recorder.end_run())
+        assert len(replay.step_intake) == len(replay.step_reversed) == 6
+        assert float(replay.step_intake.sum()) == pytest.approx(
+            agent._episode_tracker.intake,
+            rel=1e-5,
+        )
+        assert replay.step_lawn_density is not None
+        np.testing.assert_allclose(
+            replay.step_lawn_density[-1],
+            agent.env.lawn_field.density,
+            rtol=1e-6,
+        )
 
     def test_a_point_worm_is_refused(self, tmp_path: Path) -> None:
         from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
@@ -217,3 +251,21 @@ class TestDrawing:
         viewer.apply_key(pygame.K_EQUALS, pygame, controls, renderer, 10.0, 0.25)
         assert renderer.view_body_lengths < before
         assert replace(controls, clock=0.0).clock == 0.0
+
+    def test_a_non_positive_frame_rate_is_refused(self, recording: Path) -> None:
+        import replay_viewer as viewer  # pyright: ignore[reportMissingImports]
+
+        with pytest.raises(SystemExit) as raised:
+            viewer.main([str(recording), "--frames", "unused", "--fps", "0"])
+        assert raised.value.code == 2
+
+    def test_the_cached_lawn_masks_give_the_same_film(self, recording: Path) -> None:
+        from quantumnematode.env.realistic_renderer import lawn_alpha, lawn_masks
+
+        replay = load_replay(recording)
+        masks = lawn_masks(replay, 10.0)
+        cached = lawn_alpha(replay, 1, 10.0, masks)
+        fresh = lawn_alpha(replay, 1, 10.0)
+        assert cached is not None
+        assert fresh is not None
+        np.testing.assert_array_equal(cached, fresh)

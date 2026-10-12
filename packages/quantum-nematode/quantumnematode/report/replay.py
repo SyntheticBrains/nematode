@@ -7,8 +7,9 @@ static geometry. A player redraws the run from it at any speed, as smooth as the
 
 The body's sub-steps come from the environment's posture log, an evaluation record the body already
 writes when asked; turning it on draws nothing, so a recorded run is the run that would have run.
-Each step's status is snapshotted as the agent builds that step's brain parameters, once per step,
-before the step's move.
+Each step's status is the state its move left: the agent snapshots it as the next step's brain
+parameters are built, and once more when the run ends, so the first snapshot, taken before any
+move, is dropped.
 """
 
 from __future__ import annotations
@@ -89,13 +90,18 @@ class ReplayRecorder:
         satiety: float,
         modulators: tuple[float, float] | None,
     ) -> None:
-        """Record the coming step's status; the lawn densities are read from the environment."""
+        """Record the state the last move left; the lawn densities are read from the environment."""
         if self._env is None:
             return
         field = self._env.lawn_field
         density = None if field is None else field.density.copy()
         serotonin, pdf = modulators if modulators is not None else (math.nan, math.nan)
         self._status.append((intake, on_lawn, satiety, serotonin, pdf, density))
+
+    @property
+    def active(self) -> bool:
+        """Whether a run is being recorded."""
+        return self._env is not None
 
     def end_run(self) -> Path:
         """Write the run's recording and return its path."""
@@ -120,7 +126,8 @@ def _arrays(
 ) -> dict[str, np.ndarray]:
     """Turn a posture log and the step snapshots into the recording's arrays."""
     steps = len(log)
-    status = status[:steps]
+    # The first snapshot precedes any move; each later one is the state the previous move left.
+    status = status[1 : steps + 1]
     times, curvatures, heads, frames, owner = [], [], [], [], []
     for index, entry in enumerate(log):
         for time, curvature, head, frame in entry["substeps"]:

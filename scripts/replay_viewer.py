@@ -138,6 +138,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--frames", type=Path, help="save frames here instead of opening a window")
     ap.add_argument("--fps", type=float, default=30.0, help="frames per wall-second with --frames")
     args = ap.parse_args(argv)
+    if args.fps <= 0:
+        ap.error("--fps must be positive")
     try:
         if args.frames is not None:
             count = export_frames(

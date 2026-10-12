@@ -7,7 +7,8 @@ sub-steps, so a crawl is smooth at any speed. A label always names the model and
 picture claims no more than the 12-segment kinematic body it shows.
 
 The shading, width profile, agar, lawn-rim and pacing formulas are adapted from Wormlight's WebGPU
-renderer (https://github.com/chrisjz/wormlight, licensed under the Apache License 2.0), with
+renderer (https://github.com/chrisjz/wormlight, Copyright 2026 Chris Julian Zaharia, licensed
+under the Apache License 2.0), with
 brightness inverted for bright-field and per-pixel shading replaced by pre-computed surfaces and
 offset polygons. The body's width profile is the prolate ellipse of Boyle, Berri & Cohen (2012).
 """
@@ -190,52 +191,110 @@ def agar_rgb(world_size_mm: float, px_per_mm: float, seed: int = 7) -> np.ndarra
     return np.clip(image, 0, 255).astype(np.uint8)
 
 
+def _box(image: np.ndarray, radius: int, axis: int) -> np.ndarray:
+    """Box-average ``image`` along ``axis`` over ``2 * radius + 1`` pixels, edges clamped."""
+    padded = np.concatenate(
+        [
+            np.repeat(np.take(image, [0], axis=axis), radius, axis=axis),
+            image,
+            np.repeat(np.take(image, [-1], axis=axis), radius, axis=axis),
+        ],
+        axis=axis,
+    )
+    total = np.cumsum(padded, axis=axis)
+    zero = np.zeros_like(np.take(total, [0], axis=axis))
+    total = np.concatenate([zero, total], axis=axis)
+    width = 2 * radius + 1
+    n = image.shape[axis]
+    return (
+        np.take(total, range(width, width + n), axis=axis) - np.take(total, range(n), axis=axis)
+    ) / width
+
+
 def _blur(image: np.ndarray, radius: int) -> np.ndarray:
-    """Separable box blur, applied twice, of a 2-D array."""
+    """Separable box blur, applied twice, of a 2-D array: close to a Gaussian, in linear time."""
     if radius < 1:
         return image
-    kernel = np.ones(2 * radius + 1) / (2 * radius + 1)
     out = image
     for _ in range(2):
-        out = np.apply_along_axis(lambda r: np.convolve(r, kernel, mode="same"), 0, out)
-        out = np.apply_along_axis(lambda r: np.convolve(r, kernel, mode="same"), 1, out)
+        out = _box(_box(out, radius, 0), radius, 1)
     return out
 
 
-def lawn_alpha(replay: Replay, step: int, px_per_mm: float) -> np.ndarray | None:
-    """Return the lawn film's opacity (H, W) in [0, 1] at ``step``; None without lawns.
+@dataclass(frozen=True)
+class LawnMasks:
+    """The parts of a lawn's film that a run does not change, at one resolution.
 
-    Each cell's remaining density sets the film's thickness, smoothed across cells, and a band
-    inside each lawn's edge is thicker, as a real lawn's rim is.
+    The lawns' footprint and rim band, each cell's pixel slices, and the cells' smoothed coverage
+    the film is normalised by.
     """
-    if replay.lawn_cells is None or replay.step_lawn_density is None or replay.lawn_centres is None:
+
+    inside: np.ndarray
+    rim: np.ndarray
+    cells: tuple[tuple[slice, slice], ...]
+    coverage: np.ndarray
+    blur_px: int
+
+
+def lawn_masks(replay: Replay, px_per_mm: float) -> LawnMasks | None:
+    """Return the run-invariant parts of the lawn film at ``px_per_mm``; None without lawns."""
+    if replay.lawn_centres is None or replay.lawn_cells is None:
         return None
     size = max(1, round(replay.world_size_mm * px_per_mm))
-    density = replay.step_lawn_density[min(step, len(replay.step_lawn_density) - 1)]
-    raster = np.zeros((size, size))
-    coverage = np.zeros((size, size))
-    half = (replay.lawn_cell_mm or 1.0) / 2
-    for (cx, cy), value in zip(replay.lawn_cells, density, strict=True):
-        x0, x1 = round((cx - half) * px_per_mm), round((cx + half) * px_per_mm)
-        y0 = round((replay.world_size_mm - cy - half) * px_per_mm)
-        y1 = round((replay.world_size_mm - cy + half) * px_per_mm)
-        raster[max(0, y0) : max(0, y1), max(0, x0) : max(0, x1)] = float(value)
-        coverage[max(0, y0) : max(0, y1), max(0, x0) : max(0, x1)] = 1.0
-    blur = max(1, round(0.25 * px_per_mm))
-    # Normalised by the blurred coverage, so each cell's density reaches the lawn's circular edge
-    # rather than fading where the square cells stop short of it.
-    film = _blur(raster, blur) / np.maximum(_blur(coverage, blur), 1e-3)
     ys, xs = np.mgrid[0:size, 0:size]
     wx, wy = (xs + 0.5) / px_per_mm, replay.world_size_mm - (ys + 0.5) / px_per_mm
     radius = replay.lawn_radius_mm or 0.0
     inside = np.zeros((size, size), dtype=bool)
-    rim = np.zeros((size, size))
+    rim = np.zeros((size, size), dtype=np.float32)
     for cx, cy in replay.lawn_centres:
         distance = np.hypot(wx - cx, wy - cy)
         inside |= distance <= radius
         band = np.exp(-np.clip(radius - distance, 0, None) / LAWN_RIM_MM)
         rim = np.maximum(rim, band * (distance <= radius))
-    return np.clip((0.5 * film + 0.5 * rim) * inside, 0.0, 1.0)
+    half = (replay.lawn_cell_mm or 1.0) / 2
+    cells = []
+    coverage = np.zeros((size, size), dtype=np.float32)
+    for cx, cy in replay.lawn_cells:
+        x0, x1 = round((cx - half) * px_per_mm), round((cx + half) * px_per_mm)
+        y0 = round((replay.world_size_mm - cy - half) * px_per_mm)
+        y1 = round((replay.world_size_mm - cy + half) * px_per_mm)
+        cell = (slice(max(0, y0), max(0, y1)), slice(max(0, x0), max(0, x1)))
+        cells.append(cell)
+        coverage[cell] = 1.0
+    blur_px = max(1, round(0.25 * px_per_mm))
+    return LawnMasks(
+        inside=inside,
+        rim=rim.astype(np.float32),
+        cells=tuple(cells),
+        coverage=np.maximum(_blur(coverage, blur_px), 1e-3),
+        blur_px=blur_px,
+    )
+
+
+def lawn_alpha(
+    replay: Replay,
+    step: int,
+    px_per_mm: float,
+    masks: LawnMasks | None = None,
+) -> np.ndarray | None:
+    """Return the lawn film's opacity (H, W) in [0, 1] at ``step``; None without lawns.
+
+    Each cell's remaining density sets the film's thickness, smoothed across cells and normalised
+    by the cells' smoothed coverage, so each cell's density reaches the lawn's circular edge rather
+    than fading where the square cells stop short of it. A band inside each lawn's edge is thicker,
+    as a real lawn's rim is. ``masks`` may be passed to skip recomputing what a run does not change.
+    """
+    if replay.step_lawn_density is None:
+        return None
+    masks = masks if masks is not None else lawn_masks(replay, px_per_mm)
+    if masks is None:
+        return None
+    density = replay.step_lawn_density[min(step, len(replay.step_lawn_density) - 1)]
+    raster = np.zeros(masks.inside.shape, dtype=np.float32)
+    for cell, value in zip(masks.cells, density, strict=True):
+        raster[cell] = float(value)
+    film = _blur(raster, masks.blur_px) / masks.coverage
+    return np.clip((0.5 * film + 0.5 * masks.rim) * masks.inside, 0.0, 1.0)
 
 
 class RealisticRenderer:
@@ -255,6 +314,9 @@ class RealisticRenderer:
         self.size_px = size_px
         self._texture_ppm = texture_px_per_mm
         self._agar = agar_rgb(replay.world_size_mm, texture_px_per_mm)
+        self._agar_float = self._agar.astype(np.float32)
+        self._lawn_color = np.array(LAWN_COLOR, dtype=np.float32)
+        self._masks = lawn_masks(replay, texture_px_per_mm)
         self._plate: Any = None
         self._plate_step = -1
         self.follow = True
@@ -267,13 +329,10 @@ class RealisticRenderer:
         """Return the agar with the lawns at ``step``, rebuilt only when the step changes."""
         if self._plate is not None and step == self._plate_step:
             return self._plate
-        image = self._agar.astype(float)
-        alpha = lawn_alpha(self.replay, step, self._texture_ppm)
+        image = self._agar_float
+        alpha = lawn_alpha(self.replay, step, self._texture_ppm, self._masks)
         if alpha is not None:
-            image = (
-                image * (1 - alpha[..., None])
-                + np.array(LAWN_COLOR, dtype=float) * alpha[..., None]
-            )
+            image = image + (self._lawn_color - image) * alpha[..., None]
         array = np.clip(image, 0, 255).astype(np.uint8)
         self._plate = self._pg.surfarray.make_surface(array.transpose(1, 0, 2))
         self._plate_step = step
