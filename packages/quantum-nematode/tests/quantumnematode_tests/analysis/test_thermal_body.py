@@ -76,6 +76,7 @@ class TestConfigs:
 
     def test_the_preflight_table_follows_the_chosen_target(self) -> None:
         """Decision G: the table the gate preflight reads names the arms at ``TARGET``."""
+        assert tb.TARGET == 20
         assert tb.stems(tb.TARGET) == tb.STEMS
         for target in gen.TARGETS:
             for arms in tb.stems(target).values():

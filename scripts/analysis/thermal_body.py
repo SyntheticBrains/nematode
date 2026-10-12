@@ -58,8 +58,9 @@ PILOT_SEEDS: tuple[int, ...] = tuple(range(9711, 9715))
 RETRY_SEEDS: tuple[int, ...] = tuple(range(9721, 9729))
 RETRY_TARGETS: tuple[int, ...] = (20,)
 PANEL_FIRST_SEED = 2301
-# The target the panel runs at, set by stage 1's rule before stage 2 runs.
-TARGET = 35
+# The target the panel runs at, set by the positive control's rule before stage 2 runs: the retry at
+# 6,000 episodes passed at 20.
+TARGET = 20
 GAP_ONLY, CHEMICAL_ONLY = "gap_only", "chemical_only"
 LEVELS: tuple[str, ...] = (GAP_ONLY, CHEMICAL_ONLY)
 _NULL_TAG = {GAP_ONLY: "gaponly", CHEMICAL_ONLY: "chemnull"}

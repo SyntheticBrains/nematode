@@ -1,0 +1,9 @@
+target,seed,mlp_plateau_pct,floor_plateau_pct,competent,verdict
+20,9721,83.733,0.0,True,passes
+20,9722,90.2,0.0,True,passes
+20,9723,83.133,0.0,True,passes
+20,9724,84.467,0.0,True,passes
+20,9725,94.6,0.0,True,passes
+20,9726,81.4,0.0,True,passes
+20,9727,78.0,0.0,True,passes
+20,9728,57.4,0.0,True,passes

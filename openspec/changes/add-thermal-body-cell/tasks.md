@@ -14,11 +14,13 @@ panel run.
 - [x] 4. **Stage 1**: MLP-PPO and its floor on seeds 9701–9708 at targets 35 and 20; the target rule
   (35 if it passes, else 20, else stop and defer M.9). *(Read 2026-10-12: `fallback` at both, so
   the rule stops M.9; record in `supporting/092-thermal-body/stage1/`.)*
-- [ ] 4b. **The retry (Decision G)**: MLP-PPO and its floor at target 20, 6,000 episodes, seeds
+- [x] 4b. **The retry (Decision G)**: MLP-PPO and its floor at target 20, 6,000 episodes, seeds
   9721–9728, from a worktree at the amendment's commit; `mlp-gate --seeds 9721..9728 --targets 20`.
   Pass: set `TARGET = 20` in `thermal_body.py` (so `STEMS`, which the gate preflight reads, names
   the t20 arms), with a test, and commit it before stage 2's worktree is pinned; then stage 2 at
   6,000 episodes. Fail: M.9 stops, deferred-with-destination.
+  *(Read 2026-10-13: `passes`, every seed competent, 57–95% against 0% floors; record in
+  `supporting/092-thermal-body/retry/`; `TARGET` is 20.)*
 - [ ] 5. **Stage 2**: the six connectome arms on seeds 9711–9714 at the chosen target and 6,000 episodes; the gate
   preflight per null; the spread and the cost, re-measured here for the registration; the body's median episodes to 30% beside the anchor's (Decision G). At target 20,
   the point-worm gap-only check on the same seeds.
