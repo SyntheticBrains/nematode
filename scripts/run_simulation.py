@@ -1117,10 +1117,12 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 agent.reset_brain()
 
     except KeyboardInterrupt:
-        if agent.replay_recorder is not None and agent.replay_recorder.active:
-            # Keep the interrupted run's recording, up to its last completed step.
-            agent.snapshot_replay()
-            logger.info(f"Replay recorded (interrupted): {agent.replay_recorder.end_run()}")
+        recorder = agent.replay_recorder
+        if recorder is not None and recorder.active:
+            # Keep the interrupted run's finished steps; a step cut off before its intake is dropped.
+            if recorder.last_step_complete:
+                agent.snapshot_replay()
+            logger.info(f"Replay recorded (interrupted): {recorder.end_run(completed_only=True)}")
         total_interrupted = runs - total_runs_done
         manage_simulation_halt(
             max_steps=max_steps,

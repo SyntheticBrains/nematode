@@ -1157,6 +1157,8 @@ class StandardEpisodeRunner(EpisodeRunner):
             if result is not None:
                 return result
             reward = self._handle_lawn_intake(agent, reward)
+            if agent.replay_recorder is not None:
+                agent.replay_recorder.step_complete()
 
             # Predator checks (before and after predator movement)
             result, reward = self._handle_predator_phase(

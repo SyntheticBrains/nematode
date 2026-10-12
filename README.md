@@ -8,7 +8,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 
 <p align="center">
-  <img src="./docs/assets/images/demo-hi-fi.gif" width="480" alt="A simulated nematode foraging on the continuous-2D substrate while evading a pursuit predator and navigating a thermal gradient" />
+  <img src="./docs/assets/images/demo-replay.gif" width="480" alt="Realistic replay at 10× worm time: a simulated nematode with a 12-segment kinematic body grazing at the edge of a bacterial lawn on an agar plate, reversing, and crawling off it, drawn as under a bright-field microscope" />
 </p>
 
 **A closed-loop simulation platform for asking which brain architecture best learns a nematode's behaviours — with the real *C. elegans* connectome as the focal point of comparison.**
@@ -57,7 +57,7 @@ uv sync --extra cpu --extra torch --extra pixel
 |---|---|
 | `cpu` | Qiskit Aer simulator on CPU (the default quantum backend) |
 | `torch` | PyTorch — required by the classical, recurrent, spiking, hybrid and connectome brains |
-| `pixel` | Pygame — the `pixel` and `pixel_continuous` renderers |
+| `pixel` | Pygame — the `pixel` and `pixel_continuous` renderers and the realistic replay viewer |
 | `gpu` | Qiskit Aer on CUDA 11 (conflicts with `cpu`) |
 | `qpu` | IBM Quantum runtime for real hardware (`--device qpu`; put your key in `.env`, see `.env.template`) |
 | `analysis` | scikit-learn and SciPy for the analysis scripts |
@@ -89,6 +89,10 @@ uv run ./scripts/run_simulation.py --config configs/scenarios/multi_agent_foragi
 
 # A variational quantum circuit on the Aer simulator (add --device qpu --optimize for IBM hardware with Q-CTRL Fire Opal)
 uv run ./scripts/run_simulation.py --config configs/scenarios/foraging/qvarcircuit_small_oracle.yml --theme emoji --runs 20
+
+# Record a worm with a kinematic body grazing bacterial lawns, then replay it on an agar plate
+uv run ./scripts/run_simulation.py --config configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_body_internal.yml --theme headless --runs 1 --record-replay recordings/
+uv run python scripts/replay_viewer.py recordings/<session>-run0001.npz
 
 # Evolve a feed-forward network's weights with a genetic algorithm
 uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --algorithm ga --generations 20 --parallel 4
@@ -124,7 +128,15 @@ Phase 6 ranked six of these as pre-registered MUST arms (`mlpppo`, `lstmppo`, `c
 
 ## Visualisation
 
-Two Pygame renderers — `--theme pixel_continuous` for the continuous substrate and `--theme pixel` for the grid, including multi-agent runs — plus terminal themes (`ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`) and `headless` for batch training. Sprites, overlays and keyboard controls are documented in [docs/visualization.md](docs/visualization.md).
+- **Realistic replay.** A run of the kinematic body can be recorded with `--record-replay` and played back with `scripts/replay_viewer.py` as a worm on an agar plate under a bright-field microscope: a translucent 12-segment body with its pharyngeal bulbs, and bacterial lawns that thin where they are grazed. Playback runs at 1×, 10× or 60× worm time, and a label always names the model and the speed. The top of this page is one such replay.
+- **Live Pygame renderers.** `--theme pixel_continuous` for the continuous substrate, with its concentration fields, predators and sensor readouts, and `--theme pixel` for the grid, including multi-agent runs.
+- **Terminal themes** (`ascii`, `emoji`, `unicode`, `colored_ascii`, `rich`, `emoji_rich`), and `headless` for batch training.
+
+Sprites, overlays, recording options and keyboard controls are documented in [docs/visualization.md](docs/visualization.md).
+
+<p align="center">
+  <img src="./docs/assets/images/demo-hi-fi.gif" width="360" alt="The pixel_continuous renderer: a simulated nematode foraging on the continuous-2D substrate while evading a pursuit predator and navigating a thermal gradient" />
+</p>
 
 <p align="center">
   <img src="./docs/assets/images/pixel_continuous_theme.png" width="300" alt="Continuous-2D renderer: concentration-field heatmap, predator detection rings, adaptive-sensor readout" />

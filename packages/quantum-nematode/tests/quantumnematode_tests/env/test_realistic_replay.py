@@ -148,6 +148,23 @@ class TestRecording:
             rtol=1e-6,
         )
 
+    def test_an_interrupted_run_keeps_only_finished_steps(self, tmp_path: Path) -> None:
+        """Scenario "A run is recorded at sub-step resolution": a cut-off step is dropped."""
+        recorder = ReplayRecorder(tmp_path)
+        agent = _run(4, recorder)
+        assert recorder.last_step_complete
+        # A fifth move logged by the body, interrupted before its intake was applied.
+        log = agent.env.posture_log
+        log.append(dict(log[-1]))
+        assert not recorder.last_step_complete
+        replay = load_replay(recorder.end_run(completed_only=True))
+        assert len(replay.step_reversed) == len(replay.step_intake) == 4
+        assert len(replay.substep_time) == 4 * 20
+        assert float(replay.step_intake.sum()) == pytest.approx(
+            agent._episode_tracker.intake,
+            rel=1e-5,
+        )
+
     def test_a_point_worm_is_refused(self, tmp_path: Path) -> None:
         from quantumnematode.env.continuous_2d import Continuous2DEnvironment, Continuous2DParams
 

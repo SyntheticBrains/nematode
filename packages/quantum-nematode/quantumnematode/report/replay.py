@@ -70,6 +70,7 @@ class ReplayRecorder:
         self.meta = dict(meta or {})
         self._env: Continuous2DEnvironment | None = None
         self._run = 0
+        self._completed = 0
         self._status: list[tuple[float, bool, float, float, float, np.ndarray | None]] = []
 
     def begin_run(self, env: Continuous2DEnvironment, run: int) -> None:
@@ -79,6 +80,7 @@ class ReplayRecorder:
             raise ValueError(msg)
         self._env = env
         self._run = run
+        self._completed = 0
         self._status = []
         env.posture_log = []
 
@@ -98,17 +100,38 @@ class ReplayRecorder:
         serotonin, pdf = modulators if modulators is not None else (math.nan, math.nan)
         self._status.append((intake, on_lawn, satiety, serotonin, pdf, density))
 
+    def step_complete(self) -> None:
+        """Mark every move logged so far as finished, its intake applied."""
+        if self._env is not None and self._env.posture_log is not None:
+            self._completed = len(self._env.posture_log)
+
     @property
     def active(self) -> bool:
         """Whether a run is being recorded."""
         return self._env is not None
 
-    def end_run(self) -> Path:
-        """Write the run's recording and return its path."""
+    @property
+    def last_step_complete(self) -> bool:
+        """Whether the last logged move has finished, so the state it left can be snapshotted."""
+        env = self._env
+        return (
+            env is not None
+            and env.posture_log is not None
+            and (self._completed == len(env.posture_log))
+        )
+
+    def end_run(self, *, completed_only: bool = False) -> Path:
+        """Write the run's recording and return its path.
+
+        ``completed_only`` drops a move that was cut off before its intake was applied, as when a
+        run is interrupted mid-step.
+        """
         env = self._env
         if env is None or env.posture_log is None:
             msg = "end_run without begin_run"
             raise ValueError(msg)
+        if completed_only:
+            del env.posture_log[self._completed :]
         arrays = _arrays(env, env.posture_log, self._status)
         arrays["meta"] = np.array(json.dumps(self.meta | {"run": self._run}))
         self.directory.mkdir(parents=True, exist_ok=True)

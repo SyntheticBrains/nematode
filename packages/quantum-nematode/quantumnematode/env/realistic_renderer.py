@@ -244,13 +244,15 @@ def lawn_masks(replay: Replay, px_per_mm: float) -> LawnMasks | None:
     ys, xs = np.mgrid[0:size, 0:size]
     wx, wy = (xs + 0.5) / px_per_mm, replay.world_size_mm - (ys + 0.5) / px_per_mm
     radius = replay.lawn_radius_mm or 0.0
-    inside = np.zeros((size, size), dtype=bool)
+    inside = np.zeros((size, size), dtype=np.float32)
     rim = np.zeros((size, size), dtype=np.float32)
     for cx, cy in replay.lawn_centres:
         distance = np.hypot(wx - cx, wy - cy)
-        inside |= distance <= radius
+        # Coverage of each pixel by the lawn, over a one-pixel ramp, so the edge is anti-aliased.
+        cover = np.clip((radius - distance) * px_per_mm + 0.5, 0.0, 1.0)
+        inside = np.maximum(inside, cover)
         band = np.exp(-np.clip(radius - distance, 0, None) / LAWN_RIM_MM)
-        rim = np.maximum(rim, band * (distance <= radius))
+        rim = np.maximum(rim, band * cover)
     half = (replay.lawn_cell_mm or 1.0) / 2
     cells = []
     coverage = np.zeros((size, size), dtype=np.float32)
