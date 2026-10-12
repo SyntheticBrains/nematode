@@ -375,11 +375,33 @@ class TestPrecedence:
 class TestNothingReadsIt:
     """Scenario: Nothing an experiment reads changes."""
 
-    def test_no_brain_module_reads_the_table(self) -> None:
+    def test_only_the_connectome_brain_reads_the_table(self) -> None:
         readers = [
             path.name
             for path in BRAIN_DIR.rglob("*.py")
             if "connectome.signs" in path.read_text(encoding="utf-8")
             or "per_connection_signs" in path.read_text(encoding="utf-8")
         ]
-        assert readers == []
+        assert readers == ["connectome_ppo.py"]
+
+    @pytest.mark.parametrize("model", ["random", "atlas"])
+    def test_a_brain_reads_the_table_only_when_asked(
+        self,
+        model: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A brain not configured for per-connection signs never opens the table."""
+        from quantumnematode.brain.arch import connectome_ppo
+        from quantumnematode.brain.arch.dtypes import DeviceType
+
+        def refuse(*_args: object, **_kwargs: object) -> None:
+            msg = "the table was read"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(connectome_ppo, "per_connection_signs", refuse)
+        config = connectome_ppo.ConnectomePPOBrainConfig(
+            seed=1,
+            synapse_signs=model,  # type: ignore[arg-type]
+            wiring="rewired_chemical_only",
+        )
+        connectome_ppo.ConnectomePPOBrain(config=config, device=DeviceType.CPU)

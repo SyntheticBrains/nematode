@@ -394,3 +394,43 @@ def test_the_chemical_only_null_does_not_keep_the_routes(cook: Connectome) -> No
     one_wild, _two = _routes(cook, sensory, motor)
     one_null, _two_null = _routes(_chemical_null(cook, 17), sensory, motor)
     assert one_null != one_wild
+
+
+class TestRewiringOrigins:
+    """Connectome-substrate requirement "The rewiring records each edge's origin"."""
+
+    @staticmethod
+    def _null(origins: dict | None, **kwargs: object) -> object:
+        from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+        from quantumnematode.connectome.rewiring import rewire_degree_preserving
+
+        return rewire_degree_preserving(
+            load_cook_2019_hermaphrodite(),
+            np.random.default_rng(21),
+            origins=origins,
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [{}, {"rewire_gap_junctions": False, "preserve_autapses": True}],
+    )
+    def test_recording_origins_leaves_the_null_unchanged(self, kwargs: dict) -> None:
+        """Scenario "Recording origins leaves the null unchanged"."""
+        assert self._null(None, **kwargs) == self._null({}, **kwargs)
+
+    def test_an_origin_keeps_its_presynaptic_neuron(self) -> None:
+        """Scenario "An origin keeps its presynaptic neuron": a bijection, counts travelling."""
+        from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
+
+        wild = load_cook_2019_hermaphrodite()
+        origins: dict = {}
+        null = self._null(origins, rewire_gap_junctions=False, preserve_autapses=True)
+        null_edges = {(s.pre, s.post): s.weight for s in null.chemical_synapses}  # type: ignore[attr-defined]
+        wild_edges = {(s.pre, s.post): s.weight for s in wild.chemical_synapses}
+        assert set(origins) == set(null_edges)
+        assert sorted(origins.values()) == sorted(wild_edges)
+        assert all(edge[0] == origin[0] for edge, origin in origins.items())
+        assert all(null_edges[edge] == wild_edges[origin] for edge, origin in origins.items())
+        moved = sum(1 for edge, origin in origins.items() if edge != origin)
+        assert moved > len(origins) // 2

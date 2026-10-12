@@ -68,11 +68,15 @@ _MODULATED_ROLES: dict[str, dict[str, object]] = {
     "_pdfr1": {"modulator_knockout": "pdfr1"},
     "_satiety": {"modulator_satiety_link": True},
 }
-# Two substrates: stage 0's random synapse signs, and signs grounded in the transmitter atlas and
-# held under PPO, so that what a receptor cell does downstream carries its biological sign.
+# Three substrates: stage 0's random synapse signs; signs grounded in the transmitter atlas and held
+# under PPO, so that what a receptor cell does downstream carries its biological sign; and signs from
+# the per-connection table, also held.
 MODULATED_SUBSTRATES: dict[str, dict[str, object]] = {
     "modulated": {},
     "modulated_atlas": {"synapse_signs": "atlas", "enforce_synapse_signs": True},
+    # The same with each synapse signed from the per-connection table, which corrects 342 of the
+    # atlas's signs, AWC -> AIY among them.
+    "modulated_perconn": {"synapse_signs": "per_connection", "enforce_synapse_signs": True},
 }
 MODULATED_ARMS: dict[str, dict[str, object]] = {
     f"{base}{role}": {**signs, **settings}

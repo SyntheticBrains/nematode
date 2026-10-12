@@ -1,0 +1,34 @@
+{
+  "saturation_bar": 90.0,
+  "margin_points": 5.0,
+  "levels": {
+    "random": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 69.7,
+      "rn_plateau": 67.93333333333334,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    },
+    "atlas": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 54.16666666666667,
+      "rn_plateau": 71.5,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    },
+    "per_connection": {
+      "status": "readable",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 66.53333333333333,
+      "rn_plateau": 76.13333333333333,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    }
+  },
+  "launch": true
+}
