@@ -11,4 +11,4 @@
 - [x] 5. **Demo configs**: the lawn-body MLP arms. Loader tests.
 - [x] 6. **Docs**: `docs/visualization.md` (recording and replaying, keys, a frame); the CHANGELOG; a
   NOTICE entry for Wormlight.
-- [ ] 7. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
+- [x] 7. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
