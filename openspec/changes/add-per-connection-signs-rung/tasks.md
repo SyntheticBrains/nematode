@@ -18,6 +18,6 @@ Phase 8, run before the M.9 decision. Registered in
 - [x] 5. **Pilot**: seeds 9501–9504, configured as the panel; gates per level, spreads, cost.
 - [x] 5a. **Calibration** — **done**: the first pilot (9501–9504) found grounded signs saturate the network (5 of 16 grounded learners never learned); `chemical_weight_scale` and `sign_scale_calibration.py` (seeds 9601–9616) chose atlas 0.35 and per-connection 0.42; the second pilot (9511–9514) ran at those scales. Tests.
 - [x] 6. **Registration**: `launch.md`, the gate preflight, `/nematode-review-spec`.
-- [ ] 7. **Campaign and readout**: the panel from a worktree at the registration commit; the modulated
+- [x] 7. **Campaign and readout**: the panel from a worktree at the registration commit; the modulated
   arms; the logbook; tracker; roadmap; CHANGELOG.
 - [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
