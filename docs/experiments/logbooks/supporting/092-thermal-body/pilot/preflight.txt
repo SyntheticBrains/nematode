@@ -1,0 +1,25 @@
+{
+  "saturation_bar": 90.0,
+  "margin_points": 5.0,
+  "levels": {
+    "gap_only": {
+      "status": "near_bar",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 86.11666666666667,
+      "rn_plateau": 82.01666666666667,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    },
+    "chemical_only": {
+      "status": "near_bar",
+      "n_seeds": 4,
+      "n_scored": 4,
+      "wt_plateau": 86.11666666666667,
+      "rn_plateau": 73.23333333333333,
+      "wt_floor": 0.0,
+      "rn_floor": 0.0
+    }
+  },
+  "launch": false
+}
