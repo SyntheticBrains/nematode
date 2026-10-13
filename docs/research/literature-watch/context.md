@@ -8,8 +8,8 @@ it is read once per batch, and detail that does not change a score is detail tha
 A brief describing a phase that closed six months ago scores against questions nobody is asking any
 more, and the digest will look fine while doing it.
 
-Last reviewed: 2026-10-03 — re-aimed at the 8a close and the 8b re-plan (roadmap v4.4). Previous
-review 2026-09-20, at Phase 8's start.
+Last reviewed: 2026-10-14 — re-aimed at the Phase 8 close (Logbook 094), for the questions the
+phase after 8 opens on. Previous reviews 2026-10-03 (8a close) and 2026-09-20 (Phase 8's start).
 
 ## What the project is
 
@@ -26,44 +26,45 @@ in that comparison, not the point of the project.
 
 ## What is open right now
 
-These are the live questions — the second half of Phase 8 of the [roadmap](../../roadmap.md),
-*ground, then embody*. A paper bearing on one of them is a 3.
+These are the live questions — what [Phase 8's close](../../experiments/logbooks/094-phase8-synthesis.md)
+leaves open, ahead of the next phase's plan review. A paper bearing on one of them is a 3.
 
-- **What a "wiring advantage" over a null is made of.** A connectome-constrained network here
-  reaches competence sooner than degree-preserving rewired nulls, and the advantage survived a
-  shared-initialisation control — but about half of it came from how the null rewired the *gap
-  junctions*, and whether it shows at all depends on how many hops the network settles for, which
-  tracks the short sensory-to-motor routes a rewired null manufactures and the real wiring lacks. Anything on null-model design for connectomes is directly on point: degree-,
-  strength-, sign- or boundary-preserving nulls, what a null fails to preserve, shortcut or
-  path-length artefacts, shared-initialisation controls, and structure-function claims in any
-  connectome that do or do not survive a stronger null. So is anything predicting *which* graphs
-  learn faster from structure alone.
-- **Gap junctions as dynamics.** Electrical synapses here are a fixed symmetric matrix; the next
-  rung gives neurons time constants, couples them ohmically, and makes the gap junctions plastic
-  under gradient learning. Gap-junction function in network models, electrical-synapse plasticity,
-  synchronisation, stiffness and integration of graded networks with strong coupling, and intrinsic
-  or node-level adaptation.
-- **Learning through a body.** The next shipment drives the anatomical motor-to-muscle map into a
-  kinematic two-dimensional body whose rhythm comes from a body-level generator, and asks whether
-  the wiring matters for segmental drive and steering. Connectome-driven or learned locomotion
-  controllers, central pattern generators and proprioceptive rhythm generation, forward/backward
-  switching, resistive-force and reduced-order body models, muscle models and neuromuscular signs,
-  and any connectome-through-a-body work with or without learning or a null — especially with one.
-  Compute is the binding constraint, so fast models are as interesting as accurate ones.
-- **Operating point.** Whether a wiring effect survives the learner's settings. Here it is
-  depth-critical — present at four or more settling hops, reversed at two. Connectome reservoir
-  computing (positive or negative), hyperparameter sensitivity surfaces, and claims that a wiring
-  effect holds across an operating region rather than at one pinned setting.
-- **Behaviour precise enough to validate a body against.** Locomotion kinematics (undulation
-  frequency and amplitude, wavelength, speed, eigenworm spectra, omega-turn geometry), forward and
-  reverse bout statistics, roaming/dwelling and patch-leaving on structured lawns, and
-  chemotaxis or thermotaxis quantification — including methods for separating taxis from edge or
-  wall effects in tracking data.
+- **What a "wiring advantage" over a null is made of.** A connectome-constrained network here learns
+  faster than degree-preserving rewired nulls, and the advantage turned out to be the null's rewired
+  *gap junctions* and its rewired sensory-to-motor boundary; against a null that keeps both, no
+  interior advantage is detectable. What holds is **gap-junction placement**: a null whose electrical
+  synapses alone are rewired learns slower, not because of each junction's strength. Anything on
+  null-model design for connectomes is directly on point — degree-, strength-, sign- or
+  boundary-preserving nulls, nulls that hold each neuron's total coupling, what a null fails to
+  preserve, shortcut artefacts — and any structure-function claim about electrical synapses or gap
+  junction placement in any connectome, especially one tested against a matched null.
+- **Learning through a body.** The anatomical motor-to-muscle map drives a 12-segment kinematic body,
+  and the wiring's gap-junction advantage survives it. Connectome-driven or learned locomotion
+  controllers, forward/backward switching, reduced-order body models, and connectome-through-a-body
+  work with a null. Compute is the binding constraint, so fast models are as interesting as accurate
+  ones.
+- **Why learned policies steer but never modulate runs.** Every substrate and sense here learns the
+  weathervane and never klinokinesis (turning more when heading the wrong way). Work on how
+  klinokinesis and weathervaning arise — reward, action space, timescale, sensory adaptation — in
+  real worms or in models, and on thermotaxis strategies (AFD–AIY–AIZ, isothermal tracking).
+- **Training stability over long horizons.** Policy-gradient learners here learn and then collapse
+  late in long runs. Diagnoses and remedies for late policy collapse in PPO-like learners, especially
+  in small biological networks.
+- **Behaviour precise enough to validate a body against.** Locomotion kinematics, forward and reverse
+  bouts, roaming/dwelling and patch-leaving on structured lawns, chemotaxis or thermotaxis
+  quantification with magnitudes (not only signs), and methods for separating taxis from wall effects.
 
 ## Also worth knowing about
 
 Score 2, not 3: useful without settling anything above.
 
+- **Gap junctions as dynamics** — electrical synapses as ohmic coupling in a leaky network,
+  electrical-synapse plasticity, stiffness of graded networks with strong coupling. *Demoted from 3
+  on 2026-10-14: the dynamical rung here learned far slower than the memoryless one and closed
+  (Logbook 080); plastic gap strengths on the settling substrate did not move the wiring effect.*
+- **Operating point** — whether a wiring effect survives the learner's settings, connectome reservoir
+  computing, hyperparameter sensitivity surfaces. *Demoted from 3 on 2026-10-14: the depth effect
+  here was explained by the sensory-to-motor boundary.*
 - **Cross-connectome transfer** — *C. elegans* to *P. pacificus* head circuits, the dauer wiring
   state, homology between nematode nervous systems, and wiring changes across development or life
   stage. *Demoted from 3 on 2026-09-20: Phase 8 stays on one species deliberately. Still worth
