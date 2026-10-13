@@ -76,7 +76,7 @@ connectome arm runs.
 
 - **Read 2026-10-12: no target passes, so by this rule M.9 stops.** Both targets read `fallback`:
   each beats its floor, but not every seed reaches 30%
-  ([stage1/](../../../docs/experiments/logbooks/supporting/092-thermal-body/stage1/)). That verdict
+  ([stage1/](../../../../docs/experiments/logbooks/supporting/092-thermal-body/stage1/)). That verdict
   stands as recorded; Decision G is a new registration, not a re-reading of it.
 
 ### Decision D: Stage 2, the connectome pilot

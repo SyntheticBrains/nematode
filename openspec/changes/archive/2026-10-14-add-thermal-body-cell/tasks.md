@@ -27,6 +27,6 @@ panel run.
   *(Read 2026-10-13: gates pass on both nulls; the preflight reads `near_bar`, accepted with the
   user and documented in `launch.md`; the anchor saturates at 20; 32 seeds chosen with the user.)*
 - [x] 6. **Registration**: `launch.md`; `/nematode-review-spec`. *(2026-10-13: 32 seeds, 2301–2332.)*
-- [ ] 7. **Campaign and readout**: the panel from a worktree at the registration commit; the
+- [x] 7. **Campaign and readout**: the panel from a worktree at the registration commit; the
   kinematics; the logbook; tracker; roadmap; CHANGELOG.
-- [ ] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
+- [x] 8. **Close-out**: full suite; hooks by exit code; validate; archive; PR.
