@@ -25,6 +25,13 @@ Usage::
         --out-dir <scratch> --out panel.json --csv per-seed.csv
     uv run python scripts/analysis/thermal_body.py kinematics --logs <dir> --seeds 2301 ... \
         --out kinematics.json
+    uv run python scripts/analysis/thermal_body.py thermotaxis --logs <dir> --seeds 2301 ... \
+        --out-dir <captures> --out thermotaxis.json
+
+**Thermotaxis through the body.** Logbook 036's four bias statistics, graded against the thermal
+reference set on held-out episodes of the trained wild type and gap-only null and of their untrained
+floors, with C.3's thresholds; each trained arm is paired with its floor by seed, and the two wirings
+are compared beside.
 """
 
 # pyright: reportPrivateUsage=false
@@ -34,6 +41,7 @@ import argparse
 import csv
 import json
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -42,13 +50,18 @@ for _path in (_HERE, _HERE.parent / "campaigns"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+import behavioural_chemotaxis_validation as bcv  # noqa: E402  # pyright: ignore[reportMissingImports]
 import body_control as bc  # noqa: E402  # pyright: ignore[reportMissingImports]
+import body_kinematics_eval as harness  # noqa: E402  # pyright: ignore[reportMissingImports]
+import body_validation as bv  # noqa: E402  # pyright: ignore[reportMissingImports]
 import gate_preflight as gp  # noqa: E402  # pyright: ignore[reportMissingImports]
 import generate_thermal_body_configs as gen  # noqa: E402  # pyright: ignore[reportMissingImports]
 import measured_prior_contrast as mc  # noqa: E402  # pyright: ignore[reportMissingImports]
 import measured_prior_pilot as mp  # noqa: E402  # pyright: ignore[reportMissingImports]
 import operating_point_surface as ops  # noqa: E402  # pyright: ignore[reportMissingImports]
 import thermal_split as ts  # noqa: E402  # pyright: ignore[reportMissingImports]
+import wiring_premise as wp  # noqa: E402  # pyright: ignore[reportMissingImports]
+from quantumnematode.validation.datasets import load_bias_signatures  # noqa: E402
 
 HALF = "ppo"
 CELL = ts.CELL
@@ -239,6 +252,142 @@ def kinematics(
     return out
 
 
+# ── Thermotaxis through the body ─────────────────────────────────────────────────────────────
+THERMO_ARMS: tuple[tuple[str, str], ...] = (
+    ("wt", "ppo"),
+    ("wt", "frozen"),
+    ("gaponly", "ppo"),
+    ("gaponly", "frozen"),
+)
+# Each trained arm and the untrained floor it is paired with by seed.
+THERMO_FLOORS: dict[str, str] = {"wt_ppo": "wt_frozen", "gaponly_ppo": "gaponly_frozen"}
+
+
+def _thermal_run(job: tuple[str, str, int, list[str], str, int]) -> dict[str, Any]:
+    """Evaluate one run's held-out episodes with the thermal drive captured; write its capture."""
+    wiring, learner, seed, log_dirs, out_dir, target = job
+    arm = f"{wiring}_{learner}"
+    name = gen.stem(wiring, learner, target)
+    weights = None
+    if learner == "ppo":
+        candidates = (Path(d) / f"{name}-seed{seed}.log" for d in log_dirs)
+        log = next((c for c in candidates if c.is_file()), None)
+        weights = bc.final_weights(log) if log is not None else None
+        if weights is None:
+            return {"arm": arm, "seed": seed, "missing": True}
+    capture = harness.run_capture(
+        gen.THERMAL / f"{name}.yml",
+        seed,
+        weights,
+        episodes=bv.EPISODES,
+        capture_behaviour=True,
+        capture_modality="thermotaxis",
+    )
+    path = bv.write_capture(Path(out_dir) / f"{arm}-seed{seed}.json", seed, capture.behaviour)
+    return {"arm": arm, "seed": seed, "world_size_mm": capture.world_size_mm, "capture": str(path)}
+
+
+def thermal_bias_curves(runs: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Grade an arm's captures on the thermal reference set, with C.3's wall margin and threshold."""
+    seeds: dict[int, list[list[Any]]] = {}
+    for run in runs:
+        data = json.loads(Path(run["capture"]).read_text())
+        series = [bcv._steps_from_dicts(r["steps"]) for r in data["runs"] if r["steps"]]
+        if series:
+            seeds[run["seed"]] = series
+    if not seeds:
+        return None
+    seeds, wall = bcv.exclude_walls(seeds, runs[0]["world_size_mm"], bv.WALL_MARGIN_MM)
+    summary = bcv.analyse(seeds, bv.THETA_SHARP, modality="thermotaxis")
+    summary["wall_exclusion"] = wall
+    return summary
+
+
+def _paired(
+    a: dict[str, Any],
+    b: dict[str, Any],
+    sign: float,
+) -> dict[str, Any] | None:
+    """Pair two arms' per-seed statistic, oriented by ``sign``; the test with a two-sided p."""
+    paired = [
+        sign * (float(a[s]) - float(b[s]))
+        for s in sorted(set(a) & set(b), key=int)
+        if bv._finite(a[s]) and bv._finite(b[s])
+    ]
+    if not paired:
+        return None
+    test = dict(wp.paired_seed_wilcoxon_bootstrap(paired))
+    test["wilcoxon_p_two_sided"] = ops.two_sided(float(test["wilcoxon_p"]))
+    return test
+
+
+def thermal_comparisons(arms: dict[str, Any]) -> dict[str, Any]:
+    """Each trained arm against its floor, C.3's rule, and the wild type against the null, beside.
+
+    Differences are oriented so that positive is the thermal reference's direction. Learning added a
+    bias where the trained-minus-floor 80% interval lies above zero.
+    """
+    signs = {key: ref.sign for key, ref in load_bias_signatures(modality="thermotaxis").items()}
+
+    def per_seed(arm: str, key: str) -> dict[str, Any] | None:
+        curves = arms.get(arm, {}).get("bias_curves")
+        return None if curves is None else curves["statistics"][key]["per_seed"]
+
+    floors: dict[str, Any] = {}
+    for arm, floor in THERMO_FLOORS.items():
+        readings = {}
+        for key in bv.BIAS_STATISTICS:
+            a, f = per_seed(arm, key), per_seed(floor, key)
+            test = None if a is None or f is None else _paired(a, f, signs[key])
+            readings[key] = {
+                "arm_minus_floor": test,
+                "learned": test is not None and float(test["ci_lo"]) > 0.0,
+            }
+        floors[arm] = {"floor": floor, "statistics": readings}
+    wiring = {}
+    for key in bv.BIAS_STATISTICS:
+        a, b = per_seed("wt_ppo", key), per_seed("gaponly_ppo", key)
+        wiring[key] = None if a is None or b is None else _paired(a, b, signs[key])
+    return {"trained_minus_floor": floors, "wild_type_minus_gap_only": wiring}
+
+
+def thermotaxis(
+    log_dirs: list[Path],
+    seeds: tuple[int, ...],
+    out_dir: Path,
+    target: int = TARGET,
+    *,
+    workers: int = 8,
+) -> dict[str, Any]:
+    """Grade thermotaxis through the body for the four arms, then compare them."""
+    jobs = [
+        (wiring, learner, seed, [str(d) for d in log_dirs], str(out_dir), target)
+        for wiring, learner in THERMO_ARMS
+        for seed in seeds
+    ]
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(_thermal_run, jobs))
+    arms: dict[str, Any] = {}
+    for wiring, learner in THERMO_ARMS:
+        arm = f"{wiring}_{learner}"
+        runs = [r for r in results if r["arm"] == arm]
+        present = [r for r in runs if not r.get("missing")]
+        arms[arm] = {
+            "n_runs": len(present),
+            "missing_seeds": [r["seed"] for r in runs if r.get("missing")],
+            "bias_curves": thermal_bias_curves(present) if present else None,
+        }
+    return {
+        "target": target,
+        "seeds": list(seeds),
+        "episodes_per_run": bv.EPISODES,
+        "theta_sharp": bv.THETA_SHARP,
+        "wall_margin_mm": bv.WALL_MARGIN_MM,
+        "arms": arms,
+        "comparisons": thermal_comparisons(arms),
+    }
+
+
 def write_csv(result: dict[str, Any], path: Path) -> Path:
     """One row per seed: every arm's plateau and floor, and each null's gap on both metrics."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -275,10 +424,11 @@ def main(argv: list[str] | None = None) -> int:
     gate = sub.add_parser("mlp-gate", help="stage 1: the MLP's gate at each target, and the choice")
     sc = sub.add_parser("score", help="score the panel")
     kin = sub.add_parser("kinematics", help="C.3's instruments, wild type and gap-only null")
-    for parser in (gate, sc, kin):
+    thermo = sub.add_parser("thermotaxis", help="036's thermal bias curves through the body")
+    for parser in (gate, sc, kin, thermo):
         parser.add_argument("--logs", type=Path, action="append", required=True)
         parser.add_argument("--out", type=Path, help="write the JSON here")
-    for parser in (sc, kin):
+    for parser in (sc, kin, thermo):
         parser.add_argument("--seeds", type=int, nargs="+", required=True)
         parser.add_argument("--target", type=int, choices=gen.TARGETS, default=TARGET)
     gate.add_argument("--seeds", type=int, nargs="+", default=list(STAGE1_SEEDS))
@@ -290,6 +440,8 @@ def main(argv: list[str] | None = None) -> int:
         default=list(gen.TARGETS),
     )
     sc.add_argument("--out-dir", type=Path, required=True)
+    thermo.add_argument("--out-dir", type=Path, required=True, help="write each run's capture here")
+    thermo.add_argument("--workers", type=int, default=8)
     sc.add_argument("--csv", type=Path)
     args = ap.parse_args(argv)
     if args.command == "mlp-gate":
@@ -298,6 +450,14 @@ def main(argv: list[str] | None = None) -> int:
         result = score(args.logs, args.out_dir, tuple(args.seeds), args.target)
         if args.csv:
             write_csv(result, args.csv)
+    elif args.command == "thermotaxis":
+        result = thermotaxis(
+            args.logs,
+            tuple(args.seeds),
+            args.out_dir,
+            args.target,
+            workers=args.workers,
+        )
     else:
         result = kinematics(args.logs, tuple(args.seeds), args.target)
     payload = json.dumps(result, indent=2, default=str) + "\n"

@@ -197,3 +197,71 @@ def test_temperature_is_read_at_the_head() -> None:
     assert head is not None
     params = agent._create_brain_params()
     assert params.temperature == pytest.approx(env.get_temperature(position=tuple(head[0])))
+
+
+def test_a_thermal_evaluation_records_the_thermal_drive() -> None:
+    """Scenario "A thermal evaluation records the thermal drive": the setpoint error, not food."""
+    import body_kinematics_eval as harness  # pyright: ignore[reportMissingImports]
+
+    path = gen.THERMAL / f"{gen.stem('wt', 'frozen', 20)}.yml"
+    capture = harness.run_capture(
+        path,
+        3,
+        None,
+        episodes=1,
+        capture_behaviour=True,
+        capture_modality="thermotaxis",
+    )
+    steps = capture.behaviour[0]
+    assert steps
+    centre = capture.world_size_mm / 2
+    # The cell's field: 20 degrees C at the centre, 1.25 degrees C/mm along x; Tc is 20.
+    for step in steps:
+        temperature = 20.0 + 1.25 * (step.x - centre)
+        assert step.concentration == pytest.approx(-abs(temperature - 20.0), abs=1e-6)
+
+
+class TestThermotaxisComparisons:
+    def _arms(self, offsets: dict[str, float]) -> dict[str, Any]:
+        from quantumnematode.validation.datasets import load_bias_signatures
+
+        signs = {k: r.sign for k, r in load_bias_signatures(modality="thermotaxis").items()}
+        seeds = [str(s) for s in range(2301, 2309)]
+        return {
+            arm: {
+                "bias_curves": {
+                    "statistics": {
+                        key: {
+                            "per_seed": {
+                                s: signs[key] * (offset + 0.01 * i) for i, s in enumerate(seeds)
+                            },
+                        }
+                        for key in signs
+                    },
+                },
+            }
+            for arm, offset in offsets.items()
+        }
+
+    def test_learning_in_the_reference_direction_is_flagged(self) -> None:
+        """A trained arm is paired with its floor, oriented so positive is the reference sign."""
+        arms = self._arms(
+            {"wt_ppo": 0.2, "wt_frozen": 0.0, "gaponly_ppo": 0.1, "gaponly_frozen": 0.1},
+        )
+        out = tb.thermal_comparisons(arms)
+        wt = out["trained_minus_floor"]["wt_ppo"]["statistics"]
+        null = out["trained_minus_floor"]["gaponly_ppo"]["statistics"]
+        assert all(r["learned"] for r in wt.values())
+        assert not any(r["learned"] for r in null.values())
+        for test in out["wild_type_minus_gap_only"].values():
+            assert test["mean_delta"] == pytest.approx(0.1)
+            assert 0.0 <= test["wilcoxon_p_two_sided"] <= 1.0
+
+    def test_a_missing_arm_leaves_its_comparison_empty(self) -> None:
+        arms = self._arms({"wt_ppo": 0.2, "wt_frozen": 0.0})
+        out = tb.thermal_comparisons(arms)
+        assert all(
+            r["arm_minus_floor"] is None
+            for r in out["trained_minus_floor"]["gaponly_ppo"]["statistics"].values()
+        )
+        assert all(v is None for v in out["wild_type_minus_gap_only"].values())
