@@ -1,0 +1,612 @@
+{
+  "block_episodes": 500,
+  "readings": {
+    "auc_all (registered metric)": {
+      "mean_delta": 0.12565104166666669,
+      "wilcoxon_p": 0.005901310360059142,
+      "ci_lo": 0.06730312499999999,
+      "ci_hi": 0.1780015625,
+      "n": 32,
+      "wilcoxon_p_two_sided": 0.011802620720118284
+    },
+    "auc over first 3000 episodes": {
+      "mean_delta": 0.11461458333333334,
+      "wilcoxon_p": 0.008266473887488246,
+      "ci_lo": 0.054043749999999995,
+      "ci_hi": 0.16328541666666666,
+      "n": 32,
+      "wilcoxon_p_two_sided": 0.016532947774976492
+    },
+    "peak 500-episode block, %": {
+      "mean_delta": 7.574999999999999,
+      "wilcoxon_p": 0.009465908877791314,
+      "ci_lo": 3.6806249999999987,
+      "ci_hi": 11.731875,
+      "n": 32,
+      "wilcoxon_p_two_sided": 0.018931817755582628
+    },
+    "episodes to peak block": {
+      "mean_delta": -390.625,
+      "wilcoxon_p": 0.909319120527054,
+      "ci_lo": -687.5,
+      "ci_hi": -62.5,
+      "n": 32,
+      "wilcoxon_p_two_sided": 0.18136175894589202
+    },
+    "auc_all, seeds with no collapse in either": {
+      "mean_delta": 0.09265277777777776,
+      "wilcoxon_p": 0.04468661546707153,
+      "ci_lo": 0.035613888888888875,
+      "ci_hi": 0.15554444444444446,
+      "n": 24,
+      "wilcoxon_p_two_sided": 0.08937323093414307
+    },
+    "auc first 3000, seeds with no collapse": {
+      "mean_delta": 0.10458333333333335,
+      "wilcoxon_p": 0.04196000099182129,
+      "ci_lo": 0.04545277777777778,
+      "ci_hi": 0.16524027777777778,
+      "n": 24,
+      "wilcoxon_p_two_sided": 0.08392000198364258
+    }
+  },
+  "collapses": {
+    "wt_ppo": {
+      "2313": 6000,
+      "2328": 6000
+    },
+    "gaponly_ppo": {
+      "2304": 5000,
+      "2305": 6000,
+      "2307": 6000,
+      "2308": 5500,
+      "2319": 4500,
+      "2330": 5000
+    }
+  },
+  "no_collapse_seeds": [
+    2301,
+    2302,
+    2303,
+    2306,
+    2309,
+    2310,
+    2311,
+    2312,
+    2314,
+    2315,
+    2316,
+    2317,
+    2318,
+    2320,
+    2321,
+    2322,
+    2323,
+    2324,
+    2325,
+    2326,
+    2327,
+    2329,
+    2331,
+    2332
+  ],
+  "per_seed": {
+    "wt_ppo": {
+      "2301": {
+        "auc_first3000": 0.004666666666666667,
+        "auc_all": 0.33366666666666667,
+        "peak_block_pct": 90.8,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2302": {
+        "auc_first3000": 0.44633333333333336,
+        "auc_all": 0.6508333333333334,
+        "peak_block_pct": 88.6,
+        "episodes_to_peak": 4000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2303": {
+        "auc_first3000": 0.365,
+        "auc_all": 0.4975,
+        "peak_block_pct": 88.4,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2304": {
+        "auc_first3000": 0.39466666666666667,
+        "auc_all": 0.5908333333333333,
+        "peak_block_pct": 94.0,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2305": {
+        "auc_first3000": 0.004333333333333333,
+        "auc_all": 0.21266666666666667,
+        "peak_block_pct": 65.8,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2306": {
+        "auc_first3000": 0.3,
+        "auc_all": 0.5528333333333333,
+        "peak_block_pct": 83.2,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2307": {
+        "auc_first3000": 0.09766666666666667,
+        "auc_all": 0.44683333333333336,
+        "peak_block_pct": 84.4,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2308": {
+        "auc_first3000": 0.509,
+        "auc_all": 0.6855,
+        "peak_block_pct": 90.6,
+        "episodes_to_peak": 4500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2309": {
+        "auc_first3000": 0.467,
+        "auc_all": 0.6846666666666666,
+        "peak_block_pct": 91.4,
+        "episodes_to_peak": 4500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2310": {
+        "auc_first3000": 0.29,
+        "auc_all": 0.5481666666666667,
+        "peak_block_pct": 84.8,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2311": {
+        "auc_first3000": 0.294,
+        "auc_all": 0.5873333333333334,
+        "peak_block_pct": 90.8,
+        "episodes_to_peak": 4500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2312": {
+        "auc_first3000": 0.606,
+        "auc_all": 0.711,
+        "peak_block_pct": 91.2,
+        "episodes_to_peak": 3000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2313": {
+        "auc_first3000": 0.2836666666666667,
+        "auc_all": 0.4166666666666667,
+        "peak_block_pct": 74.8,
+        "episodes_to_peak": 4500,
+        "collapsed": true,
+        "collapse_by_episode": 6000
+      },
+      "2314": {
+        "auc_first3000": 0.123,
+        "auc_all": 0.48583333333333334,
+        "peak_block_pct": 89.2,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2315": {
+        "auc_first3000": 0.47433333333333333,
+        "auc_all": 0.6878333333333333,
+        "peak_block_pct": 92.0,
+        "episodes_to_peak": 4500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2316": {
+        "auc_first3000": 0.5143333333333333,
+        "auc_all": 0.6918333333333333,
+        "peak_block_pct": 91.6,
+        "episodes_to_peak": 3000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2317": {
+        "auc_first3000": 0.24766666666666667,
+        "auc_all": 0.5181666666666667,
+        "peak_block_pct": 88.8,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2318": {
+        "auc_first3000": 0.6966666666666667,
+        "auc_all": 0.7665,
+        "peak_block_pct": 92.0,
+        "episodes_to_peak": 2500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2319": {
+        "auc_first3000": 0.6056666666666667,
+        "auc_all": 0.7555,
+        "peak_block_pct": 93.0,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2320": {
+        "auc_first3000": 0.19433333333333333,
+        "auc_all": 0.5168333333333334,
+        "peak_block_pct": 89.8,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2321": {
+        "auc_first3000": 0.17633333333333334,
+        "auc_all": 0.3943333333333333,
+        "peak_block_pct": 92.6,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2322": {
+        "auc_first3000": 0.546,
+        "auc_all": 0.6836666666666666,
+        "peak_block_pct": 89.2,
+        "episodes_to_peak": 3000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2323": {
+        "auc_first3000": 0.3933333333333333,
+        "auc_all": 0.6393333333333333,
+        "peak_block_pct": 92.8,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2324": {
+        "auc_first3000": 0.04666666666666667,
+        "auc_all": 0.30833333333333335,
+        "peak_block_pct": 77.0,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2325": {
+        "auc_first3000": 0.4866666666666667,
+        "auc_all": 0.6326666666666667,
+        "peak_block_pct": 86.6,
+        "episodes_to_peak": 4500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2326": {
+        "auc_first3000": 0.41,
+        "auc_all": 0.634,
+        "peak_block_pct": 90.6,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2327": {
+        "auc_first3000": 0.41633333333333333,
+        "auc_all": 0.6238333333333334,
+        "peak_block_pct": 90.0,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2328": {
+        "auc_first3000": 0.543,
+        "auc_all": 0.6075,
+        "peak_block_pct": 82.4,
+        "episodes_to_peak": 3000,
+        "collapsed": true,
+        "collapse_by_episode": 6000
+      },
+      "2329": {
+        "auc_first3000": 0.513,
+        "auc_all": 0.7026666666666667,
+        "peak_block_pct": 94.4,
+        "episodes_to_peak": 4000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2330": {
+        "auc_first3000": 0.5266666666666666,
+        "auc_all": 0.7066666666666667,
+        "peak_block_pct": 92.6,
+        "episodes_to_peak": 4000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2331": {
+        "auc_first3000": 0.2936666666666667,
+        "auc_all": 0.30366666666666664,
+        "peak_block_pct": 81.4,
+        "episodes_to_peak": 3000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2332": {
+        "auc_first3000": 0.10866666666666666,
+        "auc_all": 0.4141666666666667,
+        "peak_block_pct": 89.0,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      }
+    },
+    "gaponly_ppo": {
+      "2301": {
+        "auc_first3000": 0.21666666666666667,
+        "auc_all": 0.4811666666666667,
+        "peak_block_pct": 88.2,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2302": {
+        "auc_first3000": 0.5396666666666666,
+        "auc_all": 0.7215,
+        "peak_block_pct": 91.4,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2303": {
+        "auc_first3000": 0.12966666666666668,
+        "auc_all": 0.4236666666666667,
+        "peak_block_pct": 85.4,
+        "episodes_to_peak": 4500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2304": {
+        "auc_first3000": 0.062,
+        "auc_all": 0.16466666666666666,
+        "peak_block_pct": 63.0,
+        "episodes_to_peak": 4000,
+        "collapsed": true,
+        "collapse_by_episode": 5000
+      },
+      "2305": {
+        "auc_first3000": 0.214,
+        "auc_all": 0.27116666666666667,
+        "peak_block_pct": 70.0,
+        "episodes_to_peak": 5500,
+        "collapsed": true,
+        "collapse_by_episode": 6000
+      },
+      "2306": {
+        "auc_first3000": 0.374,
+        "auc_all": 0.5343333333333333,
+        "peak_block_pct": 81.4,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2307": {
+        "auc_first3000": 0.14066666666666666,
+        "auc_all": 0.362,
+        "peak_block_pct": 85.4,
+        "episodes_to_peak": 5000,
+        "collapsed": true,
+        "collapse_by_episode": 6000
+      },
+      "2308": {
+        "auc_first3000": 0.273,
+        "auc_all": 0.36866666666666664,
+        "peak_block_pct": 75.4,
+        "episodes_to_peak": 4500,
+        "collapsed": true,
+        "collapse_by_episode": 5500
+      },
+      "2309": {
+        "auc_first3000": 0.044333333333333336,
+        "auc_all": 0.29433333333333334,
+        "peak_block_pct": 82.8,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2310": {
+        "auc_first3000": 0.434,
+        "auc_all": 0.6403333333333333,
+        "peak_block_pct": 91.0,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2311": {
+        "auc_first3000": 0.06433333333333334,
+        "auc_all": 0.13416666666666666,
+        "peak_block_pct": 25.4,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2312": {
+        "auc_first3000": 0.38866666666666666,
+        "auc_all": 0.5895,
+        "peak_block_pct": 85.8,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2313": {
+        "auc_first3000": 0.4756666666666667,
+        "auc_all": 0.6086666666666667,
+        "peak_block_pct": 89.0,
+        "episodes_to_peak": 3000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2314": {
+        "auc_first3000": 0.035666666666666666,
+        "auc_all": 0.4065,
+        "peak_block_pct": 84.4,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2315": {
+        "auc_first3000": 0.22733333333333333,
+        "auc_all": 0.4985,
+        "peak_block_pct": 88.4,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2316": {
+        "auc_first3000": 0.013333333333333334,
+        "auc_all": 0.195,
+        "peak_block_pct": 68.2,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2317": {
+        "auc_first3000": 0.47633333333333333,
+        "auc_all": 0.6778333333333333,
+        "peak_block_pct": 91.8,
+        "episodes_to_peak": 4000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2318": {
+        "auc_first3000": 0.12033333333333333,
+        "auc_all": 0.35583333333333333,
+        "peak_block_pct": 79.0,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2319": {
+        "auc_first3000": 0.271,
+        "auc_all": 0.23683333333333334,
+        "peak_block_pct": 77.2,
+        "episodes_to_peak": 3000,
+        "collapsed": true,
+        "collapse_by_episode": 4500
+      },
+      "2320": {
+        "auc_first3000": 0.19666666666666666,
+        "auc_all": 0.5035,
+        "peak_block_pct": 87.6,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2321": {
+        "auc_first3000": 0.19633333333333333,
+        "auc_all": 0.5043333333333333,
+        "peak_block_pct": 88.0,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2322": {
+        "auc_first3000": 0.528,
+        "auc_all": 0.695,
+        "peak_block_pct": 88.6,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2323": {
+        "auc_first3000": 0.124,
+        "auc_all": 0.214,
+        "peak_block_pct": 38.0,
+        "episodes_to_peak": 4500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2324": {
+        "auc_first3000": 0.372,
+        "auc_all": 0.6086666666666667,
+        "peak_block_pct": 87.0,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2325": {
+        "auc_first3000": 0.14,
+        "auc_all": 0.2693333333333333,
+        "peak_block_pct": 58.2,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2326": {
+        "auc_first3000": 0.42133333333333334,
+        "auc_all": 0.6468333333333334,
+        "peak_block_pct": 88.2,
+        "episodes_to_peak": 3500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2327": {
+        "auc_first3000": 0.2753333333333333,
+        "auc_all": 0.499,
+        "peak_block_pct": 89.4,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2328": {
+        "auc_first3000": 0.10766666666666666,
+        "auc_all": 0.29283333333333333,
+        "peak_block_pct": 84.8,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2329": {
+        "auc_first3000": 0.10466666666666667,
+        "auc_all": 0.43533333333333335,
+        "peak_block_pct": 92.0,
+        "episodes_to_peak": 5000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2330": {
+        "auc_first3000": 0.263,
+        "auc_all": 0.32016666666666665,
+        "peak_block_pct": 85.2,
+        "episodes_to_peak": 3500,
+        "collapsed": true,
+        "collapse_by_episode": 5000
+      },
+      "2331": {
+        "auc_first3000": 0.367,
+        "auc_all": 0.6288333333333334,
+        "peak_block_pct": 93.2,
+        "episodes_to_peak": 6000,
+        "collapsed": false,
+        "collapse_by_episode": null
+      },
+      "2332": {
+        "auc_first3000": 0.11433333333333333,
+        "auc_all": 0.3885,
+        "peak_block_pct": 88.0,
+        "episodes_to_peak": 5500,
+        "collapsed": false,
+        "collapse_by_episode": null
+      }
+    }
+  },
+  "note": "wilcoxon_p is one-sided (a > b); wilcoxon_p_two_sided folds it with operating_point_surface.two_sided."
+}

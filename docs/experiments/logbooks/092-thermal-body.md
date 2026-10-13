@@ -17,7 +17,7 @@ body: through the body on hard350, the chemical contrast was unresolved and boun
 
 **Beside it, never read as verdicts:**
 
-- **Part of the lead is the null collapsing.** Six gap-only null learners learned and then lost it,
+- **Part of the final plateau gap is the null collapsing,** late in training (see the addendum). Six gap-only null learners learned and then lost it,
   against two wild-type learners (Fisher p = 0.26). On the 25 seeds where both learners'
   last-quarter plateau is at least 30%, which still include four collapsed learners, the lead is
   **+0.073** [+0.020, +0.122] (p = 0.15).
@@ -227,7 +227,8 @@ advantage, so the body reading has no point-worm pairing on this cell.
 - **It is not the gait.** The two wirings crawl alike, and untrained they are identical, although
   the null also rewires the motor neurons' gap junctions. The trained null's extra reversals are
   behaviour its policy learned, not its body.
-- **It is part speed, part stability.** On the 25 seeds where both learners' last-quarter plateau
+- **It is part speed, part stability** *(refined by the addendum: mostly speed and ceiling; the
+  collapses come late and add little to `auc_success`)*. On the 25 seeds where both learners' last-quarter plateau
   is at least 30%, the wild type's lead is smaller (+0.073): its 80% interval still excludes zero,
   but its Wilcoxon p is 0.15. That subset is defined by the final plateau, not by an absence of
   collapse, and still includes four collapsed learners. Much of the rest comes from the null's
@@ -244,6 +245,37 @@ advantage, so the body reading has no point-worm pairing on this cell.
 - **Why the null collapses more often,** or whether that difference holds on more seeds.
 - **Anything about interior wiring.** The gap-only null rewires all gap junctions, sensory and motor
   included; no boundary-preserving gap null was run.
+
+## Addendum (2026-10-14): speed, ceiling and stability
+
+A breakdown of the same panel by time, from its committed logs
+([speed_stability.json](supporting/092-thermal-body/speed_stability.json); change
+`add-thermal-body-validation`). It is description only: the registered reading stands as read, and
+these figures were first computed while planning the follow-up, not fixed in advance.
+
+| wild type − gap-only null | n | lead | 80% CI | two-sided p |
+|---|---|---|---|---|
+| `auc_success`, all 6,000 episodes (registered) | 32 | +0.126 | [+0.067, +0.178] | 0.012 |
+| `auc_success`, first 3,000 episodes | 32 | **+0.115** | [+0.054, +0.163] | 0.017 |
+| best 500-episode block, success % | 32 | **+7.6 points** | [+3.7, +11.7] | 0.019 |
+| episodes to the best block | 32 | −391 | [−688, −63] | 0.18 |
+| `auc_success`, seeds where neither learner collapsed | 24 | +0.093 | [+0.036, +0.156] | 0.089 |
+| the same seeds, first 3,000 episodes | 24 | +0.105 | [+0.045, +0.165] | 0.084 |
+
+**Every collapse comes late.** The gap-only null's six are first seen in the 500-episode blocks ending
+at episodes 4,500 to 6,000, and the wild type's two in the last block. None is seen before episode
+4,000.
+
+**So the lead is mostly speed and ceiling, not stability.**
+
+- **Speed:** over the first 3,000 episodes, before any collapse, the wild type already leads by
+  +0.115 of the full horizon's +0.126 (mean `auc_success` 0.356 against 0.241).
+- **Ceiling:** its best block is 7.6 points higher (87.9% against 80.4%).
+- **Stability:** the late collapses add only about +0.011 to `auc_success` over 6,000 episodes. They
+  matter more to the final plateau and to subsets chosen by it, as in the plateau table above.
+
+This refines the "part speed, part stability" reading above, which came from the plateau-based
+subsets.
 
 ## Biological fidelity
 

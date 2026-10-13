@@ -19,7 +19,7 @@ import json
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from quantumnematode.agent import DEFAULT_AGENT_BODY_LENGTH, DEFAULT_MAX_STEPS, QuantumNematodeAgent
 from quantumnematode.brain.arch.dtypes import DEFAULT_QUBITS, DEFAULT_SHOTS, BrainType, DeviceType
@@ -114,17 +114,22 @@ def run_capture(  # noqa: PLR0913 - a run's identity and the evaluation's settin
     episodes: int = 10,
     substeps: int | None = None,
     capture_behaviour: bool = False,
+    capture_modality: Literal["food", "thermotaxis"] = "food",
 ) -> Capture:
     """Run ``episodes`` frozen episodes with posture capture, and behaviour capture if asked.
 
-    ``weights`` of ``None`` runs the seed's untrained policy.
+    ``weights`` of ``None`` runs the seed's untrained policy. ``capture_modality`` selects the
+    captured drive, as the simulation's sensing configuration does: the food concentration, or the
+    thermal setpoint error.
     """
     brain, config, sensing_config = build_brain(config_path, seed)
     environment_config = configure_environment(config)
     if weights is not None:
         load_weights(brain, weights)
     if capture_behaviour:
-        sensing_config = sensing_config.model_copy(update={"capture_behaviour": True})
+        sensing_config = sensing_config.model_copy(
+            update={"capture_behaviour": True, "capture_behaviour_modality": capture_modality},
+        )
 
     continuous = environment_config.continuous
     if continuous is None or continuous.body_model != "kinematic":
