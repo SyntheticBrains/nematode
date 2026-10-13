@@ -228,7 +228,7 @@ advantage, so the body reading has no point-worm pairing on this cell.
   the null also rewires the motor neurons' gap junctions. The trained null's extra reversals are
   behaviour its policy learned, not its body.
 - **It is part speed, part stability** *(refined by the addendum: mostly speed and ceiling; the
-  collapses come late and add little to `auc_success`)*. On the 25 seeds where both learners' last-quarter plateau
+  collapses come late, after the first 3,000 episodes' +0.115 lead is already in place)*. On the 25 seeds where both learners' last-quarter plateau
   is at least 30%, the wild type's lead is smaller (+0.073): its 80% interval still excludes zero,
   but its Wilcoxon p is 0.15. That subset is defined by the final plateau, not by an absence of
   collapse, and still includes four collapsed learners. Much of the rest comes from the null's
@@ -271,8 +271,11 @@ at episodes 4,500 to 6,000, and the wild type's two in the last block. None is s
 - **Speed:** over the first 3,000 episodes, before any collapse, the wild type already leads by
   +0.115 of the full horizon's +0.126 (mean `auc_success` 0.356 against 0.241).
 - **Ceiling:** its best block is 7.6 points higher (87.9% against 80.4%).
-- **Stability:** the late collapses add only about +0.011 to `auc_success` over 6,000 episodes. They
-  matter more to the final plateau and to subsets chosen by it, as in the plateau table above.
+- **Stability:** the full-horizon lead is only about +0.011 above the first-3,000-episode lead. Since
+  the full horizon averages its two halves, the second half's lead is about +0.137. That half holds
+  both the late collapses and any continued difference in learning, and this breakdown does not
+  separate them, so no part of it is attributed to collapse. The collapses matter more to the final
+  plateau and to subsets chosen by it, as in the plateau table above.
 
 This refines the "part speed, part stability" reading above, which came from the plateau-based
 subsets.
