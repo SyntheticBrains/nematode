@@ -18,8 +18,9 @@ body: through the body on hard350, the chemical contrast was unresolved and boun
 **Beside it, never read as verdicts:**
 
 - **Part of the lead is the null collapsing.** Six gap-only null learners learned and then lost it,
-  against two wild-type learners (Fisher p = 0.26). Among seeds where both learners plateau at 30%
-  or more, the lead is **+0.073** [+0.020, +0.122] (p = 0.15).
+  against two wild-type learners (Fisher p = 0.26). On the 25 seeds where both learners'
+  last-quarter plateau is at least 30%, which still include four collapsed learners, the lead is
+  **+0.073** [+0.020, +0.122] (p = 0.15).
 - **The two wirings crawl alike.** Undulation frequency, wavelength and speed match, trained and
   frozen, and untrained the two are identical, so the lead is not a gait difference. Trained, the
   null reverses more (4.3% of steps against 0.7%), a policy difference that fits its collapses.
@@ -160,18 +161,22 @@ per-seed spread is wide (−0.33 to +0.52), and the largest leads are seeds wher
 The wild type collapses less often than the gap-only null, but not significantly (Fisher p = 0.26).
 Every arm collapses sometimes.
 
-**The lead on seeds where both learners learn**, a post-hoc description:
+**The lead on seeds where both learners' last-quarter plateau clears a threshold**, a post-hoc
+description. The threshold is on the plateau alone, so a subset can still hold learners that peaked
+higher and declined: the ≥ 30% subset includes four of the eight collapsed learners (wild type 2313
+and 2328; gap-only null 2305 and 2307).
 
 Every p value in this logbook is two-sided.
 
 | seeds kept | n | lead | 80% CI | two-sided p |
 |---|---|---|---|---|
 | all (registered) | 32 | +0.126 | [+0.067, +0.178] | 0.012 |
-| both plateau ≥ 5% | 29 | +0.093 | [+0.039, +0.148] | 0.062 |
-| both plateau ≥ 30% | 25 | +0.073 | [+0.020, +0.122] | 0.15 |
+| both last-quarter plateaus ≥ 5% | 29 | +0.093 | [+0.039, +0.148] | 0.062 |
+| both last-quarter plateaus ≥ 30% | 25 | +0.073 | [+0.020, +0.122] | 0.15 |
 
-So the lead has two parts: the null more often loses what it learned, and where both keep it, the
-wild type still leads, though not significantly by the Wilcoxon (p = 0.15).
+So the lead shrinks as seeds with a low final plateau, most of them the null's collapses, are set
+aside. On the 25 seeds where both learners end at 30% or more, the wild type still leads, though not
+significantly by the Wilcoxon (p = 0.15).
 
 **`episodes_to_30pct_success`:** the wild type reaches 30% **458 episodes sooner** [166, 707],
 p = 0.023. Median episodes to 30%: the wild type 1,397, the gap-only null 2,007, the chemical-only
@@ -222,9 +227,11 @@ advantage, so the body reading has no point-worm pairing on this cell.
 - **It is not the gait.** The two wirings crawl alike, and untrained they are identical, although
   the null also rewires the motor neurons' gap junctions. The trained null's extra reversals are
   behaviour its policy learned, not its body.
-- **It is part speed, part stability.** Where both learners keep what they learned, the wild type's
-  lead is smaller (+0.073): its 80% interval still excludes zero, but its Wilcoxon p is 0.15. The
-  rest comes from the null losing what it learned more often.
+- **It is part speed, part stability.** On the 25 seeds where both learners' last-quarter plateau
+  is at least 30%, the wild type's lead is smaller (+0.073): its 80% interval still excludes zero,
+  but its Wilcoxon p is 0.15. That subset is defined by the final plateau, not by an absence of
+  collapse, and still includes four collapsed learners. Much of the rest comes from the null's
+  low-plateau seeds, most of them collapses.
 - **The chemical wiring may matter here too.** Against the chemical-only null the lead is +0.086
   with p = 0.14, larger than on hard350. It was not registered, and is not read.
 - **The size is uncertain.** The panel's spread was 3.6 times the pilot's, and the lead's size on the
