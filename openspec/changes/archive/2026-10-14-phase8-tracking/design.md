@@ -8,7 +8,7 @@
 
 - Give the committed Phase 8 work an honest home (genuine `[ ]` not-started tasks) across the two shipments (8a / 8b) with the SHOULD/MAY items attached to their windows.
 - Make D15–D20 operationally binding: rung changes conform to them, and amendments happen here, dated, not silently in milestone changes.
-- Pin the execution-protocol standards Phases 6 and 7 paid for — now the thirteen principles of the [phase protocol](../../../docs/research/phase-protocol.md) — where rung changes must inherit them, with the Phase 7 additions (positive control per new component, sweep before pin, re-baseline at a moved operating point, a registered minimum effect in both directions, the five-status close) stated as requirements rather than advice.
+- Pin the execution-protocol standards Phases 6 and 7 paid for — now the thirteen principles of the [phase protocol](../../../../docs/research/phase-protocol.md) — where rung changes must inherit them, with the Phase 7 additions (positive control per new component, sweep before pin, re-baseline at a moved operating point, a registered minimum effect in both directions, the five-status close) stated as requirements rather than advice.
 
 **Non-Goals:**
 
