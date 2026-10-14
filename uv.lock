@@ -2253,7 +2253,7 @@ wheels = [
 
 [[package]]
 name = "quantum-nematode"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "packages/quantum-nematode" }
 dependencies = [
     { name = "cma" },
@@ -2319,7 +2319,7 @@ provides-extras = ["cpu", "gpu", "torch", "qpu", "pixel", "analysis"]
 
 [[package]]
 name = "quantum-nematode-workspace"
-version = "0.6.0"
+version = "0.7.0"
 source = { virtual = "." }
 dependencies = [
     { name = "pre-commit" },
