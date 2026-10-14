@@ -63,8 +63,9 @@ Score 2, not 3: useful without settling anything above.
   on 2026-10-14: the dynamical rung here learned far slower than the memoryless one and closed
   (Logbook 080); plastic gap strengths on the settling substrate did not move the wiring effect.*
 - **Operating point** — whether a wiring effect survives the learner's settings, connectome reservoir
-  computing, hyperparameter sensitivity surfaces. *Demoted from 3 on 2026-10-14: the depth effect
-  here was explained by the sensory-to-motor boundary.*
+  computing, hyperparameter sensitivity surfaces. *Demoted from 3 on 2026-10-14: at settling depth 4,
+  block V's point, the wiring effect here was consistent with the sensory-to-motor boundary (Logbook
+  079); other depths were not re-tested against that null.*
 - **Cross-connectome transfer** — *C. elegans* to *P. pacificus* head circuits, the dauer wiring
   state, homology between nematode nervous systems, and wiring changes across development or life
   stage. *Demoted from 3 on 2026-09-20: Phase 8 stays on one species deliberately. Still worth

@@ -20,11 +20,12 @@ Phase 8 set out to ground the connectome brain's wiring advantage over a degree-
   - Through the kinematic body it is **+0.126** (`move_wt`, Logbook 092). That is mostly faster
     learning and a higher peak, together with a stronger weathervane toward the thermal setpoint
     (Logbook 093).
-- **Grounding the chemical wiring moved nothing.**
+- **Grounding the chemical wiring moved no registered reading.**
   - Measured weights left the wiring effect unmoved (8a, Logbook 073).
   - Real synapse signs, per neuron and per connection, gave the chemical wiring no lead (Logbook
     091).
-  - Serotonin and PDF knockouts read no effect and unresolved (Logbook 090).
+  - The serotonin and PDF knockouts read, on on-lawn speed, no effect at the minimum (*tph-1*) and
+    unresolved (*pdfr-1*), though both lowered intake (Logbook 090).
 - **The body works.** Both MLP-PPO and the connectome learn to forage through a 12-segment kinematic
   body driven by the anatomical motor-to-muscle map. Its crawl passes the sourced body checks.
   Learning produces a weathervane in every arm and every sense, and never klinokinesis.
@@ -221,8 +222,8 @@ Two items were added along the way: M.10 (per-connection signs) and M.9 (the the
    pilot that decides it** (`add-thermal-split`).
 
 4. **A panel sized from a small pilot sizes from an upper bound on the pilot's spread** (this
-   change). Five of the six readings sized from a pilot in 8b achieved a larger spread than the
-   pilot's:
+   change). Four of the five readings listed below, each sized from a pilot in 8b, achieved a larger
+   spread than the pilot's:
 
    | reading | achieved spread over the pilot's |
    |---|---|

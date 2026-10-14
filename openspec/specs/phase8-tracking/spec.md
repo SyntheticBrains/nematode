@@ -11,13 +11,19 @@ close, 2026-10-14 (Logbook 094).
 
 ### Requirement: Phase 8 Living Shipment Checklist
 
-The repository SHALL maintain a single living checklist file at `openspec/changes/phase8-tracking/tasks.md` covering Phase 8's two shipments (8a: block A, B.1 and the 8a synthesis; 8b: the controls carried from 8a — A.6t, A.3 and B.2 — then C.0–C.5, B.3 + D.1 and the phase synthesis) plus the MAY items, at sub-task granularity. Every Phase 8 milestone PR SHALL update this file as part of its diff. This change SHALL remain unarchived until the Phase 8 synthesis publishes, at which point it archives alongside that synthesis change.
+While Phase 8 is active, the repository SHALL maintain a single living checklist file at `openspec/changes/phase8-tracking/tasks.md` covering Phase 8's two shipments (8a: block A, B.1 and the 8a synthesis; 8b: the controls carried from 8a — A.6t, A.3 and B.2 — then C.0–C.5, B.3 + D.1 and the phase synthesis) plus the MAY items, at sub-task granularity. Every Phase 8 milestone PR SHALL update this file as part of its diff. This change SHALL remain unarchived until the Phase 8 synthesis publishes, at which point it archives alongside that synthesis change. Once archived, the checklist at `openspec/changes/archive/2026-10-14-phase8-tracking/tasks.md` SHALL be the historical record of Phase 8, and the living-checklist duties above SHALL no longer apply.
 
 #### Scenario: Future session orients to Phase 8
 
-- **GIVEN** a fresh AI session resumes Phase 8 work
+- **GIVEN** a fresh AI session resumes Phase 8 work while Phase 8 is active
 - **WHEN** the agent reads `openspec/changes/phase8-tracking/tasks.md` and `docs/roadmap.md` § Phase 8
 - **THEN** the agent SHALL be able to identify the current shipment, sub-task, and applicable design decisions (D15–D22) without re-deriving the plan or the review corrections
+
+#### Scenario: A reader consults Phase 8 after it closed
+
+- **GIVEN** Phase 8 is complete and its tracker archived
+- **WHEN** a reader or agent looks for Phase 8's checklist and decision record
+- **THEN** they SHALL be directed to `openspec/changes/archive/2026-10-14-phase8-tracking/tasks.md`, the historical record, and to `docs/roadmap.md` § Phase 8
 
 #### Scenario: Milestone PR updates the checklist
 

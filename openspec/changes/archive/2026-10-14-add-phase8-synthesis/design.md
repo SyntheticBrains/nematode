@@ -45,8 +45,8 @@ user has said the paper is not a priority. The synthesis writes the package inve
 Each comes from an 8b defect, as S8a's did.
 
 1. **A panel sized from a small pilot sizes from an upper bound on the pilot's spread.**
-   - The evidence: five of the six readings sized from a pilot in 8b achieved a larger spread than
-     the pilot's:
+   - The evidence: four of the five readings listed below, each sized from a pilot in 8b, achieved a
+     larger spread than the pilot's:
      - C.1e, 1.09 times;
      - M.10's lead, 1.5 times;
      - M.10's grounding reading, 1.4 times;
