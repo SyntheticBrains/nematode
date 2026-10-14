@@ -220,7 +220,7 @@ Releases are tags on `main` plus a GitHub Release; there is no PyPI publication.
 
 2. Set the version in both `pyproject.toml` files and in `CITATION.cff` (with `date-released`), then run `uv lock` so the lock file records it.
 
-3. Run `uv run pytest -m "not nightly"`, `uv run pre-commit run -a` and `uv build`, then audit the locked third-party dependencies — export them to a file and point `pip-audit` at it:
+3. Run `uv run pytest -m "not nightly"`, `uv run pre-commit run -a` and `uv build --package quantum-nematode` (the workspace root is private and has no build system of its own, so a bare `uv build` fails on its package discovery), then audit the locked third-party dependencies — export them to a file and point `pip-audit` at it:
 
    ```bash
    uv export --format requirements-txt --no-hashes --no-emit-project --no-emit-workspace \
