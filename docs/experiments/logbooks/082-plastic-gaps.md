@@ -156,7 +156,7 @@ The censoring rule found the episode metric comparable (crossing rates 95–98%)
 
 A learnable multiplier per existing pair stands in for coupling that the worm modulates through innexin
 expression (UNC-7, UNC-9 among them) and neuromodulation. Activity-dependent gap-junction weakening is
-documented in the olfactory circuit (NMDAR-modulated RMG–AIB coupling, *Nat. Commun.* 2020). The model
+documented in the olfactory circuit (NMDAR-modulated RMG–AIB coupling, *Nat. Commun.* 2020) *(corrected 2026-10-15: the site is **RIM–AIB**, INX-4 expressed in RIM — Choi et al. 2020, doi:10.1038/s41467-020-17218-0; the sentence is left as written)*. The model
 keeps the EM placement fixed and tunes strength freely, symmetric and positive. That fits the question,
 since placement is what EM measures and strength is what the worm can change. It does not model
 rectifying junctions, which are directional, or heterotypic innexin pairs. Both are left for the

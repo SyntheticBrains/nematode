@@ -166,6 +166,110 @@ label = "Flavell et al. 2013, serotonin and PDF initiate and extend roaming and 
 id = "W3214251916"
 label = "Ji et al. 2021, a neural circuit for flexible control of persistent behavioral states"
 
+# Added 2026-10-15, re-aimed at Phase 9's plan (roadmap v4.5). Phase 9 screens the gap-junction
+# placement effect for a model artefact and takes it to mechanism, fixes late PPO collapse, reads
+# nulls from biological variation, and ranks the families through the body behind a trigger. These
+# are the papers that plan builds on; the next paper to cite one is the one the watch needs to see.
+
+# The gap model and its nulls (G.0–G.3b): strength-preserving randomisation, the worm's
+# electrical-synapse biology, the class predictions registered for G.3, and the contact data.
+[[openalex.seeds]]
+id = "W4405248633"
+label = "Milisav et al. 2024, strength-preserving randomisation of weighted networks"
+
+[[openalex.seeds]]
+id = "W2949267911"
+label = "Bhattacharya et al. 2019, plasticity of the electrical connectome of C. elegans"
+
+[[openalex.seeds]]
+id = "W2031012150"
+label = "Kawano et al. 2011, UNC-7/UNC-9 premotor-motor gap junctions bias forward locomotion"
+
+[[openalex.seeds]]
+id = "W2603888174"
+label = "Liu et al. 2017, rectifying gap junctions amplify co-located chemical synapses"
+
+[[openalex.seeds]]
+id = "W2949783014"
+label = "Xu et al. 2018, AVB-B gap junctions facilitate undulatory wave propagation"
+
+[[openalex.seeds]]
+id = "W3041778366"
+label = "Choi et al. 2020, the RIM-AIB gap junction circuit regulates olfactory learning"
+
+[[openalex.seeds]]
+id = "W4407906868"
+label = "Sojka et al. 2025, an extensive innexin network modulates ASH aversive behaviour"
+
+[[openalex.seeds]]
+id = "W3131776733"
+label = "Brittin et al. 2021, multi-scale nerve-ring map with membrane adjacency (the contact null)"
+
+# The instrument at long horizons (M.1): late PPO collapse and loss of plasticity.
+[[openalex.seeds]]
+id = "W4415796922"
+label = "Moalla et al. 2024, representation collapse and trust issues in PPO"
+
+[[openalex.seeds]]
+id = "W4400373827"
+label = "Elsayed, Lan, Lyle & Mahmood 2024, weight clipping against policy collapse"
+
+[[openalex.seeds]]
+id = "W4401793915"
+label = "Dohare et al. 2024, loss of plasticity in deep continual learning"
+
+# Klinokinesis (K): the theory of discrete turns, and the strategy targets that follow.
+[[openalex.seeds]]
+id = "W7131846611"
+label = "Betancourt et al. 2026, discrete turn strategies emerge in information-limited navigation"
+
+[[openalex.seeds]]
+id = "W7164998451"
+label = "Chen, Pillow & Leifer 2026, state-switching navigation strategies in C. elegans chemotaxis"
+
+[[openalex.seeds]]
+id = "W4408717458"
+label = "Chen et al. 2025 (PLOS Biol), navigation strategies differentially altered by learning"
+
+# The placed set-point memory (P): the identified synapses and the minimal model.
+[[openalex.seeds]]
+id = "W1988504117"
+label = "Kunitomo et al. 2013, salt concentration memory in the ASE taste circuit"
+
+[[openalex.seeds]]
+id = "W2731238059"
+label = "Hawk et al. 2018, plasticity within AFD actuates a thermal memory at AFD-AIY"
+
+[[openalex.seeds]]
+id = "W4407745833"
+label = "Hironaka & Sumi 2025, network model of salt concentration memory-dependent chemotaxis"
+
+# Biological variation and the scoop watch (M.2, G.6, R.2): the male, the fly null results, and
+# the nearest neighbours to a connectome trained through a body.
+[[openalex.seeds]]
+id = "W4405630751"
+label = "Wang et al. 2026, dimorphic architecture of the male C. elegans connectome (eLife)"
+
+[[openalex.seeds]]
+id = "W7115589096"
+label = "Churchland & Garcia-Ojalvo 2025, derivative-free RL on the worm connectome (ENOMAD)"
+
+[[openalex.seeds]]
+id = "W7140224853"
+label = "Brunton et al. 2026, the digital sphinx — a worm connectome walking a fly body"
+
+[[openalex.seeds]]
+id = "W7214331022"
+label = "An 2026, placement and strength read jointly in a compressed fly-brain LIF model"
+
+[[openalex.seeds]]
+id = "W7221062513"
+label = "Correig-Fraga et al. 2026, structure alone supports fly visual computation"
+
+[[openalex.seeds]]
+id = "W7215069349"
+label = "Guan et al. 2026, how much of fly walking is written in the wiring (six null families)"
+
 # --- Keyword search ------------------------------------------------------------------------------
 # Preprints whose title or abstract carries a term, on the listed servers, through OpenAlex. Added
 # 2026-10-03 for two reasons found by hand that week. arXiv's query API returns HTTP 406 to GitHub
