@@ -16,9 +16,9 @@ Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking
   panel arm as stated deltas; loader tests.
 - [ ] 4. **The shortcut audit** takes the cell's config; a test on the thermal cell's sensor set.
 - [ ] 5. **Analysis** `gap_operating_point.py`: `anchor` (D23's rule), `score` (the readings,
-  corrected together, and the verdict map), `predictor` (Decision E), `table` (Decision F), the
-  per-seed CSV; in the gate preflight's shape; tests on synthetic manifests, including every verdict
-  branch and `no_gap_effect`.
+  corrected together, and the 3×3 verdict map, every branch named), per-level seed sets with each level gated on the seeds its floors cover, `predictor` (Decision E), `table` (Decision F), the
+  per-seed CSV; in the gate preflight's shape; tests on synthetic manifests, including every cell of the
+  verdict table, `no_gap_effect`, and the anchor's three minimum cases.
 - [ ] 6. **The anchor pilot** on 9801–9816 (64 runs) and the two-seed smokes on 9851–9852; preflight;
   `m` fixed by D23's rule; the cost measured.
 - [ ] 7. **Registration**: the launch record (arms, seeds, `m`, the verdict map, the predictor, the
@@ -26,7 +26,7 @@ Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking
   and G.0(a) ticked.
 - [ ] 8. **The predictor** on Logbook 082's committed draws, computed only after the launch record is
   committed.
-- [ ] 9. **Campaign** from a separate worktree, seeds 2401–2464, ≈ 848 runs, with the output controls.
+- [ ] 9. **Campaign** from a separate worktree, seeds 2401–2464, ≈ 896 runs, with the output controls.
 - [ ] 10. **Readout**: Logbook 095; the verdict recorded in the tracker and the roadmap's exit criteria;
   CHANGELOG.
 - [ ] 11. **Close-out**: full suite (`uv run pytest -q -m "not nightly"`), `pre-commit run -a`,

@@ -29,7 +29,7 @@ land". Nothing in the mechanism block (G.1–G.3b) registers until this screen h
   arms, and every G.0 arm below, each a stated delta from its parent, re-read by a loader test.
 - **Analysis** (`scripts/analysis/gap_operating_point.py`), in the gate preflight's shape: the
   anchor's readout and D23's minimum rule; the panel's readings, corrected together, and the
-  registered verdict map; the saturation predictor; the matched-statistics table and the shortcut
+  registered verdict map (survives / both / artefact / unresolved, every combination of the two deciding readings named); the saturation predictor; the matched-statistics table and the shortcut
   audit for every gap null (D24); the per-seed CSV.
 - **The shortcut audit** (`scripts/analysis/sensory_motor_hops.py`) takes the cell's config, so it can
   audit the thermal cell's injected sensors and every gap null.
@@ -53,7 +53,7 @@ requirements; every existing scenario unchanged).
 - Configs: under `configs/scenarios/thermal_foraging/`, generated.
 - Docs: `docs/experiments/logbooks/supporting/095-gap-operating-point/` (launch record, pilot,
   panel), Logbook 095, the tracker, the roadmap's G.0 status, CHANGELOG.
-- Machine time: the pilot ≈ 1 h; the panel ≈ 848 runs ≈ 13–15 h at 16 workers.
+- Machine time: the pilot ≈ 1 h; the panel ≈ 896 runs ≈ 15 h at 16 workers.
 
 ## Breaking Changes
 

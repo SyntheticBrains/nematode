@@ -53,23 +53,40 @@ Thermal target 35 on Emmons 2024, depth 4 unless stated, PPO at block V's point 
 | level | wild type | null | seeds | role |
 |---|---|---|---|---|
 | `count` | learn + frozen | gap-only, learn + frozen | 2401–2464 | the reference on the panel's own seeds |
-| `unit` | learn + frozen (16) | gap-only, learn + frozen (16) | 2401–2464 (floors 2401–2416) | **verdict** |
-| `outliers_scattered` | the `count` wild type | scattered null, learn + frozen (16) | 2401–2432 | **verdict** |
+| `unit` | learn + frozen | gap-only, learn + frozen | 2401–2464 | **verdict** |
+| `outliers_scattered` | the `count` wild type | scattered null, learn + frozen | 2401–2432 | **verdict** |
 | `outliers_held` | the `count` wild type | held null, learn + frozen (16) | 2401–2432 | beside |
 | `gap_off` | one arm, learn + frozen (16) | — | 2401–2432 | beside (Decision C) |
 | scale ×0.25, ×0.5, ×2; `log_count` | learn | gap-only, learn | 2401–2416 | beside (profile) |
 | depth 2, 3, 6 | learn | gap-only, learn | 2401–2416 | beside (M.6's thermal depth check) |
 
-About 848 runs. Readings, each a paired `wild type − null` gap on `auc_success`, classified by
-`mc.classify` at the minimum `m` D23 fixes (0.0577, carried if the anchor sits in [0.058, 0.13] and both
-anchor levels are readable, otherwise ⅔ of the anchor's effect), corrected together:
+About 896 runs. The two deciding levels carry frozen floors on every seed, so their gates read on the same seeds as their readings; the beside levels carry floors on a 16-seed subset (marked 16), and the harness gates each level on the seeds its floors cover. Readings, each a paired `wild type − null` gap on `auc_success`, classified by
+`mc.classify` at the minimum `m` D23 fixes (0.0577, carried if the anchor's lead sits in [0.058, 0.13] and both
+anchor levels are readable; ⅔ of the anchor's lead if the lead excludes zero but sits outside that
+range; 0.0577 again if the anchor's interval includes zero, in which case the panel's own `gap(count)`
+decides `no_gap_effect`), corrected together:
 `gap(count)`, `gap(unit)`, `gap(outliers_scattered)`, `gap(outliers_held)`.
 
 **Verdict map (fixed here, before any run):**
 
-- `survives` — `gap(unit)` reads `move_wt` and `gap(outliers_scattered)` reads `no_move` or `below`;
-- `artefact` — `gap(unit)` reads `no_move` or `below`, or `gap(outliers_scattered)` reads `move_wt`;
-- `unresolved` — any other combination, including an `unresolved` state on either deciding reading.
+Each deciding reading is first put in one of three classes: for `gap(unit)`, **holds** (`move_wt`),
+**fails** (`no_move`, `below` or `move_null` — the null level with or ahead of the wild type once counts
+are removed) or **open** (`unresolved`); for `gap(outliers_scattered)`, **reproduces** (`move_wt`),
+**does not** (`no_move`, `below` or `move_null`) or **open**. Every combination is named:
+
+| `gap(unit)` ↓ / `gap(outliers_scattered)` → | does not | reproduces | open |
+|---|---|---|---|
+| **holds** | `survives` | `both` | `unresolved` |
+| **fails** | `artefact` | `artefact` | `artefact` |
+| **open** | `unresolved` | `unresolved` | `unresolved` |
+
+- `survives` licenses G.1–G.3b at the committed scale and depth.
+- `both` — placement matters without the counts, *and* moving a few count outliers alone costs a
+  cell-scale lead — licenses G.1–G.3b, with the outlier pairs registered as their own class in G.3.
+- `artefact` re-aims block G (the tracker's G.0-A): once counts are removed the lead is gone, whatever
+  the outliers do.
+- `unresolved` licenses nothing by itself; how block G proceeds is a dated decision in the tracker and
+  the roadmap.
 
 `gap(count)` must exclude zero above, or the panel reads `no_gap_effect` and nothing else is read
 (the effect did not reproduce on Emmons). This is the roadmap's two-thirds rule in the project's
@@ -85,7 +102,7 @@ On untrained brains (the probe of `sign_scale_calibration.py`: 64 fixed inputs, 
 `|h| > 0.99`), for each of Logbook 082's 64 committed gap-only draws on Cook 2019 (seeds 513–576): the
 saturated fraction over the injected sensors, the command interneurons (AVA, AVB, AVD, AVE, PVC) and
 the readout motor neurons, null minus wild type. **Predicted**: Spearman ρ with that seed's committed
-`auc_success` gap > 0 (more saturation on the path in the null, a larger wild-type lead), minimum
+`auc_success` gap (`fixed_gap_auc_success` in Logbook 082's `per-seed.csv`) > 0 (more saturation on the path in the null, a larger wild-type lead), minimum
 |ρ| 0.3, two-sided permutation p and an 80% bootstrap interval, as A.3 registered its predictor
 ([Logbook 079](../../../docs/experiments/logbooks/079-boundary-null.md)); repeated on the panel's
 Emmons draws once they read. States: `predicts` (ρ ≥ 0.3, p < 0.05), `no_prediction` (interval inside
@@ -103,8 +120,8 @@ sensors. Each wiring's launch-record entry states what it does not preserve.
 
 The anchor pilot runs first on 9801–9816 (wild type and gap-only, count weights, learning and frozen);
 it fixes `m` by D23's rule and is the gate preflight's evidence for the `count` level. The other levels
-are new wirings with no committed runs, so a two-seed smoke per new level (seeds 9851–9852, not a
-pilot, discarded) checks they execute, and their floors are read in the panel itself with the rule that
+are new wirings with no committed runs, so a two-seed smoke per new level (seeds 9851–9852, recorded in the tracker's seed-band
+table; not a pilot, discarded) checks they execute, and their floors are read in the panel itself with the rule that
 a level failing its floor is reported unreadable rather than read. The launch record is committed
 before any panel run.
 
