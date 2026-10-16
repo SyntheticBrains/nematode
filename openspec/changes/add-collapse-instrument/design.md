@@ -69,9 +69,19 @@ seven (leave one out), so the intact side is held to the same rule.
 5. **Variance collapse**: `log_std` falling far below its initial value before onset.
 6. **Mean-head saturation**: the `|u| > 2` fraction rising with `log_std` flat.
 
+**As the harness encodes them** (`collapse_diagnosis.CAUSES`), each pattern is a conjunction of
+departures, the rest of its description read beside as context: (1) weight norm up, saturated
+fraction up and `srank` down; (2) raw advantage std down with the gradient norm departing in neither
+direction; (3) gradient norm up and KL up, the gradient's departure beginning no later than KL's;
+(4) explained variance down and value loss up, the critic-to-actor gradient ratio reported beside;
+(5) `log_std` down; (6) the `|u| > 2` fraction up with `log_std` departing in neither direction. The
+weight norm is the norm over every parameter but the critic's.
+
 A cause is **indicated** when its pattern departs in at least 6 of the 8 collapsed runs and in at most
 1 of the 8 intact twins; **not indicated** when it departs in at most 2 collapsed runs;
-otherwise **mixed**. More than one cause may be indicated. The readout names which, and M.1(b)'s change
+otherwise **mixed**. If a re-run that collapsed on the committed panel does not collapse under the
+registered definition, its pair leaves the stacks, it is named in the readout, and the thresholds
+apply as the same fractions (three quarters, one eighth, one quarter) of the pairs that remain. More than one cause may be indicated. The readout names which, and M.1(b)'s change
 takes its remedy order from it (D25's list, reordered by what is indicated).
 
 ### Decision E: The MLP's incidence
