@@ -121,6 +121,26 @@ uv run python scripts/analysis/collapse.py --logs <archive>/m9-panel/logs \
 
 and the same over Logbook 085's panel logs, with that panel's arms.
 
+*(Computed 2026-10-17, from the archive, before any re-run: [incidence-092.json](incidence-092.json)
+and [incidence-085.json](incidence-085.json); the archive's location is the maintainer's and is not
+recorded here.)* Under the registered definition, against 092's block rule:
+
+| panel | arm | D25 collapsed | 95% Wilson | 092's rule | grid range |
+|---|---|---|---|---|---|
+| 092 (6,000 episodes) | wild type | 7 / 32 | [0.11, 0.39] | 2 | 6–9 |
+| 092 | gap-only null | 9 / 32 | [0.16, 0.45] | 6 | 7–20 |
+| 092 | chemical-only null | 11 / 32 | [0.20, 0.52] | 5 | 8–17 |
+| 085 (3,000 episodes) | wild type | 35 / 64 | [0.43, 0.66] | 6 | 14–50 |
+| 085 | chemical-only null | 32 / 64 | [0.38, 0.62] | 3 | 16–45 |
+| 085 | MLP | 13 / 64 | [0.12, 0.32] | 3 | 3–31 |
+
+**The definition counts transient dips.** Most runs it flags on 085 fall early (23 of the wild type's
+35 before episode 1,500) and recover (22 of 35); many flagged 092 runs end high (final rate 0.77–0.89).
+Seven of the eight known collapsers' onsets fall on their late collapse (episodes 3,858–5,554); the
+gap-only null on 2305 is flagged at an early dip (episode 1,721) it recovered from before its late fall,
+so the diagnosis would align that pair on the wrong event. This is reported for the maintainer's
+decision on D25 before this campaign launches; nothing here is amended by it.
+
 ## Before launch
 
 - **No gate preflight.** This is a diagnosis licensed by an identity check, not a registered contrast:

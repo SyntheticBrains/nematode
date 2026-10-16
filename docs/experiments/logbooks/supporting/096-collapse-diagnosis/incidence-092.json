@@ -1,0 +1,2891 @@
+{
+  "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20": {
+    "definition": {
+      "fraction": 0.5,
+      "level_window": 100,
+      "peak_window": 200,
+      "persistence": 300,
+      "recovery": [
+        0.8,
+        1000
+      ]
+    },
+    "incidence": {
+      "collapsed": 11,
+      "n": 32,
+      "rate": 0.34375,
+      "wilson_95": [
+        0.20410437924433172,
+        0.5168891202103778
+      ]
+    },
+    "kaplan_meier": {
+      "median": null,
+      "n": 32,
+      "steps": [
+        [
+          1220,
+          0.96875
+        ],
+        [
+          1497,
+          0.9375
+        ],
+        [
+          2152,
+          0.90625
+        ],
+        [
+          2521,
+          0.875
+        ],
+        [
+          3550,
+          0.84375
+        ],
+        [
+          4129,
+          0.8125
+        ],
+        [
+          4168,
+          0.78125
+        ],
+        [
+          4378,
+          0.75
+        ],
+        [
+          5237,
+          0.71875
+        ],
+        [
+          5538,
+          0.6875
+        ],
+        [
+          5685,
+          0.65625
+        ]
+      ]
+    },
+    "rule_092_incidence": 5,
+    "runs": {
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2301": {
+        "auc_to_3000": 0.21733333333333332,
+        "auc_to_horizon": 0.49083333333333334,
+        "collapsed": false,
+        "final": 0.72,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.925,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.736,
+          "never_learned": false,
+          "peak": 0.882
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2302": {
+        "auc_to_3000": 0.7696666666666667,
+        "auc_to_horizon": 0.8296666666666667,
+        "collapsed": false,
+        "final": 0.92,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.94,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.9,
+          "never_learned": false,
+          "peak": 0.9
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2303": {
+        "auc_to_3000": 0.19766666666666666,
+        "auc_to_horizon": 0.4295,
+        "collapsed": false,
+        "final": 0.85,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.885,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.836,
+          "never_learned": false,
+          "peak": 0.836
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2304": {
+        "auc_to_3000": 0.14366666666666666,
+        "auc_to_horizon": 0.31433333333333335,
+        "collapsed": true,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": 5237,
+        "peak": 0.785,
+        "peak_at_onset": 0.785,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.0,
+          "never_learned": false,
+          "peak": 0.734
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2305": {
+        "auc_to_3000": 0.627,
+        "auc_to_horizon": 0.7521666666666667,
+        "collapsed": false,
+        "final": 0.9,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.94,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.912,
+          "never_learned": false,
+          "peak": 0.912
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2306": {
+        "auc_to_3000": 0.14833333333333334,
+        "auc_to_horizon": 0.24616666666666667,
+        "collapsed": true,
+        "final": 0.44,
+        "horizon": 6000,
+        "onset": 4168,
+        "peak": 0.73,
+        "peak_at_onset": 0.73,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.242,
+          "never_learned": false,
+          "peak": 0.606
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2307": {
+        "auc_to_3000": 0.0,
+        "auc_to_horizon": 0.0,
+        "collapsed": false,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.0,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.0,
+          "never_learned": true,
+          "peak": 0.0
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2308": {
+        "auc_to_3000": 0.0,
+        "auc_to_horizon": 0.07166666666666667,
+        "collapsed": true,
+        "final": 0.32,
+        "horizon": 6000,
+        "onset": 4378,
+        "peak": 0.485,
+        "peak_at_onset": 0.265,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.374,
+          "never_learned": false,
+          "peak": 0.374
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2309": {
+        "auc_to_3000": 0.121,
+        "auc_to_horizon": 0.3755,
+        "collapsed": true,
+        "final": 0.77,
+        "horizon": 6000,
+        "onset": 1497,
+        "peak": 0.92,
+        "peak_at_onset": 0.525,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.836,
+          "never_learned": false,
+          "peak": 0.884
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2310": {
+        "auc_to_3000": 0.0,
+        "auc_to_horizon": 0.166,
+        "collapsed": false,
+        "final": 0.82,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.83,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.802,
+          "never_learned": false,
+          "peak": 0.802
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2311": {
+        "auc_to_3000": 0.642,
+        "auc_to_horizon": 0.7746666666666666,
+        "collapsed": false,
+        "final": 0.94,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.965,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.936,
+          "never_learned": false,
+          "peak": 0.936
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2312": {
+        "auc_to_3000": 0.0,
+        "auc_to_horizon": 0.0,
+        "collapsed": false,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.0,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.0,
+          "never_learned": true,
+          "peak": 0.0
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2313": {
+        "auc_to_3000": 0.157,
+        "auc_to_horizon": 0.19233333333333333,
+        "collapsed": true,
+        "final": 0.27,
+        "horizon": 6000,
+        "onset": 3550,
+        "peak": 0.8,
+        "peak_at_onset": 0.8,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.38,
+          "never_learned": false,
+          "peak": 0.722
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2314": {
+        "auc_to_3000": 0.5666666666666667,
+        "auc_to_horizon": 0.7175,
+        "collapsed": false,
+        "final": 0.88,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.882,
+          "never_learned": false,
+          "peak": 0.914
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2315": {
+        "auc_to_3000": 0.265,
+        "auc_to_horizon": 0.5123333333333333,
+        "collapsed": false,
+        "final": 0.8,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.89,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.736,
+          "never_learned": false,
+          "peak": 0.814
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2316": {
+        "auc_to_3000": 0.445,
+        "auc_to_horizon": 0.625,
+        "collapsed": false,
+        "final": 0.86,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.965,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.91,
+          "never_learned": false,
+          "peak": 0.91
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2317": {
+        "auc_to_3000": 0.6093333333333333,
+        "auc_to_horizon": 0.7086666666666667,
+        "collapsed": false,
+        "final": 0.83,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.93,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.74,
+          "never_learned": false,
+          "peak": 0.88
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2318": {
+        "auc_to_3000": 0.5423333333333333,
+        "auc_to_horizon": 0.6398333333333334,
+        "collapsed": true,
+        "final": 0.62,
+        "horizon": 6000,
+        "onset": 5538,
+        "peak": 0.935,
+        "peak_at_onset": 0.935,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.384,
+          "never_learned": false,
+          "peak": 0.896
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2319": {
+        "auc_to_3000": 0.49133333333333334,
+        "auc_to_horizon": 0.6656666666666666,
+        "collapsed": false,
+        "final": 0.88,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.935,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.856,
+          "never_learned": false,
+          "peak": 0.88
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2320": {
+        "auc_to_3000": 0.557,
+        "auc_to_horizon": 0.7043333333333334,
+        "collapsed": false,
+        "final": 0.87,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.915,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.86,
+          "never_learned": false,
+          "peak": 0.898
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2321": {
+        "auc_to_3000": 0.49266666666666664,
+        "auc_to_horizon": 0.6831666666666667,
+        "collapsed": false,
+        "final": 0.76,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.97,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.884,
+          "never_learned": false,
+          "peak": 0.936
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2322": {
+        "auc_to_3000": 0.06366666666666666,
+        "auc_to_horizon": 0.36633333333333334,
+        "collapsed": false,
+        "final": 0.87,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.885,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.732,
+          "never_learned": false,
+          "peak": 0.828
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2323": {
+        "auc_to_3000": 0.6093333333333333,
+        "auc_to_horizon": 0.6421666666666667,
+        "collapsed": true,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": 5685,
+        "peak": 0.945,
+        "peak_at_onset": 0.945,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.326,
+          "never_learned": false,
+          "peak": 0.912
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2324": {
+        "auc_to_3000": 0.3446666666666667,
+        "auc_to_horizon": 0.578,
+        "collapsed": false,
+        "final": 0.94,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.935,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.91,
+          "never_learned": false,
+          "peak": 0.91
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2325": {
+        "auc_to_3000": 0.6666666666666666,
+        "auc_to_horizon": 0.7873333333333333,
+        "collapsed": false,
+        "final": 0.88,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.955,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.886,
+          "never_learned": false,
+          "peak": 0.936
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2326": {
+        "auc_to_3000": 0.5236666666666666,
+        "auc_to_horizon": 0.7051666666666667,
+        "collapsed": false,
+        "final": 0.9,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.955,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.888,
+          "never_learned": false,
+          "peak": 0.916
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2327": {
+        "auc_to_3000": 0.388,
+        "auc_to_horizon": 0.5883333333333334,
+        "collapsed": false,
+        "final": 0.83,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.905,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.846,
+          "never_learned": false,
+          "peak": 0.87
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2328": {
+        "auc_to_3000": 0.06666666666666667,
+        "auc_to_horizon": 0.26766666666666666,
+        "collapsed": true,
+        "final": 0.78,
+        "horizon": 6000,
+        "onset": 2152,
+        "peak": 0.85,
+        "peak_at_onset": 0.39,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.806,
+          "never_learned": false,
+          "peak": 0.806
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2329": {
+        "auc_to_3000": 0.3403333333333333,
+        "auc_to_horizon": 0.4528333333333333,
+        "collapsed": false,
+        "final": 0.53,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.85,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.422,
+          "never_learned": false,
+          "peak": 0.714
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2330": {
+        "auc_to_3000": 0.061,
+        "auc_to_horizon": 0.1475,
+        "collapsed": true,
+        "final": 0.08,
+        "horizon": 6000,
+        "onset": 4129,
+        "peak": 0.65,
+        "peak_at_onset": 0.65,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.168,
+          "never_learned": false,
+          "peak": 0.578
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2331": {
+        "auc_to_3000": 0.135,
+        "auc_to_horizon": 0.379,
+        "collapsed": true,
+        "final": 0.77,
+        "horizon": 6000,
+        "onset": 1220,
+        "peak": 0.89,
+        "peak_at_onset": 0.48,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.526,
+          "never_learned": false,
+          "peak": 0.814
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_chemnull_ppo_t20-seed2332": {
+        "auc_to_3000": 0.25366666666666665,
+        "auc_to_horizon": 0.41833333333333333,
+        "collapsed": true,
+        "final": 0.84,
+        "horizon": 6000,
+        "onset": 2521,
+        "peak": 0.875,
+        "peak_at_onset": 0.86,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.846,
+          "never_learned": false,
+          "peak": 0.846
+        }
+      }
+    },
+    "sensitivity": [
+      {
+        "collapsed": 11,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.34375,
+        "registered": false,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 9,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.28125,
+        "registered": false,
+        "wilson_95": [
+          0.15564580497742764,
+          0.45374509425916565
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 13,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.40625,
+        "registered": false,
+        "wilson_95": [
+          0.2551963484266544,
+          0.5773997512461713
+        ]
+      },
+      {
+        "collapsed": 11,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.34375,
+        "registered": false,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 17,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.53125,
+        "registered": false,
+        "wilson_95": [
+          0.3644951711897464,
+          0.6913061289193116
+        ]
+      },
+      {
+        "collapsed": 14,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.4375,
+        "registered": false,
+        "wilson_95": [
+          0.2816533111504036,
+          0.6067440886314801
+        ]
+      },
+      {
+        "collapsed": 10,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.3125,
+        "registered": false,
+        "wilson_95": [
+          0.17952541633609734,
+          0.4856667830095541
+        ]
+      },
+      {
+        "collapsed": 11,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.34375,
+        "registered": false,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 12,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.375,
+        "registered": false,
+        "wilson_95": [
+          0.22933887309454212,
+          0.5474559264692255
+        ]
+      },
+      {
+        "collapsed": 11,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.34375,
+        "registered": true,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 16,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.5,
+        "registered": false,
+        "wilson_95": [
+          0.33630882869327483,
+          0.6636911713067252
+        ]
+      },
+      {
+        "collapsed": 13,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.40625,
+        "registered": false,
+        "wilson_95": [
+          0.2551963484266544,
+          0.5773997512461713
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 11,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.34375,
+        "registered": false,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 12,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.375,
+        "registered": false,
+        "wilson_95": [
+          0.22933887309454212,
+          0.5474559264692255
+        ]
+      },
+      {
+        "collapsed": 10,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.3125,
+        "registered": false,
+        "wilson_95": [
+          0.17952541633609734,
+          0.4856667830095541
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 14,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.4375,
+        "registered": false,
+        "wilson_95": [
+          0.2816533111504036,
+          0.6067440886314801
+        ]
+      },
+      {
+        "collapsed": 12,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.375,
+        "registered": false,
+        "wilson_95": [
+          0.22933887309454212,
+          0.5474559264692255
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      }
+    ]
+  },
+  "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20": {
+    "definition": {
+      "fraction": 0.5,
+      "level_window": 100,
+      "peak_window": 200,
+      "persistence": 300,
+      "recovery": [
+        0.8,
+        1000
+      ]
+    },
+    "incidence": {
+      "collapsed": 9,
+      "n": 32,
+      "rate": 0.28125,
+      "wilson_95": [
+        0.15564580497742764,
+        0.45374509425916565
+      ]
+    },
+    "kaplan_meier": {
+      "median": null,
+      "n": 32,
+      "steps": [
+        [
+          1721,
+          0.96875
+        ],
+        [
+          2971,
+          0.9375
+        ],
+        [
+          3858,
+          0.90625
+        ],
+        [
+          4424,
+          0.875
+        ],
+        [
+          4449,
+          0.84375
+        ],
+        [
+          4716,
+          0.8125
+        ],
+        [
+          4850,
+          0.78125
+        ],
+        [
+          4890,
+          0.75
+        ],
+        [
+          5397,
+          0.71875
+        ]
+      ]
+    },
+    "rule_092_incidence": 6,
+    "runs": {
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2301": {
+        "auc_to_3000": 0.21666666666666667,
+        "auc_to_horizon": 0.4811666666666667,
+        "collapsed": false,
+        "final": 0.52,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.576,
+          "never_learned": false,
+          "peak": 0.882
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2302": {
+        "auc_to_3000": 0.5396666666666666,
+        "auc_to_horizon": 0.7215,
+        "collapsed": false,
+        "final": 0.92,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.95,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.894,
+          "never_learned": false,
+          "peak": 0.914
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2303": {
+        "auc_to_3000": 0.12966666666666668,
+        "auc_to_horizon": 0.4236666666666667,
+        "collapsed": false,
+        "final": 0.83,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.96,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.736,
+          "never_learned": false,
+          "peak": 0.854
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2304": {
+        "auc_to_3000": 0.062,
+        "auc_to_horizon": 0.16466666666666666,
+        "collapsed": true,
+        "final": 0.02,
+        "horizon": 6000,
+        "onset": 4449,
+        "peak": 0.765,
+        "peak_at_onset": 0.765,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.028,
+          "never_learned": false,
+          "peak": 0.63
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2305": {
+        "auc_to_3000": 0.214,
+        "auc_to_horizon": 0.27116666666666667,
+        "collapsed": true,
+        "final": 0.01,
+        "horizon": 6000,
+        "onset": 1721,
+        "peak": 0.815,
+        "peak_at_onset": 0.405,
+        "recovered": true,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.2,
+          "never_learned": false,
+          "peak": 0.7
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2306": {
+        "auc_to_3000": 0.374,
+        "auc_to_horizon": 0.5343333333333333,
+        "collapsed": false,
+        "final": 0.8,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.88,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.71,
+          "never_learned": false,
+          "peak": 0.814
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2307": {
+        "auc_to_3000": 0.14066666666666666,
+        "auc_to_horizon": 0.362,
+        "collapsed": true,
+        "final": 0.16,
+        "horizon": 6000,
+        "onset": 5397,
+        "peak": 0.925,
+        "peak_at_onset": 0.925,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.116,
+          "never_learned": false,
+          "peak": 0.854
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2308": {
+        "auc_to_3000": 0.273,
+        "auc_to_horizon": 0.36866666666666664,
+        "collapsed": true,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": 4890,
+        "peak": 0.925,
+        "peak_at_onset": 0.925,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.0,
+          "never_learned": false,
+          "peak": 0.754
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2309": {
+        "auc_to_3000": 0.044333333333333336,
+        "auc_to_horizon": 0.29433333333333334,
+        "collapsed": false,
+        "final": 0.82,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.865,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.828,
+          "never_learned": false,
+          "peak": 0.828
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2310": {
+        "auc_to_3000": 0.434,
+        "auc_to_horizon": 0.6403333333333333,
+        "collapsed": false,
+        "final": 0.88,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.91,
+          "never_learned": false,
+          "peak": 0.91
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2311": {
+        "auc_to_3000": 0.06433333333333334,
+        "auc_to_horizon": 0.13416666666666666,
+        "collapsed": true,
+        "final": 0.17,
+        "horizon": 6000,
+        "onset": 4850,
+        "peak": 0.38,
+        "peak_at_onset": 0.33,
+        "recovered": true,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.148,
+          "never_learned": true,
+          "peak": 0.254
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2312": {
+        "auc_to_3000": 0.38866666666666666,
+        "auc_to_horizon": 0.5895,
+        "collapsed": false,
+        "final": 0.84,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.9,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.844,
+          "never_learned": false,
+          "peak": 0.858
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2313": {
+        "auc_to_3000": 0.4756666666666667,
+        "auc_to_horizon": 0.6086666666666667,
+        "collapsed": false,
+        "final": 0.81,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.676,
+          "never_learned": false,
+          "peak": 0.89
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2314": {
+        "auc_to_3000": 0.035666666666666666,
+        "auc_to_horizon": 0.4065,
+        "collapsed": false,
+        "final": 0.8,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.905,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.746,
+          "never_learned": false,
+          "peak": 0.844
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2315": {
+        "auc_to_3000": 0.22733333333333333,
+        "auc_to_horizon": 0.4985,
+        "collapsed": false,
+        "final": 0.84,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.925,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.854,
+          "never_learned": false,
+          "peak": 0.884
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2316": {
+        "auc_to_3000": 0.013333333333333334,
+        "auc_to_horizon": 0.195,
+        "collapsed": false,
+        "final": 0.68,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.73,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.682,
+          "never_learned": false,
+          "peak": 0.682
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2317": {
+        "auc_to_3000": 0.47633333333333333,
+        "auc_to_horizon": 0.6778333333333333,
+        "collapsed": false,
+        "final": 0.82,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.85,
+          "never_learned": false,
+          "peak": 0.918
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2318": {
+        "auc_to_3000": 0.12033333333333333,
+        "auc_to_horizon": 0.35583333333333333,
+        "collapsed": false,
+        "final": 0.7,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.895,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.756,
+          "never_learned": false,
+          "peak": 0.79
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2319": {
+        "auc_to_3000": 0.271,
+        "auc_to_horizon": 0.23683333333333334,
+        "collapsed": true,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": 3858,
+        "peak": 0.81,
+        "peak_at_onset": 0.81,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.0,
+          "never_learned": false,
+          "peak": 0.772
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2320": {
+        "auc_to_3000": 0.19666666666666666,
+        "auc_to_horizon": 0.5035,
+        "collapsed": false,
+        "final": 0.88,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.915,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.876,
+          "never_learned": false,
+          "peak": 0.876
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2321": {
+        "auc_to_3000": 0.19633333333333333,
+        "auc_to_horizon": 0.5043333333333333,
+        "collapsed": false,
+        "final": 0.92,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.94,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.88,
+          "never_learned": false,
+          "peak": 0.88
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2322": {
+        "auc_to_3000": 0.528,
+        "auc_to_horizon": 0.695,
+        "collapsed": false,
+        "final": 0.86,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.93,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.886,
+          "never_learned": false,
+          "peak": 0.886
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2323": {
+        "auc_to_3000": 0.124,
+        "auc_to_horizon": 0.214,
+        "collapsed": true,
+        "final": 0.32,
+        "horizon": 6000,
+        "onset": 4716,
+        "peak": 0.52,
+        "peak_at_onset": 0.52,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.372,
+          "never_learned": false,
+          "peak": 0.38
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2324": {
+        "auc_to_3000": 0.372,
+        "auc_to_horizon": 0.6086666666666667,
+        "collapsed": false,
+        "final": 0.78,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.915,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.862,
+          "never_learned": false,
+          "peak": 0.87
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2325": {
+        "auc_to_3000": 0.14,
+        "auc_to_horizon": 0.2693333333333333,
+        "collapsed": false,
+        "final": 0.24,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.64,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.304,
+          "never_learned": false,
+          "peak": 0.582
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2326": {
+        "auc_to_3000": 0.42133333333333334,
+        "auc_to_horizon": 0.6468333333333334,
+        "collapsed": false,
+        "final": 0.88,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.935,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.88,
+          "never_learned": false,
+          "peak": 0.882
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2327": {
+        "auc_to_3000": 0.2753333333333333,
+        "auc_to_horizon": 0.499,
+        "collapsed": false,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.55,
+          "never_learned": false,
+          "peak": 0.894
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2328": {
+        "auc_to_3000": 0.10766666666666666,
+        "auc_to_horizon": 0.29283333333333333,
+        "collapsed": true,
+        "final": 0.89,
+        "horizon": 6000,
+        "onset": 2971,
+        "peak": 0.895,
+        "peak_at_onset": 0.595,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.82,
+          "never_learned": false,
+          "peak": 0.848
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2329": {
+        "auc_to_3000": 0.10466666666666667,
+        "auc_to_horizon": 0.43533333333333335,
+        "collapsed": false,
+        "final": 0.88,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.93,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.82,
+          "never_learned": false,
+          "peak": 0.92
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2330": {
+        "auc_to_3000": 0.263,
+        "auc_to_horizon": 0.32016666666666665,
+        "collapsed": true,
+        "final": 0.0,
+        "horizon": 6000,
+        "onset": 4424,
+        "peak": 0.91,
+        "peak_at_onset": 0.91,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.0,
+          "never_learned": false,
+          "peak": 0.852
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2331": {
+        "auc_to_3000": 0.367,
+        "auc_to_horizon": 0.6288333333333334,
+        "collapsed": false,
+        "final": 0.89,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.96,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.932,
+          "never_learned": false,
+          "peak": 0.932
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2332": {
+        "auc_to_3000": 0.11433333333333333,
+        "auc_to_horizon": 0.3885,
+        "collapsed": false,
+        "final": 0.63,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.925,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.74,
+          "never_learned": false,
+          "peak": 0.88
+        }
+      }
+    },
+    "sensitivity": [
+      {
+        "collapsed": 11,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.34375,
+        "registered": false,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 10,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.3125,
+        "registered": false,
+        "wilson_95": [
+          0.17952541633609734,
+          0.4856667830095541
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 14,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.4375,
+        "registered": false,
+        "wilson_95": [
+          0.2816533111504036,
+          0.6067440886314801
+        ]
+      },
+      {
+        "collapsed": 11,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.34375,
+        "registered": false,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 20,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.625,
+        "registered": false,
+        "wilson_95": [
+          0.4525440735307745,
+          0.7706611269054578
+        ]
+      },
+      {
+        "collapsed": 12,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.375,
+        "registered": false,
+        "wilson_95": [
+          0.22933887309454212,
+          0.5474559264692255
+        ]
+      },
+      {
+        "collapsed": 11,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.34375,
+        "registered": false,
+        "wilson_95": [
+          0.20410437924433172,
+          0.5168891202103778
+        ]
+      },
+      {
+        "collapsed": 10,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.3125,
+        "registered": false,
+        "wilson_95": [
+          0.17952541633609734,
+          0.4856667830095541
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 12,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.375,
+        "registered": false,
+        "wilson_95": [
+          0.22933887309454212,
+          0.5474559264692255
+        ]
+      },
+      {
+        "collapsed": 9,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.28125,
+        "registered": true,
+        "wilson_95": [
+          0.15564580497742764,
+          0.45374509425916565
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 16,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.5,
+        "registered": false,
+        "wilson_95": [
+          0.33630882869327483,
+          0.6636911713067252
+        ]
+      },
+      {
+        "collapsed": 10,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.3125,
+        "registered": false,
+        "wilson_95": [
+          0.17952541633609734,
+          0.4856667830095541
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 10,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.3125,
+        "registered": false,
+        "wilson_95": [
+          0.17952541633609734,
+          0.4856667830095541
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 14,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.4375,
+        "registered": false,
+        "wilson_95": [
+          0.2816533111504036,
+          0.6067440886314801
+        ]
+      },
+      {
+        "collapsed": 10,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.3125,
+        "registered": false,
+        "wilson_95": [
+          0.17952541633609734,
+          0.4856667830095541
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      }
+    ]
+  },
+  "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20": {
+    "definition": {
+      "fraction": 0.5,
+      "level_window": 100,
+      "peak_window": 200,
+      "persistence": 300,
+      "recovery": [
+        0.8,
+        1000
+      ]
+    },
+    "incidence": {
+      "collapsed": 7,
+      "n": 32,
+      "rate": 0.21875,
+      "wilson_95": [
+        0.11023836252604186,
+        0.3875499364924353
+      ]
+    },
+    "kaplan_meier": {
+      "median": null,
+      "n": 32,
+      "steps": [
+        [
+          1169,
+          0.96875
+        ],
+        [
+          1714,
+          0.9375
+        ],
+        [
+          2109,
+          0.90625
+        ],
+        [
+          3862,
+          0.875
+        ],
+        [
+          3905,
+          0.84375
+        ],
+        [
+          5465,
+          0.8125
+        ],
+        [
+          5554,
+          0.78125
+        ]
+      ]
+    },
+    "rule_092_incidence": 2,
+    "runs": {
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2301": {
+        "auc_to_3000": 0.004666666666666667,
+        "auc_to_horizon": 0.33366666666666667,
+        "collapsed": true,
+        "final": 0.7,
+        "horizon": 6000,
+        "onset": 1714,
+        "peak": 0.965,
+        "peak_at_onset": 0.05,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.616,
+          "never_learned": false,
+          "peak": 0.908
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2302": {
+        "auc_to_3000": 0.44633333333333336,
+        "auc_to_horizon": 0.6508333333333334,
+        "collapsed": false,
+        "final": 0.84,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.925,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.866,
+          "never_learned": false,
+          "peak": 0.886
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2303": {
+        "auc_to_3000": 0.365,
+        "auc_to_horizon": 0.4975,
+        "collapsed": true,
+        "final": 0.85,
+        "horizon": 6000,
+        "onset": 3905,
+        "peak": 0.945,
+        "peak_at_onset": 0.945,
+        "recovered": true,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.87,
+          "never_learned": false,
+          "peak": 0.884
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2304": {
+        "auc_to_3000": 0.39466666666666667,
+        "auc_to_horizon": 0.5908333333333333,
+        "collapsed": false,
+        "final": 0.83,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.96,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.868,
+          "never_learned": false,
+          "peak": 0.94
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2305": {
+        "auc_to_3000": 0.004333333333333333,
+        "auc_to_horizon": 0.21266666666666667,
+        "collapsed": true,
+        "final": 0.51,
+        "horizon": 6000,
+        "onset": 1169,
+        "peak": 0.77,
+        "peak_at_onset": 0.03,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.642,
+          "never_learned": false,
+          "peak": 0.658
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2306": {
+        "auc_to_3000": 0.3,
+        "auc_to_horizon": 0.5528333333333333,
+        "collapsed": false,
+        "final": 0.83,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.92,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.824,
+          "never_learned": false,
+          "peak": 0.832
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2307": {
+        "auc_to_3000": 0.09766666666666667,
+        "auc_to_horizon": 0.44683333333333336,
+        "collapsed": false,
+        "final": 0.7,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.89,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.758,
+          "never_learned": false,
+          "peak": 0.844
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2308": {
+        "auc_to_3000": 0.509,
+        "auc_to_horizon": 0.6855,
+        "collapsed": false,
+        "final": 0.78,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.935,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.778,
+          "never_learned": false,
+          "peak": 0.906
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2309": {
+        "auc_to_3000": 0.467,
+        "auc_to_horizon": 0.6846666666666666,
+        "collapsed": false,
+        "final": 0.93,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.96,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.906,
+          "never_learned": false,
+          "peak": 0.914
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2310": {
+        "auc_to_3000": 0.29,
+        "auc_to_horizon": 0.5481666666666667,
+        "collapsed": false,
+        "final": 0.86,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.865,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.848,
+          "never_learned": false,
+          "peak": 0.848
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2311": {
+        "auc_to_3000": 0.294,
+        "auc_to_horizon": 0.5873333333333334,
+        "collapsed": false,
+        "final": 0.95,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.955,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.888,
+          "never_learned": false,
+          "peak": 0.908
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2312": {
+        "auc_to_3000": 0.606,
+        "auc_to_horizon": 0.711,
+        "collapsed": false,
+        "final": 0.85,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.84,
+          "never_learned": false,
+          "peak": 0.912
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2313": {
+        "auc_to_3000": 0.2836666666666667,
+        "auc_to_horizon": 0.4166666666666667,
+        "collapsed": true,
+        "final": 0.23,
+        "horizon": 6000,
+        "onset": 5465,
+        "peak": 0.855,
+        "peak_at_onset": 0.855,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.066,
+          "never_learned": false,
+          "peak": 0.748
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2314": {
+        "auc_to_3000": 0.123,
+        "auc_to_horizon": 0.48583333333333334,
+        "collapsed": false,
+        "final": 0.78,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.93,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.874,
+          "never_learned": false,
+          "peak": 0.892
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2315": {
+        "auc_to_3000": 0.47433333333333333,
+        "auc_to_horizon": 0.6878333333333333,
+        "collapsed": false,
+        "final": 0.91,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.965,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.908,
+          "never_learned": false,
+          "peak": 0.92
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2316": {
+        "auc_to_3000": 0.5143333333333333,
+        "auc_to_horizon": 0.6918333333333333,
+        "collapsed": false,
+        "final": 0.85,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.95,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.888,
+          "never_learned": false,
+          "peak": 0.916
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2317": {
+        "auc_to_3000": 0.24766666666666667,
+        "auc_to_horizon": 0.5181666666666667,
+        "collapsed": false,
+        "final": 0.66,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.925,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.596,
+          "never_learned": false,
+          "peak": 0.888
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2318": {
+        "auc_to_3000": 0.6966666666666667,
+        "auc_to_horizon": 0.7665,
+        "collapsed": false,
+        "final": 0.81,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.93,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.758,
+          "never_learned": false,
+          "peak": 0.92
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2319": {
+        "auc_to_3000": 0.6056666666666667,
+        "auc_to_horizon": 0.7555,
+        "collapsed": false,
+        "final": 0.94,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.965,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.904,
+          "never_learned": false,
+          "peak": 0.93
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2320": {
+        "auc_to_3000": 0.19433333333333333,
+        "auc_to_horizon": 0.5168333333333334,
+        "collapsed": false,
+        "final": 0.93,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.92,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.898,
+          "never_learned": false,
+          "peak": 0.898
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2321": {
+        "auc_to_3000": 0.17633333333333334,
+        "auc_to_horizon": 0.3943333333333333,
+        "collapsed": true,
+        "final": 0.83,
+        "horizon": 6000,
+        "onset": 2109,
+        "peak": 0.955,
+        "peak_at_onset": 0.8,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.888,
+          "never_learned": false,
+          "peak": 0.926
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2322": {
+        "auc_to_3000": 0.546,
+        "auc_to_horizon": 0.6836666666666666,
+        "collapsed": false,
+        "final": 0.79,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.935,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.878,
+          "never_learned": false,
+          "peak": 0.892
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2323": {
+        "auc_to_3000": 0.3933333333333333,
+        "auc_to_horizon": 0.6393333333333333,
+        "collapsed": false,
+        "final": 0.56,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.95,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.838,
+          "never_learned": false,
+          "peak": 0.928
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2324": {
+        "auc_to_3000": 0.04666666666666667,
+        "auc_to_horizon": 0.30833333333333335,
+        "collapsed": false,
+        "final": 0.74,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.825,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.77,
+          "never_learned": false,
+          "peak": 0.77
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2325": {
+        "auc_to_3000": 0.4866666666666667,
+        "auc_to_horizon": 0.6326666666666667,
+        "collapsed": false,
+        "final": 0.28,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.915,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.7,
+          "never_learned": false,
+          "peak": 0.866
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2326": {
+        "auc_to_3000": 0.41,
+        "auc_to_horizon": 0.634,
+        "collapsed": false,
+        "final": 0.84,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.95,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.834,
+          "never_learned": false,
+          "peak": 0.906
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2327": {
+        "auc_to_3000": 0.41633333333333333,
+        "auc_to_horizon": 0.6238333333333334,
+        "collapsed": false,
+        "final": 0.89,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.935,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.884,
+          "never_learned": false,
+          "peak": 0.9
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2328": {
+        "auc_to_3000": 0.543,
+        "auc_to_horizon": 0.6075,
+        "collapsed": true,
+        "final": 0.18,
+        "horizon": 6000,
+        "onset": 5554,
+        "peak": 0.88,
+        "peak_at_onset": 0.88,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": true,
+          "last": 0.09,
+          "never_learned": false,
+          "peak": 0.824
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2329": {
+        "auc_to_3000": 0.513,
+        "auc_to_horizon": 0.7026666666666667,
+        "collapsed": false,
+        "final": 0.84,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.975,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.834,
+          "never_learned": false,
+          "peak": 0.944
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2330": {
+        "auc_to_3000": 0.5266666666666666,
+        "auc_to_horizon": 0.7066666666666667,
+        "collapsed": false,
+        "final": 0.83,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.955,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.886,
+          "never_learned": false,
+          "peak": 0.926
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2331": {
+        "auc_to_3000": 0.2936666666666667,
+        "auc_to_horizon": 0.30366666666666664,
+        "collapsed": true,
+        "final": 0.62,
+        "horizon": 6000,
+        "onset": 3862,
+        "peak": 0.88,
+        "peak_at_onset": 0.88,
+        "recovered": false,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.492,
+          "never_learned": false,
+          "peak": 0.814
+        }
+      },
+      "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2332": {
+        "auc_to_3000": 0.10866666666666666,
+        "auc_to_horizon": 0.4141666666666667,
+        "collapsed": false,
+        "final": 0.85,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.925,
+        "peak_at_onset": null,
+        "recovered": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.89,
+          "never_learned": false,
+          "peak": 0.89
+        }
+      }
+    },
+    "sensitivity": [
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 9,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.28125,
+        "registered": false,
+        "wilson_95": [
+          0.15564580497742764,
+          0.45374509425916565
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": true,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 9,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.28125,
+        "registered": false,
+        "wilson_95": [
+          0.15564580497742764,
+          0.45374509425916565
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.4,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 7,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.21875,
+        "registered": false,
+        "wilson_95": [
+          0.11023836252604186,
+          0.3875499364924353
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.5,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 8,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.25,
+        "registered": false,
+        "wilson_95": [
+          0.1325240091850904,
+          0.4210655899424448
+        ]
+      },
+      {
+        "collapsed": 6,
+        "fraction": 0.6,
+        "n": 32,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.1875,
+        "registered": false,
+        "wilson_95": [
+          0.08889544689565954,
+          0.3530915520137596
+        ]
+      }
+    ]
+  }
+}
