@@ -3,9 +3,9 @@
 Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking` G.0). Registered in
 `docs/experiments/logbooks/supporting/095-gap-operating-point/launch.md` before any scored run.
 
-- [ ] 1. **Rewiring**: a held set and a focal set for `_undirected_double_edge_swap`; `held` draws
-  both edges from the non-held pairs, `focal` draws the first from the focal pairs; the accepted count
-  returned. Tests: held pairs keep place and count; every focal pair moves when partners allow; degrees
+- [x] 1. **Rewiring**: a held set and a focal set for `_undirected_double_edge_swap`; `held` draws
+  both edges from the non-held pairs, `focal` swaps each focal pair once with a partner from the rest;
+  the accepted count returned. Tests: held pairs keep place and count; every focal pair moves when partners allow; degrees
   preserved; the existing nulls draw the graphs pinned before this change.
 - [ ] 2. **Brain options**: `gap_weight_mode`, `gap_weight_scale`, `gap_outlier_min_count`, and the
   wirings `rewired_gap_outliers_held` and `rewired_gap_outliers_scattered`; refusals (scale or mode

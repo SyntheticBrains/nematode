@@ -35,8 +35,10 @@ structure the arm exists to remove).
 `gap_outlier_min_count` (default 20, 26 pairs on Emmons, 24 on Cook) names the outliers. **Held**: the
 undirected swap draws both edges from the non-outlier pairs only, so every outlier keeps its place and
 count. **Scattered**: each accepted swap draws its first edge from the outliers and its second from the
-non-outliers, `swaps_per_edge × k` swaps for k outliers, so each outlier's count lands on a new pair and
-each displaced partner moves once; degrees are preserved by construction. The count of moved
+non-outliers, one accepted swap per outlier (k in all, each retried up to the attempt cap), so each
+outlier's count lands on a new pair and each displaced partner moves once; degrees are preserved by
+construction. A larger target would re-swap the displaced partners and, by chance, outliers already
+moved, which is a broader null than the question needs. The count of moved
 non-outlier pairs is reported. Rejected: permuting outlier counts onto other existing pairs with
 placement held (that is G.1's sizes-permuted family, and it would test a different thing).
 
