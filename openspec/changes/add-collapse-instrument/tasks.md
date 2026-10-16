@@ -7,7 +7,7 @@ Phase 9 block M (roadmap v4.5 § Phase 9, D25, D26; tracker `phase9-tracking` M.
   brain, behind a flag the brains read; the replay returns the second-to-last settling iterate when on.
   Tests: each statistic against a hand computation on a tiny batch; telemetry on and off identical on
   every output, the final weights and the next value of every generator.
-- [ ] 2. **CLI**: `--update-telemetry` and `--checkpoint-every N` in `run_simulation.py` (`run_campaign.py`
+- [x] 2. **CLI**: `--update-telemetry` and `--checkpoint-every N` in `run_simulation.py` (`run_campaign.py`
   already passes extra flags through to each run, so it needs no change); the JSONL path and the checkpoint names; refusals (`N` ≤ 0). Tests: the files
   appear with the expected rows and names; off writes nothing new.
 - [ ] 3. **`collapse.py`**: D25's definition, incidence with Wilson intervals, Kaplan–Meier
