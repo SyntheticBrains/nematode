@@ -16,7 +16,7 @@ Phase 9 block M (roadmap v4.5 § Phase 9, D25, D26; tracker `phase9-tracking` M.
 - [x] 4. **`collapse_diagnosis.py`**: the identity check, the event-aligned stacks, the envelope (the eight
   intact twins aligned on their collapsed twins' onsets, mean ± 2 sd, leave-one-out for the intact side),
   the departure rule and the cause readout of Decision D, the MLP incidence. Tests on synthetic telemetry.
-- [ ] 5. **Registration**: the launch record (the 16 paired runs and the 8 MLP runs, the identity rule,
+- [x] 5. **Registration**: the launch record (the 16 paired runs and the 8 MLP runs, the identity rule,
   the cause set and its patterns, the indicated/not-indicated rule, the retention line), committed;
   `/nematode-review-spec`.
 - [ ] 6. **Campaign**: 24 runs at 6,000 episodes with `--update-telemetry --checkpoint-every 250` and the

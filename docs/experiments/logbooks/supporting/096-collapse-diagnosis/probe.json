@@ -1,0 +1,55 @@
+{
+  "gaponly_2304": {
+    "runs_identical": true,
+    "results_csv_identical": true,
+    "weights_identical": true,
+    "checkpoints": [
+      "ep00004.pt",
+      "ep00008.pt",
+      "ep00012.pt"
+    ],
+    "telemetry_lines": 12,
+    "srank_rows": [
+      64
+    ],
+    "seconds_off": 6.0,
+    "seconds_on": 5.7,
+    "overhead": -0.046
+  },
+  "wt_2313": {
+    "runs_identical": true,
+    "results_csv_identical": true,
+    "weights_identical": true,
+    "checkpoints": [
+      "ep00004.pt",
+      "ep00008.pt",
+      "ep00012.pt"
+    ],
+    "telemetry_lines": 14,
+    "srank_rows": [
+      10,
+      13,
+      64
+    ],
+    "seconds_off": 5.5,
+    "seconds_on": 5.3,
+    "overhead": -0.027
+  },
+  "mlp_9721": {
+    "runs_identical": true,
+    "results_csv_identical": true,
+    "weights_identical": true,
+    "checkpoints": [
+      "ep00004.pt",
+      "ep00008.pt",
+      "ep00012.pt"
+    ],
+    "telemetry_lines": 12,
+    "srank_rows": [
+      64
+    ],
+    "seconds_off": 4.0,
+    "seconds_on": 4.0,
+    "overhead": 0.006
+  }
+}
