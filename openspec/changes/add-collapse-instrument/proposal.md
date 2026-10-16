@@ -52,8 +52,9 @@ own change, registered on what this one finds.
 - Scripts: `scripts/analysis/collapse.py`, `scripts/analysis/collapse_diagnosis.py`.
 - Docs: `docs/experiments/logbooks/supporting/096-collapse-diagnosis/`, Logbook 096, the tracker
   (M.1(a)), CHANGELOG, `docs/usage.md` for the flags.
-- Machine time: 24 runs at 6,000 episodes through the body, ≈ 2 h at 16 workers; the identity
-  check's re-runs are inside it.
+- Machine time: 24 runs at 6,000 episodes through the body, two waves of about 84 minutes at 16
+  workers plus the telemetry's overhead, ≈ 3 h; the identity check's re-runs are inside it. Over the
+  protocol's two-hour mark, so the spec review is mandatory (done 2026-10-16).
 
 ## Breaking Changes
 

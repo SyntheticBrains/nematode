@@ -38,15 +38,24 @@ configs at target 20, 6,000 episodes, on M.9's seeds. The pairing:
 | 2304, 2305, 2307, 2308, 2319, 2330 | gap-only null | wild type |
 
 Each pair shares a seed, a task draw and every initial weight on the chemical graph, so the stacks
-compare a collapse against its own intact twin. Identity: each re-run's plateau must equal the committed
+compare a collapse against its own intact twin. The chemical-only null's five collapses are left out:
+no Phase 9 block reads that null on the gap question, and its seeds would bring no intact twin on the
+same wiring pair. Identity: each re-run's plateau must equal the committed
 per-seed CSV's to its printed precision (the step-level logs are archived off-repo, so the plateau is
 the field compared, and the rest is named *uncompared*).
 
 ### Decision D: The cause set, fixed before the logs are read
 
 From the literature review (roadmap § Phase 9 § What the review established), each with the pattern
-that identifies it in the event-aligned stacks over the 1,500 episodes before onset, against the
-paired intact run's envelope (± 2 sd over the same episodes):
+that identifies it in the 1,500 episodes before onset.
+
+**The envelope.** Each intact twin is aligned on its collapsed twin's onset episode, so the eight
+intact runs give, for every statistic and every aligned episode, a mean and a standard deviation; the
+envelope is that mean ± 2 sd. A collapsed run **departs** on a statistic when the statistic, smoothed
+over 100 episodes, sits outside the envelope in the cause's predicted direction for at least 200
+consecutive episodes inside the 1,500 before its onset; the first episode of that stretch, as a lead
+before onset, is reported. Each intact twin is tested the same way against the envelope of the other
+seven (leave one out), so the intact side is held to the same rule.
 
 1. **Weight growth → saturation → rank loss**: layer-wise weight norm rising from the start, saturated
    fraction rising and `srank` falling before onset, entropy flat or rising, KL and clip fraction
@@ -60,16 +69,16 @@ paired intact run's envelope (± 2 sd over the same episodes):
 5. **Variance collapse**: `log_std` falling far below its initial value before onset.
 6. **Mean-head saturation**: the `|u| > 2` fraction rising with `log_std` flat.
 
-A cause is **indicated** when its pattern departs the envelope in at least 6 of the 8 collapsed runs and
-in at most 1 of the 8 intact twins; **not indicated** when it departs in at most 2 collapsed runs;
+A cause is **indicated** when its pattern departs in at least 6 of the 8 collapsed runs and in at most
+1 of the 8 intact twins; **not indicated** when it departs in at most 2 collapsed runs;
 otherwise **mixed**. More than one cause may be indicated. The readout names which, and M.1(b)'s change
 takes its remedy order from it (D25's list, reordered by what is indicated).
 
 ### Decision E: The MLP's incidence
 
 The remedy rule needs the MLP control's own collapse rate at 6,000 episodes, which is known only from
-M.9's 8 retry seeds. They are re-run with telemetry (seeds 9721–9728, the retry's configs), and their
-incidence is reported with its Wilson interval beside the connectome's. They are not part of the cause
+M.9's 8 retry seeds. They are re-run with telemetry (seeds 9721–9728, the retry's configs), their identity checked against
+the committed plateaus in Logbook 092's `retry/per_seed.csv`, and their incidence is reported with its Wilson interval beside the connectome's. They are not part of the cause
 stacks unless they collapse.
 
 ### Decision F: The collapse statistic's code is the registered definition
