@@ -548,3 +548,34 @@ def test_a_report_leaves_the_null_unchanged(cook: Connectome) -> None:
     plain = rewire_degree_preserving(cook, np.random.default_rng(17))
     reported = rewire_degree_preserving(cook, np.random.default_rng(17), gap_swap_report={})
     assert _digests(plain) == _digests(reported) == _PINNED_NULL[17]
+
+
+def test_a_scattered_count_leaves_either_endpoint_with_equal_chance(cook: Connectome) -> None:
+    """Scenario "Scattered outliers land elsewhere": no endpoint keeps the outliers' counts."""
+    outliers = _outliers(cook)
+    counts = _gap_pairs(cook)
+    kept_first = total = 0
+    for seed in range(40):
+        null, _ = _narrowed(cook, seed, focal_gap_pairs=outliers)
+        moved = _gap_pairs(null)
+        for a, b in outliers:
+            landed = [pair for pair, w in moved.items() if w == counts[a, b] and pair not in counts]
+            if len(landed) == 1:
+                total += 1
+                kept_first += a in landed[0]
+    # Only a count no other pair carries can be followed to where it landed.
+    assert total >= 200
+    assert 0.4 < kept_first / total < 0.6
+
+
+def test_each_scattered_partner_moves_once(cook: Connectome) -> None:
+    """Every accepted swap displaces an original pair no earlier swap displaced.
+
+    A reused partner would sit on a pair an earlier swap created, so fewer original pairs would
+    leave; a later swap can recreate a removed pair, which allows a shortfall of a few.
+    """
+    outliers = _outliers(cook)
+    for seed in (1, 17, 129):
+        null, report = _narrowed(cook, seed, focal_gap_pairs=outliers)
+        partners = set(_gap_pairs(cook)) - set(_gap_pairs(null)) - outliers
+        assert report["accepted"] - 2 <= len(partners) <= report["accepted"]

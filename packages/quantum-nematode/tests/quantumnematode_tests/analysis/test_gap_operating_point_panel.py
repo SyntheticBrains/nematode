@@ -75,10 +75,23 @@ class TestSeeds:
             assert set(g.FLOOR_SEEDS[level]) <= set(g.GAP_SEEDS[level])
 
     def test_the_bands_are_disjoint(self) -> None:
-        bands = [set(g.SEEDS), set(g.ANCHOR_SEEDS), set(g.SMOKE_SEEDS), set(ts.SEEDS)]
+        bands = [
+            set(g.SEEDS),
+            set(g.ANCHOR_SEEDS),
+            set(g.SMOKE_SEEDS),
+            set(g.GATE_PILOT_SEEDS),
+            set(ts.SEEDS),
+        ]
         for i, a in enumerate(bands):
             for b in bands[i + 1 :]:
                 assert not a & b
+
+    def test_the_gate_pilot_preflights_both_deciding_levels(self) -> None:
+        assert sum(len(s) for s in g.runs(g.GATE_PILOT).values()) == 64
+        assert set(g.PREFLIGHT_LEVELS) == {g.COUNT, g.UNIT, g.SCATTERED}
+        assert not set(g.GATE_PILOT_SEEDS) & (
+            set(g.SEEDS) | set(g.ANCHOR_SEEDS) | set(g.SMOKE_SEEDS)
+        )
 
     def test_the_plan_groups_the_configs_by_band(self) -> None:
         plan = g.plan()
@@ -99,7 +112,7 @@ class TestAnchorMinimum:
     def test_the_range_is_closed(self, lead: float) -> None:
         assert g.anchor_minimum(lead, 0.01, 0.2, readable=True)["case"] == "carried"
 
-    @pytest.mark.parametrize("lead", [0.03, 0.2, -0.1])
+    @pytest.mark.parametrize("lead", [0.03, 0.2])
     def test_a_lead_outside_the_range_refixes_two_thirds_of_it(self, lead: float) -> None:
         rule = g.anchor_minimum(lead, lead - 0.02, lead + 0.02, readable=True)
         assert rule["case"] == "refixed"
@@ -108,6 +121,19 @@ class TestAnchorMinimum:
     def test_an_interval_including_zero_carries_the_minimum(self) -> None:
         rule = g.anchor_minimum(0.2, -0.01, 0.4, readable=True)
         assert rule == {"case": "interval_includes_zero", "minimum": g.CARRIED_MINIMUM}
+
+    def test_a_reversed_anchor_fixes_nothing(self) -> None:
+        """The null ahead on Emmons: no minimum, so the panel waits on a dated decision."""
+        assert g.anchor_minimum(-0.1, -0.15, -0.05, readable=True) == {
+            "case": "reversed",
+            "minimum": None,
+        }
+
+    def test_the_committed_anchor_refixes_the_minimum(self) -> None:
+        """Seeds 9801-9816 led by 0.1341 [0.101, 0.168]: above the range, so m is 2/3 of it."""
+        rule = g.anchor_minimum(0.1341458, 0.1009, 0.1675, readable=True)
+        assert rule["case"] == "refixed"
+        assert rule["minimum"] == pytest.approx(0.0894, abs=1e-4)
 
     def test_an_unreadable_anchor_fixes_nothing(self) -> None:
         assert g.anchor_minimum(0.09, 0.05, 0.12, readable=False)["minimum"] is None
@@ -210,6 +236,7 @@ def _write_logs(where: Path, requirement: g.Requirement, extra_seed: int | None 
     for stem, seeds in g.runs(requirement).items():
         for seed in (*seeds, *((extra_seed,) if extra_seed else ())):
             (where / f"{stem}-seed{seed}.log").write_text("")
+            (where / f"{stem}-seed{seed}.exit").write_text("0\n")
 
 
 class TestManifest:
@@ -234,6 +261,14 @@ class TestManifest:
         with pytest.raises(g.GapOperatingPointError, match="outliers_held/rn_frozen: \\[2401\\]"):
             g.require_complete(manifest, g.PANEL)
 
+    def test_a_run_that_did_not_exit_cleanly_is_not_evidence(self, tmp_path: Path) -> None:
+        _write_logs(tmp_path, g.ANCHOR)
+        (tmp_path / f"{g.STEMS[g.COUNT]['rn_learn']}-seed9805.exit").write_text("1\n")
+        (tmp_path / f"{g.STEMS[g.COUNT]['rn_frozen']}-seed9806.exit").unlink()
+        manifest = g.build_manifest([tmp_path], tmp_path / "m.txt", g.ANCHOR)
+        with pytest.raises(g.GapOperatingPointError, match="rn_learn: \\[9805\\]"):
+            g.require_complete(manifest, g.ANCHOR)
+
     def test_runs_off_the_band_are_ignored(self, tmp_path: Path) -> None:
         _write_logs(tmp_path, g.ANCHOR, extra_seed=g.SEEDS[0])
         manifest = g.build_manifest([tmp_path], tmp_path / "m.txt", g.ANCHOR)
@@ -247,6 +282,7 @@ class TestManifest:
         second.mkdir()
         _write_logs(first, g.ANCHOR)
         (second / f"{g.STEMS[g.COUNT]['wt_learn']}-seed9801.log").write_text("")
+        (second / f"{g.STEMS[g.COUNT]['wt_learn']}-seed9801.exit").write_text("0\n")
         with pytest.raises(g.GapOperatingPointError, match="has two runs"):
             g.build_manifest([first, second], tmp_path / "m.txt", g.ANCHOR)
 

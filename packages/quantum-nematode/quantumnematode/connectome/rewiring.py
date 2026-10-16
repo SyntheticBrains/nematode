@@ -35,6 +35,8 @@ _DEFAULT_SWAPS_PER_EDGE = 10
 _MAX_ATTEMPTS_PER_TARGET = 100  # safety cap: give up mixing rather than loop forever
 _MIN_UNDIRECTED_SWAP_NODES = 4  # an undirected swap needs four distinct nodes (no self-loop)
 _ALT_PAIRING_PROB = 0.5  # coin flip between the two undirected rewirings, for mixing
+# coin flip for which of a focal swap's two new pairs carries the focal count
+_FOCAL_SIDE_PROB = 0.5
 
 
 def _directed_double_edge_swap(
@@ -169,16 +171,26 @@ def _focal_swaps(
     edge_set: set[tuple[str, str]],
     focal: list[int],
 ) -> int:
-    """Swap each focal position once, in order, with a partner drawn from the other positions."""
+    """Swap each focal position once, in order, with a partner no earlier swap has used.
+
+    A swap keeps each edge's first-sorted endpoint on the pair its weight moves to, so a single
+    swap would always leave a focal count on that endpoint. After each accepted swap a fair coin
+    decides which of the two new pairs carries the focal count, so it lands on a pair containing
+    either of its endpoints with equal chance.
+    """
     focal_set = set(focal)
-    others = [k for k in range(len(edges)) if k not in focal_set]
+    available = [k for k in range(len(edges)) if k not in focal_set]
     accepted = 0
-    if not others:
-        return 0
     for i in focal:
         for _ in range(_MAX_ATTEMPTS_PER_TARGET):
-            j = others[int(rng.integers(0, len(others)))]
+            if not available:
+                break
+            slot = int(rng.integers(0, len(available)))
+            j = available[slot]
             if _try_undirected_swap(edges, weights, rng, edge_set, i, j):
+                if rng.random() < _FOCAL_SIDE_PROB:
+                    weights[edges[i]], weights[edges[j]] = weights[edges[j]], weights[edges[i]]
+                available.pop(slot)
                 accepted += 1
                 break
     if accepted < len(focal):
@@ -272,8 +284,9 @@ def rewire_degree_preserving(  # noqa: PLR0913 - each keyword narrows what the n
     * ``hold_gap_pairs`` takes those gap pairs out of the undirected swap and puts them back with
       their counts; the rest are swapped among themselves, never onto a held pair.
     * ``focal_gap_pairs`` swaps each of those pairs once, in turn, with a partner drawn from the
-      rest, so each focal pair's count moves to a new pair and the other pairs move only as the
-      one partner each displaces; ``swaps_per_edge`` does not apply.
+      pairs no earlier swap has used, so each focal pair's count moves to a new pair containing
+      either of its endpoints with equal chance, and the other pairs move only as the one
+      partner each displaces; ``swaps_per_edge`` does not apply.
 
     ``gap_swap_report``, if given, receives the undirected swap's ``accepted`` and ``target``
     counts, and ``moved``: the number of the input's gap pairs absent from the result.

@@ -80,6 +80,9 @@ SEEDS_32: tuple[int, ...] = SEEDS[:32]
 SEEDS_16: tuple[int, ...] = SEEDS[:16]
 ANCHOR_SEEDS: tuple[int, ...] = tuple(range(9801, 9817))
 SMOKE_SEEDS: tuple[int, ...] = (9851, 9852)
+# The gate pilot: the two deciding levels' arms on disjoint seeds, so their floors and saturation
+# are evaluated before the panel launches; the count level's gate reads the anchor.
+GATE_PILOT_SEEDS: tuple[int, ...] = tuple(range(9861, 9869))
 
 COUNT, UNIT = "count", "unit"
 SCATTERED, HELD = "outliers_scattered", "outliers_held"
@@ -181,6 +184,13 @@ PANEL: Requirement = {
     for level in LEVELS
 }
 ANCHOR: Requirement = {COUNT: dict.fromkeys(gp.ARMS, ANCHOR_SEEDS)}
+GATE_PILOT: Requirement = {
+    UNIT: dict.fromkeys(gp.ARMS, GATE_PILOT_SEEDS),
+    SCATTERED: dict.fromkeys(gp.ARMS, GATE_PILOT_SEEDS),
+}
+# The levels the gate preflight reads: the count level on the anchor, the deciding levels on the
+# gate pilot.
+PREFLIGHT_LEVELS: tuple[str, ...] = (COUNT, *DECIDING)
 
 
 def runs(requirement: Requirement = PANEL) -> dict[str, tuple[int, ...]]:
@@ -205,6 +215,11 @@ def anchor_minimum(lead: float, ci_lo: float, ci_hi: float, readable: bool) -> d
     """
     if not readable:
         return {"case": "unreadable", "minimum": None}
+    if ci_hi < 0.0:
+        # The null leads: the effect reversed on Emmons. Two-thirds of a reversed lead is not a
+        # minimum for a lead in the registered direction, so nothing is fixed and the panel waits
+        # on a dated decision.
+        return {"case": "reversed", "minimum": None}
     if ci_lo <= 0.0 <= ci_hi:
         return {"case": "interval_includes_zero", "minimum": CARRIED_MINIMUM}
     if CARRY_RANGE[0] <= lead <= CARRY_RANGE[1]:
@@ -289,6 +304,8 @@ def build_manifest(log_dirs: list[Path], path: Path, requirement: Requirement) -
     for arm, level, seed, log in gp.evidence(stems, log_dirs):
         if seed not in requirement[level][arm]:
             continue
+        if not _exited_cleanly(log):
+            continue
         prior = seen.setdefault((arm, level, seed), log)
         if prior != log:
             msg = f"{arm} {level} seed {seed} has two runs: {prior} and {log}"
@@ -296,6 +313,12 @@ def build_manifest(log_dirs: list[Path], path: Path, requirement: Requirement) -
         lines.append(f"{arm} {level} {seed} {log.resolve()}")
     path.write_text("\n".join(lines) + "\n")
     return path
+
+
+def _exited_cleanly(log: Path) -> bool:
+    """Whether the runner recorded exit code 0 beside the log; a crashed run is not evidence."""
+    status = log.with_suffix(".exit")
+    return status.is_file() and status.read_text().strip() == "0"
 
 
 def require_complete(manifest: Path, requirement: Requirement) -> None:
@@ -377,9 +400,12 @@ def score(log_dirs: list[Path], out_dir: Path, minimum: float) -> dict[str, Any]
         "beside_metric": BESIDE_METRIC,
         "gates": gates,
         "gaps": gaps,
-        "censoring_rule_choice": ops.choose_metric(
-            {level: ops.censoring_rates(report) for level, report in reports.items()},
-        ),
+        "censoring_rule_choice": {
+            "note": "description: the reading is fixed on auc_success whatever this field says",
+            **ops.choose_metric(
+                {level: ops.censoring_rates(report) for level, report in reports.items()},
+            ),
+        },
         "collapse": (
             f"not read: no run here exceeds {EPISODES} episodes, the horizon below which the "
             "collapse statistic does not apply"
@@ -452,7 +478,16 @@ PREDICTOR_SOURCES: dict[str, dict[str, Any]] = {
         / "docs/experiments/logbooks/supporting/082-plastic-gaps/per-seed.csv",
         "outcome_column": "fixed_gap_auc_success",
     },
+    # The registered repeat: the anchor's own draws, against the anchor's count gap.
     "emmons": {
+        "wild_type": _COUNT_ARMS["wt_learn"],
+        "null": _COUNT_ARMS["rn_learn"],
+        "seeds": ANCHOR_SEEDS,
+        "outcome_json": wp.REPO
+        / "docs/experiments/logbooks/supporting/095-gap-operating-point/anchor.json",
+    },
+    # Beside it, as description: the panel's 64 draws against the panel's count gap.
+    "emmons_panel": {
         "wild_type": _COUNT_ARMS["wt_learn"],
         "null": _COUNT_ARMS["rn_learn"],
         "seeds": SEEDS,
@@ -511,7 +546,13 @@ def predictor(source: str) -> dict[str, Any]:
     import hop_predictor as hp  # pyright: ignore[reportMissingImports]
 
     spec = PREDICTOR_SOURCES[source]
-    gaps = outcomes(spec["outcome_csv"], spec["outcome_column"])
+    if "outcome_json" in spec:
+        anchor_gaps = json.loads(spec["outcome_json"].read_text())["gaps"][PRIMARY_METRIC]
+        gaps = {int(k): float(v) for k, v in anchor_gaps["per_seed"].items()}
+        column = f"the anchor's {PRIMARY_METRIC} gap"
+    else:
+        gaps = outcomes(spec["outcome_csv"], spec["outcome_column"])
+        column = spec["outcome_column"]
     seeds = [s for s in spec["seeds"] if s in gaps]
     if len(seeds) != len(spec["seeds"]):
         msg = f"{source}: {len(spec['seeds']) - len(seeds)} seeds have no committed gap"
@@ -528,7 +569,7 @@ def predictor(source: str) -> dict[str, Any]:
         "source": source,
         "statistic": (
             "spearman(null - wild type saturated fraction over the sensor, command and motor set, "
-            f"untrained; the committed {spec['outcome_column']})"
+            f"untrained; the committed {column})"
         ),
         "predicted_direction": "positive",
         "minimum_abs_rho": MINIMUM_RHO,
@@ -662,10 +703,14 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="command", required=True)
     pl = sub.add_parser("plan", help="the panel's configs, grouped by seed band")
     pl.add_argument("--anchor", action="store_true", help="the anchor pilot's plan instead")
+    pl.add_argument("--gate-pilot", action="store_true", help="the gate pilot's plan instead")
     an = sub.add_parser("anchor", help="score the anchor and fix the minimum")
     an.add_argument("--logs", type=Path, action="append", required=True)
     an.add_argument("--out-dir", type=Path, required=True)
-    pf = sub.add_parser("preflight", help="the gate preflight on the anchor's count level")
+    pf = sub.add_parser(
+        "preflight",
+        help="the gate preflight: the count level on the anchor, the deciding levels on the pilot",
+    )
     pf.add_argument("--logs", type=Path, action="append", required=True)
     sc = sub.add_parser("score", help="score the panel")
     sc.add_argument("--logs", type=Path, action="append", required=True)
@@ -681,12 +726,12 @@ def main(argv: list[str] | None = None) -> int:
 
     ok = True
     if args.command == "plan":
-        result = plan(ANCHOR if args.anchor else PANEL)
+        result = plan(ANCHOR if args.anchor else GATE_PILOT if args.gate_pilot else PANEL)
     elif args.command == "anchor":
         result = anchor(args.logs, args.out_dir)
         ok = result["rule"]["minimum"] is not None
     elif args.command == "preflight":
-        result = gp.preflight({COUNT: STEMS[COUNT]}, args.logs)
+        result = gp.preflight({level: STEMS[level] for level in PREFLIGHT_LEVELS}, args.logs)
         ok = result["launch"]
     elif args.command == "score":
         minimum = json.loads(args.anchor.read_text())["rule"]["minimum"]

@@ -36,8 +36,12 @@ structure the arm exists to remove).
 undirected swap draws both edges from the non-outlier pairs only, so every outlier keeps its place and
 count. **Scattered**: each accepted swap draws its first edge from the outliers and its second from the
 non-outliers, one accepted swap per outlier (k in all, each retried up to the attempt cap), so each
-outlier's count lands on a new pair and each displaced partner moves once; degrees are preserved by
-construction. A larger target would re-swap the displaced partners and, by chance, outliers already
+outlier's count lands on a new pair and each displaced partner moves once (a partner no earlier swap
+used); degrees are preserved by construction. A swap keeps each edge's first-sorted endpoint on the
+pair its count moves to, so after each accepted swap a fair coin decides which of the two new pairs
+carries the outlier's count: it lands on a pair containing either endpoint with equal chance. Without
+the coin, ALA would keep all four of its largest junctions' counts at every seed. *(Amended 2026-10-17
+at the spec review, before any panel run.)* A larger target would re-swap the displaced partners and, by chance, outliers already
 moved, which is a broader null than the question needs. The count of moved
 non-outlier pairs is reported. Rejected: permuting outlier counts onto other existing pairs with
 placement held (that is G.1's sizes-permuted family, and it would test a different thing).
@@ -106,8 +110,10 @@ saturated fraction over the injected sensors, the command interneurons (AVA, AVB
 the readout motor neurons, null minus wild type. **Predicted**: Spearman ρ with that seed's committed
 `auc_success` gap (`fixed_gap_auc_success` in Logbook 082's `per-seed.csv`) > 0 (more saturation on the path in the null, a larger wild-type lead), minimum
 |ρ| 0.3, two-sided permutation p and an 80% bootstrap interval, as A.3 registered its predictor
-([Logbook 079](../../../docs/experiments/logbooks/079-boundary-null.md)); repeated on the panel's
-Emmons draws once they read. States: `predicts` (ρ ≥ 0.3, p < 0.05), `no_prediction` (interval inside
+([Logbook 079](../../../docs/experiments/logbooks/079-boundary-null.md)); repeated on G.0(a)'s Emmons
+draws (the anchor's 16 seeds, against the anchor's own count gap) as the roadmap registers it, and on
+the panel's 64 draws beside, as description. *(Amended 2026-10-17: the draft repeated it on the panel's
+draws only.)* States: `predicts` (ρ ≥ 0.3, p < 0.05), `no_prediction` (interval inside
 ±0.3), `unresolved`.
 
 ### Decision F: The matched-statistics table and the shortcut audit
@@ -123,9 +129,16 @@ sensors. Each wiring's launch-record entry states what it does not preserve.
 The anchor pilot runs first on 9801–9816 (wild type and gap-only, count weights, learning and frozen);
 it fixes `m` by D23's rule and is the gate preflight's evidence for the `count` level. The other levels
 are new wirings with no committed runs, so a two-seed smoke per new level (seeds 9851–9852, recorded in the tracker's seed-band
-table; not a pilot, discarded) checks they execute, and their floors are read in the panel itself with the rule that
-a level failing its floor is reported unreadable rather than read. The launch record is committed
-before any panel run.
+table; not a pilot, discarded) checks they execute. **The deciding levels' gates are preflighted** on a
+gate pilot, configured as the panel, on disjoint seeds 9861–9868: the four `unit` arms and the
+scattered null's learning and frozen arms beside the `count` wild type's (64 runs). `unit` moves the
+operating point (the largest coupling falls from 89.7 to 1), so its floor and saturation cannot be
+assumed; the preflight reads `count` on the anchor and `unit` and `outliers_scattered` on the gate
+pilot, and the panel launches only if all three read `readable`. The beside levels' floors are read in
+the panel itself, a level failing its floor reported unreadable rather than read. *(Amended 2026-10-17
+at the spec review.)* **D23's rule, clarified**: an anchor whose interval excludes zero *below* (the
+null ahead, the effect reversed on Emmons) fixes no minimum, and the panel waits on a dated decision.
+The launch record is committed before any panel run.
 
 ## Risks / Trade-offs
 

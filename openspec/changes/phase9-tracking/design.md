@@ -88,6 +88,7 @@ What was verified: each item was fetched and read, and the version notes (Lee 20
 |---|---|---|
 | G.0(a) the Emmons anchor pilot (D23) | 9801–9816 | 64 runs: wild type and gap-only null, learning and frozen |
 | G.0 two-seed smokes for the new levels | 9851–9852 | execution checks only, discarded — *added 2026-10-16 by `add-gap-operating-point`* |
+| G.0 gate pilot for the deciding levels | 9861–9868 | 64 runs: the `unit` arms and the scattered null beside the count wild type — *added 2026-10-17 by `add-gap-operating-point`* |
 | G.0(c)–(g) the operating-point arms | 2401–2464 | the 16- and 32-seed arms take the first 16 or 32 of the band |
 | G.1 + G.2, one panel | 2501–2564 | 64 seeds, each arm learning and frozen |
 | G.3 the class map | 2601–2664 | 48–64 seeds; frozen floors for the new wirings in an 8-seed preflight on 9821–9828 |
