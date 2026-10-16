@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, cast
 import torch
 from torch import nn, optim
 
+from quantumnematode.brain.arch import _telemetry as tm
 from quantumnematode.brain.arch._policy import (
     categorical_evaluate_torch,
     continuous_evaluate_tanh_gaussian,
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from quantumnematode.brain.arch._ppo_buffer import ChunkedRolloutBuffer, RolloutBuffer
+    from quantumnematode.brain.arch._telemetry import UpdateTelemetry
     from quantumnematode.brain.arch._topology import BrainTopology
     from quantumnematode.brain.arch.connectome_ppo import ConnectomeTopology
 
@@ -154,6 +156,12 @@ class ConnectomePPORule:
         self.freeze_updates = freeze_updates
         self.device = device
         self.enforce_signs = enforce_signs
+        self.telemetry: UpdateTelemetry | None = None
+
+    def attach_telemetry(self, telemetry: UpdateTelemetry) -> None:
+        """Write one line per update to ``telemetry``; reading only, so the run is unchanged."""
+        self.telemetry = telemetry
+        self._topology.capture_penultimate = True
 
     def _project(self, topo: ConnectomeTopology) -> None:
         """Return the chemical weights to the constraints the optimiser step may have broken.
@@ -226,11 +234,20 @@ class ConnectomePPORule:
         total_losses: list[float] = []
         grad_norms: list[float] = []
         update_log_stds: list[torch.Tensor] = []
+        record = tm.record_for(
+            self.telemetry,
+            returns=returns,
+            raw_advantages=advantages,
+            old_values=buffer.values,
+            clip_epsilon=self.clip_epsilon,
+            max_grad_norm=self.max_grad_norm,
+        )
 
         for _ in range(self.num_epochs):
             # Final-epoch semantics for the ceiling monitor: the recorded batch
             # reflects the near-final weights of this update.
             update_log_stds.clear()
+            record.begin_epoch()
             for raw_minibatch in self._minibatches(ppo_batch, returns, advantages):
                 # Batched forward pass through the topology + critic. The
                 # minibatch's states are unpacked + run in ONE batched
@@ -273,6 +290,7 @@ class ConnectomePPORule:
 
                 self.optimizer.zero_grad()
                 loss.backward()
+                record.read_grads(topo.learnable_parameters, self.critic.parameters())
                 grad_norm = nn.utils.clip_grad_norm_(
                     self._all_params,
                     self.max_grad_norm,
@@ -280,6 +298,16 @@ class ConnectomePPORule:
                 self.optimizer.step()
 
                 self._project(topo)
+                record.minibatch(
+                    new_log_probs=new_log_probs,
+                    old_log_probs=minibatch["old_log_probs"],
+                    head_out=new_head_out,
+                    features=hidden,
+                    entropy=entropy.item(),
+                    value_loss=value_loss.item(),
+                    grad_total=grad_norm.item(),
+                    penultimate=topo.penultimate,
+                )
 
                 policy_losses.append(policy_loss.item())
                 value_losses.append(value_loss.item())
@@ -287,6 +315,7 @@ class ConnectomePPORule:
                 total_losses.append(loss.item())
                 grad_norms.append(grad_norm.item())
 
+        self._write_telemetry(record, update_log_stds)
         extra: dict[str, float] = {}
         if update_log_stds:
             ls_mean, ls_max = clamped_log_std_stats(
@@ -301,6 +330,29 @@ class ConnectomePPORule:
             total_loss=_mean(total_losses),
             grad_norm=_mean(grad_norms),
             extra=extra,
+        )
+
+    def _write_telemetry(
+        self,
+        record: tm.UpdateRecord,
+        update_log_stds: list[torch.Tensor],
+    ) -> None:
+        """Write the update's telemetry line, if telemetry is on."""
+        if self.telemetry is None:
+            return
+        topo = self._topology
+        log_std = (
+            torch.cat([t.reshape(-1) for t in update_log_stds])
+            if update_log_stds
+            else getattr(topo, "log_std", None)
+        )
+        self.telemetry.write(
+            record.finish(
+                log_std=log_std if self.continuous else None,
+                norms=tm.weight_norms({"topology": topo, "critic": self.critic}),
+                activation="tanh",
+                continuous=self.continuous,
+            ),
         )
 
     def _minibatches(

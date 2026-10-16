@@ -3,7 +3,7 @@
 Phase 9 block M (roadmap v4.5 § Phase 9, D25, D26; tracker `phase9-tracking` M.1(a)). Registered in
 `docs/experiments/logbooks/supporting/096-collapse-diagnosis/launch.md` before any log is read.
 
-- [ ] 1. **Telemetry module and hooks**: the per-update statistics on the connectome PPO rule and the MLP
+- [x] 1. **Telemetry module and hooks**: the per-update statistics on the connectome PPO rule and the MLP
   brain, behind a flag the brains read; the replay returns the second-to-last settling iterate when on.
   Tests: each statistic against a hand computation on a tiny batch; telemetry on and off identical on
   every output, the final weights and the next value of every generator.
