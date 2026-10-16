@@ -22,7 +22,7 @@ Phase 9 milestone changes SHALL conform to the ratified design decisions D23–D
 
 #### Scenario: Milestone change contradicts a D-decision
 
-- **GIVEN** a Phase 9 milestone change proposes work that contradicts a D-decision (e.g. a point-worm arm on Cook 2019 against D23, the degree-preserving null carried as a standing beside-arm against D24, a 6,000-episode body panel before M.1 has read against D25, R.2 at reduced n against D27, or a placed arm without its two-arm control against D32)
+- **GIVEN** a Phase 9 milestone change proposes work that contradicts a D-decision (e.g. a point-worm arm on Cook 2019 against D23, the degree-preserving null carried as a standing beside-arm against D24, a 6,000-episode body panel other than M.1(c) before M.1 has read against D25, R.2 at reduced n against D27, or a placed arm without its two-arm control against D32)
 - **WHEN** the change is reviewed
 - **THEN** the change SHALL be blocked until either it conforms, or a dated amendment to the relevant D-decision is recorded in `phase9-tracking` and `docs/roadmap.md`
 
@@ -108,11 +108,11 @@ R.2 SHALL run once, last in the phase, only if all four of D27's conditions hold
 
 ### Requirement: Collapse Is a Registered Statistic
 
-Every Phase 9 panel over 3,000 episodes SHALL report collapse incidence under D25's pre-registered per-seed definition (a trailing-200-episode peak; onset when the 100-episode mean falls below half of it and stays there for at least 300 episodes; censored at the horizon) with Wilson intervals, time-to-collapse censored at the horizon, and `auc_success` to 3,000 and to the horizon separately, with IQM and performance profiles beside the mean. No 6,000-episode body panel SHALL register before M.1 reads out. A collapse remedy SHALL be chosen by rescue of the known collapsers across both wirings, never tuned per arm; SHALL hold the MLP positive control, read on fresh seeds in M.1's confirmatory panel against a stated equivalence margin on `auc_success` to 3,000 and on collapse incidence; SHALL be applied identically to every arm, byte-identical-when-off and frozen for the phase; and at most three remedy rounds SHALL run. A collapsed seed SHALL stay in the primary reading. Best-so-far and best-block statistics SHALL NOT be comparison metrics, and M.4's secondary statistic SHALL be reported beside the primary and SHALL NOT re-read a verdict.
+Every Phase 9 panel over 3,000 episodes SHALL report collapse incidence under D25's pre-registered per-seed definition (a trailing-200-episode peak; onset when the 100-episode mean falls below half of it and stays there for at least 300 episodes; censored at the horizon) with Wilson intervals, time-to-collapse censored at the horizon, and `auc_success` to 3,000 and to the horizon separately, with IQM and performance profiles beside the mean. No 6,000-episode body panel SHALL register before M.1 reads out, except M.1(c), M.1's own confirmatory panel, which is how M.1 reads out; every later 6,000-episode body panel stays gated. A collapse remedy SHALL be chosen by rescue of the known collapsers across both wirings, never tuned per arm; SHALL hold the MLP positive control, read on fresh seeds in M.1's confirmatory panel against a stated equivalence margin on `auc_success` to 3,000 and on collapse incidence; SHALL be applied identically to every arm, byte-identical-when-off and frozen for the phase; and at most three remedy rounds SHALL run. A collapsed seed SHALL stay in the primary reading. Best-so-far and best-block statistics SHALL NOT be comparison metrics, and M.4's secondary statistic SHALL be reported beside the primary and SHALL NOT re-read a verdict.
 
 #### Scenario: Long body panel registered before M.1 reads
 
-- **GIVEN** a milestone change proposes a 6,000-episode body panel
+- **GIVEN** a milestone change proposes a 6,000-episode body panel other than M.1(c)
 - **WHEN** the change is reviewed and M.1 has neither closed nor fired its stop rule
 - **THEN** the registration SHALL be blocked until M.1 reads out, or the panel is re-registered at 3,000 episodes with the collapse statistic
 
