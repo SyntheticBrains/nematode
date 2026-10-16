@@ -3,145 +3,51 @@
     "definition": {
       "fraction": 0.5,
       "level_window": 100,
+      "onset": "the first fall not recovered before the horizon",
       "peak_window": 200,
       "persistence": 300,
-      "recovery": [
-        0.8,
-        1000
-      ]
+      "recovery": 0.8
     },
     "incidence": {
-      "collapsed": 32,
+      "collapsed": 7,
       "n": 64,
-      "rate": 0.5,
+      "rate": 0.109375,
       "wilson_95": [
-        0.3810209474394701,
-        0.6189790525605299
+        0.05400113344416797,
+        0.20898641326896122
       ]
     },
     "kaplan_meier": {
-      "median": 2362,
+      "median": null,
       "n": 64,
       "steps": [
         [
-          291,
+          1259,
           0.984375
         ],
         [
-          441,
+          1479,
           0.96875
         ],
         [
-          597,
+          1585,
           0.953125
         ],
         [
-          619,
+          1590,
           0.9375
         ],
         [
-          738,
+          1630,
           0.921875
         ],
         [
-          774,
+          2362,
           0.90625
         ],
         [
-          826,
+          2425,
           0.890625
-        ],
-        [
-          925,
-          0.859375
-        ],
-        [
-          969,
-          0.84375
-        ],
-        [
-          1011,
-          0.828125
-        ],
-        [
-          1034,
-          0.8125
-        ],
-        [
-          1100,
-          0.796875
-        ],
-        [
-          1158,
-          0.78125
-        ],
-        [
-          1206,
-          0.765625
-        ],
-        [
-          1219,
-          0.75
-        ],
-        [
-          1259,
-          0.734375
-        ],
-        [
-          1264,
-          0.71875
-        ],
-        [
-          1382,
-          0.703125
-        ],
-        [
-          1392,
-          0.6875
-        ],
-        [
-          1479,
-          0.671875
-        ],
-        [
-          1487,
-          0.65625
-        ],
-        [
-          1546,
-          0.640625
-        ],
-        [
-          1585,
-          0.625
-        ],
-        [
-          1590,
-          0.609375
-        ],
-        [
-          1608,
-          0.59375
-        ],
-        [
-          1630,
-          0.5625
-        ],
-        [
-          1631,
-          0.546875
-        ],
-        [
-          1663,
-          0.53125
-        ],
-        [
-          1786,
-          0.515625
-        ],
-        [
-          2362,
-          0.5
         ]
       ]
     },
@@ -151,12 +57,13 @@
         "auc_to_3000": 0.23433333333333334,
         "auc_to_horizon": 0.23433333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.62,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.525,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.492,
@@ -167,13 +74,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1802": {
         "auc_to_3000": 0.371,
         "auc_to_horizon": 0.371,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.56,
+        "first_fall": 1206,
         "horizon": 3000,
-        "onset": 1206,
+        "onset": null,
         "peak": 0.79,
-        "peak_at_onset": 0.605,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.688,
@@ -184,13 +92,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1803": {
         "auc_to_3000": 0.32766666666666666,
         "auc_to_horizon": 0.32766666666666666,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.84,
+        "first_fall": 1219,
         "horizon": 3000,
-        "onset": 1219,
+        "onset": null,
         "peak": 0.89,
-        "peak_at_onset": 0.665,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.766,
@@ -202,12 +111,13 @@
         "auc_to_3000": 0.5693333333333334,
         "auc_to_horizon": 0.5693333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.93,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.92,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.894,
@@ -219,12 +129,13 @@
         "auc_to_3000": 0.311,
         "auc_to_horizon": 0.311,
         "collapsed": false,
+        "dips": 0,
         "final": 0.74,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.86,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.77,
@@ -236,12 +147,13 @@
         "auc_to_3000": 0.38866666666666666,
         "auc_to_horizon": 0.38866666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.82,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.82,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.732,
@@ -253,12 +165,13 @@
         "auc_to_3000": 0.015,
         "auc_to_horizon": 0.015,
         "collapsed": false,
+        "dips": 0,
         "final": 0.0,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.15,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.068,
@@ -270,12 +183,13 @@
         "auc_to_3000": 0.4156666666666667,
         "auc_to_horizon": 0.4156666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.58,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.71,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.554,
@@ -287,12 +201,13 @@
         "auc_to_3000": 0.25766666666666665,
         "auc_to_horizon": 0.25766666666666665,
         "collapsed": true,
+        "dips": 0,
         "final": 0.49,
+        "first_fall": 1590,
         "horizon": 3000,
         "onset": 1590,
         "peak": 0.775,
         "peak_at_onset": 0.775,
-        "recovered": false,
         "rule_092": {
           "collapsed": false,
           "last": 0.418,
@@ -304,12 +219,13 @@
         "auc_to_3000": 0.4116666666666667,
         "auc_to_horizon": 0.4116666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.58,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.745,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.626,
@@ -321,12 +237,13 @@
         "auc_to_3000": 0.6076666666666667,
         "auc_to_horizon": 0.6076666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.79,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.855,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.754,
@@ -338,12 +255,13 @@
         "auc_to_3000": 0.3506666666666667,
         "auc_to_horizon": 0.3506666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.17,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.825,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.572,
@@ -355,12 +273,13 @@
         "auc_to_3000": 0.562,
         "auc_to_horizon": 0.562,
         "collapsed": false,
+        "dips": 0,
         "final": 0.38,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.925,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.652,
@@ -371,13 +290,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1814": {
         "auc_to_3000": 0.352,
         "auc_to_horizon": 0.352,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.45,
+        "first_fall": 1100,
         "horizon": 3000,
-        "onset": 1100,
+        "onset": null,
         "peak": 0.765,
-        "peak_at_onset": 0.53,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.58,
@@ -389,12 +309,13 @@
         "auc_to_3000": 0.268,
         "auc_to_horizon": 0.268,
         "collapsed": true,
+        "dips": 0,
         "final": 0.33,
+        "first_fall": 1585,
         "horizon": 3000,
         "onset": 1585,
         "peak": 0.655,
         "peak_at_onset": 0.655,
-        "recovered": false,
         "rule_092": {
           "collapsed": false,
           "last": 0.388,
@@ -405,13 +326,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1816": {
         "auc_to_3000": 0.4623333333333333,
         "auc_to_horizon": 0.4623333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.66,
+        "first_fall": 1786,
         "horizon": 3000,
-        "onset": 1786,
+        "onset": null,
         "peak": 0.75,
-        "peak_at_onset": 0.75,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.608,
@@ -422,13 +344,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1817": {
         "auc_to_3000": 0.379,
         "auc_to_horizon": 0.379,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.54,
+        "first_fall": 1392,
         "horizon": 3000,
-        "onset": 1392,
+        "onset": null,
         "peak": 0.82,
-        "peak_at_onset": 0.61,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.664,
@@ -439,13 +362,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1818": {
         "auc_to_3000": 0.31266666666666665,
         "auc_to_horizon": 0.31266666666666665,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.81,
+        "first_fall": 925,
         "horizon": 3000,
-        "onset": 925,
+        "onset": null,
         "peak": 0.82,
-        "peak_at_onset": 0.31,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.66,
@@ -457,12 +381,13 @@
         "auc_to_3000": 0.6213333333333333,
         "auc_to_horizon": 0.6213333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.78,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.88,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.81,
@@ -473,13 +398,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1820": {
         "auc_to_3000": 0.33766666666666667,
         "auc_to_horizon": 0.33766666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.03,
+        "first_fall": 826,
         "horizon": 3000,
-        "onset": 826,
+        "onset": null,
         "peak": 0.675,
-        "peak_at_onset": 0.6,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.392,
@@ -490,13 +416,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1821": {
         "auc_to_3000": 0.419,
         "auc_to_horizon": 0.419,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.59,
+        "first_fall": 1382,
         "horizon": 3000,
-        "onset": 1382,
+        "onset": null,
         "peak": 0.76,
-        "peak_at_onset": 0.76,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.502,
@@ -508,12 +435,13 @@
         "auc_to_3000": 0.222,
         "auc_to_horizon": 0.222,
         "collapsed": true,
+        "dips": 0,
         "final": 0.25,
+        "first_fall": 1479,
         "horizon": 3000,
         "onset": 1479,
         "peak": 0.73,
         "peak_at_onset": 0.73,
-        "recovered": false,
         "rule_092": {
           "collapsed": true,
           "last": 0.118,
@@ -525,12 +453,13 @@
         "auc_to_3000": 0.32666666666666666,
         "auc_to_horizon": 0.32666666666666666,
         "collapsed": true,
+        "dips": 0,
         "final": 0.2,
+        "first_fall": 2362,
         "horizon": 3000,
         "onset": 2362,
         "peak": 0.845,
         "peak_at_onset": 0.845,
-        "recovered": false,
         "rule_092": {
           "collapsed": true,
           "last": 0.066,
@@ -542,12 +471,13 @@
         "auc_to_3000": 0.36433333333333334,
         "auc_to_horizon": 0.36433333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.8,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.845,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.822,
@@ -558,13 +488,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1825": {
         "auc_to_3000": 0.17366666666666666,
         "auc_to_horizon": 0.17366666666666666,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.36,
+        "first_fall": 1663,
         "horizon": 3000,
-        "onset": 1663,
+        "onset": null,
         "peak": 0.55,
-        "peak_at_onset": 0.55,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.348,
@@ -576,12 +507,13 @@
         "auc_to_3000": 0.4533333333333333,
         "auc_to_horizon": 0.4533333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.69,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.78,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.714,
@@ -593,12 +525,13 @@
         "auc_to_3000": 0.569,
         "auc_to_horizon": 0.569,
         "collapsed": false,
+        "dips": 0,
         "final": 0.74,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.895,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.736,
@@ -609,13 +542,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1828": {
         "auc_to_3000": 0.23966666666666667,
         "auc_to_horizon": 0.23966666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.74,
+        "first_fall": 1631,
         "horizon": 3000,
-        "onset": 1631,
+        "onset": null,
         "peak": 0.805,
-        "peak_at_onset": 0.35,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.744,
@@ -626,13 +560,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1829": {
         "auc_to_3000": 0.299,
         "auc_to_horizon": 0.299,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.59,
+        "first_fall": 597,
         "horizon": 3000,
-        "onset": 597,
+        "onset": null,
         "peak": 0.745,
-        "peak_at_onset": 0.315,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.678,
@@ -644,12 +579,13 @@
         "auc_to_3000": 0.569,
         "auc_to_horizon": 0.569,
         "collapsed": false,
+        "dips": 0,
         "final": 0.79,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.62,
@@ -660,13 +596,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1831": {
         "auc_to_3000": 0.19633333333333333,
         "auc_to_horizon": 0.19633333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.52,
+        "first_fall": 1264,
         "horizon": 3000,
-        "onset": 1264,
+        "onset": null,
         "peak": 0.515,
-        "peak_at_onset": 0.515,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.272,
@@ -678,12 +615,13 @@
         "auc_to_3000": 0.478,
         "auc_to_horizon": 0.478,
         "collapsed": false,
+        "dips": 0,
         "final": 0.29,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.88,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.612,
@@ -694,13 +632,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1833": {
         "auc_to_3000": 0.3333333333333333,
         "auc_to_horizon": 0.3333333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.69,
+        "first_fall": 925,
         "horizon": 3000,
-        "onset": 925,
+        "onset": null,
         "peak": 0.81,
-        "peak_at_onset": 0.355,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.646,
@@ -711,13 +650,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1834": {
         "auc_to_3000": 0.365,
         "auc_to_horizon": 0.365,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.63,
+        "first_fall": 441,
         "horizon": 3000,
-        "onset": 441,
+        "onset": null,
         "peak": 0.85,
-        "peak_at_onset": 0.55,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.618,
@@ -729,12 +669,13 @@
         "auc_to_3000": 0.49533333333333335,
         "auc_to_horizon": 0.49533333333333335,
         "collapsed": false,
+        "dips": 0,
         "final": 0.71,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.75,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.638,
@@ -745,13 +686,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1836": {
         "auc_to_3000": 0.33566666666666667,
         "auc_to_horizon": 0.33566666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 2,
         "final": 0.83,
+        "first_fall": 291,
         "horizon": 3000,
-        "onset": 291,
+        "onset": null,
         "peak": 0.79,
-        "peak_at_onset": 0.095,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.762,
@@ -763,12 +705,13 @@
         "auc_to_3000": 0.29733333333333334,
         "auc_to_horizon": 0.29733333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.8,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.77,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.67,
@@ -780,12 +723,13 @@
         "auc_to_3000": 0.589,
         "auc_to_horizon": 0.589,
         "collapsed": false,
+        "dips": 0,
         "final": 0.93,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.92,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.838,
@@ -797,12 +741,13 @@
         "auc_to_3000": 0.44666666666666666,
         "auc_to_horizon": 0.44666666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.54,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.845,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.704,
@@ -814,12 +759,13 @@
         "auc_to_3000": 0.5223333333333333,
         "auc_to_horizon": 0.5223333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.61,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.785,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.688,
@@ -831,12 +777,13 @@
         "auc_to_3000": 0.5756666666666667,
         "auc_to_horizon": 0.5756666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.53,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.91,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.632,
@@ -847,13 +794,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1842": {
         "auc_to_3000": 0.27366666666666667,
         "auc_to_horizon": 0.27366666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.8,
+        "first_fall": 738,
         "horizon": 3000,
-        "onset": 738,
+        "onset": null,
         "peak": 0.79,
-        "peak_at_onset": 0.405,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.718,
@@ -865,12 +813,13 @@
         "auc_to_3000": 0.247,
         "auc_to_horizon": 0.247,
         "collapsed": true,
+        "dips": 0,
         "final": 0.37,
+        "first_fall": 1259,
         "horizon": 3000,
         "onset": 1259,
         "peak": 0.63,
         "peak_at_onset": 0.63,
-        "recovered": false,
         "rule_092": {
           "collapsed": false,
           "last": 0.386,
@@ -882,12 +831,13 @@
         "auc_to_3000": 0.613,
         "auc_to_horizon": 0.613,
         "collapsed": false,
+        "dips": 0,
         "final": 0.66,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.855,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.7,
@@ -899,12 +849,13 @@
         "auc_to_3000": 0.5706666666666667,
         "auc_to_horizon": 0.5706666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.8,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.87,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.772,
@@ -916,12 +867,13 @@
         "auc_to_3000": 0.013333333333333334,
         "auc_to_horizon": 0.013333333333333334,
         "collapsed": true,
+        "dips": 0,
         "final": 0.01,
+        "first_fall": 1630,
         "horizon": 3000,
         "onset": 1630,
         "peak": 0.115,
         "peak_at_onset": 0.115,
-        "recovered": false,
         "rule_092": {
           "collapsed": false,
           "last": 0.002,
@@ -933,12 +885,13 @@
         "auc_to_3000": 0.5003333333333333,
         "auc_to_horizon": 0.5003333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.74,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.845,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.808,
@@ -950,12 +903,13 @@
         "auc_to_3000": 0.36233333333333334,
         "auc_to_horizon": 0.36233333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.37,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.81,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.566,
@@ -966,13 +920,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1849": {
         "auc_to_3000": 0.36033333333333334,
         "auc_to_horizon": 0.36033333333333334,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.77,
+        "first_fall": 1034,
         "horizon": 3000,
-        "onset": 1034,
+        "onset": null,
         "peak": 0.745,
-        "peak_at_onset": 0.59,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.682,
@@ -983,13 +938,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1850": {
         "auc_to_3000": 0.07566666666666666,
         "auc_to_horizon": 0.07566666666666666,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.31,
+        "first_fall": 1546,
         "horizon": 3000,
-        "onset": 1546,
+        "onset": null,
         "peak": 0.285,
-        "peak_at_onset": 0.23,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.202,
@@ -1001,12 +957,13 @@
         "auc_to_3000": 0.44766666666666666,
         "auc_to_horizon": 0.44766666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.72,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.775,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.614,
@@ -1018,12 +975,13 @@
         "auc_to_3000": 0.587,
         "auc_to_horizon": 0.587,
         "collapsed": false,
+        "dips": 0,
         "final": 0.83,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.925,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.848,
@@ -1034,13 +992,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1853": {
         "auc_to_3000": 0.3576666666666667,
         "auc_to_horizon": 0.3576666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.65,
+        "first_fall": 1630,
         "horizon": 3000,
-        "onset": 1630,
+        "onset": null,
         "peak": 0.765,
-        "peak_at_onset": 0.765,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.536,
@@ -1051,13 +1010,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1854": {
         "auc_to_3000": 0.389,
         "auc_to_horizon": 0.389,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.77,
+        "first_fall": 1487,
         "horizon": 3000,
-        "onset": 1487,
+        "onset": null,
         "peak": 0.895,
-        "peak_at_onset": 0.695,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.822,
@@ -1069,12 +1029,13 @@
         "auc_to_3000": 0.287,
         "auc_to_horizon": 0.287,
         "collapsed": true,
+        "dips": 1,
         "final": 0.25,
+        "first_fall": 1011,
         "horizon": 3000,
-        "onset": 1011,
+        "onset": 2425,
         "peak": 0.705,
-        "peak_at_onset": 0.54,
-        "recovered": true,
+        "peak_at_onset": 0.705,
         "rule_092": {
           "collapsed": true,
           "last": 0.12,
@@ -1085,13 +1046,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1856": {
         "auc_to_3000": 0.20433333333333334,
         "auc_to_horizon": 0.20433333333333334,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.42,
+        "first_fall": 774,
         "horizon": 3000,
-        "onset": 774,
+        "onset": null,
         "peak": 0.63,
-        "peak_at_onset": 0.56,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.464,
@@ -1103,12 +1065,13 @@
         "auc_to_3000": 0.454,
         "auc_to_horizon": 0.454,
         "collapsed": false,
+        "dips": 0,
         "final": 0.76,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.875,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.82,
@@ -1119,13 +1082,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1858": {
         "auc_to_3000": 0.3993333333333333,
         "auc_to_horizon": 0.3993333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.77,
+        "first_fall": 969,
         "horizon": 3000,
-        "onset": 969,
+        "onset": null,
         "peak": 0.795,
-        "peak_at_onset": 0.645,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.616,
@@ -1137,12 +1101,13 @@
         "auc_to_3000": 0.37666666666666665,
         "auc_to_horizon": 0.37666666666666665,
         "collapsed": false,
+        "dips": 0,
         "final": 0.72,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.785,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.69,
@@ -1154,12 +1119,13 @@
         "auc_to_3000": 0.6353333333333333,
         "auc_to_horizon": 0.6353333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.87,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.862,
@@ -1171,12 +1137,13 @@
         "auc_to_3000": 0.4866666666666667,
         "auc_to_horizon": 0.4866666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.82,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.845,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.798,
@@ -1187,13 +1154,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1862": {
         "auc_to_3000": 0.45266666666666666,
         "auc_to_horizon": 0.45266666666666666,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.81,
+        "first_fall": 1608,
         "horizon": 3000,
-        "onset": 1608,
+        "onset": null,
         "peak": 0.815,
-        "peak_at_onset": 0.785,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.664,
@@ -1204,13 +1172,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1863": {
         "auc_to_3000": 0.5093333333333333,
         "auc_to_horizon": 0.5093333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.81,
+        "first_fall": 619,
         "horizon": 3000,
-        "onset": 619,
+        "onset": null,
         "peak": 0.895,
-        "peak_at_onset": 0.33,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.768,
@@ -1221,13 +1190,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_chemnull_ppo-seed1864": {
         "auc_to_3000": 0.14633333333333334,
         "auc_to_horizon": 0.14633333333333334,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.26,
+        "first_fall": 1158,
         "horizon": 3000,
-        "onset": 1158,
+        "onset": null,
         "peak": 0.365,
-        "peak_at_onset": 0.365,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.298,
@@ -1238,354 +1208,354 @@
     },
     "sensitivity": [
       {
-        "collapsed": 37,
+        "collapsed": 8,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 100,
         "persistence": 200,
-        "rate": 0.578125,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.456100315400829,
-          0.6913021752565451
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 31,
+        "collapsed": 8,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 100,
         "persistence": 300,
-        "rate": 0.484375,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.3663355166543264,
-          0.6041839852141988
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 20,
+        "collapsed": 7,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 100,
         "persistence": 500,
-        "rate": 0.3125,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.21231066539482046,
-          0.4339233570274815
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 42,
+        "collapsed": 9,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 100,
         "persistence": 200,
-        "rate": 0.65625,
+        "rate": 0.140625,
         "registered": false,
         "wilson_95": [
-          0.5340364020991819,
-          0.7607685792155665
+          0.0757857255603086,
+          0.24616281741577023
         ]
       },
       {
-        "collapsed": 34,
+        "collapsed": 8,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 100,
         "persistence": 300,
-        "rate": 0.53125,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.41072087051471007,
-          0.6482401257482395
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 27,
+        "collapsed": 8,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 100,
         "persistence": 500,
-        "rate": 0.421875,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.30869782474345486,
-          0.5438996845991709
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 45,
+        "collapsed": 9,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 100,
         "persistence": 200,
-        "rate": 0.703125,
+        "rate": 0.140625,
         "registered": false,
         "wilson_95": [
-          0.5822979889645707,
-          0.8009484867446022
+          0.0757857255603086,
+          0.24616281741577023
         ]
       },
       {
-        "collapsed": 37,
+        "collapsed": 8,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 100,
         "persistence": 300,
-        "rate": 0.578125,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.456100315400829,
-          0.6913021752565451
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 28,
+        "collapsed": 8,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 100,
         "persistence": 500,
-        "rate": 0.4375,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.3229400970440308,
-          0.5591379104300699
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 36,
+        "collapsed": 7,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 200,
         "persistence": 200,
-        "rate": 0.5625,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.4408620895699301,
-          0.6770599029559693
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 30,
+        "collapsed": 7,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 200,
         "persistence": 300,
-        "rate": 0.46875,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.35175987425176036,
-          0.5892791294852899
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 20,
+        "collapsed": 6,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 200,
         "persistence": 500,
-        "rate": 0.3125,
+        "rate": 0.09375,
         "registered": false,
         "wilson_95": [
-          0.21231066539482046,
-          0.4339233570274815
+          0.04367825258519838,
+          0.18982879599645597
         ]
       },
       {
-        "collapsed": 38,
+        "collapsed": 7,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 200,
         "persistence": 200,
-        "rate": 0.59375,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.4714520812860451,
-          0.7054309075028039
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 32,
+        "collapsed": 7,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 200,
         "persistence": 300,
-        "rate": 0.5,
+        "rate": 0.109375,
         "registered": true,
         "wilson_95": [
-          0.3810209474394701,
-          0.6189790525605299
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 24,
+        "collapsed": 7,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 200,
         "persistence": 500,
-        "rate": 0.375,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.2666598017882464,
-          0.497496213159955
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 43,
+        "collapsed": 7,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 200,
         "persistence": 200,
-        "rate": 0.671875,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.549991058490915,
-          0.7742944209553081
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 35,
+        "collapsed": 7,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 200,
         "persistence": 300,
-        "rate": 0.546875,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.4257359722005412,
-          0.6627055221938833
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 27,
+        "collapsed": 7,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 200,
         "persistence": 500,
-        "rate": 0.421875,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.30869782474345486,
-          0.5438996845991709
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 35,
+        "collapsed": 4,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.546875,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.4257359722005412,
-          0.6627055221938833
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 28,
+        "collapsed": 4,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.4375,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.3229400970440308,
-          0.5591379104300699
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 16,
+        "collapsed": 3,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.25,
+        "rate": 0.046875,
         "registered": false,
         "wilson_95": [
-          0.16014926530970577,
-          0.36816276458669694
+          0.016069016786292974,
+          0.12899653740093686
         ]
       },
       {
-        "collapsed": 35,
+        "collapsed": 4,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.546875,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.4257359722005412,
-          0.6627055221938833
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 31,
+        "collapsed": 4,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.484375,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.3663355166543264,
-          0.6041839852141988
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 22,
+        "collapsed": 3,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.34375,
+        "rate": 0.046875,
         "registered": false,
         "wilson_95": [
-          0.23923142078443355,
-          0.46596359790081815
+          0.016069016786292974,
+          0.12899653740093686
         ]
       },
       {
-        "collapsed": 38,
+        "collapsed": 4,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.59375,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.4714520812860451,
-          0.7054309075028039
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 34,
+        "collapsed": 4,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.53125,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.41072087051471007,
-          0.6482401257482395
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 24,
+        "collapsed": 4,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.375,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.2666598017882464,
-          0.497496213159955
+          0.024571201396618017,
+          0.14997485092208662
         ]
       }
     ]
@@ -1594,161 +1564,51 @@
     "definition": {
       "fraction": 0.5,
       "level_window": 100,
+      "onset": "the first fall not recovered before the horizon",
       "peak_window": 200,
       "persistence": 300,
-      "recovery": [
-        0.8,
-        1000
-      ]
+      "recovery": 0.8
     },
     "incidence": {
-      "collapsed": 35,
+      "collapsed": 7,
       "n": 64,
-      "rate": 0.546875,
+      "rate": 0.109375,
       "wilson_95": [
-        0.4257359722005412,
-        0.6627055221938833
+        0.05400113344416797,
+        0.20898641326896122
       ]
     },
     "kaplan_meier": {
-      "median": 2089,
+      "median": null,
       "n": 64,
       "steps": [
         [
-          442,
+          1962,
           0.984375
         ],
         [
-          525,
+          2089,
           0.96875
         ],
         [
-          560,
+          2492,
           0.953125
         ],
         [
-          612,
+          2526,
           0.9375
         ],
         [
-          634,
+          2597,
           0.921875
         ],
         [
-          652,
+          2649,
           0.90625
         ],
         [
-          706,
+          2687,
           0.890625
-        ],
-        [
-          747,
-          0.875
-        ],
-        [
-          780,
-          0.859375
-        ],
-        [
-          794,
-          0.84375
-        ],
-        [
-          811,
-          0.828125
-        ],
-        [
-          879,
-          0.8125
-        ],
-        [
-          910,
-          0.796875
-        ],
-        [
-          990,
-          0.78125
-        ],
-        [
-          1050,
-          0.765625
-        ],
-        [
-          1164,
-          0.75
-        ],
-        [
-          1209,
-          0.734375
-        ],
-        [
-          1216,
-          0.71875
-        ],
-        [
-          1261,
-          0.703125
-        ],
-        [
-          1306,
-          0.6875
-        ],
-        [
-          1328,
-          0.671875
-        ],
-        [
-          1336,
-          0.65625
-        ],
-        [
-          1339,
-          0.640625
-        ],
-        [
-          1521,
-          0.625
-        ],
-        [
-          1606,
-          0.609375
-        ],
-        [
-          1634,
-          0.578125
-        ],
-        [
-          1647,
-          0.5625
-        ],
-        [
-          1701,
-          0.546875
-        ],
-        [
-          1962,
-          0.53125
-        ],
-        [
-          1978,
-          0.515625
-        ],
-        [
-          2089,
-          0.5
-        ],
-        [
-          2291,
-          0.484375
-        ],
-        [
-          2526,
-          0.46875
-        ],
-        [
-          2597,
-          0.453125
         ]
       ]
     },
@@ -1758,12 +1618,13 @@
         "auc_to_3000": 0.47933333333333333,
         "auc_to_horizon": 0.47933333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.7,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.84,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.78,
@@ -1775,12 +1636,13 @@
         "auc_to_3000": 0.31933333333333336,
         "auc_to_horizon": 0.31933333333333336,
         "collapsed": true,
+        "dips": 1,
         "final": 0.08,
+        "first_fall": 525,
         "horizon": 3000,
-        "onset": 525,
+        "onset": 2649,
         "peak": 0.77,
-        "peak_at_onset": 0.18,
-        "recovered": true,
+        "peak_at_onset": 0.77,
         "rule_092": {
           "collapsed": true,
           "last": 0.172,
@@ -1792,12 +1654,13 @@
         "auc_to_3000": 0.45066666666666666,
         "auc_to_horizon": 0.45066666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.73,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.87,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.536,
@@ -1808,13 +1671,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1804": {
         "auc_to_3000": 0.09466666666666666,
         "auc_to_horizon": 0.09466666666666666,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.32,
+        "first_fall": 1634,
         "horizon": 3000,
-        "onset": 1634,
+        "onset": null,
         "peak": 0.4,
-        "peak_at_onset": 0.235,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.322,
@@ -1825,13 +1689,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1805": {
         "auc_to_3000": 0.22533333333333333,
         "auc_to_horizon": 0.22533333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.72,
+        "first_fall": 1606,
         "horizon": 3000,
-        "onset": 1606,
+        "onset": null,
         "peak": 0.785,
-        "peak_at_onset": 0.35,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.652,
@@ -1843,12 +1708,13 @@
         "auc_to_3000": 0.233,
         "auc_to_horizon": 0.233,
         "collapsed": true,
+        "dips": 1,
         "final": 0.0,
+        "first_fall": 1164,
         "horizon": 3000,
-        "onset": 1164,
+        "onset": 2687,
         "peak": 0.66,
-        "peak_at_onset": 0.395,
-        "recovered": true,
+        "peak_at_onset": 0.66,
         "rule_092": {
           "collapsed": true,
           "last": 0.188,
@@ -1859,13 +1725,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1807": {
         "auc_to_3000": 0.25266666666666665,
         "auc_to_horizon": 0.25266666666666665,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.72,
+        "first_fall": 1261,
         "horizon": 3000,
-        "onset": 1261,
+        "onset": null,
         "peak": 0.605,
-        "peak_at_onset": 0.58,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.56,
@@ -1876,13 +1743,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1808": {
         "auc_to_3000": 0.11433333333333333,
         "auc_to_horizon": 0.11433333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.31,
+        "first_fall": 1216,
         "horizon": 3000,
-        "onset": 1216,
+        "onset": null,
         "peak": 0.425,
-        "peak_at_onset": 0.34,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.318,
@@ -1894,12 +1762,13 @@
         "auc_to_3000": 0.5636666666666666,
         "auc_to_horizon": 0.5636666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.85,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.87,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.808,
@@ -1911,12 +1780,13 @@
         "auc_to_3000": 0.5676666666666667,
         "auc_to_horizon": 0.5676666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.77,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.955,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.862,
@@ -1928,12 +1798,13 @@
         "auc_to_3000": 0.37866666666666665,
         "auc_to_horizon": 0.37866666666666665,
         "collapsed": false,
+        "dips": 0,
         "final": 0.34,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.845,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.474,
@@ -1945,12 +1816,13 @@
         "auc_to_3000": 0.4043333333333333,
         "auc_to_horizon": 0.4043333333333333,
         "collapsed": true,
+        "dips": 0,
         "final": 0.28,
+        "first_fall": 2089,
         "horizon": 3000,
         "onset": 2089,
         "peak": 0.825,
         "peak_at_onset": 0.825,
-        "recovered": false,
         "rule_092": {
           "collapsed": true,
           "last": 0.272,
@@ -1961,13 +1833,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1813": {
         "auc_to_3000": 0.3893333333333333,
         "auc_to_horizon": 0.3893333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.68,
+        "first_fall": 2291,
         "horizon": 3000,
-        "onset": 2291,
+        "onset": null,
         "peak": 0.825,
-        "peak_at_onset": 0.805,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.626,
@@ -1978,13 +1851,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1814": {
         "auc_to_3000": 0.4063333333333333,
         "auc_to_horizon": 0.4063333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.49,
+        "first_fall": 1634,
         "horizon": 3000,
-        "onset": 1634,
+        "onset": null,
         "peak": 0.775,
-        "peak_at_onset": 0.75,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.588,
@@ -1996,12 +1870,13 @@
         "auc_to_3000": 0.624,
         "auc_to_horizon": 0.624,
         "collapsed": false,
+        "dips": 0,
         "final": 0.84,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.88,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.852,
@@ -2012,13 +1887,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1816": {
         "auc_to_3000": 0.48966666666666664,
         "auc_to_horizon": 0.48966666666666664,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.72,
+        "first_fall": 1647,
         "horizon": 3000,
-        "onset": 1647,
+        "onset": null,
         "peak": 0.89,
-        "peak_at_onset": 0.765,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.786,
@@ -2030,12 +1906,13 @@
         "auc_to_3000": 0.5326666666666666,
         "auc_to_horizon": 0.5326666666666666,
         "collapsed": true,
+        "dips": 0,
         "final": 0.32,
+        "first_fall": 2597,
         "horizon": 3000,
         "onset": 2597,
         "peak": 0.91,
         "peak_at_onset": 0.91,
-        "recovered": false,
         "rule_092": {
           "collapsed": true,
           "last": 0.282,
@@ -2046,13 +1923,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1818": {
         "auc_to_3000": 0.18766666666666668,
         "auc_to_horizon": 0.18766666666666668,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.59,
+        "first_fall": 910,
         "horizon": 3000,
-        "onset": 910,
+        "onset": null,
         "peak": 0.6,
-        "peak_at_onset": 0.295,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.514,
@@ -2064,12 +1942,13 @@
         "auc_to_3000": 0.49033333333333334,
         "auc_to_horizon": 0.49033333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.6,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.86,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.666,
@@ -2080,13 +1959,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1820": {
         "auc_to_3000": 0.458,
         "auc_to_horizon": 0.458,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.8,
+        "first_fall": 811,
         "horizon": 3000,
-        "onset": 811,
+        "onset": null,
         "peak": 0.845,
-        "peak_at_onset": 0.59,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.786,
@@ -2097,13 +1977,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1821": {
         "auc_to_3000": 0.3863333333333333,
         "auc_to_horizon": 0.3863333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.74,
+        "first_fall": 1328,
         "horizon": 3000,
-        "onset": 1328,
+        "onset": null,
         "peak": 0.815,
-        "peak_at_onset": 0.485,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.766,
@@ -2114,13 +1995,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1822": {
         "auc_to_3000": 0.19733333333333333,
         "auc_to_horizon": 0.19733333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 2,
         "final": 0.34,
+        "first_fall": 560,
         "horizon": 3000,
-        "onset": 560,
+        "onset": null,
         "peak": 0.47,
-        "peak_at_onset": 0.29,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.33,
@@ -2132,12 +2014,13 @@
         "auc_to_3000": 0.41133333333333333,
         "auc_to_horizon": 0.41133333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.68,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.76,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.63,
@@ -2149,12 +2032,13 @@
         "auc_to_3000": 0.468,
         "auc_to_horizon": 0.468,
         "collapsed": false,
+        "dips": 0,
         "final": 0.49,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.775,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.608,
@@ -2165,13 +2049,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1825": {
         "auc_to_3000": 0.3243333333333333,
         "auc_to_horizon": 0.3243333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.36,
+        "first_fall": 1336,
         "horizon": 3000,
-        "onset": 1336,
+        "onset": null,
         "peak": 0.75,
-        "peak_at_onset": 0.465,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.552,
@@ -2183,12 +2068,13 @@
         "auc_to_3000": 0.61,
         "auc_to_horizon": 0.61,
         "collapsed": false,
+        "dips": 0,
         "final": 0.86,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.79,
@@ -2200,12 +2086,13 @@
         "auc_to_3000": 0.6286666666666667,
         "auc_to_horizon": 0.6286666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.63,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.84,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.752,
@@ -2217,12 +2104,13 @@
         "auc_to_3000": 0.489,
         "auc_to_horizon": 0.489,
         "collapsed": false,
+        "dips": 0,
         "final": 0.82,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.84,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.8,
@@ -2234,12 +2122,13 @@
         "auc_to_3000": 0.49866666666666665,
         "auc_to_horizon": 0.49866666666666665,
         "collapsed": false,
+        "dips": 0,
         "final": 0.47,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.835,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": true,
           "last": 0.362,
@@ -2251,12 +2140,13 @@
         "auc_to_3000": 0.5483333333333333,
         "auc_to_horizon": 0.5483333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.7,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.925,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.77,
@@ -2267,13 +2157,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1831": {
         "auc_to_3000": 0.24966666666666668,
         "auc_to_horizon": 0.24966666666666668,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.62,
+        "first_fall": 1209,
         "horizon": 3000,
-        "onset": 1209,
+        "onset": null,
         "peak": 0.76,
-        "peak_at_onset": 0.37,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.578,
@@ -2284,13 +2175,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1832": {
         "auc_to_3000": 0.44533333333333336,
         "auc_to_horizon": 0.44533333333333336,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.76,
+        "first_fall": 634,
         "horizon": 3000,
-        "onset": 634,
+        "onset": null,
         "peak": 0.855,
-        "peak_at_onset": 0.47,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.578,
@@ -2302,12 +2194,13 @@
         "auc_to_3000": 0.5346666666666666,
         "auc_to_horizon": 0.5346666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.79,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.85,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.74,
@@ -2319,12 +2212,13 @@
         "auc_to_3000": 0.3636666666666667,
         "auc_to_horizon": 0.3636666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.54,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.84,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.682,
@@ -2336,12 +2230,13 @@
         "auc_to_3000": 0.567,
         "auc_to_horizon": 0.567,
         "collapsed": false,
+        "dips": 0,
         "final": 0.44,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.895,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.48,
@@ -2353,12 +2248,13 @@
         "auc_to_3000": 0.428,
         "auc_to_horizon": 0.428,
         "collapsed": false,
+        "dips": 0,
         "final": 0.89,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.865,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.822,
@@ -2369,13 +2265,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1837": {
         "auc_to_3000": 0.4696666666666667,
         "auc_to_horizon": 0.4696666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.62,
+        "first_fall": 442,
         "horizon": 3000,
-        "onset": 442,
+        "onset": null,
         "peak": 0.79,
-        "peak_at_onset": 0.25,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.702,
@@ -2387,12 +2284,13 @@
         "auc_to_3000": 0.6596666666666666,
         "auc_to_horizon": 0.6596666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.71,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.88,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.744,
@@ -2404,12 +2302,13 @@
         "auc_to_3000": 0.6006666666666667,
         "auc_to_horizon": 0.6006666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.85,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.91,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.842,
@@ -2421,12 +2320,13 @@
         "auc_to_3000": 0.4503333333333333,
         "auc_to_horizon": 0.4503333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.71,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.88,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.822,
@@ -2437,13 +2337,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1841": {
         "auc_to_3000": 0.5816666666666667,
         "auc_to_horizon": 0.5816666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.61,
+        "first_fall": 706,
         "horizon": 3000,
-        "onset": 706,
+        "onset": null,
         "peak": 0.875,
-        "peak_at_onset": 0.64,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.694,
@@ -2455,12 +2356,13 @@
         "auc_to_3000": 0.35633333333333334,
         "auc_to_horizon": 0.35633333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.82,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.775,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.744,
@@ -2472,12 +2374,13 @@
         "auc_to_3000": 0.45466666666666666,
         "auc_to_horizon": 0.45466666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.79,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.87,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.714,
@@ -2489,12 +2392,13 @@
         "auc_to_3000": 0.48333333333333334,
         "auc_to_horizon": 0.48333333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.86,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.81,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.61,
@@ -2506,12 +2410,13 @@
         "auc_to_3000": 0.4176666666666667,
         "auc_to_horizon": 0.4176666666666667,
         "collapsed": true,
+        "dips": 0,
         "final": 0.31,
+        "first_fall": 2526,
         "horizon": 3000,
         "onset": 2526,
         "peak": 0.875,
         "peak_at_onset": 0.875,
-        "recovered": false,
         "rule_092": {
           "collapsed": true,
           "last": 0.24,
@@ -2523,12 +2428,13 @@
         "auc_to_3000": 0.387,
         "auc_to_horizon": 0.387,
         "collapsed": false,
+        "dips": 0,
         "final": 0.7,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.705,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.592,
@@ -2539,13 +2445,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1847": {
         "auc_to_3000": 0.44766666666666666,
         "auc_to_horizon": 0.44766666666666666,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.86,
+        "first_fall": 1306,
         "horizon": 3000,
-        "onset": 1306,
+        "onset": null,
         "peak": 0.89,
-        "peak_at_onset": 0.755,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.814,
@@ -2557,12 +2464,13 @@
         "auc_to_3000": 0.5796666666666667,
         "auc_to_horizon": 0.5796666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.86,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.905,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.838,
@@ -2574,12 +2482,13 @@
         "auc_to_3000": 0.4246666666666667,
         "auc_to_horizon": 0.4246666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.73,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.835,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.602,
@@ -2591,12 +2500,13 @@
         "auc_to_3000": 0.10666666666666667,
         "auc_to_horizon": 0.10666666666666667,
         "collapsed": true,
+        "dips": 0,
         "final": 0.19,
+        "first_fall": 1962,
         "horizon": 3000,
         "onset": 1962,
         "peak": 0.44,
         "peak_at_onset": 0.44,
-        "recovered": false,
         "rule_092": {
           "collapsed": false,
           "last": 0.126,
@@ -2607,13 +2517,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1851": {
         "auc_to_3000": 0.30833333333333335,
         "auc_to_horizon": 0.30833333333333335,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.79,
+        "first_fall": 1339,
         "horizon": 3000,
-        "onset": 1339,
+        "onset": null,
         "peak": 0.77,
-        "peak_at_onset": 0.71,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.652,
@@ -2625,12 +2536,13 @@
         "auc_to_3000": 0.08433333333333333,
         "auc_to_horizon": 0.08433333333333333,
         "collapsed": true,
+        "dips": 1,
         "final": 0.0,
+        "first_fall": 612,
         "horizon": 3000,
-        "onset": 612,
+        "onset": 2492,
         "peak": 0.315,
         "peak_at_onset": 0.315,
-        "recovered": false,
         "rule_092": {
           "collapsed": false,
           "last": 0.0,
@@ -2642,12 +2554,13 @@
         "auc_to_3000": 0.4533333333333333,
         "auc_to_horizon": 0.4533333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.75,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.86,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.73,
@@ -2658,13 +2571,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1854": {
         "auc_to_3000": 0.2836666666666667,
         "auc_to_horizon": 0.2836666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.01,
+        "first_fall": 1978,
         "horizon": 3000,
-        "onset": 1978,
+        "onset": null,
         "peak": 0.65,
-        "peak_at_onset": 0.65,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.262,
@@ -2675,13 +2589,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1855": {
         "auc_to_3000": 0.3303333333333333,
         "auc_to_horizon": 0.3303333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.42,
+        "first_fall": 990,
         "horizon": 3000,
-        "onset": 990,
+        "onset": null,
         "peak": 0.895,
-        "peak_at_onset": 0.27,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.648,
@@ -2692,13 +2607,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1856": {
         "auc_to_3000": 0.14133333333333334,
         "auc_to_horizon": 0.14133333333333334,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 2,
         "final": 0.52,
+        "first_fall": 879,
         "horizon": 3000,
-        "onset": 879,
+        "onset": null,
         "peak": 0.42,
-        "peak_at_onset": 0.345,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.228,
@@ -2709,13 +2625,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1857": {
         "auc_to_3000": 0.152,
         "auc_to_horizon": 0.152,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.37,
+        "first_fall": 780,
         "horizon": 3000,
-        "onset": 780,
+        "onset": null,
         "peak": 0.565,
-        "peak_at_onset": 0.32,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.49,
@@ -2726,13 +2643,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1858": {
         "auc_to_3000": 0.444,
         "auc_to_horizon": 0.444,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.64,
+        "first_fall": 1050,
         "horizon": 3000,
-        "onset": 1050,
+        "onset": null,
         "peak": 0.8,
-        "peak_at_onset": 0.735,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.618,
@@ -2743,13 +2661,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1859": {
         "auc_to_3000": 0.333,
         "auc_to_horizon": 0.333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.74,
+        "first_fall": 794,
         "horizon": 3000,
-        "onset": 794,
+        "onset": null,
         "peak": 0.795,
-        "peak_at_onset": 0.445,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.732,
@@ -2760,13 +2679,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1860": {
         "auc_to_3000": 0.49,
         "auc_to_horizon": 0.49,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.88,
+        "first_fall": 747,
         "horizon": 3000,
-        "onset": 747,
+        "onset": null,
         "peak": 0.875,
-        "peak_at_onset": 0.52,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.732,
@@ -2777,13 +2697,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1861": {
         "auc_to_3000": 0.3293333333333333,
         "auc_to_horizon": 0.3293333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.7,
+        "first_fall": 1521,
         "horizon": 3000,
-        "onset": 1521,
+        "onset": null,
         "peak": 0.835,
-        "peak_at_onset": 0.55,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.682,
@@ -2795,12 +2716,13 @@
         "auc_to_3000": 0.41333333333333333,
         "auc_to_horizon": 0.41333333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.88,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.86,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.754,
@@ -2811,13 +2733,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1863": {
         "auc_to_3000": 0.3506666666666667,
         "auc_to_horizon": 0.3506666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.6,
+        "first_fall": 1701,
         "horizon": 3000,
-        "onset": 1701,
+        "onset": null,
         "peak": 0.68,
-        "peak_at_onset": 0.65,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.636,
@@ -2828,13 +2751,14 @@
       "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_body500_wt_ppo-seed1864": {
         "auc_to_3000": 0.273,
         "auc_to_horizon": 0.273,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.68,
+        "first_fall": 652,
         "horizon": 3000,
-        "onset": 652,
+        "onset": null,
         "peak": 0.685,
-        "peak_at_onset": 0.245,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.508,
@@ -2845,354 +2769,354 @@
     },
     "sensitivity": [
       {
-        "collapsed": 42,
+        "collapsed": 9,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 100,
         "persistence": 200,
-        "rate": 0.65625,
+        "rate": 0.140625,
         "registered": false,
         "wilson_95": [
-          0.5340364020991819,
-          0.7607685792155665
+          0.0757857255603086,
+          0.24616281741577023
         ]
       },
       {
-        "collapsed": 33,
+        "collapsed": 8,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 100,
         "persistence": 300,
-        "rate": 0.515625,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.39581601478580125,
-          0.6336644833456737
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 17,
+        "collapsed": 3,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 100,
         "persistence": 500,
-        "rate": 0.265625,
+        "rate": 0.046875,
         "registered": false,
         "wilson_95": [
-          0.17296379074222612,
-          0.38482873728565137
+          0.016069016786292974,
+          0.12899653740093686
         ]
       },
       {
-        "collapsed": 46,
+        "collapsed": 10,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 100,
         "persistence": 200,
-        "rate": 0.71875,
+        "rate": 0.15625,
         "registered": false,
         "wilson_95": [
-          0.5986606971779259,
-          0.8140662766627217
+          0.08714842338206585,
+          0.2642806177254878
         ]
       },
       {
-        "collapsed": 35,
+        "collapsed": 8,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 100,
         "persistence": 300,
-        "rate": 0.546875,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.4257359722005412,
-          0.6627055221938833
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 21,
+        "collapsed": 4,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 100,
         "persistence": 500,
-        "rate": 0.328125,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.22570557904469185,
-          0.45000894150908505
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 50,
+        "collapsed": 11,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 100,
         "persistence": 200,
-        "rate": 0.78125,
+        "rate": 0.171875,
         "registered": false,
         "wilson_95": [
-          0.6656721604337418,
-          0.8649768059328052
+          0.09877742301244645,
+          0.282132116226582
         ]
       },
       {
-        "collapsed": 43,
+        "collapsed": 11,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 100,
         "persistence": 300,
-        "rate": 0.671875,
+        "rate": 0.171875,
         "registered": false,
         "wilson_95": [
-          0.549991058490915,
-          0.7742944209553081
+          0.09877742301244645,
+          0.282132116226582
         ]
       },
       {
-        "collapsed": 25,
+        "collapsed": 5,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 100,
         "persistence": 500,
-        "rate": 0.390625,
+        "rate": 0.078125,
         "registered": false,
         "wilson_95": [
-          0.2805556918824008,
-          0.5130808211972754
+          0.03383117690855046,
+          0.17019537354162906
         ]
       },
       {
-        "collapsed": 40,
+        "collapsed": 7,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 200,
         "persistence": 200,
-        "rate": 0.625,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.502503786840045,
-          0.7333401982117536
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 30,
+        "collapsed": 6,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 200,
         "persistence": 300,
-        "rate": 0.46875,
+        "rate": 0.09375,
         "registered": false,
         "wilson_95": [
-          0.35175987425176036,
-          0.5892791294852899
+          0.04367825258519838,
+          0.18982879599645597
         ]
       },
       {
-        "collapsed": 16,
+        "collapsed": 3,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 200,
         "persistence": 500,
-        "rate": 0.25,
+        "rate": 0.046875,
         "registered": false,
         "wilson_95": [
-          0.16014926530970577,
-          0.36816276458669694
+          0.016069016786292974,
+          0.12899653740093686
         ]
       },
       {
-        "collapsed": 44,
+        "collapsed": 9,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 200,
         "persistence": 200,
-        "rate": 0.6875,
+        "rate": 0.140625,
         "registered": false,
         "wilson_95": [
-          0.5660766429725185,
-          0.7876893346051795
+          0.0757857255603086,
+          0.24616281741577023
         ]
       },
       {
-        "collapsed": 35,
+        "collapsed": 7,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 200,
         "persistence": 300,
-        "rate": 0.546875,
+        "rate": 0.109375,
         "registered": true,
         "wilson_95": [
-          0.4257359722005412,
-          0.6627055221938833
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 18,
+        "collapsed": 3,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 200,
         "persistence": 500,
-        "rate": 0.28125,
+        "rate": 0.046875,
         "registered": false,
         "wilson_95": [
-          0.18593372333727837,
-          0.40133930282207403
+          0.016069016786292974,
+          0.12899653740093686
         ]
       },
       {
-        "collapsed": 46,
+        "collapsed": 9,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 200,
         "persistence": 200,
-        "rate": 0.71875,
+        "rate": 0.140625,
         "registered": false,
         "wilson_95": [
-          0.5986606971779259,
-          0.8140662766627217
+          0.0757857255603086,
+          0.24616281741577023
         ]
       },
       {
-        "collapsed": 38,
+        "collapsed": 8,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 200,
         "persistence": 300,
-        "rate": 0.59375,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.4714520812860451,
-          0.7054309075028039
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 22,
+        "collapsed": 3,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 200,
         "persistence": 500,
-        "rate": 0.34375,
+        "rate": 0.046875,
         "registered": false,
         "wilson_95": [
-          0.23923142078443355,
-          0.46596359790081815
+          0.016069016786292974,
+          0.12899653740093686
         ]
       },
       {
-        "collapsed": 36,
+        "collapsed": 7,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.5625,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.4408620895699301,
-          0.6770599029559693
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 27,
+        "collapsed": 6,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.421875,
+        "rate": 0.09375,
         "registered": false,
         "wilson_95": [
-          0.30869782474345486,
-          0.5438996845991709
+          0.04367825258519838,
+          0.18982879599645597
         ]
       },
       {
-        "collapsed": 14,
+        "collapsed": 2,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.21875,
+        "rate": 0.03125,
         "registered": false,
         "wilson_95": [
-          0.13502319406719474,
-          0.3343278395662582
+          0.008612138346171874,
+          0.10697291770958313
         ]
       },
       {
-        "collapsed": 41,
+        "collapsed": 8,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.640625,
+        "rate": 0.125,
         "registered": false,
         "wilson_95": [
-          0.518208506097791,
-          0.7471159770854825
+          0.06472242663330453,
+          0.22774561821129946
         ]
       },
       {
-        "collapsed": 33,
+        "collapsed": 7,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.515625,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.39581601478580125,
-          0.6336644833456737
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 17,
+        "collapsed": 2,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.265625,
+        "rate": 0.03125,
         "registered": false,
         "wilson_95": [
-          0.17296379074222612,
-          0.38482873728565137
+          0.008612138346171874,
+          0.10697291770958313
         ]
       },
       {
-        "collapsed": 43,
+        "collapsed": 9,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.671875,
+        "rate": 0.140625,
         "registered": false,
         "wilson_95": [
-          0.549991058490915,
-          0.7742944209553081
+          0.0757857255603086,
+          0.24616281741577023
         ]
       },
       {
-        "collapsed": 36,
+        "collapsed": 7,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.5625,
+        "rate": 0.109375,
         "registered": false,
         "wilson_95": [
-          0.4408620895699301,
-          0.6770599029559693
+          0.05400113344416797,
+          0.20898641326896122
         ]
       },
       {
-        "collapsed": 17,
+        "collapsed": 3,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.265625,
+        "rate": 0.046875,
         "registered": false,
         "wilson_95": [
-          0.17296379074222612,
-          0.38482873728565137
+          0.016069016786292974,
+          0.12899653740093686
         ]
       }
     ]
@@ -3201,20 +3125,18 @@
     "definition": {
       "fraction": 0.5,
       "level_window": 100,
+      "onset": "the first fall not recovered before the horizon",
       "peak_window": 200,
       "persistence": 300,
-      "recovery": [
-        0.8,
-        1000
-      ]
+      "recovery": 0.8
     },
     "incidence": {
-      "collapsed": 13,
+      "collapsed": 2,
       "n": 64,
-      "rate": 0.203125,
+      "rate": 0.03125,
       "wilson_95": [
-        0.12273417819183653,
-        0.3171363573101416
+        0.008612138346171874,
+        0.10697291770958313
       ]
     },
     "kaplan_meier": {
@@ -3222,56 +3144,12 @@
       "n": 64,
       "steps": [
         [
-          490,
+          1854,
           0.984375
         ],
         [
-          672,
-          0.96875
-        ],
-        [
-          731,
-          0.953125
-        ],
-        [
-          811,
-          0.9375
-        ],
-        [
-          1248,
-          0.921875
-        ],
-        [
-          1281,
-          0.90625
-        ],
-        [
-          1329,
-          0.890625
-        ],
-        [
-          1350,
-          0.875
-        ],
-        [
-          1536,
-          0.859375
-        ],
-        [
-          1547,
-          0.84375
-        ],
-        [
-          1854,
-          0.828125
-        ],
-        [
-          2204,
-          0.8125
-        ],
-        [
           2584,
-          0.796875
+          0.96875
         ]
       ]
     },
@@ -3281,12 +3159,13 @@
         "auc_to_3000": 0.5676666666666667,
         "auc_to_horizon": 0.5676666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.52,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": true,
           "last": 0.398,
@@ -3298,12 +3177,13 @@
         "auc_to_3000": 0.4126666666666667,
         "auc_to_horizon": 0.4126666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.37,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.805,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.454,
@@ -3314,13 +3194,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1803": {
         "auc_to_3000": 0.411,
         "auc_to_horizon": 0.411,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.71,
+        "first_fall": 1281,
         "horizon": 3000,
-        "onset": 1281,
+        "onset": null,
         "peak": 0.805,
-        "peak_at_onset": 0.56,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.722,
@@ -3332,12 +3213,13 @@
         "auc_to_3000": 0.31833333333333336,
         "auc_to_horizon": 0.31833333333333336,
         "collapsed": false,
+        "dips": 0,
         "final": 0.75,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.86,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.792,
@@ -3349,12 +3231,13 @@
         "auc_to_3000": 0.36,
         "auc_to_horizon": 0.36,
         "collapsed": false,
+        "dips": 0,
         "final": 0.84,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.7,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.612,
@@ -3366,12 +3249,13 @@
         "auc_to_3000": 0.6413333333333333,
         "auc_to_horizon": 0.6413333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.6,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.855,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.642,
@@ -3383,12 +3267,13 @@
         "auc_to_3000": 0.06433333333333334,
         "auc_to_horizon": 0.06433333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.22,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.31,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.268,
@@ -3400,12 +3285,13 @@
         "auc_to_3000": 0.637,
         "auc_to_horizon": 0.637,
         "collapsed": false,
+        "dips": 0,
         "final": 0.96,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.925,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.872,
@@ -3417,12 +3303,13 @@
         "auc_to_3000": 0.5926666666666667,
         "auc_to_horizon": 0.5926666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.74,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.9,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.82,
@@ -3434,12 +3321,13 @@
         "auc_to_3000": 0.683,
         "auc_to_horizon": 0.683,
         "collapsed": false,
+        "dips": 0,
         "final": 0.87,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.935,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.814,
@@ -3451,12 +3339,13 @@
         "auc_to_3000": 0.3463333333333333,
         "auc_to_horizon": 0.3463333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.85,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.85,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.684,
@@ -3468,12 +3357,13 @@
         "auc_to_3000": 0.7406666666666667,
         "auc_to_horizon": 0.7406666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.86,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.96,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.796,
@@ -3485,12 +3375,13 @@
         "auc_to_3000": 0.49233333333333335,
         "auc_to_horizon": 0.49233333333333335,
         "collapsed": false,
+        "dips": 0,
         "final": 0.91,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.87,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.758,
@@ -3502,12 +3393,13 @@
         "auc_to_3000": 0.8096666666666666,
         "auc_to_horizon": 0.8096666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.87,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.985,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.826,
@@ -3519,12 +3411,13 @@
         "auc_to_3000": 0.6496666666666666,
         "auc_to_horizon": 0.6496666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.9,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.92,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.884,
@@ -3536,12 +3429,13 @@
         "auc_to_3000": 0.499,
         "auc_to_horizon": 0.499,
         "collapsed": false,
+        "dips": 0,
         "final": 0.8,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.875,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.784,
@@ -3553,12 +3447,13 @@
         "auc_to_3000": 0.638,
         "auc_to_horizon": 0.638,
         "collapsed": false,
+        "dips": 0,
         "final": 0.66,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.885,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.702,
@@ -3570,12 +3465,13 @@
         "auc_to_3000": 0.47833333333333333,
         "auc_to_horizon": 0.47833333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.92,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.915,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.878,
@@ -3587,12 +3483,13 @@
         "auc_to_3000": 0.305,
         "auc_to_horizon": 0.305,
         "collapsed": false,
+        "dips": 0,
         "final": 0.62,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.67,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.576,
@@ -3604,12 +3501,13 @@
         "auc_to_3000": 0.619,
         "auc_to_horizon": 0.619,
         "collapsed": false,
+        "dips": 0,
         "final": 0.89,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.955,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.896,
@@ -3620,13 +3518,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1821": {
         "auc_to_3000": 0.6393333333333333,
         "auc_to_horizon": 0.6393333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.92,
+        "first_fall": 672,
         "horizon": 3000,
-        "onset": 672,
+        "onset": null,
         "peak": 0.96,
-        "peak_at_onset": 0.48,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.93,
@@ -3638,12 +3537,13 @@
         "auc_to_3000": 0.459,
         "auc_to_horizon": 0.459,
         "collapsed": false,
+        "dips": 0,
         "final": 0.84,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.852,
@@ -3654,13 +3554,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1823": {
         "auc_to_3000": 0.4483333333333333,
         "auc_to_horizon": 0.4483333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.66,
+        "first_fall": 490,
         "horizon": 3000,
-        "onset": 490,
+        "onset": null,
         "peak": 0.75,
-        "peak_at_onset": 0.595,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.676,
@@ -3672,12 +3573,13 @@
         "auc_to_3000": 0.669,
         "auc_to_horizon": 0.669,
         "collapsed": false,
+        "dips": 0,
         "final": 0.71,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.955,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.858,
@@ -3689,12 +3591,13 @@
         "auc_to_3000": 0.6803333333333333,
         "auc_to_horizon": 0.6803333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.93,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.935,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.898,
@@ -3706,12 +3609,13 @@
         "auc_to_3000": 0.778,
         "auc_to_horizon": 0.778,
         "collapsed": false,
+        "dips": 0,
         "final": 0.88,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.945,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.872,
@@ -3722,13 +3626,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1827": {
         "auc_to_3000": 0.488,
         "auc_to_horizon": 0.488,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.88,
+        "first_fall": 1248,
         "horizon": 3000,
-        "onset": 1248,
+        "onset": null,
         "peak": 0.945,
-        "peak_at_onset": 0.63,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.908,
@@ -3740,12 +3645,13 @@
         "auc_to_3000": 0.49433333333333335,
         "auc_to_horizon": 0.49433333333333335,
         "collapsed": false,
+        "dips": 0,
         "final": 0.61,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.77,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.582,
@@ -3757,12 +3663,13 @@
         "auc_to_3000": 0.411,
         "auc_to_horizon": 0.411,
         "collapsed": false,
+        "dips": 0,
         "final": 0.9,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.895,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.846,
@@ -3774,12 +3681,13 @@
         "auc_to_3000": 0.6446666666666667,
         "auc_to_horizon": 0.6446666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.85,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.915,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.86,
@@ -3791,12 +3699,13 @@
         "auc_to_3000": 0.7206666666666667,
         "auc_to_horizon": 0.7206666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.95,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.95,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.924,
@@ -3808,12 +3717,13 @@
         "auc_to_3000": 0.774,
         "auc_to_horizon": 0.774,
         "collapsed": false,
+        "dips": 0,
         "final": 0.94,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.98,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.908,
@@ -3824,13 +3734,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1833": {
         "auc_to_3000": 0.39266666666666666,
         "auc_to_horizon": 0.39266666666666666,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.8,
+        "first_fall": 1536,
         "horizon": 3000,
-        "onset": 1536,
+        "onset": null,
         "peak": 0.875,
-        "peak_at_onset": 0.875,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.566,
@@ -3841,13 +3752,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1834": {
         "auc_to_3000": 0.27,
         "auc_to_horizon": 0.27,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.78,
+        "first_fall": 811,
         "horizon": 3000,
-        "onset": 811,
+        "onset": null,
         "peak": 0.675,
-        "peak_at_onset": 0.675,
-        "recovered": false,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.404,
@@ -3859,12 +3771,13 @@
         "auc_to_3000": 0.582,
         "auc_to_horizon": 0.582,
         "collapsed": false,
+        "dips": 0,
         "final": 0.95,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.935,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.918,
@@ -3876,12 +3789,13 @@
         "auc_to_3000": 0.588,
         "auc_to_horizon": 0.588,
         "collapsed": false,
+        "dips": 0,
         "final": 0.94,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.95,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.85,
@@ -3893,12 +3807,13 @@
         "auc_to_3000": 0.09333333333333334,
         "auc_to_horizon": 0.09333333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.49,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.44,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.3,
@@ -3910,12 +3825,13 @@
         "auc_to_3000": 0.633,
         "auc_to_horizon": 0.633,
         "collapsed": false,
+        "dips": 0,
         "final": 0.72,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.94,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.838,
@@ -3926,13 +3842,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1839": {
         "auc_to_3000": 0.5343333333333333,
         "auc_to_horizon": 0.5343333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.77,
+        "first_fall": 731,
         "horizon": 3000,
-        "onset": 731,
+        "onset": null,
         "peak": 0.945,
-        "peak_at_onset": 0.54,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.788,
@@ -3943,13 +3860,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1840": {
         "auc_to_3000": 0.4573333333333333,
         "auc_to_horizon": 0.4573333333333333,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.88,
+        "first_fall": 1547,
         "horizon": 3000,
-        "onset": 1547,
+        "onset": null,
         "peak": 0.885,
-        "peak_at_onset": 0.63,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.83,
@@ -3961,12 +3879,13 @@
         "auc_to_3000": 0.615,
         "auc_to_horizon": 0.615,
         "collapsed": false,
+        "dips": 0,
         "final": 0.87,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.91,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.876,
@@ -3978,12 +3897,13 @@
         "auc_to_3000": 0.6026666666666667,
         "auc_to_horizon": 0.6026666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.86,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.93,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.824,
@@ -3995,12 +3915,13 @@
         "auc_to_3000": 0.718,
         "auc_to_horizon": 0.718,
         "collapsed": false,
+        "dips": 0,
         "final": 0.85,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.975,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.872,
@@ -4012,12 +3933,13 @@
         "auc_to_3000": 0.034,
         "auc_to_horizon": 0.034,
         "collapsed": false,
+        "dips": 0,
         "final": 0.07,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.14,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.11,
@@ -4029,12 +3951,13 @@
         "auc_to_3000": 0.443,
         "auc_to_horizon": 0.443,
         "collapsed": false,
+        "dips": 0,
         "final": 0.94,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.945,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.888,
@@ -4046,12 +3969,13 @@
         "auc_to_3000": 0.5796666666666667,
         "auc_to_horizon": 0.5796666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.94,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.95,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.922,
@@ -4063,12 +3987,13 @@
         "auc_to_3000": 0.5013333333333333,
         "auc_to_horizon": 0.5013333333333333,
         "collapsed": true,
+        "dips": 0,
         "final": 0.37,
+        "first_fall": 2584,
         "horizon": 3000,
         "onset": 2584,
         "peak": 0.905,
         "peak_at_onset": 0.905,
-        "recovered": false,
         "rule_092": {
           "collapsed": true,
           "last": 0.27,
@@ -4080,12 +4005,13 @@
         "auc_to_3000": 0.6053333333333333,
         "auc_to_horizon": 0.6053333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.9,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.87,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.666,
@@ -4097,12 +4023,13 @@
         "auc_to_3000": 0.5526666666666666,
         "auc_to_horizon": 0.5526666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.84,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.84,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.718,
@@ -4114,12 +4041,13 @@
         "auc_to_3000": 0.5616666666666666,
         "auc_to_horizon": 0.5616666666666666,
         "collapsed": false,
+        "dips": 0,
         "final": 0.53,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.895,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.73,
@@ -4131,12 +4059,13 @@
         "auc_to_3000": 0.5773333333333334,
         "auc_to_horizon": 0.5773333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.82,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.78,
@@ -4148,12 +4077,13 @@
         "auc_to_3000": 0.4583333333333333,
         "auc_to_horizon": 0.4583333333333333,
         "collapsed": true,
+        "dips": 0,
         "final": 0.26,
+        "first_fall": 1854,
         "horizon": 3000,
         "onset": 1854,
         "peak": 0.825,
         "peak_at_onset": 0.825,
-        "recovered": false,
         "rule_092": {
           "collapsed": true,
           "last": 0.186,
@@ -4165,12 +4095,13 @@
         "auc_to_3000": 0.5186666666666667,
         "auc_to_horizon": 0.5186666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.71,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.865,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.704,
@@ -4182,12 +4113,13 @@
         "auc_to_3000": 0.6213333333333333,
         "auc_to_horizon": 0.6213333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.9,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.925,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.862,
@@ -4199,12 +4131,13 @@
         "auc_to_3000": 0.5263333333333333,
         "auc_to_horizon": 0.5263333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.69,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.752,
@@ -4216,12 +4149,13 @@
         "auc_to_3000": 0.5503333333333333,
         "auc_to_horizon": 0.5503333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.74,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.885,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.778,
@@ -4233,12 +4167,13 @@
         "auc_to_3000": 0.7316666666666667,
         "auc_to_horizon": 0.7316666666666667,
         "collapsed": false,
+        "dips": 0,
         "final": 0.96,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.99,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.96,
@@ -4250,12 +4185,13 @@
         "auc_to_3000": 0.22166666666666668,
         "auc_to_horizon": 0.22166666666666668,
         "collapsed": false,
+        "dips": 0,
         "final": 0.49,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.745,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.646,
@@ -4267,12 +4203,13 @@
         "auc_to_3000": 0.6043333333333333,
         "auc_to_horizon": 0.6043333333333333,
         "collapsed": false,
+        "dips": 0,
         "final": 0.96,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.955,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.916,
@@ -4283,13 +4220,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1860": {
         "auc_to_3000": 0.416,
         "auc_to_horizon": 0.416,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.62,
+        "first_fall": 1350,
         "horizon": 3000,
-        "onset": 1350,
+        "onset": null,
         "peak": 0.76,
-        "peak_at_onset": 0.655,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.444,
@@ -4301,12 +4239,13 @@
         "auc_to_3000": 0.5863333333333334,
         "auc_to_horizon": 0.5863333333333334,
         "collapsed": false,
+        "dips": 0,
         "final": 0.89,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.89,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.7,
@@ -4317,13 +4256,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1862": {
         "auc_to_3000": 0.547,
         "auc_to_horizon": 0.547,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.62,
+        "first_fall": 2204,
         "horizon": 3000,
-        "onset": 2204,
+        "onset": null,
         "peak": 0.795,
-        "peak_at_onset": 0.795,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.544,
@@ -4334,13 +4274,14 @@
       "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64_body500-seed1863": {
         "auc_to_3000": 0.4886666666666667,
         "auc_to_horizon": 0.4886666666666667,
-        "collapsed": true,
+        "collapsed": false,
+        "dips": 1,
         "final": 0.71,
+        "first_fall": 1329,
         "horizon": 3000,
-        "onset": 1329,
+        "onset": null,
         "peak": 0.92,
-        "peak_at_onset": 0.575,
-        "recovered": true,
+        "peak_at_onset": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.656,
@@ -4352,12 +4293,13 @@
         "auc_to_3000": 0.49566666666666664,
         "auc_to_horizon": 0.49566666666666664,
         "collapsed": false,
+        "dips": 0,
         "final": 0.8,
+        "first_fall": null,
         "horizon": 3000,
         "onset": null,
         "peak": 0.9,
         "peak_at_onset": null,
-        "recovered": null,
         "rule_092": {
           "collapsed": false,
           "last": 0.8,
@@ -4368,37 +4310,11 @@
     },
     "sensitivity": [
       {
-        "collapsed": 19,
-        "fraction": 0.4,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 200,
-        "rate": 0.296875,
-        "registered": false,
-        "wilson_95": [
-          0.19905151325539794,
-          0.41770201103542925
-        ]
-      },
-      {
-        "collapsed": 13,
-        "fraction": 0.4,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 300,
-        "rate": 0.203125,
-        "registered": false,
-        "wilson_95": [
-          0.12273417819183653,
-          0.3171363573101416
-        ]
-      },
-      {
         "collapsed": 3,
         "fraction": 0.4,
         "n": 64,
         "peak_window": 100,
-        "persistence": 500,
+        "persistence": 200,
         "rate": 0.046875,
         "registered": false,
         "wilson_95": [
@@ -4407,115 +4323,11 @@
         ]
       },
       {
-        "collapsed": 23,
-        "fraction": 0.5,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 200,
-        "rate": 0.359375,
-        "registered": false,
-        "wilson_95": [
-          0.25288402291451745,
-          0.48179149390220904
-        ]
-      },
-      {
-        "collapsed": 16,
-        "fraction": 0.5,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 300,
-        "rate": 0.25,
-        "registered": false,
-        "wilson_95": [
-          0.16014926530970577,
-          0.36816276458669694
-        ]
-      },
-      {
-        "collapsed": 8,
-        "fraction": 0.5,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 500,
-        "rate": 0.125,
-        "registered": false,
-        "wilson_95": [
-          0.06472242663330453,
-          0.22774561821129946
-        ]
-      },
-      {
-        "collapsed": 31,
-        "fraction": 0.6,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 200,
-        "rate": 0.484375,
-        "registered": false,
-        "wilson_95": [
-          0.3663355166543264,
-          0.6041839852141988
-        ]
-      },
-      {
-        "collapsed": 22,
-        "fraction": 0.6,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 300,
-        "rate": 0.34375,
-        "registered": false,
-        "wilson_95": [
-          0.23923142078443355,
-          0.46596359790081815
-        ]
-      },
-      {
-        "collapsed": 10,
-        "fraction": 0.6,
-        "n": 64,
-        "peak_window": 100,
-        "persistence": 500,
-        "rate": 0.15625,
-        "registered": false,
-        "wilson_95": [
-          0.08714842338206585,
-          0.2642806177254878
-        ]
-      },
-      {
-        "collapsed": 13,
-        "fraction": 0.4,
-        "n": 64,
-        "peak_window": 200,
-        "persistence": 200,
-        "rate": 0.203125,
-        "registered": false,
-        "wilson_95": [
-          0.12273417819183653,
-          0.3171363573101416
-        ]
-      },
-      {
-        "collapsed": 10,
-        "fraction": 0.4,
-        "n": 64,
-        "peak_window": 200,
-        "persistence": 300,
-        "rate": 0.15625,
-        "registered": false,
-        "wilson_95": [
-          0.08714842338206585,
-          0.2642806177254878
-        ]
-      },
-      {
         "collapsed": 3,
         "fraction": 0.4,
         "n": 64,
-        "peak_window": 200,
-        "persistence": 500,
+        "peak_window": 100,
+        "persistence": 300,
         "rate": 0.046875,
         "registered": false,
         "wilson_95": [
@@ -4524,37 +4336,37 @@
         ]
       },
       {
-        "collapsed": 20,
-        "fraction": 0.5,
+        "collapsed": 1,
+        "fraction": 0.4,
         "n": 64,
-        "peak_window": 200,
-        "persistence": 200,
-        "rate": 0.3125,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.015625,
         "registered": false,
         "wilson_95": [
-          0.21231066539482046,
-          0.4339233570274815
+          0.002763541923337505,
+          0.08334101600094265
         ]
       },
       {
-        "collapsed": 13,
+        "collapsed": 5,
         "fraction": 0.5,
         "n": 64,
-        "peak_window": 200,
-        "persistence": 300,
-        "rate": 0.203125,
-        "registered": true,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.078125,
+        "registered": false,
         "wilson_95": [
-          0.12273417819183653,
-          0.3171363573101416
+          0.03383117690855046,
+          0.17019537354162906
         ]
       },
       {
         "collapsed": 4,
         "fraction": 0.5,
         "n": 64,
-        "peak_window": 200,
-        "persistence": 500,
+        "peak_window": 100,
+        "persistence": 300,
         "rate": 0.0625,
         "registered": false,
         "wilson_95": [
@@ -4563,75 +4375,49 @@
         ]
       },
       {
-        "collapsed": 27,
-        "fraction": 0.6,
+        "collapsed": 2,
+        "fraction": 0.5,
         "n": 64,
-        "peak_window": 200,
-        "persistence": 200,
-        "rate": 0.421875,
-        "registered": false,
-        "wilson_95": [
-          0.30869782474345486,
-          0.5438996845991709
-        ]
-      },
-      {
-        "collapsed": 19,
-        "fraction": 0.6,
-        "n": 64,
-        "peak_window": 200,
-        "persistence": 300,
-        "rate": 0.296875,
-        "registered": false,
-        "wilson_95": [
-          0.19905151325539794,
-          0.41770201103542925
-        ]
-      },
-      {
-        "collapsed": 8,
-        "fraction": 0.6,
-        "n": 64,
-        "peak_window": 200,
+        "peak_window": 100,
         "persistence": 500,
-        "rate": 0.125,
+        "rate": 0.03125,
         "registered": false,
         "wilson_95": [
-          0.06472242663330453,
-          0.22774561821129946
+          0.008612138346171874,
+          0.10697291770958313
         ]
       },
       {
-        "collapsed": 13,
-        "fraction": 0.4,
+        "collapsed": 6,
+        "fraction": 0.6,
         "n": 64,
-        "peak_window": 400,
+        "peak_window": 100,
         "persistence": 200,
-        "rate": 0.203125,
+        "rate": 0.09375,
         "registered": false,
         "wilson_95": [
-          0.12273417819183653,
-          0.3171363573101416
+          0.04367825258519838,
+          0.18982879599645597
         ]
       },
       {
-        "collapsed": 8,
-        "fraction": 0.4,
+        "collapsed": 6,
+        "fraction": 0.6,
         "n": 64,
-        "peak_window": 400,
+        "peak_window": 100,
         "persistence": 300,
-        "rate": 0.125,
+        "rate": 0.09375,
         "registered": false,
         "wilson_95": [
-          0.06472242663330453,
-          0.22774561821129946
+          0.04367825258519838,
+          0.18982879599645597
         ]
       },
       {
         "collapsed": 3,
-        "fraction": 0.4,
+        "fraction": 0.6,
         "n": 64,
-        "peak_window": 400,
+        "peak_window": 100,
         "persistence": 500,
         "rate": 0.046875,
         "registered": false,
@@ -4641,81 +4427,237 @@
         ]
       },
       {
-        "collapsed": 18,
+        "collapsed": 2,
+        "fraction": 0.4,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.03125,
+        "registered": false,
+        "wilson_95": [
+          0.008612138346171874,
+          0.10697291770958313
+        ]
+      },
+      {
+        "collapsed": 2,
+        "fraction": 0.4,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.03125,
+        "registered": false,
+        "wilson_95": [
+          0.008612138346171874,
+          0.10697291770958313
+        ]
+      },
+      {
+        "collapsed": 1,
+        "fraction": 0.4,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.015625,
+        "registered": false,
+        "wilson_95": [
+          0.002763541923337505,
+          0.08334101600094265
+        ]
+      },
+      {
+        "collapsed": 2,
+        "fraction": 0.5,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.03125,
+        "registered": false,
+        "wilson_95": [
+          0.008612138346171874,
+          0.10697291770958313
+        ]
+      },
+      {
+        "collapsed": 2,
+        "fraction": 0.5,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.03125,
+        "registered": true,
+        "wilson_95": [
+          0.008612138346171874,
+          0.10697291770958313
+        ]
+      },
+      {
+        "collapsed": 1,
+        "fraction": 0.5,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.015625,
+        "registered": false,
+        "wilson_95": [
+          0.002763541923337505,
+          0.08334101600094265
+        ]
+      },
+      {
+        "collapsed": 4,
+        "fraction": 0.6,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.0625,
+        "registered": false,
+        "wilson_95": [
+          0.024571201396618017,
+          0.14997485092208662
+        ]
+      },
+      {
+        "collapsed": 4,
+        "fraction": 0.6,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.0625,
+        "registered": false,
+        "wilson_95": [
+          0.024571201396618017,
+          0.14997485092208662
+        ]
+      },
+      {
+        "collapsed": 2,
+        "fraction": 0.6,
+        "n": 64,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.03125,
+        "registered": false,
+        "wilson_95": [
+          0.008612138346171874,
+          0.10697291770958313
+        ]
+      },
+      {
+        "collapsed": 2,
+        "fraction": 0.4,
+        "n": 64,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.03125,
+        "registered": false,
+        "wilson_95": [
+          0.008612138346171874,
+          0.10697291770958313
+        ]
+      },
+      {
+        "collapsed": 2,
+        "fraction": 0.4,
+        "n": 64,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.03125,
+        "registered": false,
+        "wilson_95": [
+          0.008612138346171874,
+          0.10697291770958313
+        ]
+      },
+      {
+        "collapsed": 1,
+        "fraction": 0.4,
+        "n": 64,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.015625,
+        "registered": false,
+        "wilson_95": [
+          0.002763541923337505,
+          0.08334101600094265
+        ]
+      },
+      {
+        "collapsed": 2,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.28125,
+        "rate": 0.03125,
         "registered": false,
         "wilson_95": [
-          0.18593372333727837,
-          0.40133930282207403
+          0.008612138346171874,
+          0.10697291770958313
         ]
       },
       {
-        "collapsed": 12,
+        "collapsed": 2,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.1875,
+        "rate": 0.03125,
         "registered": false,
         "wilson_95": [
-          0.11064643172948806,
-          0.29974360564101526
+          0.008612138346171874,
+          0.10697291770958313
         ]
       },
       {
-        "collapsed": 3,
+        "collapsed": 1,
         "fraction": 0.5,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.046875,
+        "rate": 0.015625,
         "registered": false,
         "wilson_95": [
-          0.016069016786292974,
-          0.12899653740093686
+          0.002763541923337505,
+          0.08334101600094265
         ]
       },
       {
-        "collapsed": 22,
+        "collapsed": 4,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 200,
-        "rate": 0.34375,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.23923142078443355,
-          0.46596359790081815
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 16,
+        "collapsed": 4,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 300,
-        "rate": 0.25,
+        "rate": 0.0625,
         "registered": false,
         "wilson_95": [
-          0.16014926530970577,
-          0.36816276458669694
+          0.024571201396618017,
+          0.14997485092208662
         ]
       },
       {
-        "collapsed": 7,
+        "collapsed": 2,
         "fraction": 0.6,
         "n": 64,
         "peak_window": 400,
         "persistence": 500,
-        "rate": 0.109375,
+        "rate": 0.03125,
         "registered": false,
         "wilson_95": [
-          0.05400113344416797,
-          0.20898641326896122
+          0.008612138346171874,
+          0.10697291770958313
         ]
       }
     ]

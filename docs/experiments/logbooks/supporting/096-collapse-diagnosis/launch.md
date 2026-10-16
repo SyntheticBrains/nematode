@@ -48,9 +48,13 @@ committed incidence is not re-read.
 ## The statistic
 
 **Collapse** (D25, `scripts/analysis/collapse.py`): the peak at episode *t* is the highest trailing-200
-success rate seen by *t*; onset is the first episode where the trailing-100 rate falls below half the
-peak and stays below for at least 300 episodes; censored at the horizon. Each collapsed re-run's onset
-is its own, under this definition. A pair leaves the stacks, named, when its collapsed run does not
+success rate seen by *t*; a fall begins where the trailing-100 rate drops below half the peak and stays
+below for at least 300 episodes; a fall the rate later climbs back from (above 0.8 of the peak at the
+fall, at any point before the horizon) is a dip, counted beside; **onset is the start of the first fall
+not recovered**; censored at the horizon. *(Amended 2026-10-17 by the maintainer's decision, before any
+re-run; see the incidence below.)* Each collapsed re-run's onset is its own, under this definition. On
+092's committed runs all eight known collapsers' onsets fall on their late collapse (episodes
+3,858–5,667). A pair leaves the stacks, named, when its collapsed run does not
 collapse under it, when its intact twin does, or when either run's telemetry stops before the window
 ends. Both wild-type collapses came in 092's last 500-episode block, so the 300-episode persistence may
 censor them; with six pairs the rule below reads at least 5 collapsed and none intact.
@@ -123,23 +127,24 @@ and the same over Logbook 085's panel logs, with that panel's arms.
 
 *(Computed 2026-10-17, from the archive, before any re-run: [incidence-092.json](incidence-092.json)
 and [incidence-085.json](incidence-085.json); the archive's location is the maintainer's and is not
-recorded here.)* Under the registered definition, against 092's block rule:
+recorded here.)* The definition as first written and as amended, against 092's block rule:
 
-| panel | arm | D25 collapsed | 95% Wilson | 092's rule | grid range |
-|---|---|---|---|---|---|
-| 092 (6,000 episodes) | wild type | 7 / 32 | [0.11, 0.39] | 2 | 6–9 |
-| 092 | gap-only null | 9 / 32 | [0.16, 0.45] | 6 | 7–20 |
-| 092 | chemical-only null | 11 / 32 | [0.20, 0.52] | 5 | 8–17 |
-| 085 (3,000 episodes) | wild type | 35 / 64 | [0.43, 0.66] | 6 | 14–50 |
-| 085 | chemical-only null | 32 / 64 | [0.38, 0.62] | 3 | 16–45 |
-| 085 | MLP | 13 / 64 | [0.12, 0.32] | 3 | 3–31 |
+| panel | arm | first fall | amended | 95% Wilson (amended) | 092's rule | grid (amended) | runs with a dip |
+|---|---|---|---|---|---|---|---|
+| 092 (6,000 episodes) | wild type | 7 / 32 | **3 / 32** | [0.03, 0.24] | 2 | 2–3 | 4 |
+| 092 | gap-only null | 9 / 32 | **6 / 32** | [0.09, 0.35] | 6 | 5–10 | 4 |
+| 092 | chemical-only null | 11 / 32 | **6 / 32** | [0.09, 0.35] | 5 | 4–7 | 5 |
+| 085 (3,000 episodes) | wild type | 35 / 64 | **7 / 64** | [0.05, 0.21] | 6 | 2–11 | 31 |
+| 085 | chemical-only null | 32 / 64 | **7 / 64** | [0.05, 0.21] | 3 | 3–9 | 26 |
+| 085 | MLP | 13 / 64 | **2 / 64** | [0.01, 0.11] | 3 | 1–6 | 11 |
 
-**The definition counts transient dips.** Most runs it flags on 085 fall early (23 of the wild type's
-35 before episode 1,500) and recover (22 of 35); many flagged 092 runs end high (final rate 0.77–0.89).
-Seven of the eight known collapsers' onsets fall on their late collapse (episodes 3,858–5,554); the
-gap-only null on 2305 is flagged at an early dip (episode 1,721) it recovered from before its late fall,
-so the diagnosis would align that pair on the wrong event. This is reported for the maintainer's
-decision on D25 before this campaign launches; nothing here is amended by it.
+**Why D25 was amended.** As first written, the onset was a run's first fall, and most falls it counted
+were dips early in learning that the run recovered from: 23 of 085's 35 flagged wild-type runs fell
+before episode 1,500, and 22 recovered. It also placed gap-only seed 2305's onset at an early dip
+(episode 1,721) rather than its late fall. The maintainer chose, on 2026-10-17 and before any re-run,
+to make the onset the first fall not recovered before the horizon. Amended, the incidence sits close
+to 092's own rule, the grid's spread narrows, and 2305's onset moves to episode 5,667. The JSON files
+hold the amended reading, with each run's first fall and dips beside it.
 
 ## Before launch
 

@@ -44,7 +44,8 @@ class TestDefinition:
         # The 100-episode mean falls below 0.4 once more than half its window is past the fall.
         assert reading.onset == pytest.approx(3051, abs=2)
         assert reading.peak_at_onset == pytest.approx(0.8, abs=0.01)
-        assert reading.recovered is False
+        assert reading.dips == 0
+        assert reading.first_fall == reading.onset
 
     def test_a_dip_shorter_than_the_persistence_is_not_a_collapse(self) -> None:
         reading = cl.detect(_series((3000, 0.8), (250, 0.0), (2750, 0.8)))
@@ -55,10 +56,31 @@ class TestDefinition:
         assert not reading.collapsed
         assert reading.horizon == 6000
 
-    def test_a_recovery_within_1000_episodes_is_recorded(self) -> None:
+    def test_a_recovered_fall_is_a_dip_not_a_collapse(self) -> None:
+        """A fall the run climbs back from, at any point before the horizon, is counted as a dip."""
         reading = cl.detect(_series((3000, 0.8), (500, 0.0), (2500, 0.8)))
+        assert not reading.collapsed
+        assert reading.dips == 1
+        assert reading.first_fall == pytest.approx(3051, abs=2)
+
+    def test_a_late_recovery_still_makes_a_dip(self) -> None:
+        reading = cl.detect(_series((2000, 0.8), (2500, 0.0), (1500, 0.8)))
+        assert not reading.collapsed
+        assert reading.dips == 1
+
+    def test_an_early_dip_does_not_move_the_onset_of_a_late_collapse(self) -> None:
+        """The onset is the fall the run never recovers from, not the first fall."""
+        reading = cl.detect(_series((1000, 0.6), (400, 0.0), (2600, 0.8), (2000, 0.0)))
         assert reading.collapsed
-        assert reading.recovered is True
+        assert reading.dips == 1
+        assert reading.first_fall == pytest.approx(1051, abs=2)
+        assert reading.onset == pytest.approx(4051, abs=2)
+        assert reading.peak_at_onset == pytest.approx(0.8, abs=0.01)
+
+    def test_a_partial_recovery_below_the_bar_is_still_a_collapse(self) -> None:
+        reading = cl.detect(_series((3000, 0.8), (500, 0.0), (2500, 0.5)))
+        assert reading.collapsed
+        assert reading.onset == pytest.approx(3051, abs=2)
 
     def test_a_never_learning_run_does_not_collapse(self) -> None:
         reading = cl.detect(np.zeros(6000))
@@ -79,10 +101,10 @@ class TestPanel:
 
     def test_kaplan_meier_censors_the_uncollapsed_at_their_horizon(self) -> None:
         readings = [
-            cl.Collapse(6000, 0.8, 0.0, 3000, 0.8, recovered=False),
-            cl.Collapse(6000, 0.8, 0.0, 4000, 0.8, recovered=False),
-            cl.Collapse(6000, 0.8, 0.8, None, None, None),
-            cl.Collapse(6000, 0.8, 0.8, None, None, None),
+            cl.Collapse(6000, 0.8, 0.0, 3000, 0.8),
+            cl.Collapse(6000, 0.8, 0.0, 4000, 0.8),
+            cl.Collapse(6000, 0.8, 0.8, None, None),
+            cl.Collapse(6000, 0.8, 0.8, None, None),
         ]
         km = cl.kaplan_meier(readings)
         assert km["steps"] == [[3000, 0.75], [4000, 0.5]]

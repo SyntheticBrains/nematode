@@ -6,14 +6,18 @@ final-quarter plateau scores such a seed as "never learned"; a panel that reads 
 as if it kept its peak. This module is the one definition every long panel reports beside its
 primary, so neither reading hides the loss.
 
-**The definition** (registered, D25). On a run's per-episode success series:
+**The definition** (registered, D25, as amended on 2026-10-17). On a run's per-episode success series:
 
 * the **peak** at episode *t* is the highest trailing-200-episode success rate seen by *t*;
-* **onset** is the first episode at which the trailing-100-episode rate falls below half the peak
-  and stays below it for at least 300 consecutive episodes;
-* a run whose fall would be confirmed only after its horizon is **censored**: no collapse observed;
-* a collapsed run **recovered** if its trailing-100 rate returns above 0.8 of the peak within
-  1,000 episodes of onset.
+* a **fall** begins at an episode where the trailing-100-episode rate drops below half the peak and
+  stays below it for at least 300 consecutive episodes;
+* a fall is **recovered** if the trailing-100 rate later returns above 0.8 of the peak at the fall,
+  at any point before the horizon; a recovered fall is a **dip**, counted but not a collapse;
+* **onset** is the start of the first fall the run does not recover from before its horizon;
+* a run whose fall would be confirmed only after its horizon is **censored**: no collapse observed.
+
+Counting the first fall, as first registered, made most of the falls it counted dips early in
+learning that the run recovered from; the first fall is still reported beside, for continuity.
 
 A run that never succeeds has a peak of zero and cannot fall below half of it, so it does not
 collapse; it is a run that never learned, which the panel's own floor gate reports.
@@ -47,7 +51,6 @@ LEVEL_WINDOW = 100
 FRACTION = 0.5
 PERSISTENCE = 300
 RECOVERY_FRACTION = 0.8
-RECOVERY_WINDOW = 1000
 # 95% Wilson intervals.
 Z = 1.959963984540054
 # The sensitivity grid.
@@ -70,7 +73,8 @@ class Collapse:
     final: float | None
     onset: int | None
     peak_at_onset: float | None
-    recovered: bool | None
+    dips: int = 0
+    first_fall: int | None = None
 
     @property
     def collapsed(self) -> bool:
@@ -98,34 +102,51 @@ def trailing_mean(series: np.ndarray, window: int) -> np.ndarray:
     return out
 
 
-def detect(  # noqa: PLR0913 - the definition's five parameters, each varied by the grid
+def detect(
     series: np.ndarray,
     *,
     peak_window: int = PEAK_WINDOW,
     level_window: int = LEVEL_WINDOW,
     fraction: float = FRACTION,
     persistence: int = PERSISTENCE,
-    recovery_window: int = RECOVERY_WINDOW,
 ) -> Collapse:
-    """Read one run's success series under the definition (registered values by default)."""
+    """Read one run's success series under the definition (registered values by default).
+
+    Falls are found in order; each recovered fall is a dip, and scanning resumes where the rate came
+    back. The first fall not recovered before the horizon is the collapse.
+    """
     horizon = len(series)
     peak_curve = np.fmax.accumulate(np.nan_to_num(trailing_mean(series, peak_window), nan=0.0))
     level = trailing_mean(series, level_window)
     below = np.nan_to_num(level, nan=np.inf) < fraction * peak_curve
-    onset: int | None = None
+    final = float(level[-1]) if horizon and not np.isnan(level[-1]) else None
+    last_peak = float(peak_curve[-1]) if horizon else 0.0
+    dips = 0
+    first_fall: int | None = None
+    t = 0
+    while t < horizon:
+        fall = _next_fall(below, t, persistence)
+        if fall is None:
+            break
+        if first_fall is None:
+            first_fall = fall + 1
+        peak = float(peak_curve[fall])
+        back = np.nonzero(np.nan_to_num(level[fall:], nan=0.0) > RECOVERY_FRACTION * peak)[0]
+        if back.size == 0:
+            return Collapse(horizon, last_peak, final, fall + 1, peak, dips, first_fall)
+        dips += 1
+        t = fall + int(back[0])
+    return Collapse(horizon, last_peak, final, None, None, dips, first_fall)
+
+
+def _next_fall(below: np.ndarray, start: int, persistence: int) -> int | None:
+    """Return the first index from ``start`` that opens ``persistence`` consecutive episodes below."""
     run = 0
-    for t in range(horizon):
+    for t in range(start, len(below)):
         run = run + 1 if below[t] else 0
         if run == persistence:
-            onset = t - persistence + 1
-            break
-    final = float(level[-1]) if horizon and not np.isnan(level[-1]) else None
-    if onset is None:
-        return Collapse(horizon, float(peak_curve[-1]) if horizon else 0.0, final, None, None, None)
-    peak = float(peak_curve[onset])
-    after = level[onset : onset + recovery_window]
-    recovered = bool(np.any(after > RECOVERY_FRACTION * peak))
-    return Collapse(horizon, float(peak_curve[-1]), final, onset + 1, peak, recovered)
+            return t - persistence + 1
+    return None
 
 
 def wilson(k: int, n: int, z: float = Z) -> tuple[float, float]:
@@ -229,7 +250,8 @@ def panel(series_by_run: dict[str, np.ndarray], early_horizon: int = 3000) -> di
             "level_window": LEVEL_WINDOW,
             "fraction": FRACTION,
             "persistence": PERSISTENCE,
-            "recovery": [RECOVERY_FRACTION, RECOVERY_WINDOW],
+            "recovery": RECOVERY_FRACTION,
+            "onset": "the first fall not recovered before the horizon",
         },
         "runs": {
             run: {

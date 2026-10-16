@@ -1,7 +1,8 @@
 ## Context
 
 D25 fixes the collapse definition's shape (a trailing-200-episode peak; onset when the 100-episode mean
-falls below half of it and stays there at least 300 episodes; censored at the horizon), forbids further
+falls below half of it and stays there at least 300 episodes; censored at the horizon; amended on
+2026-10-17 so the onset is the first such fall the run does not recover from, below), forbids further
 6,000-episode body panels before M.1 reads out (M.1(c) excepted), and requires that a remedy be chosen
 by rescue of the known collapsers and then hold the MLP control. This change builds what that needs
 and runs the diagnosis; it chooses no remedy.
@@ -123,7 +124,13 @@ or, failing that, as its dated addendum.
 ### Decision F: The collapse statistic's code is the registered definition
 
 `collapse.py` takes a per-episode success series and returns the onset (or none), the peak, the final
-level, and whether it recovered (mean above 0.8 × peak within 1,000 episodes); incidence over a panel
+level, the number of dips and the first fall. *(Amended 2026-10-17, by the maintainer's decision,
+before any re-run: a fall the run recovers from, its 100-episode mean back above 0.8 × the peak at the
+fall at any point before the horizon, is a dip; the onset is the first fall not recovered. As first
+written the onset was the first fall, with recovery read only within 1,000 episodes; on the archived
+085 and 092 panels that counted mostly early dips, 35 of 64 wild-type runs on 085 against 092's rule's
+6, and placed gap-only seed 2305's onset at an early dip. Amended: 7 of 64, and all eight known
+collapsers' onsets fall on their late collapse.)* incidence over a panel
 with Wilson intervals; Kaplan–Meier time-to-collapse censored at the horizon. Its sensitivity analysis
 varies the trailing window (100, 200, 400), the fraction (0.4, 0.5, 0.6) and the persistence (200, 300,
 500\) on the committed panels whose per-episode series exist, and reports how incidence moves. 092's own
