@@ -7,7 +7,7 @@ Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking
   both edges from the non-held pairs, `focal` swaps each focal pair once with a partner from the rest;
   the accepted count returned. Tests: held pairs keep place and count; every focal pair moves when partners allow; degrees
   preserved; the existing nulls draw the graphs pinned before this change.
-- [ ] 2. **Brain options**: `gap_weight_mode`, `gap_weight_scale`, `gap_outlier_min_count`, and the
+- [x] 2. **Brain options**: `gap_weight_mode`, `gap_weight_scale`, `gap_outlier_min_count`, and the
   wirings `rewired_gap_outliers_held` and `rewired_gap_outliers_scattered`; refusals (scale or mode
   away from default with gap junctions off; the threshold read only by the two wirings); the comment
   corrected. Tests: each option's matrix against a hand computation; `plastic_gaps` composes;
