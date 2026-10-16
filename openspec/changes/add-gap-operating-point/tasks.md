@@ -12,7 +12,7 @@ Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking
   away from default with gap junctions off; the threshold read only by the two wirings); the comment
   corrected. Tests: each option's matrix against a hand computation; `plastic_gaps` composes;
   every default byte-identical (parameters, outputs, the next RNG draw).
-- [ ] 3. **Configs** through `generate_gap_operating_point_configs.py`: the Emmons t35 anchor and every
+- [x] 3. **Configs** through `generate_gap_operating_point_configs.py`: the Emmons t35 anchor and every
   panel arm as stated deltas; loader tests.
 - [ ] 4. **The shortcut audit** takes the cell's config; a test on the thermal cell's sensor set.
 - [ ] 5. **Analysis** `gap_operating_point.py`: `anchor` (D23's rule), `score` (the readings,
