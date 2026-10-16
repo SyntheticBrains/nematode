@@ -984,17 +984,19 @@ class MLPPPOBrain(ClassicalBrain):
                     all_params.append(self.gate_weights)
                 all_params.extend(self._std_params)
                 record.read_grads(self._actor_side_params(), self.critic.parameters())
+                # The features the heads read, before the step, as the update's loss saw them.
+                features = (
+                    self._head_features(gated_states)
+                    if self._telemetry is not None
+                    else gated_states
+                )
                 total_norm = nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
                 self.optimizer.step()
                 record.minibatch(
                     new_log_probs=new_log_probs,
                     old_log_probs=batch["old_log_probs"],
                     head_out=head_out,
-                    features=(
-                        self._head_features(gated_states)
-                        if self._telemetry is not None
-                        else gated_states
-                    ),
+                    features=features,
                     entropy=entropy.item(),
                     value_loss=value_loss.item(),
                     grad_total=total_norm.item(),

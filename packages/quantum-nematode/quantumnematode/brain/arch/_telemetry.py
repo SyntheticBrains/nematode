@@ -40,6 +40,10 @@ TANH_SATURATED = 0.99
 LARGE_MEAN = 2.0
 # ``srank``: the fewest singular values whose sum reaches this fraction of the total.
 SRANK_KEEP = 0.99
+# ``srank`` grows with the number of rows it is computed on, and an update's batch is as long as the
+# episode that ended it, so it is computed on this many rows, the first of the final epoch's
+# minibatches in the order the update drew them. A smaller batch reports its own row count.
+SRANK_ROWS = 64
 
 
 class UpdateTelemetry:
@@ -227,7 +231,8 @@ class UpdateRecord:
             "clip_fraction": clip_fraction(new, old, self._clip_epsilon),
             "saturated_fraction": saturated_fraction(features, activation),
             "saturation_rule": "relu_zero" if activation == "relu" else "tanh_0.99",
-            "srank": srank(features),
+            "srank": srank(features[:SRANK_ROWS]),
+            "srank_rows": int(min(SRANK_ROWS, features.shape[0])),
             "feature_dim": int(features.shape[-1]),
             "weight_norms": norms,
             "log_std": None if log_std is None else float(log_std.detach().double().mean()),

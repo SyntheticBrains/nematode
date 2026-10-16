@@ -8,8 +8,9 @@ entropy and `log_std`; approximate KL and clip fraction over the final epoch; va
 variance; pre-clip gradient norm, the fraction of minibatches clipped, and actor and critic gradient
 norms; the raw advantages' mean, std and maximum magnitude before normalisation; the pre-squash action
 mean's magnitude and the fraction of steps with `|u| > 2`; layer-wise weight norms; the saturated-unit
-fraction and effective rank of the features the heads read; and, on the connectome, the settling
-residual. Every quantity SHALL be computed from tensors the update already holds, without drawing from
+fraction of the features the heads read (`|h| > 0.99` for tanh features, exactly zero for ReLU
+features) and their effective rank on a fixed number of rows, with that row count; and, on the
+connectome, the settling residual. Every quantity SHALL be computed from tensors the update already holds, without drawing from
 any random generator and without writing to any parameter or buffer.
 
 #### Scenario: Telemetry does not change the run

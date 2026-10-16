@@ -21,10 +21,16 @@ next value of each generator.
 
 ### Decision B: Per update, not per minibatch
 
-One line per update keeps the file small (≈ 12,000 lines and a few MB for a 6,000-episode body run).
-KL and clip fraction are means over the final epoch, the epoch whose weights the next rollout uses;
-entropy and losses are means over all epochs, as the existing report is. Saturation and `srank` are
-computed once per update on the update's full batch of features.
+One line per update keeps the file small: an update fires at every 256 steps and at every episode
+end, so one or two a body episode, some 6,000 to 18,000 lines and a few tens of MB for a 6,000-episode
+run. KL and clip fraction are means over the final epoch, the epoch whose weights the next rollout
+uses; entropy and losses are means over all epochs, as the existing report is. Saturation is computed
+once per update on the final epoch's full batch of features: `|h| > 0.99` for tanh features, exactly
+zero for ReLU features (an inactive unit passes no gradient). `srank` grows with the rows it is
+computed on, and an update's batch is as long as the episode that ended it, which a collapse
+changes; so it is computed on a fixed 64 rows, the first of the final epoch's minibatches in the
+order the update drew them, and the row count is logged. A shorter batch's `srank` is not read.
+*(Amended 2026-10-16 at the spec review, before launch.)*
 
 ### Decision C: The diagnosis is a reproduction, so it runs on M.9's own configs
 
@@ -49,13 +55,25 @@ the field compared, and the rest is named *uncompared*).
 From the literature review (roadmap § Phase 9 § What the review established), each with the pattern
 that identifies it in the 1,500 episodes before onset.
 
-**The envelope.** Each intact twin is aligned on its collapsed twin's onset episode, so the eight
-intact runs give, for every statistic and every aligned episode, a mean and a standard deviation; the
-envelope is that mean ± 2 sd. A collapsed run **departs** on a statistic when the statistic, smoothed
-over 100 episodes, sits outside the envelope in the cause's predicted direction for at least 200
-consecutive episodes inside the 1,500 before its onset; the first episode of that stretch, as a lead
-before onset, is reported. Each intact twin is tested the same way against the envelope of the other
-seven (leave one out), so the intact side is held to the same rule.
+**The envelope.** Each intact twin is aligned on its collapsed twin's onset episode. **The window** is
+the 1,500 episodes ending 100 before onset: the trailing-100 success rate crosses half the peak some
+way into the fall, and the statistics are smoothed over 100 episodes, so the last hundred episodes
+before onset already carry the fall. **Each run is read as its change from its own baseline**, its
+smoothed mean over the 1,500 episodes before the window: the two wirings differ in saturation and
+settling residual from the first episode, and six collapsed runs are gap-only while six intact
+twins are wild type, so a raw level would read the wiring as a cause. The eight intact runs give,
+for every statistic and every aligned episode, a mean and a sample standard deviation (`ddof = 1`);
+the envelope is that mean ± 2 sd, its half-width never below 10% of the intact runs' mean absolute
+baseline nor below the statistic's absolute floor (0.01 for the fractions, 1e-4 for KL, 0.05 for
+explained variance, 1 for `srank`), so a statistic flat on every intact run does not make any
+movement a departure. A collapsed run **departs** on a statistic when its smoothed change sits
+outside the envelope in the cause's predicted direction for at least 200 consecutive episodes inside
+the window; the stretch's start, as a lead before onset, is reported. Each intact twin is tested the
+same way against the envelope of the other seven (leave one out). A pair leaves the stacks, named,
+if its intact twin itself collapses under the definition, or if either run's telemetry stops before
+the window ends. The aligned smoothed stacks (every 25 episodes, from the baseline to 300 after
+onset) and the context statistics around onset are written to a committed CSV and JSON.
+*(Amended 2026-10-16 at the spec review, before launch.)*
 
 1. **Weight growth → saturation → rank loss**: layer-wise weight norm rising from the start, saturated
    fraction rising and `srank` falling before onset, entropy flat or rising, KL and clip fraction
@@ -72,7 +90,11 @@ seven (leave one out), so the intact side is held to the same rule.
 **As the harness encodes them** (`collapse_diagnosis.CAUSES`), each pattern is a conjunction of
 departures, the rest of its description read beside as context: (1) weight norm up, saturated
 fraction up and `srank` down; (2) raw advantage std down with the gradient norm departing in neither
-direction; (3) gradient norm up and KL up, the gradient's departure beginning no later than KL's;
+direction; (3) gradient norm up and KL up, the gradient's departure beginning no later than KL's — the
+sustained form; the transient form (a jump followed within tens of updates by a KL spike) cannot
+survive the smoothing and the 200-episode rule, so it is counted beside, never read as the cause:
+per update, unsmoothed, in the window, a gradient-norm spike followed within 20 updates by a KL
+spike, a spike being 5 scaled MADs above the run's own baseline median;
 (4) explained variance down and value loss up, the critic-to-actor gradient ratio reported beside;
 (5) `log_std` down; (6) the `|u| > 2` fraction up with `log_std` departing in neither direction. The
 weight norm is the norm over every parameter but the critic's.
@@ -88,8 +110,15 @@ takes its remedy order from it (D25's list, reordered by what is indicated).
 
 The remedy rule needs the MLP control's own collapse rate at 6,000 episodes, which is known only from
 M.9's 8 retry seeds. They are re-run with telemetry (seeds 9721–9728, the retry's configs), their identity checked against
-the committed plateaus in Logbook 092's `retry/per_seed.csv`, and their incidence is reported with its Wilson interval beside the connectome's. They are not part of the cause
-stacks unless they collapse.
+the committed plateaus in Logbook 092's `retry/per_seed.csv`, and their incidence is reported with its
+Wilson interval beside 092's committed panel incidence (2/32 and 6/32). They have no intact twin and
+are never part of the cause stacks. The 16 connectome re-runs were chosen half on collapse, so their
+incidence is reported only as a check of the definition against 092's rule.
+
+**Incidence on the committed 085 and 092 panels**, with its sensitivity to the definition, needs their
+per-episode series, which no committed file holds: the panels' logs are archived off-repo. It is
+computed with `collapse.py` on the archived logs once they are restored, and reported in Logbook 096
+or, failing that, as its dated addendum.
 
 ### Decision F: The collapse statistic's code is the registered definition
 

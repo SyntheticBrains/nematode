@@ -47,7 +47,7 @@ import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -60,6 +60,7 @@ if str(_HERE) not in sys.path:
 
 import collapse as cl  # noqa: E402  # pyright: ignore[reportMissingImports]
 import t7_continuous_ranking as t7  # noqa: E402  # pyright: ignore[reportMissingImports]
+from quantumnematode.brain.arch._telemetry import SRANK_ROWS  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 EXPERIMENTS = REPO / "experiments"
@@ -96,9 +97,37 @@ RUNS: tuple[tuple[str, int], ...] = (
 )
 
 LEAD = 1500
+# The window ends this many episodes before onset: the trailing-100 success rate crosses half the
+# peak some way into the fall, and the statistics are smoothed over 100 episodes, so the last
+# hundred episodes before onset already carry the fall itself.
+GAP = 100
+# Each run's own baseline: its smoothed mean over the 1,500 episodes before the window. Departures
+# are read on the change from it, so a level that differs between wirings from the first episode is
+# not read as a cause.
+BASELINE = 1500
 SMOOTH = 100
 MIN_RUN = 200
 SDS = 2.0
+# The envelope's half-width is never below this fraction of the envelope runs' mean baseline, nor
+# below the statistic's absolute floor: a statistic that sits at one value on every intact run has
+# no spread, and any movement at all would otherwise depart.
+FLOOR_FRACTION = 0.10
+ABS_FLOOR: dict[str, float] = {
+    "saturated_fraction": 0.01,
+    "action_mean_large_fraction": 0.01,
+    "clip_fraction": 0.01,
+    "approx_kl": 1e-4,
+    "explained_variance": 0.05,
+    "srank": 1.0,
+}
+# The transient form of stale second moments: a gradient-norm spike followed within this many
+# updates by a KL spike, a spike being above the run's own baseline median by this many MADs.
+SPIKE_MADS = 5.0
+SPIKE_FOLLOW = 20
+# The stacks written out: every this many episodes, through this many after onset.
+STACK_STEP = 25
+AFTER = 300
+CONTEXT = ("entropy", "clip_fraction", "approx_kl", "critic_over_actor_grad")
 INDICATED_COLLAPSED = 0.75
 INDICATED_INTACT = 1 / 8
 NOT_INDICATED = 0.25
@@ -162,7 +191,10 @@ def _weight_norm(line: dict[str, Any]) -> float:
 STATISTICS: dict[str, Callable[[dict[str, Any]], float | None]] = {
     "weight_norm": _weight_norm,
     "saturated_fraction": lambda line: line["saturated_fraction"],
-    "srank": lambda line: line["srank"],
+    # A batch shorter than the fixed row count gives a smaller rank for that reason alone.
+    "srank": lambda line: (
+        line["srank"] if line.get("srank_rows", SRANK_ROWS) >= SRANK_ROWS else None
+    ),
     "adv_std": lambda line: line["adv_std"],
     "grad_norm": lambda line: line["grad_norm"],
     "approx_kl": lambda line: line["approx_kl"],
@@ -216,47 +248,73 @@ def smoothed(series: np.ndarray, window: int = SMOOTH) -> np.ndarray:
         return np.where(n > 0, (values[hi] - values[lo]) / n, np.nan)
 
 
-def aligned(series: np.ndarray, onset: int, lead: int = LEAD) -> np.ndarray:
-    """Return the ``lead`` episodes before ``onset`` (1-indexed), NaN-padded before the start."""
-    end = onset - 1
-    start = end - lead
-    out = np.full(lead, np.nan)
+def window_bounds(onset: int) -> tuple[int, int]:
+    """Return the window's ``[start, end)`` indices: the ``LEAD`` episodes ending ``GAP`` before onset."""
+    end = onset - 1 - GAP
+    return end - LEAD, end
+
+
+def aligned(series: np.ndarray, onset: int) -> np.ndarray:
+    """Return the window's values, NaN-padded where the run did not reach that far back."""
+    start, end = window_bounds(onset)
+    out = np.full(LEAD, np.nan)
     lo = max(0, start)
-    out[lo - start :] = series[lo:end]
+    if end > lo:
+        out[lo - start : lo - start + (end - lo)] = series[lo:end]
     return out
 
 
+def baseline(series: np.ndarray, onset: int) -> float:
+    """Return a run's mean over the ``BASELINE`` episodes before its window (what exists of them)."""
+    start, _ = window_bounds(onset)
+    chunk = series[max(0, start - BASELINE) : max(0, start)]
+    seen = chunk[~np.isnan(chunk)]
+    return float(seen.mean()) if seen.size else float("nan")
+
+
 # ── The envelope and the departure rule ──────────────────────────────────────────────────────
-def envelope(stack: list[np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
-    """Return the mean and standard deviation at each aligned episode across the stacked runs."""
+def envelope(
+    stack: list[np.ndarray],
+    baselines: list[float],
+    statistic: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the envelope's centre and half-width at each aligned episode.
+
+    The centre is the stacked runs' mean; the half-width is two sample standard deviations
+    (``ddof=1``), never below ``FLOOR_FRACTION`` of the runs' mean absolute baseline nor below the
+    statistic's absolute floor.
+    """
     array = np.vstack(stack)
     with warnings.catch_warnings():
         # An aligned episode no run reached is NaN in every row, and stays NaN.
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        return np.nanmean(array, axis=0), np.nanstd(array, axis=0)
+        mean, sd = np.nanmean(array, axis=0), np.nanstd(array, axis=0, ddof=1)
+        level = float(np.nanmean(np.abs(baselines))) if baselines else 0.0
+    floor = max(FLOOR_FRACTION * (0.0 if np.isnan(level) else level), ABS_FLOOR.get(statistic, 0.0))
+    return mean, np.fmax(SDS * np.nan_to_num(sd, nan=0.0), floor)
 
 
 def departure(
     series: np.ndarray,
-    mean: np.ndarray,
-    sd: np.ndarray,
+    centre: np.ndarray,
+    half_width: np.ndarray,
     direction: int,
     min_run: int = MIN_RUN,
 ) -> int | None:
     """Return how far before onset a ``min_run``-long stretch outside the envelope begins.
 
     ``direction`` is +1 for above the envelope, -1 for below. Returns the stretch's lead before
-    onset, in episodes (``LEAD`` is the earliest), or ``None`` when there is no such stretch.
+    onset, in episodes (``GAP + LEAD`` is the earliest), or ``None`` when there is no such stretch.
     """
     with np.errstate(invalid="ignore"):
         outside = (
-            series > mean + SDS * sd if direction > 0 else series < mean - SDS * sd
+            series > centre + half_width if direction > 0 else series < centre - half_width
         ) & ~np.isnan(series)
     run = 0
     for t, flag in enumerate(outside):
         run = run + 1 if flag else 0
         if run == min_run:
-            return len(series) - (t - min_run + 1)
+            return GAP + len(series) - (t - min_run + 1)
     return None
 
 
@@ -327,28 +385,51 @@ def classify(collapsed_hits: int, n_collapsed: int, intact_hits: int, n_intact: 
     return "mixed"
 
 
+def _view(
+    series: dict[str, np.ndarray],
+    onset: int,
+) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+    """Return a run's windowed change from its own baseline, and the baselines, per statistic."""
+    smooth = {k: smoothed(v) for k, v in series.items()}
+    base = {k: baseline(v, onset) for k, v in smooth.items()}
+    return {k: aligned(v, onset) - np.nan_to_num(base[k]) for k, v in smooth.items()}, base
+
+
+def _reference(
+    views: dict[int, dict[str, np.ndarray]],
+    bases: dict[int, dict[str, float]],
+    seeds: list[int],
+    statistics: list[str],
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    return {
+        k: envelope([views[s][k] for s in seeds], [bases[s][k] for s in seeds], k)
+        for k in statistics
+    }
+
+
 def diagnose_series(
     collapsed: dict[int, dict[str, np.ndarray]],
     intact: dict[int, dict[str, np.ndarray]],
     onsets: dict[int, int],
 ) -> dict[str, Any]:
-    """Read every cause on aligned, smoothed series; keys are seeds, one pair per seed."""
+    """Read every cause on windowed, smoothed, baseline-relative series; one pair per seed."""
     seeds = sorted(onsets)
-    view = {
-        side: {s: {k: aligned(smoothed(v), onsets[s]) for k, v in runs[s].items()} for s in seeds}
-        for side, runs in (("collapsed", collapsed), ("intact", intact))
-    }
+    views: dict[str, dict[int, dict[str, np.ndarray]]] = {"collapsed": {}, "intact": {}}
+    bases: dict[str, dict[int, dict[str, float]]] = {"collapsed": {}, "intact": {}}
+    for side, runs in (("collapsed", collapsed), ("intact", intact)):
+        for s in seeds:
+            views[side][s], bases[side][s] = _view(runs[s], onsets[s])
     statistics = sorted({c.statistic for comps in CAUSES.values() for c in comps})
-    full = {k: envelope([view["intact"][s][k] for s in seeds]) for k in statistics}
-    out: dict[str, Any] = {"seeds": seeds, "onsets": onsets, "causes": {}}
+    full = _reference(views["intact"], bases["intact"], seeds, statistics)
+    out: dict[str, Any] = {"seeds": seeds, "onsets": onsets, "causes": {}, "baselines": bases}
     for name, components in CAUSES.items():
         per_run: dict[str, Any] = {"collapsed": {}, "intact": {}}
         for s in seeds:
-            hit, leads = cause_departs(view["collapsed"][s], full, components)
+            hit, leads = cause_departs(views["collapsed"][s], full, components)
             per_run["collapsed"][s] = {"departs": hit and _ordered(name, leads), "leads": leads}
             others = [t for t in seeds if t != s]
-            loo = {k: envelope([view["intact"][t][k] for t in others]) for k in statistics}
-            hit, leads = cause_departs(view["intact"][s], loo, components)
+            loo = _reference(views["intact"], bases["intact"], others, statistics)
+            hit, leads = cause_departs(views["intact"][s], loo, components)
             per_run["intact"][s] = {"departs": hit and _ordered(name, leads), "leads": leads}
         hits_c = sum(r["departs"] for r in per_run["collapsed"].values())
         hits_i = sum(r["departs"] for r in per_run["intact"].values())
@@ -360,7 +441,82 @@ def diagnose_series(
             "per_run": per_run,
         }
     out["indicated"] = [n for n, c in out["causes"].items() if c["reading"] == "indicated"]
+    out["context_at_onset"] = {
+        side: {s: _context(runs[s], onsets[s]) for s in seeds}
+        for side, runs in (("collapsed", collapsed), ("intact", intact))
+    }
+    out["stacks"] = [
+        row
+        for side, runs in (("collapsed", collapsed), ("intact", intact))
+        for s in seeds
+        for row in _stack_rows(side, s, runs[s], onsets[s])
+    ]
     return out
+
+
+def _context(series: dict[str, np.ndarray], onset: int) -> dict[str, float | None]:
+    """Return the context statistics' smoothed mean over the 100 episodes around onset."""
+    out: dict[str, float | None] = {}
+    for k in CONTEXT:
+        chunk = smoothed(series[k])[max(0, onset - 51) : onset + 49]
+        seen = chunk[~np.isnan(chunk)]
+        out[k] = float(seen.mean()) if seen.size else None
+    return out
+
+
+def _stack_rows(
+    side: str,
+    seed: int,
+    series: dict[str, np.ndarray],
+    onset: int,
+) -> list[dict[str, Any]]:
+    """Every statistic, smoothed, every ``STACK_STEP`` episodes from the baseline to ``AFTER``."""
+    start, _ = window_bounds(onset)
+    lo = max(0, start - BASELINE)
+    rows: list[dict[str, Any]] = []
+    for k, v in series.items():
+        smooth = smoothed(v)
+        rows.extend(
+            {
+                "side": side,
+                "seed": seed,
+                "statistic": k,
+                "episode": t + 1,
+                "relative_to_onset": t + 1 - onset,
+                "value": float(smooth[t]),
+            }
+            for t in range(lo, min(len(v), onset - 1 + AFTER), STACK_STEP)
+            if not np.isnan(smooth[t])
+        )
+    return rows
+
+
+def spike_events(lines: list[dict[str, Any]], onset: int) -> int:
+    """Count gradient-norm spikes followed within ``SPIKE_FOLLOW`` updates by a KL spike.
+
+    Read per update, unsmoothed, inside the window; a spike is above the run's own baseline
+    median by ``SPIKE_MADS`` scaled MADs. The transient form of stale second moments, which the
+    smoothed departure rule cannot see; reported beside the causes, never as one.
+    """
+    start, end = window_bounds(onset)
+    base = [x for x in lines if max(0, start - BASELINE) < x["episode"] <= max(0, start)]
+    window = [x for x in lines if start < x["episode"] <= end]
+    if len(base) < 2 or not window:
+        return 0
+
+    def threshold(key: str) -> float:
+        values = np.array([float(x[key]) for x in base])
+        median = float(np.median(values))
+        return median + SPIKE_MADS * 1.4826 * float(np.median(np.abs(values - median)))
+
+    grad_bar, kl_bar = threshold("grad_norm"), threshold("approx_kl")
+    events = 0
+    for i, line in enumerate(window):
+        if float(line["grad_norm"]) > grad_bar and any(
+            float(later["approx_kl"]) > kl_bar for later in window[i + 1 : i + 1 + SPIKE_FOLLOW]
+        ):
+            events += 1
+    return events
 
 
 # ── Reading the re-runs ──────────────────────────────────────────────────────────────────────
@@ -378,27 +534,60 @@ def _telemetry(log: Path, experiments: Path = EXPERIMENTS) -> list[dict[str, Any
 
 
 def diagnose(log_dirs: list[Path]) -> dict[str, Any]:
-    """Find each collapsed re-run's onset, build both sides' series, and read the causes."""
+    """Find each collapsed re-run's onset, build both sides' series, and read the causes.
+
+    A pair leaves the stacks, named, when its collapsed run does not collapse under the registered
+    definition, when its intact twin collapses under it, or when either run's telemetry stops
+    before the window ends.
+    """
     onsets: dict[int, int] = {}
     collapsed: dict[int, dict[str, np.ndarray]] = {}
     intact: dict[int, dict[str, np.ndarray]] = {}
-    not_collapsed: list[int] = []
+    excluded: dict[int, str] = {}
+    spikes: dict[str, dict[int, int]] = {"collapsed": {}, "intact": {}}
     for pair in PAIRS:
         logs = {stem: _find(log_dirs, stem, pair.seed) for stem in (pair.collapsed, pair.intact)}
         missing = [stem for stem, log in logs.items() if log is None]
         if missing:
             msg = f"seed {pair.seed}: no re-run for {missing}"
             raise DiagnosisError(msg)
-        reading = cl.detect(cl.success_series(logs[pair.collapsed]))  # type: ignore[arg-type]
+        collapsed_log, intact_log = (
+            cast("Path", logs[pair.collapsed]),
+            cast("Path", logs[pair.intact]),
+        )
+        reading = cl.detect(cl.success_series(collapsed_log))
         if reading.onset is None:
-            not_collapsed.append(pair.seed)
+            excluded[pair.seed] = "the collapsed run does not collapse under the definition"
+            continue
+        if cl.detect(cl.success_series(intact_log)).onset is not None:
+            excluded[pair.seed] = "the intact twin collapses under the definition"
+            continue
+        lines = {"collapsed": _telemetry(collapsed_log), "intact": _telemetry(intact_log)}
+        _, end = window_bounds(reading.onset)
+        short = [side for side, x in lines.items() if not x or max(y["episode"] for y in x) < end]
+        if short:
+            excluded[pair.seed] = f"telemetry stops before the window ends: {short}"
             continue
         onsets[pair.seed] = reading.onset
-        collapsed[pair.seed] = episode_series(_telemetry(logs[pair.collapsed]))  # type: ignore[arg-type]
-        intact[pair.seed] = episode_series(_telemetry(logs[pair.intact]))  # type: ignore[arg-type]
+        collapsed[pair.seed] = episode_series(lines["collapsed"])
+        intact[pair.seed] = episode_series(lines["intact"])
+        for side, x in lines.items():
+            spikes[side][pair.seed] = spike_events(x, reading.onset)
     out = diagnose_series(collapsed, intact, onsets)
-    out["not_collapsed_under_the_definition"] = not_collapsed
+    out["excluded"] = excluded
+    out["transient_stale_moments"] = spikes
     return out
+
+
+def write_stacks(result: dict[str, Any], path: Path) -> Path:
+    """Write the aligned, smoothed stacks: one row per run, statistic and sampled episode."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = ["side", "seed", "statistic", "episode", "relative_to_onset", "value"]
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(result["stacks"])
+    return path
 
 
 def mlp(log_dirs: list[Path]) -> dict[str, Any]:
@@ -415,11 +604,24 @@ def mlp(log_dirs: list[Path]) -> dict[str, Any]:
         for stem, seed in RUNS
         if stem != MLP and (log := _find(log_dirs, stem, seed)) is not None
     }
+    committed = json.loads((SUPPORTING / "sensitivity.json").read_text())["collapse"]
     return {
         "mlp": cl.panel(series),
-        "connectome_reruns": cl.incidence(
-            [cl.detect(s) for s in connectome.values()],
-        ),
+        "connectome_panel_092": {
+            arm: {
+                "collapsed": len(committed[key]["collapsed_seeds"]),
+                "n": 32,
+                "rule": "092 blocks",
+            }
+            for arm, key in (("wild_type", "wt_ppo"), ("gap_only_null", "gaponly_ppo"))
+        },
+        "connectome_reruns_selected": {
+            "note": (
+                "the 16 re-runs were chosen half on collapse, so this is a check on the "
+                "definition against 092's rule, not an incidence"
+            ),
+            **cl.incidence([cl.detect(s) for s in connectome.values()]),
+        },
     }
 
 
@@ -441,6 +643,7 @@ def main(argv: list[str] | None = None) -> int:
     for parser in parsers.values():
         parser.add_argument("--logs", type=Path, action="append", required=True)
         parser.add_argument("--out", type=Path)
+    parsers["diagnose"].add_argument("--csv", type=Path, help="write the aligned stacks here")
     args = ap.parse_args(argv)
     ok = True
     if args.command == "identity":
@@ -448,6 +651,9 @@ def main(argv: list[str] | None = None) -> int:
         ok = result["all_identical"]
     elif args.command == "diagnose":
         result = diagnose(args.logs)
+        if args.csv:
+            write_stacks(result, args.csv)
+        result = {k: v for k, v in result.items() if k != "stacks"}
     else:
         result = mlp(args.logs)
     payload = json.dumps(result, indent=2, sort_keys=True, default=str) + "\n"

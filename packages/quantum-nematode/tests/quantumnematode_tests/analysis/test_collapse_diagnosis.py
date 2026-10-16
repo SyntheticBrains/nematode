@@ -105,10 +105,22 @@ class TestSeries:
         assert series["weight_norm"][0] == pytest.approx(5.0)
         assert series["critic_over_actor_grad"][0] == pytest.approx(2.0)
 
-    def test_alignment_pads_before_the_start(self) -> None:
-        window = cd.aligned(np.arange(10.0), onset=5, lead=6)
-        assert np.isnan(window[:2]).all()
-        assert list(window[2:]) == [0.0, 1.0, 2.0, 3.0]
+    def test_the_window_ends_a_gap_before_onset_and_pads_before_the_start(self) -> None:
+        onset = cd.GAP + 11
+        window = cd.aligned(np.arange(6000.0), onset=onset)
+        assert len(window) == cd.LEAD
+        assert window[-1] == onset - 2 - cd.GAP
+        assert np.isnan(window[0])
+
+    def test_the_baseline_is_the_stretch_before_the_window(self) -> None:
+        series = np.zeros(6000)
+        start, _ = cd.window_bounds(5000)
+        series[start - cd.BASELINE : start] = 3.0
+        assert cd.baseline(series, 5000) == 3.0
+
+    def test_a_short_batch_s_rank_is_not_read(self) -> None:
+        assert cd.STATISTICS["srank"]({"srank": 10, "srank_rows": 12}) is None
+        assert cd.STATISTICS["srank"]({"srank": 40, "srank_rows": 64}) == 40
 
 
 class TestDeparture:
@@ -116,8 +128,15 @@ class TestDeparture:
         mean, sd = np.zeros(1500), np.ones(1500)
         series = np.zeros(1500)
         series[-300:] = 5.0
-        assert cd.departure(series, mean, sd, +1) == 300
+        assert cd.departure(series, mean, sd, +1) == 300 + cd.GAP
         assert cd.departure(series, mean, sd, -1) is None
+
+    def test_the_envelope_has_a_floor(self) -> None:
+        flat = [np.zeros(cd.LEAD) for _ in range(8)]
+        _, half = cd.envelope(flat, [0.0] * 8, "action_mean_large_fraction")
+        assert float(half.min()) == cd.ABS_FLOOR["action_mean_large_fraction"]
+        _, half = cd.envelope(flat, [2.0] * 8, "weight_norm")
+        assert float(half.min()) == pytest.approx(cd.FLOOR_FRACTION * 2.0)
 
     def test_a_short_stretch_does_not(self) -> None:
         mean, sd = np.zeros(1500), np.ones(1500)
@@ -160,6 +179,30 @@ class TestCauses:
         result = self._panel(growing=0)
         assert all(c["reading"] == "not_indicated" for c in result["causes"].values())  # type: ignore[union-attr]
 
+    def test_a_level_that_differs_from_the_start_is_not_a_departure(self) -> None:
+        rng = np.random.default_rng(1)
+        seeds = list(range(8))
+        collapsed = {s: _run(rng) for s in seeds}
+        for run in collapsed.values():
+            run["saturated_fraction"] = run["saturated_fraction"] + 2.0
+            run["srank"] = run["srank"] - 2.0
+            run["weight_norm"] = run["weight_norm"] + 2.0
+        intact = {s: _run(rng) for s in seeds}
+        result = cd.diagnose_series(collapsed, intact, dict.fromkeys(seeds, _ONSET))
+        assert result["causes"]["weight_growth"]["collapsed_departures"] == 0
+
+    def test_the_stacks_and_context_are_written(self, tmp_path: Path) -> None:
+        result = self._panel(growing=8)
+        rows = result["stacks"]  # type: ignore[index]
+        assert {r["side"] for r in rows} == {"collapsed", "intact"}
+        assert max(r["relative_to_onset"] for r in rows) < cd.AFTER
+        assert set(result["context_at_onset"]["collapsed"][0]) == set(cd.CONTEXT)  # type: ignore[index]
+        path = cd.write_stacks(result, tmp_path / "stacks.csv")  # type: ignore[arg-type]
+        assert (
+            path.read_text().splitlines()[0]
+            == "side,seed,statistic,episode,relative_to_onset,value"
+        )
+
     def test_every_registered_cause_is_read(self) -> None:
         assert set(self._panel(growing=8)["causes"]) == set(cd.CAUSES)  # type: ignore[arg-type]
 
@@ -174,3 +217,24 @@ class TestCauses:
         assert cd._ordered("stale_second_moments", {"grad_norm": 400, "approx_kl": 300})
         assert not cd._ordered("stale_second_moments", {"grad_norm": 200, "approx_kl": 300})
         assert cd._ordered("weight_growth", {})
+
+
+def _line(episode: int, grad: float, kl: float) -> dict[str, float]:
+    return {"episode": episode, "grad_norm": grad, "approx_kl": kl}
+
+
+def test_a_gradient_spike_then_a_kl_spike_is_counted() -> None:
+    """The transient form of stale second moments, read per update."""
+    onset = 4000
+    start, end = cd.window_bounds(onset)
+    rng = np.random.default_rng(0)
+    base = [
+        _line(e, 1 + 0.01 * rng.random(), 0.01 + 1e-4 * rng.random())
+        for e in range(start - 1000, start)
+    ]
+    quiet = [_line(e, 1.0, 0.01) for e in range(start + 1, end)]
+    assert cd.spike_events(base + quiet, onset) == 0
+    spiked = list(quiet)
+    spiked[100] = _line(spiked[100]["episode"], 50.0, 0.01)
+    spiked[105] = _line(spiked[105]["episode"], 1.0, 5.0)
+    assert cd.spike_events(base + spiked, onset) == 1

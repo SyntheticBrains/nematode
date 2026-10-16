@@ -74,6 +74,29 @@ class TestStatistics:
         assert tm.explained_variance(returns, torch.full((4,), 2.5)) == pytest.approx(0.0)
         assert tm.explained_variance(torch.ones(3), torch.zeros(3)) is None
 
+    def test_srank_reads_a_fixed_number_of_rows(self) -> None:
+        record = tm.UpdateRecord(
+            returns=torch.arange(200.0),
+            raw_advantages=torch.ones(200),
+            old_values=torch.zeros(200),
+            clip_epsilon=0.2,
+            max_grad_norm=0.5,
+        )
+        record.begin_epoch()
+        record.read_grads([], [])
+        record.minibatch(
+            new_log_probs=torch.zeros(200),
+            old_log_probs=torch.zeros(200),
+            head_out=torch.zeros(200, 2),
+            features=torch.eye(200),
+            entropy=0.0,
+            value_loss=0.0,
+            grad_total=0.0,
+        )
+        line = record.finish(log_std=None, norms={}, activation="tanh", continuous=False)
+        assert line["srank_rows"] == tm.SRANK_ROWS
+        assert line["srank"] == tm.SRANK_ROWS
+
     def test_srank(self) -> None:
         assert tm.srank(torch.eye(4)) == 4
         assert tm.srank(torch.outer(torch.arange(1.0, 6.0), torch.ones(3))) == 1
@@ -133,6 +156,7 @@ class TestStatistics:
         assert line["action_mean_large_fraction"] == pytest.approx(1 / 4)
         assert line["log_std"] == pytest.approx(-1.0)
         assert line["srank"] == 2
+        assert line["srank_rows"] == 4
         assert line["settling_residual"] == pytest.approx(1.0)
         assert line["batch_size"] == 4
 
