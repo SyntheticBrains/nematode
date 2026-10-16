@@ -19,9 +19,9 @@ Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking
   corrected together, and the 3×3 verdict map, every branch named), per-level seed sets with each level gated on the seeds its floors cover, `predictor` (Decision E), `table` (Decision F), the
   per-seed CSV; in the gate preflight's shape; tests on synthetic manifests, including every cell of the
   verdict table, `no_gap_effect`, and the anchor's three minimum cases.
-- [ ] 6. **The anchor pilot** on 9801–9816 (64 runs) and the two-seed smokes on 9851–9852; preflight;
+- [x] 6. **The anchor pilot** on 9801–9816 (64 runs) and the two-seed smokes on 9851–9852; preflight;
   `m` fixed by D23's rule; the cost measured.
-- [ ] 7. **Registration**: the launch record (arms, seeds, `m`, the verdict map, the predictor, the
+- [x] 7. **Registration**: the launch record (arms, seeds, `m`, the verdict map, the predictor, the
   table, the retention line, D23 and D24 cited), committed; `/nematode-review-spec`; tracker H.2, H.3
   and G.0(a) ticked.
 - [ ] 8. **The predictor** on Logbook 082's committed draws, computed only after the launch record is
