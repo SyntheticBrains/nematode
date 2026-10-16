@@ -62,7 +62,7 @@ Thermal target 35 on Emmons 2024, depth 4 unless stated, PPO at block V's point 
 | scale ×0.25, ×0.5, ×2; `log_count` | learn | gap-only, learn | 2401–2416 | beside (profile) |
 | depth 2, 3, 6 | learn | gap-only, learn | 2401–2416 | beside (M.6's thermal depth check) |
 
-About 896 runs. The two deciding levels carry frozen floors on every seed, so their gates read on the same seeds as their readings; the beside levels carry floors on a 16-seed subset (marked 16), and the harness gates each level on the seeds its floors cover. Readings, each a paired `wild type − null` gap on `auc_success`, classified by
+About 896 runs. The two deciding levels carry frozen floors on every seed, so their gates read on the same seeds as their readings; the beside levels carry floors on a 16-seed subset (marked 16), and the harness gates each level on the seeds its floors cover. The profile and depth levels have no frozen arms of their own: their gates read the `count` level's floors on 2401–2416, which says whether each arm learns at all and nothing finer, and the output marks them `floor_borrowed_from: count`. Readings, each a paired `wild type − null` gap on `auc_success`, classified by
 `mc.classify` at the minimum `m` D23 fixes (0.0577, carried if the anchor's lead sits in [0.058, 0.13] and both
 anchor levels are readable; ⅔ of the anchor's lead if the lead excludes zero but sits outside that
 range; 0.0577 again if the anchor's interval includes zero, in which case the panel's own `gap(count)`

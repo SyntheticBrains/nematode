@@ -15,7 +15,7 @@ Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking
 - [x] 3. **Configs** through `generate_gap_operating_point_configs.py`: the Emmons t35 anchor and every
   panel arm as stated deltas; loader tests.
 - [x] 4. **The shortcut audit** takes the cell's config; a test on the thermal cell's sensor set.
-- [ ] 5. **Analysis** `gap_operating_point.py`: `anchor` (D23's rule), `score` (the readings,
+- [x] 5. **Analysis** `gap_operating_point.py`: `anchor` (D23's rule), `score` (the readings,
   corrected together, and the 3×3 verdict map, every branch named), per-level seed sets with each level gated on the seeds its floors cover, `predictor` (Decision E), `table` (Decision F), the
   per-seed CSV; in the gate preflight's shape; tests on synthetic manifests, including every cell of the
   verdict table, `no_gap_effect`, and the anchor's three minimum cases.
