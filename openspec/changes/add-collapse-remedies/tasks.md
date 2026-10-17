@@ -13,7 +13,7 @@ after M.1(a) read no cause indicated ([Logbook 096](../../../docs/experiments/lo
   stop before 100 updates; a clipped tensor sits within ±κ·s; the optimiser carries and keeps the
   settings; the placebo changes the minibatch order and nothing else); off byte-identical (outputs,
   weights, optimiser state, saved keys, the next draw of every generator).
-- [ ] 2. **Configs**: the placebo and each round's body and MLP configs as stated deltas of 092's.
+- [x] 2. **Configs**: the placebo and each round's body and MLP configs as stated deltas of 092's.
 - [ ] 3. **Analysis** `scripts/analysis/collapse_remedies.py`: drawdown per run, the placebo-paired
   drawdown and learning-speed readings, the pass rule, collapse counts and rescues/harms beside, the KL
   stop rate, the MLP preflight; failed runs read as registered. Tests on synthetic series covering every
