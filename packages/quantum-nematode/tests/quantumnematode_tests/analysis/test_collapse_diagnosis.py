@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -157,7 +158,7 @@ def _run(rng: np.random.Generator, *, grow: bool = False) -> dict[str, np.ndarra
 
 
 class TestCauses:
-    def _panel(self, growing: int) -> dict[str, object]:
+    def _panel(self, growing: int) -> dict[str, Any]:
         rng = np.random.default_rng(0)
         seeds = list(range(8))
         collapsed = {s: _run(rng, grow=s < growing) for s in seeds}
@@ -234,6 +235,6 @@ def test_a_gradient_spike_then_a_kl_spike_is_counted() -> None:
     quiet = [_line(e, 1.0, 0.01) for e in range(start + 1, end)]
     assert cd.spike_events(base + quiet, onset) == 0
     spiked = list(quiet)
-    spiked[100] = _line(spiked[100]["episode"], 50.0, 0.01)
-    spiked[105] = _line(spiked[105]["episode"], 1.0, 5.0)
+    spiked[100] = _line(int(spiked[100]["episode"]), 50.0, 0.01)
+    spiked[105] = _line(int(spiked[105]["episode"]), 1.0, 5.0)
     assert cd.spike_events(base + spiked, onset) == 1

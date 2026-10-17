@@ -23,4 +23,4 @@ Phase 9 block M (roadmap v4.5 § Phase 9, D25, D26; tracker `phase9-tracking` M.
   output controls, from a separate worktree.
 - [x] 7. **Readout**: Logbook 096; tracker M.1(a) ticked with the causes indicated; M.1(b)'s remedy order
   recorded for its change; CHANGELOG; `docs/usage.md`.
-- [ ] 8. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
+- [x] 8. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
