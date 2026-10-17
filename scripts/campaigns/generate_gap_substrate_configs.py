@@ -2,7 +2,7 @@
 """Emit G.0-A's selection-pilot configs: ohmic against log-compressed gap coupling, on both cells.
 
 On the thermal cell at target 35 and on hard350, both on Emmons 2024: for each candidate model (`ohmic`
-gap coupling at the default weights; `log_count` weights with additive coupling) the wild type and the
+gap coupling at the calibrated conductance scale; `log_count` weights with additive coupling) the wild type and the
 gap-only null, each learning and frozen; the additive-count wild type learning, described beside; and the
 MLP-PPO control's frozen floor where none is committed (its learning configs are reused as they stand).
 

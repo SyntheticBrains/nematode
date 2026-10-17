@@ -200,3 +200,21 @@ def test_the_default_is_byte_identical() -> None:
         b = explicit.topology.forward_with_hidden_batched(food, thermotaxis_features=thermal)[1]
     assert torch.equal(a, b)
     assert not hasattr(implicit.topology, "ohmic_inverse")
+
+
+def test_the_modulator_current_passes_through_the_operator() -> None:
+    """The held current enters each iteration's drive, so ohmic coupling averages it too."""
+    brain = _brain(gap_coupling="ohmic", modulators=True)
+    topology = brain.topology
+    food, thermal = _inputs(1)
+    with torch.no_grad():
+        topology.w_chem.zero_()
+        modulators = torch.tensor([[1.0, 0.5, 0.2]])
+        _, settled = topology.forward_with_hidden_batched(
+            food,
+            thermotaxis_features=thermal,
+            modulators=modulators,
+        )
+        held = topology._held_current(modulators)
+    assert held is not None
+    assert torch.allclose(settled, torch.tanh(held @ topology.ohmic_inverse), atol=1e-6)

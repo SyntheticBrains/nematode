@@ -24,7 +24,7 @@ gated pilot; the point-worm contrast now, at a minimum of 0.0577; 092's body con
   eligibility per cell, the shown-slower test against each cell's margin and the selection (design
   Decision C), never reading the wiring gap; the additive arm described; tests on synthetic manifests
   covering every branch of the rule.
-- [ ] 5. **Registration**: the launch record (`docs/experiments/logbooks/supporting/097-gap-substrate/launch.md`)
+- [x] 5. **Registration**: the launch record (`docs/experiments/logbooks/supporting/097-gap-substrate/launch.md`)
   with the probe's result, the selection rule and its operating characteristic, the seeds, the cost from
   measured rates, and the retention line, committed before any pilot run; two-seed smokes on 9891–9892;
   `/nematode-review-spec`; the seed-band table gains 9871–9886, 9891–9892 and 3901–3964; the tracker's

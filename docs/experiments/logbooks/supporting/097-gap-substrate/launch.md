@@ -35,13 +35,14 @@ cells ([probe.json](probe.json)):
 | **ohmic × 0.03** | **0.0162** | 0.000 |
 | ohmic × 0.01 | 0.0213 | 0.000 |
 
-(Thermal shown; hard350 agrees to three decimals.)
+(Thermal shown; hard350 agrees within 0.001.)
 
 **As first registered**, the pilot launched only if ohmic's spread was at least a quarter of the additive
 count model's. **It stopped the pilot**: at the built conductances ohmic coupling averages the input away.
-The probe also showed that yardstick was the artefact: log counts, unit weights and gap-off brains, which
-G.0 showed learn as well as the count model (67–71% plateaus), all fall far below a quarter of its spread,
-because that spread is its gap amplification.
+The probe also showed that yardstick was the artefact: the log-count and gap-off brains, which G.0 showed
+learn as well as the count model (71% and 67% plateaus), fall far below a quarter of its spread (as did
+unit weights, 70%, in a 4-seed pass of the same probe: 0.026), because that spread is its gap
+amplification.
 
 **Amended by the maintainer, 2026-10-17, before any pilot run**: the reference is the gap-off brain, a
 known learner; the ohmic conductance scale is the largest on the grid ×1, 0.3, 0.1, 0.03, 0.01, 0.003,
@@ -78,18 +79,28 @@ and hard350. On each cell:
 4. Otherwise **log**, if eligible on both cells; otherwise **neither**, and the substrate decision
    returns to the maintainer.
 
-**Operating characteristic** (Logbook 080's paired spreads, 16 seeds): ohmic is chosen with probability
-about 0.95 if the two learn equally fast, 0.76 if ohmic is slower by 0.025, 0.38 by 0.05, 0.01 by 0.10.
+**Operating characteristic** (Logbook 080's paired spreads, 16 seeds, normal approximation with a t
+interval): ohmic is chosen with probability about 0.95 if the two learn equally fast, 0.76 if ohmic is
+slower by 0.025, 0.38 by 0.05, 0.01 by 0.10. The instrument's percentile bootstrap interval is slightly
+narrower, which shifts these to about 0.94, 0.73, 0.33 and 0.004.
 
-**Never read**: the gap between the wild type and the gap-only null, on either model. The
+**Never read**: the gap between the wild type and the gap-only null, on either model. The selection
+output records each model's gate evidence (both wirings' plateaus and floors, per seed), because the
+eligibility rule reads it; it is gate evidence only, never read or reported as a contrast. The
 additive-count wild type is described beside (ohmic − additive and log − additive on `auc_success`).
+
+**Failed runs**: a run that exits non-zero is re-run once on the same seed; `select` reads only a
+complete pilot, every arm on every seed.
 
 ## Before launch
 
 - **Smokes**, seeds 9891–9892, every pilot config at 20 episodes: 44 of 44 runs exited 0. Execution
   checks only, discarded.
-- **No gate preflight on committed runs**: the ohmic and log arms on these cells are new; the pilot is
-  itself the gate. The MLP control's readability rule is its first step.
+- **Gates on committed runs, where they exist.** The MLP control's readability: Logbook 080's committed
+  MLP runs pass on both cells (`080-across-step-state/mlp.json`: thermal plateaus 47–90%, hard350
+  88–99%, every floor beaten). Log counts on the thermal cell: G.0's 16-seed level read readable (wild
+  type 70.8%, null 67.6%, floors 0%, unsaturated; Logbook 095). The ohmic arms on both cells and the log
+  arms on hard350 have no committed runs; the pilot is their gate.
 - **Cost**: thermal from G.0's measured rates (22.9 minutes a learning run, 5.1 a frozen one, at 16
   workers); hard350 scaled by its 350-step episode cap. About **6 hours**, with the machine to itself.
 - **Readiness review**: two spec reviews of the change (2026-10-17) and the probe above; findings fixed
@@ -109,14 +120,14 @@ uv run python scripts/run_campaign.py "${cfgs[@]}" --seeds 9871-9886 --runs 3000
   --output-dir ../nematode/campaigns/g0a-pilot \
   -- --theme headless --track-experiment --no-detailed-export --no-file-log
 
-# Then, from the main checkout:
-cd ../nematode
-D=docs/experiments/logbooks/supporting/097-gap-substrate
-uv run python scripts/analysis/gap_substrate_selection.py select --logs campaigns/g0a-pilot/logs \
-  --out-dir build/g0a --out $D/selection.json
+# Then, from the same worktree, so the registered harness reads the runs:
+D=../nematode/docs/experiments/logbooks/supporting/097-gap-substrate
+uv run python scripts/analysis/gap_substrate_selection.py select \
+  --logs ../nematode/campaigns/g0a-pilot/logs --out-dir build/g0a --out $D/selection.json
 ```
 
 ## Retention (A.0)
 
-Committed: this record, `probe.json`, `selection.json`. Archived off-repo: the smoke and pilot
+Committed: this record, `probe.json`, `selection.json` (with every arm's per-seed plateau and floor, the
+gate evidence the rule reads). Archived off-repo: the smoke and pilot
 campaigns' raw logs and the worktree's session records.

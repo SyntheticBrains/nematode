@@ -301,7 +301,9 @@ def select(log_dirs: list[Path], out_dir: Path) -> dict[str, Any]:
 
 
 def _gate_summary(gates: dict[str, Any]) -> dict[str, Any]:
+    """Gate evidence only: the rule reads it for eligibility, never as a contrast between wirings."""
     return {
+        "per_seed": {w: gates[w]["per_seed"] for w in ("wt", "rn")},
         "wt_plateau": gates["wt"]["plateau_success"],
         "wt_floor": gates["wt"]["floor_success"],
         "rn_plateau": gates["rn"]["plateau_success"],

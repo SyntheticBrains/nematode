@@ -58,7 +58,7 @@ model differs from every registered reading in the gap coupling's form alone.
 
 **The pilot** (seeds 9871–9886, disjoint from every band) runs on both block-V cells on Emmons 2024, the
 thermal cell at target 35 and hard350, 3,000 episodes. On each cell: for each candidate model (`ohmic` at
-the defaults; `log_count`), the wild type and the gap-only null, each learning and frozen; the
+the calibrated `gap_weight_scale: 0.03`, Decision D; `log_count`), the wild type and the gap-only null, each learning and frozen; the
 **additive-count** wild type learning, the substrate every registered reading used, read only as
 description; and the MLP-PPO control, learning and frozen (its frozen floors derived from the committed
 learning configs). 2 cells × 11 arms × 16 seeds = **352 runs**.
@@ -100,9 +100,9 @@ gain), on both cells.
 count model's. **The probe stopped it** ([probe.json](../../../docs/experiments/logbooks/supporting/097-gap-substrate/probe.json)):
 at the built gap matrix's scale ohmic's spread is 0.0003 against the additive model's 0.24, on both cells.
 The probe also showed the yardstick was the artefact: every brain G.0 showed learns as well as the count
-model falls far below a quarter of its spread (log counts 0.035, unit weights 0.026, gap junctions off
-0.021, against plateaus of 67–71%), because the additive count model's large spread is its gap
-amplification.
+model falls far below a quarter of its spread (on the pilot's 16 seeds, log counts 0.041 and gap
+junctions off 0.025; unit weights 0.026 in a 4-seed pass; against plateaus of 67–71%), because the
+additive count model's large spread is its gap amplification.
 
 *Amended 2026-10-17 by the maintainer, before any pilot run*: the reference is the **gap-off brain**, a
 known learner (67% in G.0), and the ohmic conductance scale is **calibrated** on the same untrained
