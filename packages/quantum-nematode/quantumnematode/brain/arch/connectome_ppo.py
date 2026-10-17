@@ -15,6 +15,12 @@ Forward pass (single step): repeat K times before motor readout::
 
     h = tanh((W_chem * M_chem).T @ h + G_gap.T @ h)
 
+or, with ``gap_coupling: ohmic``, starting from ``h = M^-1 s`` (``s`` the injected sensors)::
+
+    h = tanh(M^-1 ((W_chem * M_chem).T @ h)),    M = I + L,  L = diag(G_gap 1) - G_gap
+
+so that gap junctions pass current in proportion to the potential difference.
+
 K is configurable; default 4 (matches the canonical *C. elegans*
 klinotaxis pathway depth: sensory → primary-interneuron →
 command-interneuron → motor). K=1 produces a degenerate output because
@@ -260,6 +266,12 @@ WeightPrior = Literal["random", "measured", "measured_signs", "measured_shuffled
 # compresses their tail. Every option gives a positive weight to every existing pair, so the binary
 # degrees, and with them the normalisers, are the same under all three.
 GapWeightMode = Literal["count", "unit", "log_count"]
+# How gap junctions couple in the settling map. "additive" adds each partner's activity scaled by
+# the pair's weight, ``+ G^T h``. "ohmic" passes current in proportion to the potential difference:
+# the injected sensors and each settling iteration's drive go through ``(I + L)^-1``, ``L`` the gap
+# Laplacian, the steady state of ``dv/dt = -v + drive - L v``. Its rows sum to 1, so the coupling
+# averages and adds no loop gain at any conductance; the chemical recurrence is unchanged.
+GapCoupling = Literal["additive", "ohmic"]
 _GAP_WEIGHT_MODES: frozenset[str] = frozenset({"count", "unit", "log_count"})
 # The two wirings that read ``gap_outlier_min_count``, and its default.
 _GAP_OUTLIER_WIRINGS: frozenset[str] = frozenset(
@@ -401,6 +413,9 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # Multiplier on the whole gap matrix after the fan-in scaling, so 0.25 is a quarter of the
     # coupling on every pair. Default 1.0 is byte-identical to the pre-option brain.
     gap_weight_scale: float = Field(default=1.0, gt=0.0)
+    # The gap junctions' form of coupling; see GapCoupling. Default "additive" is byte-identical to
+    # the pre-option brain.
+    gap_coupling: GapCoupling = "additive"
     # Learnable gap-junction strengths: every existing gap pair carries a positive multiplier,
     # symmetric by construction and starting at 1, that PPO learns with the rest of the brain. No
     # pair can be created, so each wiring keeps its placement and tunes only its strengths. Off by
@@ -524,6 +539,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
             _dynamics_refusal,
             _plastic_gaps_refusal,
             _gap_options_refusal,
+            _gap_coupling_refusal,
             _body_drive_refusal,
             _freeze_wiring_refusal,
             _modulators_refusal,
@@ -906,6 +922,34 @@ def _gap_options_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return next((msg for refused, msg in refusals if refused), None)
 
 
+def _gap_coupling_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why ohmic gap coupling cannot run here, or ``None`` when it can.
+
+    The ohmic operator is built once from a fixed gap matrix and acts inside the settling map, so
+    everything that reaches into the additive settling loop, or changes the gap matrix, is refused.
+    """
+    if config.gap_coupling == "additive":
+        return None
+    reasons: tuple[tuple[bool, str], ...] = (
+        (config.gap_coupling != "ohmic", f"Unsupported gap_coupling: {config.gap_coupling!r}"),
+        (not config.enable_gap_junctions, "it has no gap junctions to couple"),
+        (config.dynamics == "leaky", "dynamics='leaky' already couples gap junctions ohmically"),
+        (config.plastic_gaps, "plastic_gaps changes the gap matrix the operator is built from"),
+        (config.learning_rule != "ppo", f"learning_rule={config.learning_rule!r} is not PPO"),
+        (
+            config.plasticity_node_noise != 0.0,
+            "node perturbation acts on the additive pre-activations",
+        ),
+        (config.enable_activity_traces, "activity traces are defined on the additive settling map"),
+        (
+            config.plasticity_eligibility == "eprop",
+            "e-prop's trace is derived for the additive map",
+        ),
+    )
+    reason = next((why for refused, why in reasons if refused), None)
+    return None if reason is None else f"gap_coupling='ohmic' is refused: {reason}."
+
+
 def _freeze_wiring_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     """Return why a frozen wiring cannot run here, or ``None`` when it can."""
     if not config.freeze_wiring:
@@ -994,6 +1038,8 @@ def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     if (refusal := _body_drive_refusal(config)) is not None:
         raise ValueError(refusal)
     if (refusal := _freeze_wiring_refusal(config)) is not None:
+        raise ValueError(refusal)
+    if (refusal := _gap_coupling_refusal(config)) is not None:
         raise ValueError(refusal)
 
 
@@ -1192,6 +1238,7 @@ class ConnectomeTopology(nn.Module):
     pooled_motor: torch.Tensor
     membrane: torch.Tensor
     implicit_inverse: torch.Tensor
+    ohmic_inverse: torch.Tensor
     nmj_indices: torch.Tensor
     nmj_map: torch.Tensor
     modulator_map: torch.Tensor
@@ -1244,6 +1291,7 @@ class ConnectomeTopology(nn.Module):
         chemical_weight_scale: float = 1.0,
         gap_weight_mode: GapWeightMode = "count",
         gap_weight_scale: float = 1.0,
+        gap_coupling: GapCoupling = "additive",
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
@@ -1518,6 +1566,9 @@ class ConnectomeTopology(nn.Module):
             )
         if dynamics == "leaky":
             self._build_leaky(membrane_tau_steps, device)
+        self.gap_coupling = gap_coupling
+        if gap_coupling == "ohmic":
+            self._build_ohmic(device)
         self.plastic_gaps = plastic_gaps
         if plastic_gaps:
             # One log-multiplier per ordered pair; the forward symmetrises it, so the coupling
@@ -1917,6 +1968,22 @@ class ConnectomeTopology(nn.Module):
         return (
             float(h.index_select(-1, self._serotonin_release_indices).clamp_min(0.0).mean()),
             float(h.index_select(-1, self._pdf_release_indices).clamp_min(0.0).mean()),
+        )
+
+    def _build_ohmic(self, device: torch.device) -> None:
+        """Precompute the ohmic operator ``(I + L)^-1`` from the fixed gap matrix.
+
+        ``L = diag(G 1) - G`` is symmetric positive semi-definite for a non-negative symmetric
+        ``G``, so ``I + L`` is invertible and its inverse is symmetric with eigenvalues in (0, 1];
+        ``L 1 = 0`` makes every row of the inverse sum to 1. Computed once in double precision, and
+        not saved with the weights: it is derived from the gap matrix.
+        """
+        gap = self.g_gap.detach().cpu().to(torch.float64)
+        operator = torch.eye(self.n_neurons, dtype=torch.float64) + torch.diag(gap.sum(dim=1)) - gap
+        self.register_buffer(
+            "ohmic_inverse",
+            torch.linalg.inv(operator).to(dtype=torch.float32, device=device),
+            persistent=False,
         )
 
     def _build_leaky(self, membrane_tau_steps: float, device: torch.device) -> None:
@@ -2780,7 +2847,7 @@ class ConnectomeTopology(nn.Module):
             h = h.index_add(0, self._thermotaxis_neuron_indices, thermo_inj)
         return h
 
-    def forward_with_hidden(  # noqa: C901, PLR0913 — one input per sensory projection
+    def forward_with_hidden(  # noqa: C901, PLR0912, PLR0913 — one input per sensory projection
         self,
         food_features: torch.Tensor,
         predator_distal_features: torch.Tensor | None = None,
@@ -2803,8 +2870,10 @@ class ConnectomeTopology(nn.Module):
         ``[strength, angle]`` in oracle mode or
         ``[concentration, lateral, dC/dt]`` in klinotaxis mode. Sensor
         injection produces the initial 302-vec hidden state; K recurrent
-        updates iterate the chemical + gap-junction sum through ``tanh``;
-        motor pooling + readout produce the action logits.
+        updates iterate the chemical + gap-junction sum through ``tanh``
+        (under ohmic coupling, the chemical drive equilibrated through the gap
+        Laplacian's implicit step, the initial state likewise); motor pooling +
+        readout produce the action logits.
 
         Predator parameters are only consumed when the topology was
         constructed with ``enable_predator_projection=True`` AND the
@@ -2859,10 +2928,16 @@ class ConnectomeTopology(nn.Module):
         # episode, so every step within one draws at the same magnitude.
         scale = self.current_node_noise
         held = self._held_current(modulators)
+        ohmic = self.ohmic_inverse if self.gap_coupling == "ohmic" else None
+        if ohmic is not None:
+            # The injected sensors equilibrate across their gap junctions before the first step.
+            h = ohmic @ h
         for settling_step in range(self.forward_pass_depth):
-            preact = chem_mat.T @ h + gap_mat.T @ h
+            preact = chem_mat.T @ h if ohmic is not None else chem_mat.T @ h + gap_mat.T @ h
             if held is not None:
                 preact = preact + held
+            if ohmic is not None:
+                preact = ohmic @ preact
             if self.node_noise > 0.0:
                 # Into the PRE-activation, at EVERY settling step. Perturbing only the settled
                 # state leaves a synapse's effect through the later steps uncredited, and
@@ -3062,12 +3137,18 @@ class ConnectomeTopology(nn.Module):
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.gap_matrix()
         held = self._held_current(modulators)
+        # The operator is symmetric, so right-multiplying a batch applies it to every row.
+        ohmic = self.ohmic_inverse if self.gap_coupling == "ohmic" else None
+        if ohmic is not None:
+            h = h @ ohmic
         previous = h
         for _ in range(self.forward_pass_depth):
             previous = h
-            preact = h @ chem_mat + h @ gap_mat
+            preact = h @ chem_mat if ohmic is not None else h @ chem_mat + h @ gap_mat
             if held is not None:
                 preact = preact + held
+            if ohmic is not None:
+                preact = preact @ ohmic
             h = torch.tanh(preact)
         if self.capture_penultimate:
             self.penultimate = previous.detach()
@@ -3403,6 +3484,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             chemical_weight_scale=config.chemical_weight_scale,
             gap_weight_mode=config.gap_weight_mode,
             gap_weight_scale=config.gap_weight_scale,
+            gap_coupling=config.gap_coupling,
         ).to(self.device)
         # The two concentrations, serotonin then PDF, carried across an episode's steps.
         self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)
@@ -4121,6 +4203,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "chemical_weight_scale": self.config.chemical_weight_scale,
                     "gap_weight_mode": self.config.gap_weight_mode,
                     "gap_weight_scale": self.config.gap_weight_scale,
+                    "gap_coupling": self.config.gap_coupling,
                     "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
                     # The plasticity identity, ENFORCED on load below. Two checkpoints can differ
@@ -4197,6 +4280,23 @@ class ConnectomePPOBrain(ClassicalBrain):
         "plasticity_plastic_readout",
         "plasticity_plastic_tensors",
     )
+
+    def _reject_gap_coupling_mismatch(self, components: dict[str, WeightComponent]) -> None:
+        """Refuse weights saved under the other form of gap coupling.
+
+        The gap matrix is the same under both forms, so the wiring check passes either way. A file
+        that records no coupling predates the option, when every brain coupled additively, so it is
+        read as additive rather than left unchecked.
+        """
+        recorded = components["training_state"].state if "training_state" in components else {}
+        saved = recorded.get("gap_coupling", "additive")
+        if saved != self.config.gap_coupling:
+            msg = (
+                f"Weight file was saved with gap_coupling={saved!r}; this brain couples gap "
+                f"junctions {self.config.gap_coupling!r}, so the weights would not mean what they "
+                "meant when trained."
+            )
+            raise ValueError(msg)
 
     def _reject_plasticity_identity_mismatch(
         self,
@@ -4318,6 +4418,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         raise_on_speed_sign_mismatch(components, signed_speed=self.config.signed_speed)
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
         self._reject_plasticity_identity_mismatch(components)
+        self._reject_gap_coupling_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
             self._load_topology_state(topology_state)
