@@ -3,7 +3,7 @@
 Phase 9 M.1(b) (roadmap v4.5 § Phase 9, D25 as amended 2026-10-17; tracker `phase9-tracking` M.1(b)),
 after M.1(a) read no cause indicated ([Logbook 096](../../../docs/experiments/logbooks/096-collapse-diagnosis.md)).
 
-- [ ] 1. **Stabilisers and the placebo** on the connectome PPO rule and the MLP-PPO brain:
+- [x] 1. **Stabilisers and the placebo** on the connectome PPO rule and the MLP-PPO brain:
   `kl_stop_factor` (relative KL stop: factor 3, window 100), `weight_clip` (κ, `s` at construction as a
   non-persistent buffer, zero-`s` tensors exempt, before the mask and sign projection), `adam_eps` and
   `adam_beta2` (re-applied after an optimiser state is loaded), `rollout_shuffle_stream` (the placebo's

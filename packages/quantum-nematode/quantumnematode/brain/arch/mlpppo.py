@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import torch
-from torch import nn, optim
+from torch import nn
 
 if TYPE_CHECKING:
     from quantumnematode.brain.arch._telemetry import UpdateTelemetry
@@ -46,6 +46,7 @@ from pydantic import field_validator, model_validator
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
+from quantumnematode.brain.arch import _ppo_stabilisers as stab
 from quantumnematode.brain.arch import _telemetry as tm
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._mlp_topology import MLPTopology
@@ -65,6 +66,7 @@ from quantumnematode.brain.arch._policy import (
     raise_on_speed_sign_mismatch,
 )
 from quantumnematode.brain.arch._ppo_buffer import RolloutBuffer
+from quantumnematode.brain.arch._ppo_stabilisers import PPOStabiliserConfig
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._std_head import (
     StateDependentLogStdHead,
@@ -102,7 +104,7 @@ DEFAULT_MAX_GRAD_NORM = 0.5
 EPISODE_LOG_INTERVAL = 25
 
 
-class MLPPPOBrainConfig(PlasticityConfigMixin, BrainConfig):
+class MLPPPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, BrainConfig):
     """Configuration for the MLPPPOBrain architecture.
 
     Uses modular feature extraction via sensory_modules (required).
@@ -350,14 +352,22 @@ class MLPPPOBrain(ClassicalBrain):
         if self._feature_gating:
             params.append(self.gate_weights)
         params.extend(self._std_params)
-        self.optimizer = optim.Adam(params, lr=config.learning_rate)
+        self._stabilisers = config
+        self.optimizer = stab.make_adam(params, config.learning_rate, config)
+        # Measured at construction, so a loaded checkpoint is clipped against the initial scale.
+        self._weight_clip = (
+            stab.WeightClip(params, config.weight_clip) if config.weight_clip is not None else None
+        )
+        self._kl_stop = (
+            stab.KLStop(config.kl_stop_factor) if config.kl_stop_factor is not None else None
+        )
 
         # Rollout buffer (pass RNG for reproducible minibatch shuffling). In
         # continuous mode it stores the per-step pre-squash sample vectors.
         self.buffer = RolloutBuffer(
             config.rollout_buffer_size,
             self.device,
-            rng=self.rng,
+            rng=stab.shuffle_rng(self.seed) if config.rollout_shuffle_stream else self.rng,
             continuous_actions=self.continuous,
         )
 
@@ -937,7 +947,10 @@ class MLPPPOBrain(ClassicalBrain):
             clip_epsilon=self.clip_epsilon,
             max_grad_norm=self.max_grad_norm,
         )
+        gate = stab.UpdateGate(self._kl_stop)
         for _ in range(self.num_epochs):
+            if gate.stopped:
+                break
             # Final-epoch semantics: the recorded monitor batch reflects the
             # near-final weights of this update, not stale earlier epochs.
             update_log_stds.clear()
@@ -976,6 +989,8 @@ class MLPPPOBrain(ClassicalBrain):
                 )
                 value_loss = nn.functional.mse_loss(values, batch["returns"])
                 loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
+                if not gate.allow(new_log_probs, batch["old_log_probs"]):
+                    break
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -991,7 +1006,7 @@ class MLPPPOBrain(ClassicalBrain):
                     else gated_states
                 )
                 total_norm = nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
-                self.optimizer.step()
+                self._step_optimizer()
                 record.minibatch(
                     new_log_probs=new_log_probs,
                     old_log_probs=batch["old_log_probs"],
@@ -1007,6 +1022,8 @@ class MLPPPOBrain(ClassicalBrain):
                 total_entropy_loss += entropy.item()
                 num_updates += 1
 
+        gate.close()
+        record.note_gate(stopped=gate.stopped, stepped=gate.stepped)
         record_clamped_log_std(self.history_data, update_log_stds)
         self._write_telemetry(record, update_log_stds)
 
@@ -1024,6 +1041,12 @@ class MLPPPOBrain(ClassicalBrain):
             msg = "Update telemetry reads PPO updates; this brain runs a plastic rule."
             raise ValueError(msg)
         self._telemetry = telemetry
+
+    def _step_optimizer(self) -> None:
+        """Take the optimiser step, then clip the weights to their construction scale if asked."""
+        self.optimizer.step()
+        if self._weight_clip is not None:
+            self._weight_clip.apply()
 
     def _actor_side_params(self) -> list[nn.Parameter]:
         """Every parameter the optimiser steps that is not the critic's."""
@@ -1216,6 +1239,7 @@ class MLPPPOBrain(ClassicalBrain):
         # Optimizer state only after networks succeed
         if "optimizer" in components:
             self.optimizer.load_state_dict(components["optimizer"].state)
+            stab.reapply_adam(self.optimizer, self._stabilisers)
 
         # Training state
         if "training_state" in components:
