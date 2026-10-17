@@ -580,13 +580,24 @@ def diagnose(log_dirs: list[Path]) -> dict[str, Any]:
 
 
 def write_stacks(result: dict[str, Any], path: Path) -> Path:
-    """Write the aligned, smoothed stacks: one row per run, statistic and sampled episode."""
+    """Write the aligned, smoothed stacks wide: one row per run and sampled episode.
+
+    A column per statistic, values to six significant figures, so the file stays small enough to
+    commit beside the analysis.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["side", "seed", "statistic", "episode", "relative_to_onset", "value"]
+    rows: dict[tuple[str, int, int, int], dict[str, str]] = {}
+    statistics: list[str] = []
+    for r in result["stacks"]:
+        key = (r["side"], int(r["seed"]), int(r["episode"]), int(r["relative_to_onset"]))
+        rows.setdefault(key, {})[r["statistic"]] = f"{r['value']:.6g}"
+        if r["statistic"] not in statistics:
+            statistics.append(r["statistic"])
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(result["stacks"])
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(["side", "seed", "episode", "relative_to_onset", *statistics])
+        for key in sorted(rows):
+            writer.writerow([*key, *(rows[key].get(k, "") for k in statistics)])
     return path
 
 

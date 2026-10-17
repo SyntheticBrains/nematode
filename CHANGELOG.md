@@ -6,6 +6,10 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Added
+
+- **M.1(a): late collapse leaves no registered signature before it falls** ([Logbook 096](docs/experiments/logbooks/096-collapse-diagnosis.md)). Re-running Logbook 092's eight late body collapses with telemetry, no registered cause separates them from their intact twins; the MLP control collapses on none of 8 seeds. New `run_simulation.py` flags `--update-telemetry` (one JSON line per PPO update, read-only) and `--checkpoint-every N`, and `scripts/analysis/collapse.py`, the collapse statistic every panel over 3,000 episodes now reports (D25, amended so the onset is the first fall a run does not recover from).
+
 ## [0.7.0] - 2026-10-14
 
 The Phase 8 release, *ground, then embody*. Phase 8 took the connectome's learning-speed advantage over a degree-preserving null apart, then put the connectome in a body. On hard350 the advantage came from the null's rewired gap junctions and its rewired sensory–motor boundary; against a null that keeps both, no interior chemical-wiring advantage is detectable. What holds is **gap-junction placement**: on the thermal cell the wild type learns faster than a null whose gap junctions alone are rewired, not because of each junction's strength, and the lead survives a 12-segment kinematic body driven by the anatomical motor-to-muscle map. Measured weights and real synapse signs moved no wiring reading. Through the body the worm learns to weathervane but never klinokinesis, and on patchy lawns it learns to dwell. See the [Phase 8 synthesis](docs/experiments/logbooks/094-phase8-synthesis.md).

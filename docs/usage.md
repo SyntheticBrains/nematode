@@ -23,6 +23,8 @@ A *session* is `--runs` episodes of one scenario with one brain that learns acro
 | `--validate-chemotaxis` | Print the simulated chemotaxis index and its band. It is a time-in-zone fraction, so it is not compared with the published endpoint-count indices in `data/chemotaxis/` |
 | `--save-weights PATH` / `--load-weights PATH` | Persist trained weights after the session, or warm-start from a saved file (MLP-PPO, hybrid-classical and connectome brains). A config-level `weights_path` does the same and may contain `{seed}`, resolved with the run seed, so one config addresses one weight file per seed |
 | `--record-rollouts PATH` | Write one JSON line per step — the brain's observation, sampled action, action mean and probability — for behavioural cloning (`scripts/campaigns/l4_behavioural_clone.py`); single-agent runs only |
+| `--update-telemetry` | Write one JSON line per PPO update to `exports/<session>/telemetry/updates.jsonl`: raw advantage statistics, approximate KL, clip fraction, value loss and explained variance, pre-clip gradient norms (actor and critic apart), the pre-squash action mean, `log_std`, layer-wise weight norms, the head features' saturation and effective rank, and on the connectome the settling residual. Read-only: a run is identical with it on or off. MLP-PPO and connectome PPO brains; single-agent runs only |
+| `--checkpoint-every N` | Also save weights every `N` episodes to `exports/<session>/weights/epNNNNN.pt`, beside `final.pt`; `N` must be positive |
 | `--show-last-frame-only` | In terminal themes, print only each run's final frame |
 | `--manyworlds` | Overlay the top two candidate actions at each step (single run only) |
 | `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING`, `ERROR`, `CRITICAL`, or `NONE` |

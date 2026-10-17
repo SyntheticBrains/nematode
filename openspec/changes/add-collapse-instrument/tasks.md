@@ -19,8 +19,8 @@ Phase 9 block M (roadmap v4.5 § Phase 9, D25, D26; tracker `phase9-tracking` M.
 - [x] 5. **Registration**: the launch record (the 16 paired runs and the 8 MLP runs, the identity rule,
   the cause set and its patterns, the indicated/not-indicated rule, the retention line), committed;
   `/nematode-review-spec`.
-- [ ] 6. **Campaign**: 24 runs at 6,000 episodes with `--update-telemetry --checkpoint-every 250` and the
+- [x] 6. **Campaign**: 24 runs at 6,000 episodes with `--update-telemetry --checkpoint-every 250` and the
   output controls, from a separate worktree.
-- [ ] 7. **Readout**: Logbook 096; tracker M.1(a) ticked with the causes indicated; M.1(b)'s remedy order
+- [x] 7. **Readout**: Logbook 096; tracker M.1(a) ticked with the causes indicated; M.1(b)'s remedy order
   recorded for its change; CHANGELOG; `docs/usage.md`.
 - [ ] 8. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.

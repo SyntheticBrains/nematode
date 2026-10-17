@@ -198,10 +198,9 @@ class TestCauses:
         assert max(r["relative_to_onset"] for r in rows) < cd.AFTER
         assert set(result["context_at_onset"]["collapsed"][0]) == set(cd.CONTEXT)  # type: ignore[index]
         path = cd.write_stacks(result, tmp_path / "stacks.csv")  # type: ignore[arg-type]
-        assert (
-            path.read_text().splitlines()[0]
-            == "side,seed,statistic,episode,relative_to_onset,value"
-        )
+        header = path.read_text().splitlines()[0].split(",")
+        assert header[:4] == ["side", "seed", "episode", "relative_to_onset"]
+        assert set(header[4:]) == set(cd.STATISTICS)
 
     def test_every_registered_cause_is_read(self) -> None:
         assert set(self._panel(growing=8)["causes"]) == set(cd.CAUSES)  # type: ignore[arg-type]
