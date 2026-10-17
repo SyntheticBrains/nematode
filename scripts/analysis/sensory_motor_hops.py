@@ -66,9 +66,9 @@ def _topology(wiring: str, seed: int, config: Path = ARM) -> ConnectomeTopology:
     if brain_config is None or not isinstance(brain_config.config, ConnectomePPOBrainConfig):
         msg = f"{config.name} does not carry a connectome brain config"
         raise TypeError(msg)
-    update: dict[str, Any] = {"seed": seed}
-    if wiring != "wild_type":
-        update["wiring"] = wiring
+    # The wiring is always the one asked for, so a config that carries a null cannot pass it off
+    # as the wild type.
+    update: dict[str, Any] = {"seed": seed, "wiring": wiring}
     torch.manual_seed(seed)
     return ConnectomePPOBrain(
         config=brain_config.config.model_copy(update=update),
@@ -174,8 +174,11 @@ def compare(
     if null != DEFAULT_NULL:
         # Recorded only off the default, so the committed default measurement regenerates as it was.
         out["null_wiring"] = null
-    if config != ARM:
-        out["config"] = str(config.resolve().relative_to(REPO))
+    resolved = config.resolve()
+    if resolved != ARM.resolve():
+        out["config"] = (
+            str(resolved.relative_to(REPO)) if resolved.is_relative_to(REPO) else str(resolved)
+        )
     for depth in (2, 3, 4, 6):
         null_counts = [n["within_depth"][depth] for n in nulls]
         out.setdefault("within_depth_summary", {})[depth] = {
