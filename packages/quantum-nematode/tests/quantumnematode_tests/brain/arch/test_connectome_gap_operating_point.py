@@ -313,6 +313,8 @@ def test_unread_or_meaningless_settings_are_refused(
     [
         ({"gap_weight_mode": "squared"}, "Unsupported gap_weight_mode"),
         ({"gap_weight_scale": 0.0}, "must be positive"),
+        ({"gap_weight_scale": float("nan")}, "must be positive and finite"),
+        ({"gap_weight_scale": float("inf")}, "must be positive and finite"),
         ({"wiring": "rewired_gap_outliers_held", "gap_outlier_min_count": 0}, "at least 1"),
         (
             {"wiring": "rewired_gap_outliers_scattered", "gap_outlier_min_count": 100_000},

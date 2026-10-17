@@ -15,7 +15,8 @@ the lead is gone.
 | `gap(outliers_scattered)`, only the 26 pairs of count ≥ 20 moved | 2401–2432 | +0.033 | [+0.005, +0.061] | 0.076 | `unresolved` → open |
 | `gap(outliers_held)`, those 26 held, the rest rewired | 2401–2432 | +0.063 | [+0.041, +0.084] | 0.005 | `below` (described) |
 
-The minimum is **0.0894**, two-thirds of the anchor's +0.1341 (D23's rule). `gap(unit)` fails, so the
+The minimum is **0.0894**, two-thirds of the anchor's +0.1341: D23 re-fixes the minimum from the
+anchor, and two-thirds is the launch record's rule for doing so. `gap(unit)` fails, so the
 verdict is `artefact` whatever the outliers do (the registered map names every combination).
 
 **Beside it, never read as verdicts:**
@@ -23,17 +24,25 @@ verdict is `artefact` whatever the outliers do (the registered map names every c
 - **The lead follows the gap scale.** With the placement fixed and the whole gap matrix scaled, the
   lead is +0.004 at ×0.25, +0.062 at ×0.5, +0.104 at ×1 and +0.153 at ×2 (16 seeds; the ×1 value is
   the 64-seed reading). With each count replaced by `log1p(count)` it is +0.012 [−0.023, +0.046].
-- **The wild type barely uses its gap junctions; the null's hurt it.** With gap junctions off, the
-  brain trails the wild type by only +0.019 [−0.005, +0.044], and leads the count gap-only null by
-  +0.090 [+0.064, +0.116] (32 seeds). The wild type's plateau is 69–71% with count, unit or log weights
-  and 67% with no gap junctions at all; the null's is 52.7% with counts and 68.6% without them.
+- **The null's count-weighted junctions cost it; no benefit to the wild type is detected.** With gap
+  junctions off, the brain trails the wild type by +0.019 [−0.005, +0.044], a non-detection on 32
+  seeds rather than an absence, and leads the count gap-only null by +0.090 [+0.064, +0.116]. The wild
+  type's plateau is 69–71% with count, unit or log weights and 67% with no gap junctions at all; the
+  null's is 52.7% with counts and 68.6% without them.
 - **Not only the largest pairs.** Holding the 26 outliers in place while the other 1,069 pairs are
   rewired with their counts still leaves a +0.063 lead; moving only the outliers costs +0.033.
-- **Depth.** At depth 2 the wild type does not learn (plateau 0.1% against the null's 12.6%); at depth
-  3 the lead is +0.041, at depth 6 +0.080 with both plateaus lower (38% and 23%).
-- **The shortcut audit does not explain it.** Every gap-only null, under every weighting, puts about
-  four motor neurons one gap-hop from an injected sensor where the wild type has none; under unit
-  weights the null keeps that shortcut and does not trail.
+- **Depth.** At depth 2 the wild type barely learns (plateau 0.1%, above its floor on 7 of 16 seeds,
+  which passes the gate) and the null leads, −0.034 [−0.050, −0.021]; at depth 3 the lead is +0.041,
+  at depth 6 +0.080 with both plateaus lower (38% and 22%).
+- **Episodes to 30% success**, registered beside: `count` +405 [+332, +484], `unit` +6 [−50, +65],
+  `outliers_scattered` +94 [−12, +212], `outliers_held` +220 [+133, +303]. The censoring rule found
+  the levels' crossing rates too different to compare (spread 1.0), so `auc_success` carries the reading,
+  as registered.
+- **The shortcut audit.** Every gap-only null, under every weighting, puts about four motor neurons one
+  gap-hop from an injected sensor where the wild type has none. Under unit weights the null keeps that
+  shortcut and does not trail, so a shortcut at unit coupling (at most 0.58) costs no lead; at count
+  coupling this panel does not separate it (held, with the shortcut, trails by +0.063; scattered,
+  without it, by +0.033).
 - **The saturation predictor**, registered before it was computed, is `unresolved` on 082's Cook
   draws (ρ +0.28, p 0.026, under the 0.3 minimum) and on the anchor's 16 Emmons draws (ρ −0.31,
   p 0.24); on the panel's 64 draws, as description, `no_prediction` (ρ +0.14).
@@ -111,24 +120,31 @@ The beside levels agree with the verdict and say where the lead comes from.
 
 The wild type learns about as well with counts, unit weights, log weights or no gap junctions at all
 (67–71%). The null learns as well as the wild type whenever the large counts are removed or compressed,
-and worse the larger they are. The lead is the null being hurt by where its rewired high-count gap
-junctions land, scaled by how strongly the model lets them couple, not the wild type being helped by its
-own placement. Gap-off makes the same point directly: no gap junctions at all trail the wild type by
-only +0.019, and beat the count null by +0.090.
+and worse the larger they are. This is **consistent with** the null being hurt by its rewired
+count-weighted gap junctions, scaled by how strongly the model lets them couple, rather than the wild
+type being helped by its own placement; gap-off trails the wild type by +0.019 (not detected) and beats
+the count null by +0.090. It does not say which property of the rewired junctions does the harm: the
+swap moves where the counts land and also redistributes each neuron's total coupling (the count–degree
+correlation falls from 0.19 to about 0), and separating those two is G.1's question.
+
+The ×1 row is the 64-seed reading; on the profile's own seeds, 2401–2416, `count` reads +0.122 (71.0%
+against 49.4%).
 
 The harm is spread through the counts, not confined to the largest pairs. Holding the 26 pairs of count
 ≥ 20 in place and rewiring the other 1,069 still leaves +0.063; moving only those 26 leaves +0.033.
 
 ### Depth, and the shortcut audit
 
-At depth 2 the wild type does not learn at all, 0.1% against the null's 12.6%, as Logbook 071 found on
-hard350 at the shallow end. At depth 3 the lead is +0.041 and at depth 6 +0.080, with both wirings'
+At depth 2 the wild type barely learns, 0.1% against the null's 12.6% (it passes its floor gate on 7 of
+16 seeds), and the null leads, −0.034 [−0.050, −0.021], as Logbook 071 found on hard350 at the shallow
+end. At depth 3 the lead is +0.041 and at depth 6 +0.080, with both wirings'
 plateaus lower at depth 6.
 
 The audit computed before launch ([table.json](supporting/095-gap-operating-point/table.json)) found that
 every gap-only null creates about four sensor–motor gap pairs, putting four motor neurons one gap-hop
-from an injected sensor where the wild type has none. Under unit weights the null keeps that shortcut and
-does not trail, so the shortcut is not what costs it the lead.
+from an injected sensor where the wild type has none. Under unit weights the null keeps that shortcut,
+coupling at most 0.58, and does not trail; at count coupling this panel does not separate the shortcut
+from the rest of the rewiring.
 
 ## What the verdict licenses, and what it does not
 
@@ -136,17 +152,29 @@ does not trail, so the shortcut is not what costs it the lead.
 
 **Which substrate change.** This panel tested one of the three candidates directly: log-compressed
 counts, under which both wirings learn alike at about 70% and the lead is +0.012. Count-capped weights
-and ohmic coupling were not run. Naming the change is the maintainer's decision, taken in G.0-A's change.
+and ohmic coupling were not run. **The maintainer named the change on 2026-10-17**: ohmic gap coupling in
+the settling map (current in proportion to the potential difference, which cannot latch at any
+conductance and keeps the counts as conductances), chosen against log-compressed counts in a gated pilot
+whose selection rule is fixed before it runs. G.0-A's change carries both.
 
 **What it does not do.** The Phase 8 records are not re-read (D23): their registered readings stand as
-what was measured on the count-weighted model. What changes is what they are about. Every gap-junction
-lead of Logbooks 078, 082 and 092 was measured with counts entering the settling map as additive drive,
-and on this cell that drive, not the placement, carries the lead. The body's +0.126 is the next thing
-tested, on the corrected model.
+what was measured on the count-weighted model, on Cook 2019. On Emmons at thermal t35, placement without
+the counts carries no lead. What that means for Logbooks 078, 082 and 092 is G.0-A's registered
+restatement, starting with the body's +0.126 re-run on the corrected model.
 
-**Limits.** One cell (thermal t35) and one substrate (Emmons 2024); the profile and depth levels read
-16 seeds and borrow the count level's floors; the panel runs 3,000 episodes, below the horizon where
-the collapse statistic applies.
+**Limits.**
+
+- One cell (thermal t35) and one substrate (Emmons 2024); Phase 8's records are on Cook 2019.
+- Unit weights remove the counts **and** cut the coupling (the largest from 89.7 to 1, the 99th
+  percentile from 5.13 to 0.41). "Counts removed" and "coupling reduced" are separated only by the
+  16-seed scale profile and the log-count level, which point the same way.
+- `gap(unit)` compares against a null that keeps a sensor–motor shortcut, as the launch record states.
+- The profile and depth levels read 16 seeds and borrow the count level's floors; the depth-2 wild type
+  passes its gate at a 0.1% plateau.
+- Achieved spreads: `count` σ 0.119 and `unit` σ 0.090 (detectable about 0.042 and 0.032 at 64 seeds),
+  `outliers_scattered` σ 0.125 (about 0.062 at 32 seeds, above the registered 0.047–0.054 but below
+  the minimum). Reported, never used to re-read.
+- 3,000 episodes, below the horizon where the collapse statistic applies.
 
 ## Data
 

@@ -549,7 +549,7 @@ def predictor(source: str) -> dict[str, Any]:
     if "outcome_json" in spec:
         anchor_gaps = json.loads(spec["outcome_json"].read_text())["gaps"][PRIMARY_METRIC]
         gaps = {int(k): float(v) for k, v in anchor_gaps["per_seed"].items()}
-        column = f"the anchor's {PRIMARY_METRIC} gap"
+        column = f"{PRIMARY_METRIC} gap at the anchor"
     else:
         gaps = outcomes(spec["outcome_csv"], spec["outcome_column"])
         column = spec["outcome_column"]
@@ -736,7 +736,8 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "score":
         minimum = json.loads(args.anchor.read_text())["rule"]["minimum"]
         if minimum is None:
-            msg = f"{args.anchor} fixed no minimum: the anchor is unreadable"
+            case = json.loads(args.anchor.read_text())["rule"]["case"]
+            msg = f"{args.anchor} fixed no minimum: the anchor's case is {case!r}"
             raise GapOperatingPointError(msg)
         result = score(args.logs, args.out_dir, float(minimum))
         if args.csv:

@@ -24,6 +24,7 @@ in a single chemical-synapse hop.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
@@ -865,9 +866,9 @@ def _gap_options_refusal(config: ConnectomePPOBrainConfig) -> str | None:
             f"Unsupported gap_weight_mode: {config.gap_weight_mode!r}",
         ),
         (
-            config.gap_weight_scale <= 0.0,
+            not math.isfinite(config.gap_weight_scale) or config.gap_weight_scale <= 0.0,
             (
-                f"gap_weight_scale={config.gap_weight_scale} must be positive: zero is "
+                f"gap_weight_scale={config.gap_weight_scale} must be positive and finite: zero is "
                 "enable_gap_junctions=false, and a negative scale makes every gap junction "
                 "anti-coupling"
             ),
@@ -1469,7 +1470,7 @@ class ConnectomeTopology(nn.Module):
         # would accumulate across every update.
         self.w_chem.requires_grad_(not freeze_wiring)
 
-        # ── Gap junctions: non-learnable, symmetric, fan-in normalised ──
+        # ── Gap junctions: symmetric, partner-count scaled, learnable only under plastic_gaps ──
         # Each entry ``G[i, j]`` is the pair's weight (see GapWeightMode) divided by
         # ``sqrt(d_i * d_j)``, ``d`` the binary gap degree: symmetric, as gap junctions are
         # bidirectional, which a row-or-column scaling would break. The normaliser counts a
