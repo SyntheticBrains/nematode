@@ -434,3 +434,148 @@ class TestRewiringOrigins:
         assert all(null_edges[edge] == wild_edges[origin] for edge, origin in origins.items())
         moved = sum(1 for edge, origin in origins.items() if edge != origin)
         assert moved > len(origins) // 2
+
+
+# ── Narrowed gap swaps: held and focal pairs ─────────────────────────────────────────────────
+# Covers the connectome-ppo-brain requirement "Gap-outlier wirings": held outliers keep their
+# place; scattered outliers land elsewhere; degrees are exact; existing nulls are unchanged.
+
+_OUTLIER_MIN = 20
+
+
+def _outliers(c: Connectome) -> set[tuple[str, str]]:
+    return {(g.neuron_a, g.neuron_b) for g in c.gap_junctions if g.weight >= _OUTLIER_MIN}
+
+
+def _gap_pairs(c: Connectome) -> dict[tuple[str, str], int]:
+    return {(g.neuron_a, g.neuron_b): g.weight for g in c.gap_junctions}
+
+
+def _gap_degrees(c: Connectome) -> Counter:
+    degrees: Counter = Counter()
+    for g in c.gap_junctions:
+        degrees[g.neuron_a] += 1
+        degrees[g.neuron_b] += 1
+    return degrees
+
+
+def _narrowed(c: Connectome, seed: int, **kwargs: object) -> tuple[Connectome, dict[str, int]]:
+    report: dict[str, int] = {}
+    null = rewire_degree_preserving(
+        c,
+        np.random.default_rng(seed),
+        rewire_chemical=False,
+        gap_swap_report=report,
+        **kwargs,  # type: ignore[arg-type]
+    )
+    return null, report
+
+
+@pytest.mark.parametrize("seed", [1, 17, 129])
+class TestNarrowedGapSwaps:
+    """Held and focal gap swaps.
+
+    Scenarios: Held outliers keep their place; Scattered outliers land elsewhere.
+    """
+
+    def test_held_pairs_keep_place_and_count(self, cook: Connectome, seed: int) -> None:
+        held = _outliers(cook)
+        null, _ = _narrowed(cook, seed, hold_gap_pairs=held)
+        pairs, wild = _gap_pairs(null), _gap_pairs(cook)
+        assert all(pairs.get(edge) == wild[edge] for edge in held)
+        assert set(pairs) - held != set(wild) - held
+        assert _gap_degrees(null) == _gap_degrees(cook)
+
+    def test_held_pairs_are_never_duplicated(self, cook: Connectome, seed: int) -> None:
+        null, _ = _narrowed(cook, seed, hold_gap_pairs=_outliers(cook))
+        edges = [(g.neuron_a, g.neuron_b) for g in null.gap_junctions]
+        assert len(edges) == len(set(edges)) == len(cook.gap_junctions)
+
+    def test_focal_counts_land_elsewhere(self, cook: Connectome, seed: int) -> None:
+        focal = _outliers(cook)
+        null, report = _narrowed(cook, seed, focal_gap_pairs=focal)
+        pairs = _gap_pairs(null)
+        moved = [edge for edge in focal if edge not in pairs]
+        assert len(moved) >= len(focal) - 2  # a hub-to-hub outlier may find no valid partner
+        assert sorted(w for w in pairs.values() if w >= _OUTLIER_MIN) == sorted(
+            g.weight for g in cook.gap_junctions if g.weight >= _OUTLIER_MIN
+        )
+        assert _gap_degrees(null) == _gap_degrees(cook)
+        assert report["target"] == len(focal)
+        assert 0 < report["accepted"] <= report["target"]
+
+    def test_focal_moves_far_less_than_the_full_swap(self, cook: Connectome, seed: int) -> None:
+        _, focal_report = _narrowed(cook, seed, focal_gap_pairs=_outliers(cook))
+        _, full_report = _narrowed(cook, seed)
+        assert focal_report["moved"] <= 2 * len(_outliers(cook)) < full_report["moved"] / 10
+
+    def test_the_chemical_graph_is_held(self, cook: Connectome, seed: int) -> None:
+        for kwargs in ({"hold_gap_pairs": _outliers(cook)}, {"focal_gap_pairs": _outliers(cook)}):
+            null, _ = _narrowed(cook, seed, **kwargs)
+            assert null.chemical_synapses == cook.chemical_synapses
+
+
+def test_the_narrowing_sets_need_the_gap_swap(cook: Connectome) -> None:
+    """A narrowing set without the gap swap is refused (scenario: Gap-outlier wirings)."""
+    with pytest.raises(ValueError, match="need rewire_gap_junctions"):
+        rewire_degree_preserving(
+            cook,
+            np.random.default_rng(1),
+            rewire_gap_junctions=False,
+            hold_gap_pairs=_outliers(cook),
+        )
+
+
+def test_the_narrowing_sets_are_alternatives(cook: Connectome) -> None:
+    """Holding and focusing one swap is refused (scenario: Gap-outlier wirings)."""
+    with pytest.raises(ValueError, match="alternatives"):
+        rewire_degree_preserving(
+            cook,
+            np.random.default_rng(1),
+            hold_gap_pairs=_outliers(cook),
+            focal_gap_pairs=_outliers(cook),
+        )
+
+
+def test_an_unknown_gap_pair_is_refused(cook: Connectome) -> None:
+    """A pair absent from the gap layer is refused (scenario: Gap-outlier wirings)."""
+    with pytest.raises(ValueError, match="absent from the input"):
+        rewire_degree_preserving(cook, np.random.default_rng(1), hold_gap_pairs={("ADAL", "ZZZZ")})
+
+
+def test_a_report_leaves_the_null_unchanged(cook: Connectome) -> None:
+    """A swap report leaves the pinned null as drawn (scenario: Existing nulls are unchanged)."""
+    plain = rewire_degree_preserving(cook, np.random.default_rng(17))
+    reported = rewire_degree_preserving(cook, np.random.default_rng(17), gap_swap_report={})
+    assert _digests(plain) == _digests(reported) == _PINNED_NULL[17]
+
+
+def test_a_scattered_count_leaves_either_endpoint_with_equal_chance(cook: Connectome) -> None:
+    """Scenario "Scattered outliers land elsewhere": no endpoint keeps the outliers' counts."""
+    outliers = _outliers(cook)
+    counts = _gap_pairs(cook)
+    kept_first = total = 0
+    for seed in range(40):
+        null, _ = _narrowed(cook, seed, focal_gap_pairs=outliers)
+        moved = _gap_pairs(null)
+        for a, b in outliers:
+            landed = [pair for pair, w in moved.items() if w == counts[a, b] and pair not in counts]
+            if len(landed) == 1:
+                total += 1
+                kept_first += a in landed[0]
+    # Only a count no other pair carries can be followed to where it landed.
+    assert total >= 200
+    assert 0.4 < kept_first / total < 0.6
+
+
+def test_each_scattered_partner_moves_once(cook: Connectome) -> None:
+    """Every accepted swap displaces an original pair no earlier swap displaced.
+
+    A reused partner would sit on a pair an earlier swap created, so fewer original pairs would
+    leave; a later swap can recreate a removed pair, which allows a shortfall of a few.
+    """
+    outliers = _outliers(cook)
+    for seed in (1, 17, 129):
+        null, report = _narrowed(cook, seed, focal_gap_pairs=outliers)
+        partners = set(_gap_pairs(cook)) - set(_gap_pairs(null)) - outliers
+        assert report["accepted"] - 2 <= len(partners) <= report["accepted"]

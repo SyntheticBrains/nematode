@@ -6,6 +6,10 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Added
+
+- **G.0: the gap-junction placement advantage is an artefact of the gap model's operating point** ([Logbook 095](docs/experiments/logbooks/095-gap-operating-point.md)). With every gap count set to 1 the wild type no longer leads the gap-only null (+0.003 against +0.104 with counts); the lead follows the gap scale. New brain options `gap_weight_mode` and `gap_weight_scale`, the wirings `rewired_gap_outliers_held` and `rewired_gap_outliers_scattered`, and `scripts/analysis/gap_operating_point.py`.
+
 ## [0.7.0] - 2026-10-14
 
 The Phase 8 release, *ground, then embody*. Phase 8 took the connectome's learning-speed advantage over a degree-preserving null apart, then put the connectome in a body. On hard350 the advantage came from the null's rewired gap junctions and its rewired sensory–motor boundary; against a null that keeps both, no interior chemical-wiring advantage is detectable. What holds is **gap-junction placement**: on the thermal cell the wild type learns faster than a null whose gap junctions alone are rewired, not because of each junction's strength, and the lead survives a 12-segment kinematic body driven by the anatomical motor-to-muscle map. Measured weights and real synapse signs moved no wiring reading. Through the body the worm learns to weathervane but never klinokinesis, and on patchy lawns it learns to dwell. See the [Phase 8 synthesis](docs/experiments/logbooks/094-phase8-synthesis.md).

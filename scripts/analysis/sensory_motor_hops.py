@@ -12,7 +12,9 @@ for a reason that has nothing to do with the null being better wired.
 This probe measures that directly rather than leaving it as a story. It walks the **same graph the
 simulation propagates through** -- the brain's own masked chemical matrix plus its gap junctions,
 read off a constructed topology rather than rebuilt from the data files -- and reports the hop
-distance from the six food sensors to each of the 39 motor neurons.
+distance from every sensor the cell injects into to each of the 39 motor neurons. On the food cell
+that is the six food sensors; ``--config`` names another cell, whose thermal or predator sensors
+then count as sources too.
 
 **What a result here can and cannot say.** A shorter path in the null is *consistent* with the depth
 finding and would make the mechanism worth testing; it is not itself evidence that path length
@@ -24,6 +26,8 @@ and not as a mechanism confirmed.
 Usage::
 
     uv run python scripts/analysis/sensory_motor_hops.py --seeds 1-8
+    uv run python scripts/analysis/sensory_motor_hops.py --seeds 1-8 \
+        --config configs/scenarios/thermal_foraging/<cell>.yml --null rewired_gap_junctions_only
 """
 
 from __future__ import annotations
@@ -56,15 +60,15 @@ ARM = (
 UNREACHED = -1
 
 
-def _topology(wiring: str, seed: int) -> ConnectomeTopology:
+def _topology(wiring: str, seed: int, config: Path = ARM) -> ConnectomeTopology:
     """Construct one arm and hand back its topology, so the graph measured is the graph run."""
-    brain_config = load_simulation_config(str(ARM)).brain
+    brain_config = load_simulation_config(str(config)).brain
     if brain_config is None or not isinstance(brain_config.config, ConnectomePPOBrainConfig):
-        msg = f"{ARM.name} does not carry a connectome brain config"
+        msg = f"{config.name} does not carry a connectome brain config"
         raise TypeError(msg)
-    update: dict[str, Any] = {"seed": seed}
-    if wiring != "wild_type":
-        update["wiring"] = wiring
+    # The wiring is always the one asked for, so a config that carries a null cannot pass it off
+    # as the wild type.
+    update: dict[str, Any] = {"seed": seed, "wiring": wiring}
     torch.manual_seed(seed)
     return ConnectomePPOBrain(
         config=brain_config.config.model_copy(update=update),
@@ -72,8 +76,28 @@ def _topology(wiring: str, seed: int) -> ConnectomeTopology:
     ).topology
 
 
+# Every projection's target-index buffer; a cell carries the ones its config enables.
+_SENSOR_BUFFERS = (
+    "_food_neuron_indices",
+    "_thermotaxis_neuron_indices",
+    "_predator_distal_neuron_indices",
+    "_predator_anterior_neuron_indices",
+    "_predator_posterior_neuron_indices",
+)
+
+
+def injected_sensors(topology: ConnectomeTopology) -> list[int]:
+    """Every neuron the cell injects sensation into, in buffer order, each once."""
+    out: list[int] = []
+    for name in _SENSOR_BUFFERS:
+        indices = getattr(topology, name, None)
+        if isinstance(indices, torch.Tensor):
+            out.extend(i for i in indices.tolist() if i not in out)
+    return out
+
+
 def hop_distances(topology: ConnectomeTopology) -> dict[int, int]:
-    """Breadth-first hops from the food sensors to every neuron, over the propagating graph.
+    """Breadth-first hops from the injected sensors to every neuron, over the propagating graph.
 
     Chemical synapses are directed pre to post; gap junctions conduct both ways. Both carry signal
     in the settling loop, so both are edges here -- measuring the chemical graph alone would
@@ -83,7 +107,7 @@ def hop_distances(topology: ConnectomeTopology) -> dict[int, int]:
     gap = (topology.g_gap != 0).bool()
     adjacency = mask | gap | gap.T
 
-    sources = topology._food_neuron_indices.tolist()
+    sources = injected_sensors(topology)
     distance = dict.fromkeys(sources, 0)
     queue = deque(sources)
     while queue:
@@ -114,22 +138,47 @@ def motor_reach(topology: ConnectomeTopology) -> dict[str, Any]:
     }
 
 
+def short_reach(topology: ConnectomeTopology) -> dict[int, int]:
+    """How many motor neurons sit within one and within two hops of an injected sensor."""
+    distance = hop_distances(topology)
+    hops = [distance.get(m, UNREACHED) for m in topology._motor_flat_indices.tolist()]
+    return {d: sum(1 for h in hops if h != UNREACHED and h <= d) for d in (1, 2)}
+
+
 DEFAULT_NULL = "rewired_degree_preserving"
-NULLS = (DEFAULT_NULL, "rewired_chemical_only", "rewired_boundary_held")
+NULLS = (
+    DEFAULT_NULL,
+    "rewired_chemical_only",
+    "rewired_boundary_held",
+    "rewired_gap_junctions_only",
+    "rewired_gap_outliers_held",
+    "rewired_gap_outliers_scattered",
+)
 
 
-def compare(seeds: tuple[int, ...], null: str = DEFAULT_NULL) -> dict[str, Any]:
+def compare(
+    seeds: tuple[int, ...],
+    null: str = DEFAULT_NULL,
+    config: Path = ARM,
+) -> dict[str, Any]:
     """Measure the wild type once and a fresh rewired null per seed.
 
     ``null`` picks the rewiring. The chemical-only null holds the wild type's gap junctions, which
-    the propagating graph includes, so it shows how much of the reach difference is chemical.
+    the propagating graph includes, so it shows how much of the reach difference is chemical; the
+    gap nulls hold the chemical graph, so they show how much is in the gap junctions. ``config``
+    picks the cell, and with it the sources and the connectome.
     """
-    wild = motor_reach(_topology("wild_type", seeds[0]))
-    nulls = [motor_reach(_topology(null, s)) for s in seeds]
+    wild = motor_reach(_topology("wild_type", seeds[0], config))
+    nulls = [motor_reach(_topology(null, s, config)) for s in seeds]
     out: dict[str, Any] = {"wild_type": wild, "rewired_nulls": nulls, "seeds": list(seeds)}
     if null != DEFAULT_NULL:
         # Recorded only off the default, so the committed default measurement regenerates as it was.
         out["null_wiring"] = null
+    resolved = config.resolve()
+    if resolved != ARM.resolve():
+        out["config"] = (
+            str(resolved.relative_to(REPO)) if resolved.is_relative_to(REPO) else str(resolved)
+        )
     for depth in (2, 3, 4, 6):
         null_counts = [n["within_depth"][depth] for n in nulls]
         out.setdefault("within_depth_summary", {})[depth] = {
@@ -144,7 +193,10 @@ def compare(seeds: tuple[int, ...], null: str = DEFAULT_NULL) -> dict[str, Any]:
 def _print(result: dict[str, Any]) -> None:
     wild = result["wild_type"]
     nulls = result["rewired_nulls"]
-    print(f"food sensors -> {wild['n_motor']} motor neurons, over chemical + gap-junction edges\n")
+    print(
+        f"injected sensors -> {wild['n_motor']} motor neurons, over chemical + gap-junction "
+        "edges\n",
+    )
     print(
         f"  wild type      min {wild['min_hops']}  median {wild['median_hops']}  max {wild['max_hops']}",
     )
@@ -170,11 +222,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seeds", default="1-8", help="rewiring seeds, e.g. 1-8")
     ap.add_argument("--out", type=Path, help="write the measurement JSON here")
     ap.add_argument("--null", choices=NULLS, default=DEFAULT_NULL, help="which rewired null")
+    ap.add_argument("--config", type=Path, default=ARM, help="the cell whose graph is walked")
     args = ap.parse_args(argv)
 
     lo, _, hi = args.seeds.partition("-")
     seeds = tuple(range(int(lo), int(hi) + 1)) if hi else (int(lo),)
-    result = compare(seeds, args.null)
+    result = compare(seeds, args.null, args.config)
     _print(result)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

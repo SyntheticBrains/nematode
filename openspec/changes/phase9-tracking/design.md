@@ -35,6 +35,8 @@ The ratified decision table (`docs/roadmap.md` § Phase 9 § Pre-registered desi
 - **D31** the behavioural references are repaired before they are read again: K.1 replaces the ratio band by a unit-free quintile statistic with a digitised Pierce-Shimomura 1999 figure beside it; thermal captures graded by the side of Tc; committed verdicts not re-read.
 - **D32** what the placed rung claims: a state-gated placed gain at an identified synapse, not reward-driven credit assignment; its positive control names both arms (must flip at the site, must not at a degree-matched random site; both flipping is the result); the trainable-mask capacity control runs first; every result a performance claim under the Phase 7 claim discipline.
 
+*Amendment 2026-10-16 (D23, with the matching roadmap edit; from `add-gap-operating-point`'s spec review).* D23's minimum rule gains its third case: if G.0(a)'s anchor interval includes zero, 0.0577 stands and the G.0 panel's own count-weight gap decides `no_gap_effect`. *(Clarified 2026-10-17, before the panel ran: an anchor whose interval excludes zero **below** — the null ahead, the effect reversed on Emmons — fixes no minimum, and the panel waits on a dated decision. It did not arise.)* G.0's verdict map gains `both` (the lead holds under unit weights and the scattered outliers also reproduce one), which licenses G.1–G.3b with the outlier pairs as their own G.3 class.
+
 Amending any D-decision requires a dated note in this change (and a matching roadmap edit), before the affected milestone change merges — the same anti-scope-creep discipline as `phase6-tracking` Decision 4, `phase7-tracking` Decision A and `phase8-tracking` Decision A.
 
 ### Decision B: Execution-protocol standards (inherited, non-optional)
@@ -85,6 +87,8 @@ What was verified: each item was fetched and read, and the version notes (Lee 20
 | Registration | Band | Notes |
 |---|---|---|
 | G.0(a) the Emmons anchor pilot (D23) | 9801–9816 | 64 runs: wild type and gap-only null, learning and frozen |
+| G.0 two-seed smokes for the new levels | 9851–9852 | execution checks only, discarded — *added 2026-10-16 by `add-gap-operating-point`* |
+| G.0 gate pilot for the deciding levels | 9861–9868 | 64 runs: the `unit` arms and the scattered null beside the count wild type — *added 2026-10-17 by `add-gap-operating-point`* |
 | G.0(c)–(g) the operating-point arms | 2401–2464 | the 16- and 32-seed arms take the first 16 or 32 of the band |
 | G.1 + G.2, one panel | 2501–2564 | 64 seeds, each arm learning and frozen |
 | G.3 the class map | 2601–2664 | 48–64 seeds; frozen floors for the new wirings in an 8-seed preflight on 9821–9828 |
