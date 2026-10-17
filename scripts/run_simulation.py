@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from quantumnematode.brain.arch import Brain
     from quantumnematode.validation.chemotaxis import ChemotaxisMetrics
 
 from quantumnematode.agent import (
@@ -23,6 +24,7 @@ from quantumnematode.agent import (
     SatietyConfig,
 )
 from quantumnematode.brain.arch._registry import get_registration
+from quantumnematode.brain.arch._telemetry import UpdateTelemetry
 from quantumnematode.brain.arch.dtypes import (
     DEFAULT_BRAIN_TYPE,
     DEFAULT_QUBITS,
@@ -297,13 +299,67 @@ def parse_arguments() -> argparse.Namespace:
             "mean and probability) to this path. Single-agent runs only."
         ),
     )
+    parser.add_argument(
+        "--update-telemetry",
+        action="store_true",
+        help=(
+            "Write one JSON line per PPO update to exports/<session>/telemetry/updates.jsonl: "
+            "advantages, KL, clip fraction, gradient and weight norms, saturation, rank. Read-only: "
+            "the run is identical with it off. PPO brains only (MLP-PPO, connectome PPO)."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-every",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Also save weights every N episodes to exports/<session>/weights/epNNNNN.pt.",
+    )
 
     return parser.parse_args()
+
+
+def _attach_update_telemetry(brain: object, session_id: str) -> UpdateTelemetry:
+    """Attach per-update telemetry to a PPO brain, or exit naming why it cannot be."""
+    attach = getattr(brain, "set_update_telemetry", None)
+    if not callable(attach):
+        print(
+            f"error: --update-telemetry reads PPO updates; {type(brain).__name__} has none to read",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+    telemetry = UpdateTelemetry(Path.cwd() / "exports" / session_id / "telemetry" / "updates.jsonl")
+    try:
+        attach(telemetry)
+    except (AttributeError, ValueError) as exc:
+        print(f"error: --update-telemetry: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
+    logger.info("Writing update telemetry to %s", telemetry.path)
+    return telemetry
+
+
+def _save_checkpoint(brain: Brain, session_id: str, run_num: int, every: int | None) -> None:
+    """Save the weights after episode ``run_num`` when it falls on the checkpoint schedule."""
+    if every is None or run_num % every != 0:
+        return
+    path = Path.cwd() / "exports" / session_id / "weights" / f"ep{run_num:05d}.pt"
+    try:
+        save_weights(brain, path)
+    except Exception:
+        # A missing scheduled checkpoint would leave a hole the analysis cannot see, so stop.
+        logger.exception("Failed to save checkpoint %s", path)
+        raise
 
 
 def main() -> None:  # noqa: C901, PLR0912, PLR0915
     """Run the Quantum Nematode simulation."""
     args = parse_arguments()
+    if args.checkpoint_every is not None and args.checkpoint_every <= 0:
+        print(
+            f"error: --checkpoint-every must be a positive episode count, got {args.checkpoint_every}",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
 
     config_file = args.config
     manyworlds_mode = args.manyworlds
@@ -537,6 +593,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             unsupported_flags.append("--track-experiment")
         if args.validate_chemotaxis:
             unsupported_flags.append("--validate-chemotaxis")
+        if args.update_telemetry or args.checkpoint_every is not None:
+            unsupported_flags.append("--update-telemetry/--checkpoint-every")
         if sensing_config.capture_behaviour:
             # The single-agent capture path is not wired through the multi-agent runner (each
             # agent would accumulate an un-emitted behaviour list); reject rather than leak.
@@ -740,6 +798,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 "weights": None if load_weights_path is None else str(load_weights_path),
             },
         )
+    telemetry = _attach_update_telemetry(brain, session_id) if args.update_telemetry else None
     rollout_recorder: RolloutRecorder | None = None
     if args.record_rollouts:
         if args.manyworlds:
@@ -831,6 +890,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             logger.debug(f"Run {run_num} using derived seed: {run_seed}")
 
             logger.info(f"Starting run {run_num} of {runs}")
+            if telemetry is not None:
+                telemetry.episode = run_num
             if agent.frame_recorder is not None:
                 agent.frame_recorder.run = run_num
             if agent.replay_recorder is not None:
@@ -1103,6 +1164,7 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
                 foods_collected=foods_collected_this_run or 0,
                 distance_efficiencies=agent._episode_tracker.distance_efficiencies.copy(),
             )
+            _save_checkpoint(brain, session_id, run_num, args.checkpoint_every)
 
             if run_num < runs:
                 # Derive seed for next run and update environment before reset
@@ -1140,6 +1202,8 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
         # Ensure incremental writers are always closed (safe to call twice)
         if rollout_recorder is not None:
             rollout_recorder.close()
+        if telemetry is not None:
+            telemetry.close()
         if not path_csv_file.closed:
             path_csv_file.close()
         if not sim_results_csv_file.closed:

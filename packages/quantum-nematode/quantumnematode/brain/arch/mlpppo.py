@@ -38,6 +38,7 @@ import torch
 from torch import nn, optim
 
 if TYPE_CHECKING:
+    from quantumnematode.brain.arch._telemetry import UpdateTelemetry
     from quantumnematode.brain.weights import WeightComponent
     from quantumnematode.initializers._initializer import ParameterInitializer
 
@@ -45,6 +46,7 @@ from pydantic import field_validator, model_validator
 
 from quantumnematode.brain.actions import DEFAULT_ACTIONS, Action, ActionData
 from quantumnematode.brain.arch import BrainData, BrainParams, ClassicalBrain
+from quantumnematode.brain.arch import _telemetry as tm
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.brain.arch._mlp_topology import MLPTopology
 from quantumnematode.brain.arch._plasticity_config import (
@@ -287,6 +289,8 @@ class MLPPPOBrain(ClassicalBrain):
 
         # Store LR scheduling config
         self._init_lr_schedule(config)
+        # Per-update telemetry, attached by the runner; None writes nothing.
+        self._telemetry: UpdateTelemetry | None = None
 
         # Build networks
         self._activation = config.activation
@@ -925,10 +929,19 @@ class MLPPPOBrain(ClassicalBrain):
         num_updates = 0
 
         update_log_stds: list[torch.Tensor] = []
+        record = tm.record_for(
+            self._telemetry,
+            returns=returns,
+            raw_advantages=advantages,
+            old_values=self.buffer.values,
+            clip_epsilon=self.clip_epsilon,
+            max_grad_norm=self.max_grad_norm,
+        )
         for _ in range(self.num_epochs):
             # Final-epoch semantics: the recorded monitor batch reflects the
             # near-final weights of this update, not stale earlier epochs.
             update_log_stds.clear()
+            record.begin_epoch()
             for batch in self.buffer.get_minibatches(self.num_minibatches, returns, advantages):
                 gated_states = self._apply_torch_gating(batch["states"])
                 values = self.critic(gated_states).squeeze(-1)
@@ -937,7 +950,7 @@ class MLPPPOBrain(ClassicalBrain):
                 # discrete (Categorical) or continuous (tanh-Gaussian, re-scoring the
                 # stored pre-squash samples). Clipped surrogate is shared.
                 if self.continuous:
-                    mean = self.actor(gated_states)
+                    mean = head_out = self.actor(gated_states)
                     log_std_b = (
                         self.log_std_head(gated_states)
                         if self._state_dependent_std
@@ -953,7 +966,7 @@ class MLPPPOBrain(ClassicalBrain):
                         self._action_high,
                     )
                 else:
-                    logits = self.actor(gated_states)
+                    logits = head_out = self.actor(gated_states)
                     new_log_probs, entropy = categorical_evaluate_torch(logits, batch["actions"])
                 policy_loss = ppo_clip_policy_loss(
                     new_log_probs,
@@ -970,8 +983,24 @@ class MLPPPOBrain(ClassicalBrain):
                 if self._feature_gating:
                     all_params.append(self.gate_weights)
                 all_params.extend(self._std_params)
-                nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
+                record.read_grads(self._actor_side_params(), self.critic.parameters())
+                # The features the heads read, before the step, as the update's loss saw them.
+                features = (
+                    self._head_features(gated_states)
+                    if self._telemetry is not None
+                    else gated_states
+                )
+                total_norm = nn.utils.clip_grad_norm_(all_params, self.max_grad_norm)
                 self.optimizer.step()
+                record.minibatch(
+                    new_log_probs=new_log_probs,
+                    old_log_probs=batch["old_log_probs"],
+                    head_out=head_out,
+                    features=features,
+                    entropy=entropy.item(),
+                    value_loss=value_loss.item(),
+                    grad_total=total_norm.item(),
+                )
 
                 total_policy_loss += policy_loss.item()
                 total_value_loss += value_loss.item()
@@ -979,6 +1008,7 @@ class MLPPPOBrain(ClassicalBrain):
                 num_updates += 1
 
         record_clamped_log_std(self.history_data, update_log_stds)
+        self._write_telemetry(record, update_log_stds)
 
         if num_updates > 0:
             self.latest_data.loss = total_policy_loss / num_updates
@@ -987,6 +1017,58 @@ class MLPPPOBrain(ClassicalBrain):
                 f"value_loss={total_value_loss / num_updates:.4f}, "
                 f"entropy={total_entropy_loss / num_updates:.4f}",
             )
+
+    def set_update_telemetry(self, telemetry: UpdateTelemetry) -> None:
+        """Write one telemetry line per PPO update; refused under a rule that makes none."""
+        if not self._uses_ppo:
+            msg = "Update telemetry reads PPO updates; this brain runs a plastic rule."
+            raise ValueError(msg)
+        self._telemetry = telemetry
+
+    def _actor_side_params(self) -> list[nn.Parameter]:
+        """Every parameter the optimiser steps that is not the critic's."""
+        params = list(self.actor.parameters())
+        if self._feature_gating:
+            params.append(self.gate_weights)
+        return params + list(self._std_params)
+
+    def _telemetry_modules(self) -> dict[str, nn.Module | nn.Parameter]:
+        """Return every learnable module and free parameter, the critic included, by name."""
+        modules: dict[str, nn.Module | nn.Parameter] = {"actor": self.actor, "critic": self.critic}
+        if self._feature_gating:
+            modules["gate_weights"] = self.gate_weights
+        if hasattr(self, "log_std_head"):
+            modules["log_std_head"] = self.log_std_head
+        elif isinstance(getattr(self, "log_std", None), nn.Parameter):
+            modules["log_std"] = self.log_std
+        return modules
+
+    def _head_features(self, gated_states: torch.Tensor) -> torch.Tensor:
+        """Return the actor's last hidden layer: the features its output layer reads."""
+        with torch.no_grad():
+            return self.actor[:-1](gated_states)
+
+    def _write_telemetry(
+        self,
+        record: tm.UpdateRecord,
+        update_log_stds: list[torch.Tensor],
+    ) -> None:
+        """Write the update's telemetry line, if telemetry is on."""
+        if self._telemetry is None:
+            return
+        log_std = (
+            torch.cat([t.reshape(-1) for t in update_log_stds])
+            if update_log_stds
+            else getattr(self, "log_std", None)
+        )
+        self._telemetry.write(
+            record.finish(
+                log_std=log_std if self.continuous else None,
+                norms=tm.weight_norms(self._telemetry_modules()),
+                activation=self._activation,
+                continuous=self.continuous,
+            ),
+        )
 
     def update_memory(self, reward: float | None = None) -> None:
         """No-op for MLPPPOBrain."""

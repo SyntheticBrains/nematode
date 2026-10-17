@@ -1,0 +1,548 @@
+{
+  "connectome_panel_092": {
+    "gap_only_null": {
+      "collapsed": 6,
+      "n": 32,
+      "rule": "092 blocks"
+    },
+    "wild_type": {
+      "collapsed": 2,
+      "n": 32,
+      "rule": "092 blocks"
+    }
+  },
+  "connectome_reruns_selected": {
+    "collapsed": 8,
+    "n": 16,
+    "note": "the 16 re-runs were chosen half on collapse, so this is a check on the definition against 092's rule, not an incidence",
+    "rate": 0.5,
+    "wilson_95": [
+      0.27999563610326017,
+      0.7200043638967398
+    ]
+  },
+  "mlp": {
+    "definition": {
+      "fraction": 0.5,
+      "level_window": 100,
+      "onset": "the first fall not recovered before the horizon",
+      "peak_window": 200,
+      "persistence": 300,
+      "recovery": 0.8
+    },
+    "incidence": {
+      "collapsed": 0,
+      "n": 8,
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.32440756488388023
+      ]
+    },
+    "kaplan_meier": {
+      "median": null,
+      "n": 8,
+      "steps": []
+    },
+    "rule_092_incidence": 0,
+    "runs": {
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9721": {
+        "auc_to_3000": 0.32466666666666666,
+        "auc_to_horizon": 0.5565,
+        "collapsed": false,
+        "dips": 0,
+        "final": 0.97,
+        "first_fall": null,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.93,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.864,
+          "never_learned": false,
+          "peak": 0.864
+        }
+      },
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9722": {
+        "auc_to_3000": 0.47733333333333333,
+        "auc_to_horizon": 0.683,
+        "collapsed": false,
+        "dips": 0,
+        "final": 0.89,
+        "first_fall": null,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.955,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.878,
+          "never_learned": false,
+          "peak": 0.924
+        }
+      },
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9723": {
+        "auc_to_3000": 0.49633333333333335,
+        "auc_to_horizon": 0.6265,
+        "collapsed": false,
+        "dips": 0,
+        "final": 0.95,
+        "first_fall": null,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.965,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.92,
+          "never_learned": false,
+          "peak": 0.92
+        }
+      },
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9724": {
+        "auc_to_3000": 0.3263333333333333,
+        "auc_to_horizon": 0.555,
+        "collapsed": false,
+        "dips": 0,
+        "final": 0.92,
+        "first_fall": null,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.945,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.922,
+          "never_learned": false,
+          "peak": 0.922
+        }
+      },
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9725": {
+        "auc_to_3000": 0.6096666666666667,
+        "auc_to_horizon": 0.7585,
+        "collapsed": false,
+        "dips": 0,
+        "final": 0.82,
+        "first_fall": null,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.99,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.928,
+          "never_learned": false,
+          "peak": 0.972
+        }
+      },
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9726": {
+        "auc_to_3000": 0.378,
+        "auc_to_horizon": 0.6093333333333333,
+        "collapsed": false,
+        "dips": 0,
+        "final": 0.76,
+        "first_fall": null,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.96,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.816,
+          "never_learned": false,
+          "peak": 0.9
+        }
+      },
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9727": {
+        "auc_to_3000": 0.5943333333333334,
+        "auc_to_horizon": 0.6963333333333334,
+        "collapsed": false,
+        "dips": 0,
+        "final": 0.74,
+        "first_fall": null,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.965,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.744,
+          "never_learned": false,
+          "peak": 0.898
+        }
+      },
+      "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9728": {
+        "auc_to_3000": 0.24733333333333332,
+        "auc_to_horizon": 0.3998333333333333,
+        "collapsed": false,
+        "dips": 1,
+        "final": 0.77,
+        "first_fall": 4331,
+        "horizon": 6000,
+        "onset": null,
+        "peak": 0.835,
+        "peak_at_onset": null,
+        "rule_092": {
+          "collapsed": false,
+          "last": 0.632,
+          "never_learned": false,
+          "peak": 0.726
+        }
+      }
+    },
+    "sensitivity": [
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 100,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": true,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 200,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.4,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.5,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 200,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 300,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      },
+      {
+        "collapsed": 0,
+        "fraction": 0.6,
+        "n": 8,
+        "peak_window": 400,
+        "persistence": 500,
+        "rate": 0.0,
+        "registered": false,
+        "wilson_95": [
+          0.0,
+          0.32440756488388023
+        ]
+      }
+    ]
+  }
+}

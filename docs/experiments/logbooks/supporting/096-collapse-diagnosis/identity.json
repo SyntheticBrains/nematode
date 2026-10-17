@@ -1,0 +1,127 @@
+{
+  "all_identical": true,
+  "compared": "final-quarter plateau success %, to the committed CSV's printed precision",
+  "runs": {
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2304": {
+      "committed": 1.333333,
+      "identical": true,
+      "rerun": 1.333333
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2305": {
+      "committed": 45.8,
+      "identical": true,
+      "rerun": 45.8
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2307": {
+      "committed": 53.333333,
+      "identical": true,
+      "rerun": 53.333333
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2308": {
+      "committed": 22.6,
+      "identical": true,
+      "rerun": 22.6
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2313": {
+      "committed": 64.533333,
+      "identical": true,
+      "rerun": 64.533333
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2319": {
+      "committed": 0.0,
+      "identical": true,
+      "rerun": 0.0
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2328": {
+      "committed": 81.8,
+      "identical": true,
+      "rerun": 81.8
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2330": {
+      "committed": 0.066667,
+      "identical": true,
+      "rerun": 0.066667
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2304": {
+      "committed": 88.8,
+      "identical": true,
+      "rerun": 88.8
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2305": {
+      "committed": 61.866667,
+      "identical": true,
+      "rerun": 61.866667
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2307": {
+      "committed": 81.466667,
+      "identical": true,
+      "rerun": 81.466667
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2308": {
+      "committed": 84.066667,
+      "identical": true,
+      "rerun": 84.066667
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2313": {
+      "committed": 45.2,
+      "identical": true,
+      "rerun": 45.2
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2319": {
+      "committed": 90.666667,
+      "identical": true,
+      "rerun": 90.666667
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2328": {
+      "committed": 54.866667,
+      "identical": true,
+      "rerun": 54.866667
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2330": {
+      "committed": 88.933333,
+      "identical": true,
+      "rerun": 88.933333
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9721": {
+      "committed": 83.733,
+      "identical": true,
+      "rerun": 83.733
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9722": {
+      "committed": 90.2,
+      "identical": true,
+      "rerun": 90.2
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9723": {
+      "committed": 83.133,
+      "identical": true,
+      "rerun": 83.133
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9724": {
+      "committed": 84.467,
+      "identical": true,
+      "rerun": 84.467
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9725": {
+      "committed": 94.6,
+      "identical": true,
+      "rerun": 94.6
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9726": {
+      "committed": 81.4,
+      "identical": true,
+      "rerun": 81.4
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9727": {
+      "committed": 78.0,
+      "identical": true,
+      "rerun": 78.0
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9728": {
+      "committed": 57.4,
+      "identical": true,
+      "rerun": 57.4
+    }
+  },
+  "uncompared": "every other field: the step-level logs are archived off-repo"
+}

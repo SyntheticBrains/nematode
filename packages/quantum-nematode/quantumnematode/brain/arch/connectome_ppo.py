@@ -86,6 +86,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from quantumnematode.brain.arch._node_noise_schedule import NodeNoiseSchedule
+    from quantumnematode.brain.arch._telemetry import UpdateTelemetry
     from quantumnematode.connectome.model import Connectome
     from quantumnematode.learning_rules.ppo import ConnectomePPORule
 
@@ -1246,6 +1247,11 @@ class ConnectomeTopology(nn.Module):
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
+        # Set by update telemetry: the batched settling then keeps its second-to-last iterate,
+        # detached, so the settled state's distance from a fixed point can be read. Off, nothing
+        # is kept; on, the forward computes exactly what it computes off.
+        self.capture_penultimate = False
+        self.penultimate: torch.Tensor | None = None
         self.body_drive = body_drive
         self.freeze_wiring = freeze_wiring
         self.input_gain = input_gain
@@ -3056,11 +3062,15 @@ class ConnectomeTopology(nn.Module):
         chem_mat = self.w_chem * self.m_chem if self.enforce_strict_mask else self.w_chem
         gap_mat = self.gap_matrix()
         held = self._held_current(modulators)
+        previous = h
         for _ in range(self.forward_pass_depth):
+            previous = h
             preact = h @ chem_mat + h @ gap_mat
             if held is not None:
                 preact = preact + held
             h = torch.tanh(preact)
+        if self.capture_penultimate:
+            self.penultimate = previous.detach()
 
         if self.body_drive:
             return self.body_drive_mean(h), h
@@ -3109,6 +3119,8 @@ class ConnectomeTopology(nn.Module):
         ``(logits, rates)`` of shapes ``(C, L, A)`` and ``(C, L, N)``.
         """
         chunks, length = food_features.shape[:2]
+        # Leaky dynamics has no settling iterate to keep.
+        self.penultimate = None
 
         def flat(x: torch.Tensor | None) -> torch.Tensor | None:
             return None if x is None else x.reshape(chunks * length, *x.shape[2:])
@@ -3552,6 +3564,10 @@ class ConnectomePPOBrain(ClassicalBrain):
             )
             raise AttributeError(msg)
         return self._ppo_rule
+
+    def set_update_telemetry(self, telemetry: UpdateTelemetry) -> None:
+        """Write one telemetry line per PPO update; refused under a rule that makes none."""
+        self._require_ppo_rule("update telemetry").attach_telemetry(telemetry)
 
     @property
     def critic(self) -> nn.Linear:
