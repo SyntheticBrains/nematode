@@ -32,7 +32,7 @@ against 092's committed 2 of 32 for the wild type and 6 of 32 for the gap-only n
   MLP's from 1.1 to 2.0, on runs that collapse and runs that do not.
 - **Around onset**, the collapsed runs' critic-to-actor gradient ratio is lower than their twins' on 8
   of 8 seeds (median 1.0 against 1.8), and they show more transient gradient-then-KL spikes in the
-  window on 7 of 8 (median 155 against 112). The first is read inside the fall itself, so it may be a
+  window on 7 of 8 (median 164 against 112). The first is read inside the fall itself, so it may be a
   consequence; neither is a registered cause.
 
 **Date**: 2026-10-17.
@@ -132,7 +132,9 @@ the amended definition, with Wilson intervals, Kaplan–Meier time to collapse, 
 **Limits.** Eight collapsed runs for six causes; one cell, the body at target 20, on Cook 2019 and the
 count-weighted gap model that Logbook 095 found carries an artefact. The intact envelope is eight runs,
 most of them the other wiring (six wild type, two gap-only). The context around onset is read inside the
-fall.
+fall. The telemetry these runs wrote counted the `|u| > 2` fraction over action elements rather than over
+steps, as the spec defines it; mean-head saturation was read on that element fraction, which is lower
+on a many-output body drive. The telemetry now counts steps.
 
 ## Data
 

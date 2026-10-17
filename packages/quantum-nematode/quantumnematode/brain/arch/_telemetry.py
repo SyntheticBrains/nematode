@@ -240,7 +240,11 @@ class UpdateRecord:
         if continuous:
             mean = torch.cat(self._final["mean"]).detach().double()
             out["action_mean_abs"] = float(mean.abs().mean())
-            out["action_mean_large_fraction"] = float((mean.abs() > LARGE_MEAN).double().mean())
+            # A step counts once, however many of its action dimensions are large.
+            large = (
+                mean.abs().amax(dim=-1) > LARGE_MEAN if mean.ndim > 1 else mean.abs() > LARGE_MEAN
+            )
+            out["action_mean_large_fraction"] = float(large.double().mean())
         if self._final["residual"]:
             residual = torch.cat(self._final["residual"]).double()
             out["settling_residual"] = float(residual.mean())
