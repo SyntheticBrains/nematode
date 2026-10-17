@@ -96,5 +96,7 @@ paths agree; every refusal fires, by the validator and again at build (`model_co
 
 ## Open Questions
 
-- The point-worm contrast's minimum (Decision E): two-thirds of G.0's count-model anchor (0.0894), or of
-  Logbook 082's committed effect (0.0577). Fixed in its launch record, before it runs.
+None. *(Resolved 2026-10-17 by the maintainer: the point-worm contrast's minimum is **0.0577**,
+two-thirds of Logbook 082's committed thermal gap effect, the project's established minimum for the gap
+question; at 64 seeds the detectable effect is about 0.033–0.042, well under it. It is fixed in that
+contrast's launch record before it runs.)*
