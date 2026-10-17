@@ -1,7 +1,9 @@
 # training-telemetry Specification
 
 ## Purpose
-TBD - created by archiving change add-collapse-instrument. Update Purpose after archive.
+
+Per-update PPO telemetry and periodic weight checkpoints: read-only instruments that record what each
+update holds, so a long run's learning dynamics can be examined after the fact without changing the run.
 
 ## Requirements
 

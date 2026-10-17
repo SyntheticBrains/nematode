@@ -128,3 +128,19 @@ def test_a_non_positive_interval_is_refused(tmp_path: Path) -> None:
     assert result.returncode == 2
     assert "--checkpoint-every" in result.stderr
     assert not (tmp_path / "exports").exists()
+
+
+def test_a_failed_checkpoint_stops_the_run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A scheduled checkpoint that cannot be written raises rather than leaving a silent gap."""
+    sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+    import run_simulation  # pyright: ignore[reportMissingImports]
+
+    def fail(*_: object, **__: object) -> None:
+        msg = "disk full"
+        raise OSError(msg)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run_simulation, "save_weights", fail)
+    run_simulation._save_checkpoint(object(), "session", 3, 2)  # off schedule: nothing to save
+    with pytest.raises(OSError, match="disk full"):
+        run_simulation._save_checkpoint(object(), "session", 4, 2)

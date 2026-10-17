@@ -153,7 +153,8 @@ class TestStatistics:
         assert line["critic_grad"] == 0.0
         assert line["clipped_minibatch_fraction"] == pytest.approx(0.5)
         assert line["action_mean_abs"] == pytest.approx(5 / 4)
-        assert line["action_mean_large_fraction"] == pytest.approx(1 / 4)
+        # Per step: [3, 0] and [1, -1] in each of two minibatches, so two of four steps are large.
+        assert line["action_mean_large_fraction"] == pytest.approx(1 / 2)
         assert line["log_std"] == pytest.approx(-1.0)
         assert line["srank"] == 2
         assert line["srank_rows"] == 4
@@ -322,3 +323,16 @@ def test_a_plastic_rule_refuses_telemetry(tmp_path: Path) -> None:
     brain = ConnectomePPOBrain(config=config, device=DeviceType.CPU)
     with pytest.raises(AttributeError, match="update telemetry"):
         brain.set_update_telemetry(tm.UpdateTelemetry(tmp_path / "u.jsonl"))
+
+
+def test_the_mlp_records_every_non_critic_parameter(tmp_path: Path) -> None:
+    """The MLP's weight norms carry its free log_std beside the actor and the critic."""
+    brain = _mlp()
+    sink = tm.UpdateTelemetry(tmp_path / "updates.jsonl")
+    brain.set_update_telemetry(sink)
+    _drive(brain)
+    sink.close()
+    norms = json.loads((tmp_path / "updates.jsonl").read_text().splitlines()[0])["weight_norms"]
+    assert "log_std" in norms
+    assert any(k.startswith("actor.") for k in norms)
+    assert any(k.startswith("critic.") for k in norms)

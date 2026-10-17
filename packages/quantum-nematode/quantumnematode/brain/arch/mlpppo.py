@@ -1032,6 +1032,17 @@ class MLPPPOBrain(ClassicalBrain):
             params.append(self.gate_weights)
         return params + list(self._std_params)
 
+    def _telemetry_modules(self) -> dict[str, nn.Module | nn.Parameter]:
+        """Return every learnable module and free parameter, the critic included, by name."""
+        modules: dict[str, nn.Module | nn.Parameter] = {"actor": self.actor, "critic": self.critic}
+        if self._feature_gating:
+            modules["gate_weights"] = self.gate_weights
+        if hasattr(self, "log_std_head"):
+            modules["log_std_head"] = self.log_std_head
+        elif isinstance(getattr(self, "log_std", None), nn.Parameter):
+            modules["log_std"] = self.log_std
+        return modules
+
     def _head_features(self, gated_states: torch.Tensor) -> torch.Tensor:
         """Return the actor's last hidden layer: the features its output layer reads."""
         with torch.no_grad():
@@ -1053,7 +1064,7 @@ class MLPPPOBrain(ClassicalBrain):
         self._telemetry.write(
             record.finish(
                 log_std=log_std if self.continuous else None,
-                norms=tm.weight_norms({"actor": self.actor, "critic": self.critic}),
+                norms=tm.weight_norms(self._telemetry_modules()),
                 activation=self._activation,
                 continuous=self.continuous,
             ),
