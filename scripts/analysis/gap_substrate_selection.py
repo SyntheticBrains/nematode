@@ -196,14 +196,33 @@ def probe(seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
 
 
 # ── The selection (Decision C) ───────────────────────────────────────────────────────────────
+def _ran_config(log: Path) -> str | None:
+    """The config file name a tracked run records on completion, or ``None`` if it records none."""
+    for raw in reversed(log.read_text(errors="replace").splitlines()):
+        line = raw.strip()
+        if line.startswith("Config:"):
+            return Path(line.removeprefix("Config:").strip()).name
+    return None
+
+
 def build_manifest(log_dirs: list[Path], path: Path, cell: str) -> Path:
-    """Write ``<arm> <level> <seed> <log>`` for one cell's runs that exited 0."""
+    """Write ``<arm> <level> <seed> <log>`` for one cell's runs that exited 0.
+
+    A log is named by the campaign runner from the config and seed it launched, and its ``.exit``
+    marker is written by the runner after the run ends. A run that exited 0 must also record, in its
+    own log, the config it ran under that name; one that does not is refused rather than scored.
+    """
     seen: dict[tuple[str, str, int], Path] = {}
     lines: list[str] = []
     for arm, level, seed, log in gp.evidence(levels(cell), log_dirs):
         status = log.with_suffix(".exit")
         if seed not in SEEDS or not status.is_file() or status.read_text().strip() != "0":
             continue
+        expected = f"{log.stem.rpartition('-seed')[0]}.yml"
+        ran = _ran_config(log)
+        if ran != expected:
+            msg = f"{log} exited 0 but records config {ran!r}, not {expected!r}"
+            raise SelectionError(msg)
         prior = seen.setdefault((arm, level, seed), log)
         if prior != log:
             msg = f"{arm} {level} seed {seed} has two runs: {prior} and {log}"

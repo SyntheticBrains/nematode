@@ -125,13 +125,15 @@ class TestManifest:
         *,
         skip: str | None = None,
         fail: str | None = None,
+        mislabel: str | None = None,
     ) -> None:
         for stem in set(gen.ARMS[cell].values()):
             for seed in gs.SEEDS:
                 name = f"{stem}-seed{seed}"
                 if name == skip:
                     continue
-                (where / f"{name}.log").write_text("")
+                ran = "other.yml" if name == mislabel else f"{stem}.yml"
+                (where / f"{name}.log").write_text(f"  Config: /session/{ran}\n")
                 (where / f"{name}.exit").write_text("1\n" if name == fail else "0\n")
 
     def test_a_complete_cell_passes(self, tmp_path: Path) -> None:
@@ -145,3 +147,16 @@ class TestManifest:
         manifest = gs.build_manifest([tmp_path], tmp_path / "m.txt", "thermal")
         with pytest.raises(gs.SelectionError, match="9871"):
             gs.require_complete(manifest, "thermal")
+
+    def test_a_log_recording_another_config_is_refused(self, tmp_path: Path) -> None:
+        mlp = gen.ARMS["thermal"]["mlp_learn"]
+        self._write(tmp_path, "thermal", mislabel=f"{mlp}-seed9871")
+        with pytest.raises(gs.SelectionError, match="other.yml"):
+            gs.build_manifest([tmp_path], tmp_path / "m.txt", "thermal")
+
+    def test_a_log_recording_no_config_is_refused(self, tmp_path: Path) -> None:
+        self._write(tmp_path, "thermal")
+        mlp = gen.ARMS["thermal"]["mlp_learn"]
+        (tmp_path / f"{mlp}-seed9871.log").write_text("")
+        with pytest.raises(gs.SelectionError, match="None"):
+            gs.build_manifest([tmp_path], tmp_path / "m.txt", "thermal")
