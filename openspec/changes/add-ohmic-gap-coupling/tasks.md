@@ -16,10 +16,11 @@ gated pilot; the point-worm contrast now, at a minimum of 0.0577; 092's body con
 - [x] 2. **Configs** through `generate_gap_substrate_configs.py`: on the thermal cell at target 35 and on
   hard350, on Emmons 2024, each model's wild type and gap-only null learning and frozen, the additive-count
   wild type learning, the MLP control learning and frozen (frozen floors derived); loader and build tests.
-- [ ] 3. **The operating-point probe** (design Decision D), at no run cost, before any pilot run: the
+- [x] 3. **The operating-point probe** (design Decision D), at no run cost, before any pilot run: the
   saturated fraction, the action-mean spread and `M⁻¹`'s self-weights for the additive, log and ohmic wild
-  types on both cells; the quarter-spread stop rule applied.
-- [ ] 4. **Analysis** `scripts/analysis/gap_substrate_selection.py`: the cells' readability, each model's
+  types on both cells; the quarter-spread stop rule applied. *(It fired; the maintainer amended Decision D:
+  the reference is the gap-off brain, and the ohmic scale is calibrated to ×0.03 on the pilot's seeds.)*
+- [x] 4. **Analysis** `scripts/analysis/gap_substrate_selection.py`: the cells' readability, each model's
   eligibility per cell, the shown-slower test against each cell's margin and the selection (design
   Decision C), never reading the wiring gap; the additive arm described; tests on synthetic manifests
   covering every branch of the rule.

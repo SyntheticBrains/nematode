@@ -1,0 +1,118 @@
+{
+  "cells": {
+    "hard350": {
+      "additive": {
+        "action_spread": 0.23714911472052336,
+        "saturated": 0.05805373052862706
+      },
+      "floor": 0.012451752729248255,
+      "gap_off": {
+        "action_spread": 0.02490350545849651,
+        "saturated": 0.0
+      },
+      "log": {
+        "action_spread": 0.0410877721151337,
+        "saturated": 3.2336506592400838e-06
+      },
+      "ohmic": {
+        "0.001": {
+          "action_spread": 0.024464851012453437,
+          "saturated": 0.0
+        },
+        "0.003": {
+          "action_spread": 0.02366369334049523,
+          "saturated": 0.0
+        },
+        "0.01": {
+          "action_spread": 0.02124112448655069,
+          "saturated": 0.0
+        },
+        "0.03": {
+          "action_spread": 0.0161597331170924,
+          "saturated": 0.0
+        },
+        "0.1": {
+          "action_spread": 0.0077648628648603335,
+          "saturated": 0.0
+        },
+        "0.3": {
+          "action_spread": 0.0022275724077189807,
+          "saturated": 0.0
+        },
+        "1.0": {
+          "action_spread": 0.00031602605213265633,
+          "saturated": 0.0
+        }
+      }
+    },
+    "thermal": {
+      "additive": {
+        "action_spread": 0.2380675207823515,
+        "saturated": 0.05849027334443235
+      },
+      "floor": 0.012467560271034017,
+      "gap_off": {
+        "action_spread": 0.024935120542068034,
+        "saturated": 0.0
+      },
+      "log": {
+        "action_spread": 0.041210301918908954,
+        "saturated": 0.0
+      },
+      "ohmic": {
+        "0.001": {
+          "action_spread": 0.024495424993801862,
+          "saturated": 0.0
+        },
+        "0.003": {
+          "action_spread": 0.023692712478805333,
+          "saturated": 0.0
+        },
+        "0.01": {
+          "action_spread": 0.021266570081934333,
+          "saturated": 0.0
+        },
+        "0.03": {
+          "action_spread": 0.016178777033928782,
+          "saturated": 0.0
+        },
+        "0.1": {
+          "action_spread": 0.0077714990329695866,
+          "saturated": 0.0
+        },
+        "0.3": {
+          "action_spread": 0.0022274165148701286,
+          "saturated": 0.0
+        },
+        "1.0": {
+          "action_spread": 0.00031631703041057335,
+          "saturated": 0.0
+        }
+      }
+    }
+  },
+  "chosen_scale": 0.03,
+  "grid": [
+    1.0,
+    0.3,
+    0.1,
+    0.03,
+    0.01,
+    0.003,
+    0.001
+  ],
+  "launch": true,
+  "ohmic_self_weight_at_chosen": {
+    "AFDL": 0.9015316963195801,
+    "ALA": 0.28947335481643677,
+    "AVAL": 0.7305324673652649,
+    "AVBL": 0.7986776232719421,
+    "below_half": 0.016556291390728478,
+    "median": 0.9288815557956696
+  },
+  "reference_fraction": 0.5,
+  "seeds": [
+    9871,
+    9886
+  ]
+}

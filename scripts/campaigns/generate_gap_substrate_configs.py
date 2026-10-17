@@ -34,8 +34,12 @@ _MLP_H = "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_hard350_ppo_w64"
 
 _EMMONS: dict[str, Any] = {"connectome_source": "emmons_2024_hermaphrodite"}
 _GAP_ONLY: dict[str, Any] = {"wiring": "rewired_gap_junctions_only"}
+# The ohmic conductance scale, calibrated before any run on untrained brains (the largest scale on the
+# probe's grid keeping at least half the gap-off brain's action spread on both cells): at the built gap
+# matrix's own scale, ohmic coupling averages the input away.
+OHMIC_SCALE = 0.03
 MODELS: dict[str, dict[str, Any]] = {
-    "ohmic": {"gap_coupling": "ohmic"},
+    "ohmic": {"gap_coupling": "ohmic", "gap_weight_scale": OHMIC_SCALE},
     "log": {"gap_weight_mode": "log_count"},
 }
 WIRINGS: dict[str, dict[str, Any]] = {"wt": {}, "gaponly": _GAP_ONLY}

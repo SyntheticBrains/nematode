@@ -33,7 +33,8 @@ non-persistent buffer, as the leaky substrate's operator is; it is applied by on
 iteration (right-multiplied on a batch).
 
 **The conductances are the brain's gap matrix as built**: the counts divided by `sqrt(d_i d_j)`, with
-`gap_weight_mode` and `gap_weight_scale` applied. The form changes; the conductances do not. That is not the
+`gap_weight_mode` and `gap_weight_scale` applied. The form changes; at scale 1 the conductances do not,
+and the pilot's ohmic arms run at the scale Decision D calibrates. That is not the
 same as an unchanged operating point: 296 of 302 neurons share one gap component, so `M⁻¹` is dense, and on
 Emmons the median neuron keeps 33% of its own drive (AVA 9%, AVB 13%). Decision D measures that before any
 run. Rejected: the explicit diffusive form `tanh(W_chemᵀh − Lh + c)`, which is stiff at these
@@ -89,15 +90,28 @@ counts that gap is already known as description (+0.012 on 16 seeds, G.0(e)); on
 and stays unread until the registered contrast. The rule reads floors, saturation and the wild type's
 learning speed only, so the choice of model is not a choice of answer.
 
-### Decision D: The operating point, measured before the pilot
+### Decision D: The operating point, measured before the pilot, and the ohmic scale calibrated
 
 At no run cost, on untrained brains with `sign_scale_calibration.py`'s 64 fixed inputs and the pilot's
-seeds, for the additive-count, log-count and ohmic wild types on both cells: the saturated-unit fraction,
-the action mean's spread across the inputs (the sensor-to-action gain), and the fraction of each neuron's
-own drive `M⁻¹` keeps. Reported in the launch record before the pilot runs. **If ohmic's action spread is
-below a quarter of the additive model's** on either cell — the regime in which Logbook 080's first
-registration learned nothing — the pilot does not launch, and any input-gain recalibration is brought to
-the maintainer as a new, dated decision; it is never made inside this pilot.
+seeds, the saturated-unit fraction and the action mean's spread across the inputs (the sensor-to-action
+gain), on both cells.
+
+*As first registered*, the pilot launched only if ohmic's spread was at least a quarter of the additive
+count model's. **The probe stopped it** ([probe.json](../../../docs/experiments/logbooks/supporting/097-gap-substrate/probe.json)):
+at the built gap matrix's scale ohmic's spread is 0.0003 against the additive model's 0.24, on both cells.
+The probe also showed the yardstick was the artefact: every brain G.0 showed learns as well as the count
+model falls far below a quarter of its spread (log counts 0.035, unit weights 0.026, gap junctions off
+0.021, against plateaus of 67–71%), because the additive count model's large spread is its gap
+amplification.
+
+*Amended 2026-10-17 by the maintainer, before any pilot run*: the reference is the **gap-off brain**, a
+known learner (67% in G.0), and the ohmic conductance scale is **calibrated** on the same untrained
+brains, as Logbook 091 calibrated a weight scale: on the grid ×1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001,
+the largest scale whose spread is at least half the gap-off brain's on both cells. **It is ×0.03**
+(spread 0.0162 against a floor of 0.0125 on both cells; ×0.1 gives 0.0078). At ×0.03 the median neuron
+keeps 93% of its own drive and ALA, the most strongly coupled, 29%: strong pairs still couple, weak ones
+barely do. The pilot's ohmic arms run at that scale (`gap_weight_scale: 0.03`); the log arms are as
+registered. If no scale on the grid had passed, the pilot would not have launched.
 
 ### Decision E: Byte identity and the tests
 
