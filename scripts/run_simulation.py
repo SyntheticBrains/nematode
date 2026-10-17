@@ -346,7 +346,9 @@ def _save_checkpoint(brain: Brain, session_id: str, run_num: int, every: int | N
     try:
         save_weights(brain, path)
     except Exception:
+        # A missing scheduled checkpoint would leave a hole the analysis cannot see, so stop.
         logger.exception("Failed to save checkpoint %s", path)
+        raise
 
 
 def main() -> None:  # noqa: C901, PLR0912, PLR0915
