@@ -5,7 +5,7 @@ Phase 9 G.0-A (roadmap v4.5 § Phase 9; tracker `phase9-tracking` G.0-A), after 
 decisions of 2026-10-17: ohmic coupling in the settling map, selected against log-compressed counts in a
 gated pilot; the point-worm contrast now, at a minimum of 0.0577; 092's body contrast after M.1 reads out.
 
-- [ ] 1. **Brain option** `gap_coupling` (`additive` | `ohmic`): the operator `(I + L)⁻¹` built once from
+- [x] 1. **Brain option** `gap_coupling` (`additive` | `ohmic`): the operator `(I + L)⁻¹` built once from
   the gap matrix as a non-persistent buffer; the sensors equilibrated through it; both settling paths
   (single and batched); the modulator field's held current through it; the refusals (gap junctions off,
   `dynamics: leaky`, `plastic_gaps`, the plastic learning rules, node perturbation, activity traces,
