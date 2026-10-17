@@ -8,6 +8,7 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ### Added
 
+- **G.0: the gap-junction placement advantage is an artefact of the gap model's operating point** ([Logbook 095](docs/experiments/logbooks/095-gap-operating-point.md)). With every gap count set to 1 the wild type no longer leads the gap-only null (+0.003 against +0.104 with counts); the lead follows the gap scale. New brain options `gap_weight_mode` and `gap_weight_scale`, the wirings `rewired_gap_outliers_held` and `rewired_gap_outliers_scattered`, and `scripts/analysis/gap_operating_point.py`.
 - **M.1(a): late collapse leaves no registered signature before it falls** ([Logbook 096](docs/experiments/logbooks/096-collapse-diagnosis.md)). Re-running Logbook 092's eight late body collapses with telemetry, no registered cause separates them from their intact twins; the MLP control collapses on none of 8 seeds. New `run_simulation.py` flags `--update-telemetry` (one JSON line per PPO update, read-only) and `--checkpoint-every N`, and `scripts/analysis/collapse.py`, the collapse statistic every panel over 3,000 episodes now reports (D25, amended so the onset is the first fall a run does not recover from).
 
 ## [0.7.0] - 2026-10-14

@@ -1,0 +1,34 @@
+{
+  "launch": true,
+  "levels": {
+    "count": {
+      "n_scored": 16,
+      "n_seeds": 16,
+      "rn_floor": 0.0,
+      "rn_plateau": 49.125,
+      "status": "readable",
+      "wt_floor": 0.0,
+      "wt_plateau": 71.2
+    },
+    "outliers_scattered": {
+      "n_scored": 8,
+      "n_seeds": 8,
+      "rn_floor": 0.0,
+      "rn_plateau": 67.03333333333333,
+      "status": "readable",
+      "wt_floor": 0.0,
+      "wt_plateau": 62.88333333333333
+    },
+    "unit": {
+      "n_scored": 8,
+      "n_seeds": 8,
+      "rn_floor": 0.0,
+      "rn_plateau": 73.16666666666666,
+      "status": "readable",
+      "wt_floor": 0.0,
+      "wt_plateau": 74.45
+    }
+  },
+  "margin_points": 5.0,
+  "saturation_bar": 90.0
+}

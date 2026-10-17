@@ -24,6 +24,7 @@ in a single chemical-synapse hop.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
@@ -253,6 +254,18 @@ WeightPrior = Literal["random", "measured", "measured_signs", "measured_shuffled
 # Under "per_neuron_fanin" the null's remaining edges receive the wild type's uncovered draws rather
 # than their own, so every neuron carries its wild type's multiset under every prior; under
 # "edge_order" they keep their draw. "dense_mask" shares by edge identity and is refused.
+# What each gap pair contributes before the symmetric 1/sqrt(d_i d_j) scaling, d the binary gap
+# degree. "count" is the pair's electron-microscopy count; "unit" is 1 for every existing pair, so
+# placement alone is left; "log_count" is log1p(count), which keeps the ordering of the counts and
+# compresses their tail. Every option gives a positive weight to every existing pair, so the binary
+# degrees, and with them the normalisers, are the same under all three.
+GapWeightMode = Literal["count", "unit", "log_count"]
+_GAP_WEIGHT_MODES: frozenset[str] = frozenset({"count", "unit", "log_count"})
+# The two wirings that read ``gap_outlier_min_count``, and its default.
+_GAP_OUTLIER_WIRINGS: frozenset[str] = frozenset(
+    {"rewired_gap_outliers_held", "rewired_gap_outliers_scattered"},
+)
+_DEFAULT_GAP_OUTLIER_MIN_COUNT = 20
 # The priors that read ``measured_weight_scale``. Under the others it would be accepted and ignored.
 _SCALED_PRIORS: frozenset[str] = frozenset({"measured", "measured_shuffled"})
 # Tag appended to the run seed for the shuffle's generator, so its stream is not the draw's.
@@ -312,6 +325,12 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # "rewired_gap_junctions_only" holds the chemical graph, autapses included, exactly and rewires
     # only the gap junctions, their counts travelling with their edges, so it differs from the
     # wild type in gap placement and each neuron's total gap strength, and nothing else.
+    # "rewired_gap_outliers_held" and "rewired_gap_outliers_scattered" also hold the chemical graph
+    # exactly and narrow which gap pairs move, by the outliers -- the pairs whose count is at least
+    # ``gap_outlier_min_count``. "held" rewires every other pair and keeps each outlier on its pair
+    # with its count; "scattered" moves each outlier once, swapping it with one other pair, so its
+    # count lands on a new pair and only the pair it displaced moves with it. Both keep every
+    # neuron's gap degree. Together they separate the few high-count pairs from the many small ones.
     # Default wild_type is byte-identical to the pre-change brain.
     wiring: Literal[
         "wild_type",
@@ -320,11 +339,17 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
         "rewired_gap_junctions_held",
         "rewired_boundary_held",
         "rewired_gap_junctions_only",
+        "rewired_gap_outliers_held",
+        "rewired_gap_outliers_scattered",
     ] = "wild_type"
     # Seed for the rewiring draw (used only under a rewired wiring). None -> derive from the run
     # seed, so each paired run draws its own null topology from a dedicated RNG while the
     # weight-init RNG stream is left untouched (matched init vs wild-type for the same seed).
     rewire_seed: int | None = None
+
+    # The gap pairs a gap-outlier wiring narrows by: those whose count is at least this. Read only
+    # by the two gap-outlier wirings, and refused away from its default under any other.
+    gap_outlier_min_count: int = Field(default=_DEFAULT_GAP_OUTLIER_MIN_COUNT, gt=0)
 
     # Chemical-weight initialisation. "degree_scaled" draws every incoming edge of a
     # neuron from N(0, 1/sqrt(k)), k its chemical in-degree, so the synapse counts in
@@ -333,7 +358,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # n / sqrt(sum n^2) over the neuron's incoming counts: magnitudes proportional to
     # count, signs still random, and the expected squared incoming norm 1 under both
     # settings (so per-unit homeostatic targets are unchanged). Chemical weights only;
-    # gap junctions already carry their counts through the fan-in normalisation.
+    # gap junctions carry their counts, or not, by gap_weight_mode.
     # Default degree_scaled is byte-identical to the pre-option brain.
     weight_init: Literal["degree_scaled", "count_scaled"] = "degree_scaled"
     # Structure of the chemical-weight draw; see WeightDraw above for what each mode shares between
@@ -370,6 +395,12 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
     # enforce.
     enforce_synapse_signs: bool = False
     enable_gap_junctions: bool = True
+    # What each gap pair contributes before the fan-in scaling; see GapWeightMode. Default "count"
+    # is byte-identical to the pre-option brain.
+    gap_weight_mode: GapWeightMode = "count"
+    # Multiplier on the whole gap matrix after the fan-in scaling, so 0.25 is a quarter of the
+    # coupling on every pair. Default 1.0 is byte-identical to the pre-option brain.
+    gap_weight_scale: float = Field(default=1.0, gt=0.0)
     # Learnable gap-junction strengths: every existing gap pair carries a positive multiplier,
     # symmetric by construction and starting at 1, that PPO learns with the rest of the brain. No
     # pair can be created, so each wiring keeps its placement and tunes only its strengths. Off by
@@ -488,18 +519,17 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
                 "which one the arm means rather than inheriting a default."
             )
             raise ValueError(msg)
-        if (refusal := _weight_prior_refusal(self)) is not None:
-            raise ValueError(refusal)
-        if (refusal := _dynamics_refusal(self)) is not None:
-            raise ValueError(refusal)
-        if (refusal := _plastic_gaps_refusal(self)) is not None:
-            raise ValueError(refusal)
-        if (refusal := _body_drive_refusal(self)) is not None:
-            raise ValueError(refusal)
-        if (refusal := _freeze_wiring_refusal(self)) is not None:
-            raise ValueError(refusal)
-        if (refusal := _modulators_refusal(self)) is not None:
-            raise ValueError(refusal)
+        for refusal_of in (
+            _weight_prior_refusal,
+            _dynamics_refusal,
+            _plastic_gaps_refusal,
+            _gap_options_refusal,
+            _body_drive_refusal,
+            _freeze_wiring_refusal,
+            _modulators_refusal,
+        ):
+            if (refusal := refusal_of(self)) is not None:
+                raise ValueError(refusal)
         if self.enforce_synapse_signs and self.synapse_signs == "random":
             msg = (
                 "enforce_synapse_signs=true requires synapse_signs='atlas' or 'per_connection': "
@@ -825,6 +855,57 @@ def _plastic_gaps_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return None
 
 
+def _gap_options_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why the gap-weight and gap-outlier settings cannot run here, or ``None``.
+
+    The field bounds and the mode's Literal are repeated because ``model_copy`` skips them.
+    """
+    outlier_wiring = config.wiring in _GAP_OUTLIER_WIRINGS
+    refusals: tuple[tuple[bool, str], ...] = (
+        (
+            config.gap_weight_mode not in _GAP_WEIGHT_MODES,
+            f"Unsupported gap_weight_mode: {config.gap_weight_mode!r}",
+        ),
+        (
+            not math.isfinite(config.gap_weight_scale) or config.gap_weight_scale <= 0.0,
+            (
+                f"gap_weight_scale={config.gap_weight_scale} must be positive and finite: zero is "
+                "enable_gap_junctions=false, and a negative scale makes every gap junction "
+                "anti-coupling"
+            ),
+        ),
+        (
+            not config.enable_gap_junctions
+            and (config.gap_weight_mode != "count" or config.gap_weight_scale != 1.0),
+            (
+                f"gap_weight_mode={config.gap_weight_mode!r} and "
+                f"gap_weight_scale={config.gap_weight_scale} with enable_gap_junctions=false would "
+                "be accepted and never read: there is no gap matrix to weight."
+            ),
+        ),
+        (
+            outlier_wiring and not config.enable_gap_junctions,
+            (
+                f"wiring={config.wiring!r} requires enable_gap_junctions: with gap junctions off "
+                "it is the wild type."
+            ),
+        ),
+        (
+            config.gap_outlier_min_count < 1,
+            f"gap_outlier_min_count={config.gap_outlier_min_count} must be at least 1.",
+        ),
+        (
+            not outlier_wiring and config.gap_outlier_min_count != _DEFAULT_GAP_OUTLIER_MIN_COUNT,
+            (
+                f"gap_outlier_min_count={config.gap_outlier_min_count} under "
+                f"wiring={config.wiring!r} would be accepted and never read: only "
+                f"{sorted(_GAP_OUTLIER_WIRINGS)} narrow the gap swap by count."
+            ),
+        ),
+    )
+    return next((msg for refused, msg in refusals if refused), None)
+
+
 def _freeze_wiring_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     """Return why a frozen wiring cannot run here, or ``None`` when it can."""
     if not config.freeze_wiring:
@@ -837,6 +918,28 @@ def _freeze_wiring_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     if config.freeze_updates:
         return "freeze_wiring is redundant under freeze_updates, which already trains nothing."
     return None
+
+
+def _gap_outliers(
+    connectome: Connectome,
+    config: ConnectomePPOBrainConfig,
+) -> set[tuple[str, str]] | None:
+    """Return the gap pairs a gap-outlier wiring narrows by, or ``None`` under any other wiring."""
+    if config.wiring not in _GAP_OUTLIER_WIRINGS:
+        return None
+    outliers = {
+        (gj.neuron_a, gj.neuron_b)
+        for gj in connectome.gap_junctions
+        if gj.weight >= config.gap_outlier_min_count
+    }
+    if not outliers:
+        msg = (
+            f"wiring={config.wiring!r} found no gap pair with a count of at least "
+            f"gap_outlier_min_count={config.gap_outlier_min_count}: holding none is "
+            "rewired_gap_junctions_only, and scattering none is the wild type."
+        )
+        raise ValueError(msg)
+    return outliers
 
 
 def _per_connection_edge_signs(
@@ -1139,6 +1242,8 @@ class ConnectomeTopology(nn.Module):
         modulator_circuit: ModulatorCircuit | None = None,
         modulator_knockout: ModulatorKnockout = "none",
         chemical_weight_scale: float = 1.0,
+        gap_weight_mode: GapWeightMode = "count",
+        gap_weight_scale: float = 1.0,
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
@@ -1371,19 +1476,24 @@ class ConnectomeTopology(nn.Module):
         # would accumulate across every update.
         self.w_chem.requires_grad_(not freeze_wiring)
 
-        # ── Gap junctions: non-learnable, symmetric, fan-in normalised ──
-        # Each entry ``G[i, j]`` is divided by ``sqrt(fan_in[i] * fan_in[j])``
-        # so per-neuron total gap-junction input stays bounded while
-        # preserving the symmetry of the underlying physics (gap junctions
-        # are bidirectional). A pure row-or-column scaling would break
-        # ``G[a, b] == G[b, a]``; the symmetric scaling is the only
-        # normalisation consistent with both spec scenarios.
+        # ── Gap junctions: symmetric, partner-count scaled, learnable only under plastic_gaps ──
+        # Each entry ``G[i, j]`` is the pair's weight (see GapWeightMode) divided by
+        # ``sqrt(d_i * d_j)``, ``d`` the binary gap degree: symmetric, as gap junctions are
+        # bidirectional, which a row-or-column scaling would break. The normaliser counts a
+        # neuron's partners, not their counts, so it does not bound a neuron's gap input: a
+        # high-count pair between two low-degree neurons couples far above 1 (ALA to CAN reaches
+        # about 90 under "count"), enough to hold both near saturation through the settling.
         if enable_gap_junctions:
             g_gap_np = np.zeros((self.n_neurons, self.n_neurons), dtype=np.float32)
             for gj in connectome.gap_junctions:
                 a_i = self._idx[gj.neuron_a]
                 b_j = self._idx[gj.neuron_b]
-                w = float(gj.weight)
+                if gap_weight_mode == "unit":
+                    w = 1.0
+                elif gap_weight_mode == "log_count":
+                    w = float(np.log1p(gj.weight))
+                else:
+                    w = float(gj.weight)
                 g_gap_np[a_i, b_j] = w
                 g_gap_np[b_j, a_i] = w
             gap_in_degree = (g_gap_np != 0).sum(axis=0)
@@ -1395,6 +1505,8 @@ class ConnectomeTopology(nn.Module):
             ).astype(np.float32)
             # Symmetric scaling: divide G[i,j] by sqrt(d_i * d_j).
             g_gap_np = g_gap_np * gap_scale[:, np.newaxis] * gap_scale[np.newaxis, :]
+            if gap_weight_scale != 1.0:
+                g_gap_np *= np.float32(gap_weight_scale)
             self.register_buffer(
                 "g_gap",
                 torch.from_numpy(g_gap_np).to(device=device),
@@ -3180,14 +3292,24 @@ class ConnectomePPOBrain(ClassicalBrain):
         # Each null edge's origin, the wild-type edge whose place it took: a per-connection sign
         # travels with it, as its synapse count does.
         origins: dict[tuple[str, str], tuple[str, str]] = {}
+        # A gap-outlier wiring's accepted swaps, the swap target, and how many gap pairs moved;
+        # empty under every other wiring.
+        self.gap_swap_report: dict[str, int] = {}
+        if (refusal := _gap_options_refusal(config)) is not None:
+            raise ValueError(refusal)
         if config.wiring != "wild_type":
             rewire_seed = config.rewire_seed if config.rewire_seed is not None else self.seed
+            outliers = _gap_outliers(connectome, config)
             connectome = rewire_degree_preserving(
                 connectome,
                 np.random.default_rng(rewire_seed),
                 origins=origins,
                 rewire_gap_junctions=config.wiring
-                in ("rewired_degree_preserving", "rewired_gap_junctions_only"),
+                in (
+                    "rewired_degree_preserving",
+                    "rewired_gap_junctions_only",
+                    *_GAP_OUTLIER_WIRINGS,
+                ),
                 preserve_autapses=config.wiring
                 in ("rewired_chemical_only", "rewired_boundary_held"),
                 hold_boundary=(
@@ -3195,10 +3317,17 @@ class ConnectomePPOBrain(ClassicalBrain):
                     if config.wiring == "rewired_boundary_held"
                     else None
                 ),
-                rewire_chemical=config.wiring != "rewired_gap_junctions_only",
+                rewire_chemical=config.wiring
+                not in ("rewired_gap_junctions_only", *_GAP_OUTLIER_WIRINGS),
+                hold_gap_pairs=outliers if config.wiring == "rewired_gap_outliers_held" else None,
+                focal_gap_pairs=(
+                    outliers if config.wiring == "rewired_gap_outliers_scattered" else None
+                ),
+                gap_swap_report=self.gap_swap_report if outliers is not None else None,
             )
             logger.info(
-                f"ConnectomePPOBrain wiring: {config.wiring} (rewire_seed={rewire_seed})",
+                f"ConnectomePPOBrain wiring: {config.wiring} (rewire_seed={rewire_seed})"
+                + (f", gap swaps {self.gap_swap_report}" if self.gap_swap_report else ""),
             )
 
         # Derive the per-mode food-feature count.
@@ -3272,6 +3401,8 @@ class ConnectomePPOBrain(ClassicalBrain):
             ),
             modulator_knockout=config.modulator_knockout,
             chemical_weight_scale=config.chemical_weight_scale,
+            gap_weight_mode=config.gap_weight_mode,
+            gap_weight_scale=config.gap_weight_scale,
         ).to(self.device)
         # The two concentrations, serotonin then PDF, carried across an episode's steps.
         self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)
@@ -3988,6 +4119,8 @@ class ConnectomePPOBrain(ClassicalBrain):
                     "weight_prior": self.config.weight_prior,
                     "measured_weight_scale": self.config.measured_weight_scale,
                     "chemical_weight_scale": self.config.chemical_weight_scale,
+                    "gap_weight_mode": self.config.gap_weight_mode,
+                    "gap_weight_scale": self.config.gap_weight_scale,
                     "synapse_signs": self.config.synapse_signs,
                     "connectome_source": self.config.connectome_source,
                     # The plasticity identity, ENFORCED on load below. Two checkpoints can differ
