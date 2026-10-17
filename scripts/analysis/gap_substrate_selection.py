@@ -197,7 +197,7 @@ def probe(seeds: tuple[int, ...] = SEEDS) -> dict[str, Any]:
 
 # ── The selection (Decision C) ───────────────────────────────────────────────────────────────
 def _ran_config(log: Path) -> str | None:
-    """The config file name a tracked run records on completion, or ``None`` if it records none."""
+    """Return the config file name a tracked run records on completion, or ``None``."""
     for raw in reversed(log.read_text(errors="replace").splitlines()):
         line = raw.strip()
         if line.startswith("Config:"):

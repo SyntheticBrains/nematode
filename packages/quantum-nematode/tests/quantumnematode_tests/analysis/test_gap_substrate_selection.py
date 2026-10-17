@@ -151,7 +151,7 @@ class TestManifest:
     def test_a_log_recording_another_config_is_refused(self, tmp_path: Path) -> None:
         mlp = gen.ARMS["thermal"]["mlp_learn"]
         self._write(tmp_path, "thermal", mislabel=f"{mlp}-seed9871")
-        with pytest.raises(gs.SelectionError, match="other.yml"):
+        with pytest.raises(gs.SelectionError, match=r"other\.yml"):
             gs.build_manifest([tmp_path], tmp_path / "m.txt", "thermal")
 
     def test_a_log_recording_no_config_is_refused(self, tmp_path: Path) -> None:
