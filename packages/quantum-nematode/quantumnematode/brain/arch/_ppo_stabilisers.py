@@ -4,10 +4,11 @@ Small PPO learners trained long enough can lose a policy they had. These setting
 candidate remedies, applied identically to every learner that carries them:
 
 * **KL early stopping, relative to the learner** (``kl_stop_factor``): before each minibatch's
-  step, if that minibatch's approximate KL exceeds the factor times the median per-update KL over
-  the learner's last 100 updates, the step is not taken and the rest of the update is skipped. A
-  fixed KL target cannot serve learners whose typical per-update KL differs tenfold; a relative
-  one acts on each learner's own outsized updates.
+  step, if that minibatch's approximate KL exceeds the factor times the median, over the learner's
+  last 100 updates, of each update's largest minibatch KL, the step is not taken and the rest of the
+  update is skipped. The window holds the same statistic the test compares, a single minibatch's KL,
+  so the stop acts only on minibatches far beyond what the learner's updates usually reach. A fixed
+  KL target cannot serve learners whose typical KL differs tenfold.
 * **Weight clipping relative to the initial scale** (``weight_clip``, a factor κ): after every
   optimiser step each learnable tensor is clipped elementwise to ±κ times its own largest absolute
   value at construction. A tensor that is zero everywhere at construction (a bias, a log-std, a
@@ -101,7 +102,7 @@ class WeightClip:
 class KLStop:
     """Stop an update whose next minibatch would move the policy far more than the learner's norm.
 
-    The per-update KL recorded is the mean approximate KL over the minibatches the update evaluated.
+    The window holds each update's largest minibatch KL, the statistic each minibatch is tested on.
     """
 
     def __init__(self, factor: float, window: int = KL_STOP_WINDOW) -> None:
@@ -143,9 +144,9 @@ class UpdateGate:
         return True
 
     def close(self) -> None:
-        """Record the update's mean minibatch KL in the stop's window."""
+        """Record the update's largest minibatch KL in the stop's window."""
         if self._stop is not None and self._kls:
-            self._stop.record(sum(self._kls) / len(self._kls))
+            self._stop.record(max(self._kls))
 
 
 def approx_kl(new_log_probs: torch.Tensor, old_log_probs: torch.Tensor) -> float:

@@ -1,7 +1,32 @@
 {
   "what": "092's body configs with every stabiliser key written out at its default, 20 episodes, against M.1(a)'s re-runs on the same seed",
   "runs": {
-    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2304": {"episodes_compared": 20, "identical": true},
-    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9721": {"episodes_compared": 20, "identical": true}
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2304": {
+      "episodes_compared": 20,
+      "identical": true
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9721": {
+      "episodes_compared": 20,
+      "identical": true
+    }
+  },
+  "kl_stop_firing_rate": {
+    "what": "round-1 configs, 150 episodes, telemetry; updates after the 100-update window",
+    "seeds": [
+      9893,
+      9894
+    ],
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_m1b_klstop_t20": {
+      "updates_after_window": 73,
+      "stopped": 14,
+      "rate": 0.192,
+      "mean_minibatches_stepped_when_stopped": 20.9
+    },
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_m1b_klstop_t20": {
+      "updates_after_window": 191,
+      "stopped": 5,
+      "rate": 0.026,
+      "mean_minibatches_stepped_when_stopped": 21.8
+    }
   }
 }

@@ -24,7 +24,9 @@ optimiser state, the same next draw of every generator, and no new key in the sa
 
 - **KL early stopping, relative to the learner.** Before each minibatch's optimiser step, its approximate
   KL `mean((r − 1) − log r)` is read from the log-probabilities the loss already computed. If it exceeds
-  **3 × the median per-update KL over that learner's last 100 updates**, the step is not taken and the
+  **3 × the median, over that learner's last 100 updates, of each update's largest minibatch KL** (the
+  same statistic the test compares, so an ordinary update's late epochs do not trip it; amended at the
+  pre-launch review, before any round, from the update's mean KL), the step is not taken and the
   update's remaining minibatches and epochs are skipped. No stop is possible before 100 updates. The
   rule is the same for every arm and scale-free, so it acts on each learner's own outsized updates: on
   M.1(a)'s telemetry the connectome's median per-update KL is 0.003 and the MLP's 0.030, a tenfold
@@ -36,7 +38,7 @@ optimiser state, the same next draw of every generator, and no new key in the sa
   telemetry records `kl_stopped` and `minibatches_stepped` per update.
 - **Weight clipping**, κ = 2. Elsayed et al. 2024 clip each layer to κ times its initialisation
   distribution's bound; here `s` stands in for that bound as each learnable tensor's largest absolute
-  value **at construction**, kept as a non-persistent buffer only when the clip is on (so a loaded
+  value **at construction**, kept on the learner only when the clip is on and never saved (so a loaded
   checkpoint is clipped against the brain's own construction, not re-measured). After every optimiser
   step each tensor is clipped elementwise to ±κ·s, before the connectome's mask and sign projection.
   Tensors with `s = 0` — the biases, `log_std`, the body drive's log-gains — are exempt, because a
@@ -100,7 +102,7 @@ default and byte-identical when off. Under amended D25, wild type 2331 also coll
 
 A round is 16 body runs at 6,000 episodes plus 8 MLP runs: about 2.2 hours for the connectome wave (M.1(a)
 measured 7,775 seconds for the same 16) and about 1.1 for the MLP's. The placebo and three rounds at most:
-about 13 hours, with the machine to itself; M.2 and M.3 wait or run between rounds. No gate preflight
+about 12 hours, with the machine to itself; M.2 and M.3 wait or run between rounds. No gate preflight
 applies: no round reads a floor or saturation gate, and the configs are 092's.
 
 ## Risks / Trade-offs

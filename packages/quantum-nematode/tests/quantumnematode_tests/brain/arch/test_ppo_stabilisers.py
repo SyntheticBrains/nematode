@@ -75,7 +75,7 @@ class TestPieces:
         assert not stop.exceeded(0.045)
         assert stop.exceeded(0.046)
 
-    def test_the_gate_counts_steps_and_records_the_mean(self) -> None:
+    def test_the_gate_counts_steps_and_records_the_largest(self) -> None:
         stop = stab.KLStop(1.0, window=1)
         stop.record(0.001)
         gate = stab.UpdateGate(stop)
@@ -85,7 +85,7 @@ class TestPieces:
         assert gate.stopped
         assert gate.stepped == 1
         gate.close()
-        assert stop.history[-1] == pytest.approx((0.0 + stab.approx_kl(same + 1.0, same)) / 2)
+        assert stop.history[-1] == pytest.approx(stab.approx_kl(same + 1.0, same))
 
     def test_without_a_stop_every_minibatch_steps(self) -> None:
         gate = stab.UpdateGate(None)
@@ -172,6 +172,8 @@ def test_off_is_byte_identical(build: Any) -> None:
     a, b = _state(implicit), _state(explicit)
     assert a.keys() == b.keys()
     assert all(torch.equal(a[k], b[k]) for k in a)
+    assert implicit.rng.random() == explicit.rng.random()
+    assert implicit.buffer.rng.random() == explicit.buffer.rng.random()
     training = implicit.get_weight_components()["training_state"].state
     assert not {k for k in training if "kl" in k or "clip" in k or "adam" in k or "shuffle" in k}
 

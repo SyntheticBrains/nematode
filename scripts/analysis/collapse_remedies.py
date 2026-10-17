@@ -75,15 +75,24 @@ def _find(log_dirs: list[Path], stem: str, seed: int) -> Path | None:
     return next((d / name for d in log_dirs if (d / name).is_file()), None)
 
 
+def _require(log_dirs: list[Path], stem: str, seed: int) -> Path:
+    """Return a run's log, or refuse: a missing log is a wrong path, never a failed run."""
+    log = _find(log_dirs, stem, seed)
+    if log is None:
+        msg = f"no log for {stem} seed {seed} in {[str(d) for d in log_dirs]}"
+        raise RemedyError(msg)
+    return log
+
+
 def _exited_cleanly(log: Path) -> bool:
     status = log.with_suffix(".exit")
     return status.is_file() and status.read_text().strip() == "0"
 
 
-def run_reading(log: Path | None) -> dict[str, Any]:
+def run_reading(log: Path) -> dict[str, Any]:
     """One run's drawdown, early success and collapse; a failed run counts against the remedy."""
-    series = cl.success_series(log) if log is not None else np.zeros(0)
-    if log is None or not _exited_cleanly(log) or len(series) == 0:
+    series = cl.success_series(log)
+    if not _exited_cleanly(log) or len(series) == 0:
         peak = cl.trailing_mean(series, PEAK_WINDOW) if len(series) else np.zeros(0)
         top = float(np.nanmax(peak)) if len(peak) and np.any(~np.isnan(peak)) else 1.0
         return {"failed": True, "drawdown": top, "early": 0.0, "collapsed": None}
@@ -103,6 +112,7 @@ def paired(deltas: list[float]) -> dict[str, Any]:
     return {
         "mean": float(np.mean(deltas)),
         "ci": [test["ci_lo"], test["ci_hi"]],
+        "wilcoxon_p_one_sided": test["wilcoxon_p"],
         "n": len(deltas),
     }
 
@@ -116,15 +126,16 @@ def passes(reduction: dict[str, Any], guard: dict[str, Any]) -> bool:
     )
 
 
-def _kl_stop_rate(log: Path | None) -> float | None:
-    """Return the fraction of a run's updates a KL stop ended, from its telemetry if present."""
-    if log is None:
-        return None
+def _kl_stop_rate(log: Path) -> float | None:
+    """Return the fraction of a run's updates a KL stop ended, after its window has filled.
+
+    The stop cannot fire before its 100-update window fills, so those updates are left out.
+    """
     try:
         lines = cd._telemetry(log)
     except cd.DiagnosisError:
         return None
-    flags = [bool(x.get("kl_stopped")) for x in lines if "kl_stopped" in x]
+    flags = [bool(x.get("kl_stopped")) for x in lines[100:] if "kl_stopped" in x]
     return float(np.mean(flags)) if flags else None
 
 
@@ -136,10 +147,10 @@ def read_round(round_name: str, log_dirs: list[Path], originals: list[Path]) -> 
     runs: dict[str, Any] = {}
     reduction, early = [], []
     for parent, seed in RUNS:
-        remedy = run_reading(_find(log_dirs, gen.stem(parent, round_name), seed))
-        placebo = run_reading(_find(log_dirs, gen.stem(parent, "placebo"), seed))
-        original_log = _find(originals, parent, seed)
-        original = run_reading(original_log) if original_log is not None else None
+        remedy_log = _require(log_dirs, gen.stem(parent, round_name), seed)
+        remedy = run_reading(remedy_log)
+        placebo = run_reading(_require(log_dirs, gen.stem(parent, "placebo"), seed))
+        original = run_reading(_require(originals, parent, seed))
         if placebo["failed"]:
             msg = f"the placebo run {parent} seed {seed} failed; the round cannot be read"
             raise RemedyError(msg)
@@ -148,16 +159,17 @@ def read_round(round_name: str, log_dirs: list[Path], originals: list[Path]) -> 
         runs[f"{parent}-seed{seed}"] = {
             "remedy": remedy,
             "placebo": placebo,
-            "original_collapsed": None if original is None else original["collapsed"],
-            "kl_stop_rate": _kl_stop_rate(_find(log_dirs, gen.stem(parent, round_name), seed)),
+            "original_collapsed": original["collapsed"],
+            "kl_stop_rate": _kl_stop_rate(remedy_log),
         }
     reduction_test, guard_test = paired(reduction), paired(early)
     collapsed = {
         side: sum(bool(r[side]["collapsed"]) for r in runs.values())
         for side in ("remedy", "placebo")
     }
+    # A failed remedy run (collapse unknown) is never a rescue.
     rescued = sum(
-        1 for r in runs.values() if r["original_collapsed"] and not r["remedy"]["collapsed"]
+        1 for r in runs.values() if r["original_collapsed"] and r["remedy"]["collapsed"] is False
     )
     harmed = sum(
         1 for r in runs.values() if r["original_collapsed"] is False and r["remedy"]["collapsed"]
@@ -179,13 +191,17 @@ def read_round(round_name: str, log_dirs: list[Path], originals: list[Path]) -> 
 
 
 def mlp_preflight(round_name: str, log_dirs: list[Path], originals: list[Path]) -> dict[str, Any]:
-    """Compare the MLP's plateau and collapses under the remedy with its M.1(a) re-runs."""
+    """Compare the MLP's plateau and collapses under the remedy with its M.1(a) re-runs.
+
+    A preflight for M.1(c)'s MLP hold, never part of the selection: it carries no MLP placebo, so a
+    difference here mixes the remedy with a re-roll.
+    """
     rows = []
     for seed in cd.MLP_SEEDS:
-        remedy_log = _find(log_dirs, gen.stem(gen.MLP, round_name), seed)
-        original_log = _find(originals, gen.MLP, seed)
-        remedy = t7.plateau_tail(remedy_log) if remedy_log is not None else None
-        original = t7.plateau_tail(original_log) if original_log is not None else None
+        remedy_log = _require(log_dirs, gen.stem(gen.MLP, round_name), seed)
+        original_log = _require(originals, gen.MLP, seed)
+        remedy = t7.plateau_tail(remedy_log)
+        original = t7.plateau_tail(original_log)
         rows.append(
             {
                 "seed": seed,

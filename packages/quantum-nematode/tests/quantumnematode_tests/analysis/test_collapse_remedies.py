@@ -68,13 +68,27 @@ class TestStatistic:
         assert cr.passes(reduction, guard) is ok
 
 
+def _write_mlp(where: Path) -> None:
+    for seed in cr.cd.MLP_SEEDS:
+        for stem in (gen.stem(gen.MLP, "klstop"), gen.MLP):
+            _write(where, stem, seed, _HOLDS)
+
+
 def _round(
-    tmp_path: Path, remedy: np.ndarray, *, failed_placebo: bool = False,
+    tmp_path: Path,
+    remedy: np.ndarray,
+    *,
+    failed_placebo: bool = False,
 ) -> dict[str, object]:
+    _write_mlp(tmp_path)
     for parent, seed in cr.RUNS:
         placebo = _FALLS if parent == gen.GAP_ONLY else _HOLDS
         _write(
-            tmp_path, gen.stem(parent, "placebo"), seed, placebo, code=1 if failed_placebo else 0,
+            tmp_path,
+            gen.stem(parent, "placebo"),
+            seed,
+            placebo,
+            code=1 if failed_placebo else 0,
         )
         _write(tmp_path, gen.stem(parent, "klstop"), seed, remedy)
         _write(tmp_path, parent, seed, placebo)
@@ -88,6 +102,7 @@ class TestRound:
         assert result["drawdown_reduction"]["mean"] == pytest.approx(0.4, abs=0.02)  # type: ignore[index]
 
     def test_a_remedy_that_changes_nothing_fails(self, tmp_path: Path) -> None:
+        _write_mlp(tmp_path)
         for parent, seed in cr.RUNS:
             run = _FALLS if parent == gen.GAP_ONLY else _HOLDS
             _write(tmp_path, gen.stem(parent, "placebo"), seed, run)
@@ -109,6 +124,13 @@ class TestRound:
     def test_a_failed_placebo_leaves_the_round_unreadable(self, tmp_path: Path) -> None:
         with pytest.raises(cr.RemedyError, match="placebo"):
             _round(tmp_path, _HOLDS, failed_placebo=True)
+
+    def test_a_missing_log_is_refused_not_failed(self, tmp_path: Path) -> None:
+        _round(tmp_path, _HOLDS)
+        parent, seed = cr.RUNS[0]
+        (tmp_path / f"{gen.stem(parent, 'klstop')}-seed{seed}.log").unlink()
+        with pytest.raises(cr.RemedyError, match="no log"):
+            cr.read_round("klstop", [tmp_path], [tmp_path])
 
     def test_only_a_remedy_round_is_read(self, tmp_path: Path) -> None:
         with pytest.raises(cr.RemedyError, match="not a remedy round"):

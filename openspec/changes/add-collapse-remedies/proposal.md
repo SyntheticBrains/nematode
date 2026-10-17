@@ -40,6 +40,7 @@ requirement; every existing scenario unchanged).
 ## Impact
 
 - `learning_rules/ppo.py`, `brain/arch/connectome_ppo.py` (config keys, passed to the rule),
-  `brain/arch/mlpppo.py` and `brain/arch/_ppo_buffer.py` (the placebo's permutation stream).
+  `brain/arch/mlpppo.py` (the placebo's permutation stream is passed to the existing buffer),
+  `brain/arch/_telemetry.py` (the KL stop's fields).
 - Configs: each round's body and MLP configs as stated deltas of 092's.
 - A remedy changes no existing reading: every stabiliser is off by default.
