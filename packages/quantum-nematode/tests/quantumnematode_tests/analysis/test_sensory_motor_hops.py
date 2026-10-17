@@ -59,3 +59,25 @@ def test_the_gap_nulls_are_walked_on_the_thermal_cell() -> None:
         reach = hops.short_reach(hops._topology(null, 9851, _THERMAL))
         assert set(reach) == {1, 2}
         assert 0 <= reach[1] <= reach[2] <= result["wild_type"]["n_motor"]
+
+
+_NULL_CONFIG = _THERMAL.with_name(
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_g0_count_gaponly_t35.yml",
+)
+
+
+def test_the_wild_type_is_the_wild_type_whatever_the_config_carries() -> None:
+    """A config that carries a null cannot pass that null off as the wild type."""
+    from_null = hops._topology("wild_type", 9851, _NULL_CONFIG)
+    from_wild = hops._topology("wild_type", 9851, _THERMAL)
+    assert from_null.g_gap.equal(from_wild.g_gap)
+
+
+def test_the_config_is_recorded_only_off_the_default(tmp_path: Path) -> None:
+    """A relative path to the default is not recorded; a config outside the repo is, absolutely."""
+    relative = hops.ARM.relative_to(_root)
+    assert "config" not in hops.compare((9851,), config=relative)
+    outside = tmp_path / _THERMAL.name
+    outside.write_text(_THERMAL.read_text())
+    assert hops.compare((9851,), config=outside)["config"] == str(outside.resolve())
+    assert hops.compare((9851,), config=_THERMAL)["config"] == str(_THERMAL.relative_to(_root))
