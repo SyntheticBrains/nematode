@@ -13,7 +13,7 @@ gated pilot; the point-worm contrast now, at a minimum of 0.0577; 092's body con
   Decision E): the operator and its row sums; the no-gain test; the sensor relay; the held current; single
   and batched agree; `additive` byte-identical (pinned digests, state-dict keys, outputs, the next draw);
   every refusal. `.test_durations` regenerated.
-- [ ] 2. **Configs** through `generate_gap_substrate_configs.py`: on the thermal cell at target 35 and on
+- [x] 2. **Configs** through `generate_gap_substrate_configs.py`: on the thermal cell at target 35 and on
   hard350, on Emmons 2024, each model's wild type and gap-only null learning and frozen, the additive-count
   wild type learning, the MLP control learning and frozen (frozen floors derived); loader and build tests.
 - [ ] 3. **The operating-point probe** (design Decision D), at no run cost, before any pilot run: the
