@@ -18,7 +18,7 @@ after M.1(a) read no cause indicated ([Logbook 096](../../../docs/experiments/lo
   drawdown and learning-speed readings, the pass rule, collapse counts and rescues/harms beside, the KL
   stop rate, the MLP preflight; failed runs read as registered. Tests on synthetic series covering every
   branch.
-- [ ] 4. **Registration**: the launch record (`docs/experiments/logbooks/supporting/098-collapse-remedies/launch.md`)
+- [x] 4. **Registration**: the launch record (`docs/experiments/logbooks/supporting/098-collapse-remedies/launch.md`)
   with the rule, the predicted reach of each remedy, the cost and the retention line; a probe that these
   configs with every stabiliser key at its default reproduce M.1(a)'s runs; the roadmap's D25 and the
   tracker carry the dated amendments (the placebo-paired selection, the relative KL stop);

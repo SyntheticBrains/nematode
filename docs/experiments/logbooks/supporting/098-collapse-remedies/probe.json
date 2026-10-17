@@ -1,0 +1,7 @@
+{
+  "what": "092's body configs with every stabiliser key written out at its default, 20 episodes, against M.1(a)'s re-runs on the same seed",
+  "runs": {
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2304": {"episodes_compared": 20, "identical": true},
+    "mlpppo_small_continuous2d_thermal_klinotaxis_body_ppo_t20-seed9721": {"episodes_compared": 20, "identical": true}
+  }
+}
