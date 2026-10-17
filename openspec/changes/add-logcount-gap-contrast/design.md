@@ -52,10 +52,14 @@ exactly as the panel. Seeds 3901–3964 are disjoint from it, from G.0 (2401–2
 
 **Why only the thermal cell.** 0.0577 is a minimum fixed on this cell: two-thirds of the thermal
 split's 0.0865, registered by Logbook 082. The STOP branch's two cells are the point worm and the body,
-both on the thermal task, and the body's turn comes after M.1. hard350 has no registered minimum for a
+both on the thermal task, and the body's turn comes after M.1. The roadmap names them: its Phase 9
+deliverable and target both read *the corrected model's contrast re-run on the point worm and 092's
+body cell*. hard350 has no registered minimum for a
 gap-only contrast on Emmons. Reading it would need its own anchor. It is not part of the sequence the
 maintainer fixed, and adding it here would double the cost without a decision that reads it. It
-stays open for G.1's registration to raise.
+stays open for G.1's registration to raise. One consequence is stated now: the decomposition's
+hard350 entries (075, 079) will be restated without a corrected-model reading on hard350, and the
+restatement says so.
 
 **No MLP arm.** The cell's readability under this learner was established on 2026-10-18 by G.0-A's
 MLP control, on this cell's configs and episodes: plateau 71.2% against a 0.0% floor on 16 seeds.
@@ -64,8 +68,8 @@ This panel's own gates check that both connectome arms learn.
 ### Decision B: The reading and the verdict map, fixed before any run
 
 **The reading.** `gap(log)` on `auc_success`, wild type − null, paired by seed over 64 seeds. It is
-computed with `ops.score_level` and `ops.wiring_gap`: the one-sided Wilcoxon and an 80% percentile
-bootstrap interval. Its q is the family-of-one correction from `ops.apply_family_correction`, which is
+computed with `ops.score_level` and `ops.wiring_gap`: the one-sided Wilcoxon, reported, and an 80%
+percentile bootstrap interval. The classification reads the two-sided q, never the one-sided p. Its q is the family-of-one correction from `ops.apply_family_correction`, which is
 the two-sided Wilcoxon p, the same code path G.0 used. It is classified by `mc.classify` at
 **m = 0.0577**: `CARRIED_MINIMUM`, the value `gap_operating_point.py` already carries.
 
@@ -77,15 +81,26 @@ frozen plateau lies above zero. The two learning arms do not both plateau at 90%
 |---|---|---|
 | gates fail | **`unreadable`** | nothing; a dated decision in the tracker and the roadmap |
 | `move_wt` | **`placement`** | G.1–G.3b register on log counts, with G.1's minimum fixed by D23's rule from this lead (below) |
-| `below` with the wild type ahead | **`below_minimum`** | nothing by itself: a lead under the minimum; a dated decision |
+| `below`, either direction | **`below_minimum`** | nothing by itself: an effect that excludes zero but is under the minimum, with its direction recorded; a dated decision |
 | `no_move` | **`no_wiring_effect`** | the point-worm half of the STOP condition; G.1–G.3b do not register until the body cell reads on log counts |
-| `move_null`, or `below` with the null ahead | **`reversed`** | nothing by itself; a dated decision |
+| `move_null` | **`reversed`** | nothing by itself; a dated decision |
 | `unresolved` | **`unresolved`** | nothing by itself; a dated decision |
 
 **D23 on the corrected model.** Under `placement` this panel is the anchor D23 asks for. It is the
 corrected model's effect, read on Emmons in its own campaign and never inside G.1's panel. G.1 carries
 0.0577 if the lead sits in [0.058, 0.13]. Otherwise G.1's minimum is re-fixed at two-thirds of the
-lead, which is `anchor_minimum`'s rule. G.1 then needs no separate anchor pilot.
+lead, which is `anchor_minimum`'s rule. G.1 then needs no separate anchor pilot. At the edge, a lead
+in \[0.0577, 0.058) reads `placement` but would re-fix G.1's minimum at about 0.0385, below this
+panel's own bar. In that case G.1 carries 0.0577; the edge is the rule's, not a re-read.
+
+**The two cells together**, stated now so that neither reading is re-read in the other's light:
+
+- **STOP** needs `no_wiring_effect` on both cells: here, and in the body re-run.
+- **This cell `placement`, body anything:** G.1–G.3b register on log counts on the point worm, as
+  above.
+- **This cell `no_wiring_effect`, body showing an effect:** G.1–G.3b are not licensed on the point
+  worm. Whether they move to the body is a dated decision then, not now.
+- **Any other combination** is a dated decision.
 
 **Described beside, never verdicts:**
 
@@ -98,30 +113,44 @@ No run exceeds 3,000 episodes, so the collapse statistic does not apply.
 
 ### Decision C: Sizing and the operating characteristic
 
-The paired spread on this cell is σ ≈ 0.094–0.110 (082's Cook gap over 64 seeds; G.0's anchor over 16
-seeds). G.0's log level gives about 0.10. At 64 seeds the standard error is about 0.0125.
+**The spread.** On this cell's committed panels, on Emmons, the paired spread is:
 
-- The detectable effect for the two-sided test at 80% power is about 2.8σ/√n = 0.033–0.038, well below
-  m.
-- Under a normal approximation with σ = 0.10:
+- σ ≈ 0.119 for G.0's count level over 64 seeds;
+- 0.109 for its log level over 16 seeds;
+- 0.094 for 082's Cook gap over 64 seeds.
 
-| true effect | `placement` | `below_minimum` | `no_wiring_effect` |
-|---|---|---|---|
-| 0 | 0 | 0.03 | 0.95 |
-| +0.012, G.0's 16-seed estimate | 0 | 0.16 | 0.84 |
-| +0.0577, the minimum | 0.50 | 0.50 | 0 |
-| +0.08 | 0.96 | 0.04 | 0 |
-| +0.104, the count model's lead | 1.00 | 0 | 0 |
+The operating characteristic below uses **σ = 0.115**. At 64 seeds the standard error is about
+0.014–0.015. The detectable effect for the two-sided test at 80% power is about 2.8σ/√n = 0.038–0.042,
+below m.
 
-Any remaining probability goes to `reversed`; at a true effect of 0 that is about 0.025. The
-`no_wiring_effect` state also needs the 80% interval to lie inside ±m. Its half-width is about
-0.016, so this holds whenever the mean is within about ±0.04. The achieved spread is reported beside
-the reading and never used to re-read it.
+**The operating characteristic.** It is simulated with the registered instrument: 1,000 draws of 64
+normal seed gaps per row, each scored by `wp.paired_seed_wilcoxon_bootstrap` and classified by
+`mc.classify` at m.
+
+| true effect | `placement` | `below_minimum` (direction) | `no_wiring_effect` | `unresolved` |
+|---|---|---|---|---|
+| 0 | 0 | 0.05 (0.02 wild type, 0.03 null) | 0.81 | 0.15 |
+| +0.012, G.0's 16-seed estimate | 0 | 0.13 (wild type) | 0.63 | 0.24 |
+| +0.0577, the minimum | 0.50 | 0.47 | 0 | 0.03 |
+| +0.08 | 0.94 | 0.06 | 0 | 0 |
+| +0.104, the count model's lead | 1.00 | 0 | 0 | 0 |
+
+**Why `unresolved` is common when there is no effect.** `no_move` needs the 80% interval to include
+zero and the two-sided q to be at least 0.05. A seed mean between about 1.28 and 1.96 standard errors
+from zero satisfies neither. That band takes about 15% of the probability at a true effect of zero,
+whatever the seed count. It is the shared classifier's rule, as in G.0 and 082, and it is kept, as the
+maintainer decided on 2026-10-18 at the spec review. An `unresolved` reading goes to a dated decision.
+It is never re-read under a different rule.
+
+The achieved spread is reported beside the reading and never used to re-read it.
 
 ### Decision D: D24 before launch
 
-`gap_operating_point.table`'s `matched_statistics` is computed for the log-count wild type and for the
-gap-only null on each of the 64 panel seeds, and committed as `table.json` before any run:
+`gap_operating_point.matched_statistics` is computed for the log-count wild type and for the gap-only
+null on each of the 64 panel seeds. Each brain is built from the panel's own configs by
+`gap_operating_point._brain`, which loads a thermal config by stem. `gap_operating_point.table` is not
+used, because it looks each stem up in G.0's generator, which does not hold G.0-A's configs. The
+statistics are committed as `table.json` before any run:
 
 - max G, p99, pairs above 1;
 - the ALA, CANL and AVAL totals;
@@ -140,8 +169,9 @@ re-read it.
 arms (seeds 9871–9886) through `gate_preflight`, and the preflight is committed. Those arms read 70.0%
 and 69.2%, with floors at 0.0%, 20 points under the bar. Gate evidence is reported only as evidence.
 
-**Cost.** It is estimated from the pilot's own logs, at the same cell, configs and episodes, and
-stated in the launch record.
+**Cost.** It is estimated from the pilot's own run records, at the same cell, configs and episodes.
+The tracked-experiment ID carries each run's start time and its `timestamp` its end, in UTC; the two
+clocks are reconciled before the durations are read. The estimate is stated in the launch record.
 
 **Readiness review.** `/nematode-review-spec` runs before registration.
 
@@ -154,13 +184,16 @@ stated in the launch record.
 - `table`;
 - `score`: manifest, completeness, gates, gap, classification, verdict, CSV.
 
+It exposes a `STEMS` table, `level -> arm -> config stem`, so that
+`gate_preflight.py --panel logcount_contrast` reads it.
+
 Its manifest reads only runs whose `.exit` is 0 and whose log records the config its name claims. The
 check is the same as `gap_substrate_selection.py`'s. A missing run is refused, never read as a failure.
 
 The tests run on synthetic manifests:
 
 - every verdict-map row;
-- the D23 rule's cases;
+- the D23 rule's cases, including the edge in \[0.0577, 0.058);
 - refusal of an incomplete or mislabelled panel;
 - the seeds' disjointness from every committed G band.
 

@@ -27,8 +27,9 @@ This change is step 1.
   **256 runs** at 3,000 episodes. The configs are G.0-A's four `*_g0a_log_*_t35.yml`, unchanged, so the
   pilot that chose the model is also this panel's gate evidence on disjoint seeds.
 
-- **One reading** is `gap(log)` on `auc_success`, wild type − null, paired by seed. It uses the one-sided
-  Wilcoxon and an 80% bootstrap interval, and is classified by `mc.classify` at **m = 0.0577**. The
+- **One reading** is `gap(log)` on `auc_success`, wild type − null, paired by seed. It uses an 80%
+  bootstrap interval and the two-sided Wilcoxon as its q, a family of one, and is classified by
+  `mc.classify` at **m = 0.0577**. The
   verdict map is fixed before any run (design Decision B): `placement`, `below_minimum`,
   `no_wiring_effect`, `reversed`, `unresolved` or `unreadable`. A `placement` lead also serves as D23's
   anchor on the corrected model, which fixes G.1's minimum.

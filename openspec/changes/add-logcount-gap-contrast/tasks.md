@@ -5,7 +5,8 @@ Phase 9 G.0-A (roadmap v4.5 § Phase 9; tracker `phase9-tracking` G.0-A), after
 
 - [ ] 1. **Harness** `scripts/analysis/logcount_contrast.py` (design Decision F). Its subcommands are
   `plan`, `preflight`, `table` and `score`, and its verdict map follows Decision B. Its D23 rule reuses
-  `anchor_minimum`, and its manifest verifies each run's recorded config. Tests cover every verdict row,
+  `anchor_minimum`, and its manifest verifies each run's recorded config. It exposes `STEMS` for
+  `gate_preflight`. Tests cover every verdict row,
   the D23 cases, refusals and seed disjointness. `.test_durations` is regenerated.
 - [ ] 2. **Before launch** (Decisions D and E):
   - `table.json` on the 64 panel seeds;
@@ -14,7 +15,9 @@ Phase 9 G.0-A (roadmap v4.5 § Phase 9; tracker `phase9-tracking` G.0-A), after
   - `/nematode-review-spec add-logcount-gap-contrast`, with findings fixed or recorded.
 - [ ] 3. **Registration**: `docs/experiments/logbooks/supporting/099-logcount-contrast/launch.md`,
   committed before any panel run. It fixes the arms, seeds, reading, minimum, verdict map, operating
-  characteristic, gates, D24 audit, cost, launch commands and retention.
+  characteristic, gates, D24 audit, cost, launch commands and retention. The tracker's G.1–G.3b items
+  gain a note, citing the new protocol requirement, that none registers on log counts before this panel
+  has read.
 - [ ] 4. **The panel** from a separate worktree: 256 runs with the output controls, after M.1(b)'s
   rounds release the machine.
 - [ ] 5. **Readout**: Logbook 099 (the reading, the D23 minimum if `placement`, and the audit and
