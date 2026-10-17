@@ -30,9 +30,10 @@ gated pilot; the point-worm contrast now, at a minimum of 0.0577; 092's body con
   `/nematode-review-spec`; the seed-band table gains 9871–9886, 9891–9892 and 3901–3964; the tracker's
   G.0-A item and the roadmap's G.0 entry carry the dated sequencing amendment (092's body re-run after M.1
   reads out).
-- [ ] 6. **The selection pilot** from a separate worktree, 352 runs, with the output controls.
-- [ ] 7. **Readout**: Logbook 097 (the probe, the pilot, the selection, the additive arm beside); the
-  tracker's G.0-A item and the roadmap; CHANGELOG.
-- [ ] 8. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR. The
+- [x] 6. **The selection pilot** from a separate worktree, 352 runs, with the output controls. *(352 of
+  352 exited 0, 4.9 h.)*
+- [x] 7. **Readout**: Logbook 097 (the probe, the pilot, the selection, the additive arm beside); the
+  tracker's G.0-A item and the roadmap; CHANGELOG. *(Log counts chosen; ohmic shown slower on both cells.)*
+- [x] 8. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR. The
   point-worm contrast on the chosen model registers next, in its own change, with D24 defined for ohmic
   coupling if ohmic is chosen.

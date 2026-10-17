@@ -80,7 +80,9 @@ class TestRule:
     def test_ohmic_when_eligible_and_not_shown_slower(self) -> None:
         both = {"thermal": True, "hard350": True}
         assert gs.decide(
-            both, {"ohmic": both, "log": both}, {"thermal": False, "hard350": False},
+            both,
+            {"ohmic": both, "log": both},
+            {"thermal": False, "hard350": False},
         ) == ("ohmic")
 
     def test_log_when_ohmic_is_shown_slower_on_either_cell(self) -> None:
@@ -92,14 +94,18 @@ class TestRule:
         both = {"thermal": True, "hard350": True}
         ohmic = {"thermal": True, "hard350": False}
         assert gs.decide(
-            both, {"ohmic": ohmic, "log": both}, {"thermal": False, "hard350": False},
+            both,
+            {"ohmic": ohmic, "log": both},
+            {"thermal": False, "hard350": False},
         ) == ("log")
 
     def test_neither_when_no_model_is_eligible_on_both(self) -> None:
         both = {"thermal": True, "hard350": True}
         one = {"thermal": False, "hard350": True}
         assert gs.decide(
-            both, {"ohmic": one, "log": one}, {"thermal": False, "hard350": False},
+            both,
+            {"ohmic": one, "log": one},
+            {"thermal": False, "hard350": False},
         ) == ("neither")
 
     def test_unreadable_when_the_mlp_fails_a_cell(self) -> None:
@@ -113,7 +119,12 @@ class TestRule:
 
 class TestManifest:
     def _write(
-        self, where: Path, cell: str, *, skip: str | None = None, fail: str | None = None,
+        self,
+        where: Path,
+        cell: str,
+        *,
+        skip: str | None = None,
+        fail: str | None = None,
     ) -> None:
         for stem in set(gen.ARMS[cell].values()):
             for seed in gs.SEEDS:
