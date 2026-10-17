@@ -26,8 +26,8 @@ Phase 9's first act (roadmap v4.5 § Phase 9, D23, D24; tracker `phase9-tracking
   and G.0(a) ticked.
 - [x] 8. **The predictor** on Logbook 082's committed draws, computed only after the launch record is
   committed.
-- [ ] 9. **Campaign** from a separate worktree, seeds 2401–2464, ≈ 896 runs, with the output controls.
-- [ ] 10. **Readout**: Logbook 095; the verdict recorded in the tracker and the roadmap's exit criteria;
+- [x] 9. **Campaign** from a separate worktree, seeds 2401–2464, ≈ 896 runs, with the output controls.
+- [x] 10. **Readout**: Logbook 095; the verdict recorded in the tracker and the roadmap's exit criteria;
   CHANGELOG.
 - [ ] 11. **Close-out**: full suite (`uv run pytest -q -m "not nightly"`), `pre-commit run -a`,
   `openspec validate --strict`, archive, PR.

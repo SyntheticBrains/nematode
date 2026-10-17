@@ -1481,7 +1481,7 @@ ______________________________________________________________________
 |---|---|---|---|---|
 | **H** | Housekeeping: the watch re-aimed; the retention rule re-registered and 8b's campaign directories archived off-repo; D23 and D24 recorded; the record corrections as dated notes; the klinokinesis reference repaired (K.1, D31) | 9a | MUST | 🔲 |
 | **M** | The instrument at long horizons: M.1 late collapse (logging and checkpoints; diagnosis on re-run seeds; remedies read as rescue of known collapsers; a confirmatory panel on fresh seeds; a stop rule); M.2 wild type against wild type on hard350; M.3 variance components; M.4 the secondary body statistic from committed data | 9a | MUST | 🔲 |
-| **G.0** | The gap model's operating point: the Emmons anchor pilot; the saturation predictor on committed draws; unit-weight, gap-off, gap-scale, log-count and top-k held/scattered arms; depths 2, 3 and 6; the shortcut audit on every gap null. Verdict `survives` / `artefact` / `unresolved` | 9a | **MUST, first** | 🔲 |
+| **G.0** | The gap model's operating point: the Emmons anchor pilot; the saturation predictor on committed draws; unit-weight, gap-off, gap-scale, log-count and top-k held/scattered arms; depths 2, 3 and 6; the shortcut audit on every gap null. Verdict `survives` / `artefact` / `unresolved` | 9a | **MUST, first** | ✅ **`artefact`** ([095](experiments/logbooks/095-gap-operating-point.md)) |
 | **G.1–G.3b** | The mechanism: the placement × totals 2×2 in effective units; interior against boundary gap junctions with a registered direction; the class map as scatters against size-matched random scatters with both rival predictions registered and read two-sided; the named class tested with two new nulls | 9a | MUST, gated on G.0 | 🔲 |
 | **R.1** | Per-family positive controls and body heads for LSTM/GRU, CfC, Transformer and GA through the kinematic body, each at its own calibrated entropy | 9a | MUST | 🔲 |
 | **9a synthesis** | Every 9a criterion assigned a status; G.0's verdict read as the 9b gate; whether the body freeze can be signed | 9a | MUST | 🔲 |
@@ -1570,7 +1570,7 @@ Every target is a behavioural or methodological claim under the Phase 7 claim di
 - 🔲 **H** complete before the first campaign, with the seed-band table and the retention rule.
 - 🔲 **M.1** read out: the collapse statistic and the rule for a collapsed seed exist; a remedy chosen by D25's rescue rule and held on the MLP control, or the stop rule fired.
 - 🔲 **M.2** read on hard350; **M.3** read; **M.4** chosen.
-- 🔲 **G.0** read with one of its three verdicts, and the substrate change named if `artefact`.
+- 🔲 **G.0** read with one of its three verdicts, and the substrate change named if `artefact`. *(2026-10-17: read `artefact`, [Logbook 095](experiments/logbooks/095-gap-operating-point.md) — the lead is +0.104 with counts and +0.003 at unit weights; the substrate change is still to be named, in G.0-A's change.)*
 - 🔲 **G.1, G.2, G.3 and G.3b** read on a gap model that cleared G.0 — or, if `artefact`, the corrected model's contrast re-run on the point worm and 092's body cell and the decomposition restated, with the mechanism block run on the corrected model or deferred-with-destination.
 - 🔲 **R.1** read for every family, each passed or ranked last with reason.
 - 🔲 **The 9a synthesis** with every 9a criterion assigned a status and the D27 freeze decision written.
