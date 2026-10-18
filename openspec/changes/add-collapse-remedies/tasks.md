@@ -23,9 +23,9 @@ after M.1(a) read no cause indicated ([Logbook 096](../../../docs/experiments/lo
   configs with every stabiliser key at its default reproduce M.1(a)'s runs; the roadmap's D25 and the
   tracker carry the dated amendments (the placebo-paired selection, the relative KL stop);
   `/nematode-review-spec`; no gate preflight applies (no round reads a floor or saturation gate).
-- [ ] 5. **Rounds** from a worktree, with the machine to itself: the placebo, then the remedies in order,
-  stopping at the first pass.
-- [ ] 6. **Readout**: Logbook 098; tracker M.1(b) with the chosen remedy or the fired stop rule; M.1(c)'s
+- [x] 5. **Rounds** from a worktree, with the machine to itself: the placebo, then the remedies in order,
+  stopping at the first pass. *(All three ran, 88 runs, every one exiting 0; none passed.)*
+- [x] 6. **Readout**: Logbook 098; tracker M.1(b) with the chosen remedy or the fired stop rule; M.1(c)'s
   change registers next; `docs/usage.md` for the new config keys; CHANGELOG.
-- [ ] 7. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive (a new
+- [x] 7. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive (a new
   capability's spec given a real Purpose), PR.
