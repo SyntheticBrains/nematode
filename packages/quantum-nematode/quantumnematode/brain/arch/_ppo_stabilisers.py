@@ -74,12 +74,20 @@ def make_adam(
 
 
 def reapply_adam(optimizer: optim.Optimizer, config: PPOStabiliserConfig) -> None:
-    """Restore the configured second-moment settings after an optimiser state is loaded."""
+    """Restore the settings ``make_adam`` built after an optimiser state is loaded.
+
+    A loaded state carries the settings it was saved with. When either setting is configured, both
+    are restored, the unconfigured one to PyTorch's default, so the optimiser matches the one
+    ``make_adam`` builds whatever the saved state held. With neither configured the loaded settings
+    are kept.
+    """
+    if config.adam_eps is None and config.adam_beta2 is None:
+        return
+    eps = config.adam_eps if config.adam_eps is not None else _ADAM_EPS
+    beta2 = config.adam_beta2 if config.adam_beta2 is not None else _ADAM_BETA2
     for group in optimizer.param_groups:
-        if config.adam_eps is not None:
-            group["eps"] = config.adam_eps
-        if config.adam_beta2 is not None:
-            group["betas"] = (group["betas"][0], config.adam_beta2)
+        group["eps"] = eps
+        group["betas"] = (group["betas"][0], beta2)
 
 
 class WeightClip:

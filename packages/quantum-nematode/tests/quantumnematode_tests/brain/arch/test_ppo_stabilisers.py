@@ -55,6 +55,31 @@ class TestPieces:
         assert optimizer.param_groups[0]["eps"] == 1e-4
         assert optimizer.param_groups[0]["betas"] == (0.9, 0.99)
 
+    def test_one_setting_restores_the_other_to_its_default_after_a_load(self) -> None:
+        """Scenario "Adam's settings survive a load": the optimiser matches the one built."""
+        param = torch.nn.Parameter(torch.ones(2))
+        saved = stab.make_adam(
+            [param],
+            0.01,
+            stab.PPOStabiliserConfig(adam_eps=1e-4, adam_beta2=0.99),
+        ).state_dict()
+        config = stab.PPOStabiliserConfig(adam_beta2=0.95)
+        optimizer = stab.make_adam([param], 0.01, config)
+        built = dict(optimizer.param_groups[0])
+        optimizer.load_state_dict(saved)
+        stab.reapply_adam(optimizer, config)
+        assert optimizer.param_groups[0]["eps"] == built["eps"] == 1e-8
+        assert optimizer.param_groups[0]["betas"] == built["betas"] == (0.9, 0.95)
+
+    def test_no_setting_keeps_the_loaded_state(self) -> None:
+        param = torch.nn.Parameter(torch.ones(2))
+        saved = stab.make_adam([param], 0.01, stab.PPOStabiliserConfig(adam_eps=1e-4)).state_dict()
+        config = stab.PPOStabiliserConfig()
+        optimizer = stab.make_adam([param], 0.01, config)
+        optimizer.load_state_dict(saved)
+        stab.reapply_adam(optimizer, config)
+        assert optimizer.param_groups[0]["eps"] == 1e-4
+
     def test_weight_clip_bounds_by_construction_scale(self) -> None:
         """Scenario "Weight clipping bounds each tensor by its construction scale"."""
         weight = torch.nn.Parameter(torch.tensor([0.5, -1.0]))

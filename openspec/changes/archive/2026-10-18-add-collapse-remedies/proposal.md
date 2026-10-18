@@ -13,8 +13,8 @@ collapse statistic ships alone and R.2 and G.5 run at 3,000 episodes.
 - **PPO stabilisers and a placebo**, on the connectome PPO rule and the MLP-PPO brain alike, each off by
   default and byte-identical when off:
   - `kl_stop_factor` — **KL early stopping relative to the learner**: an update stops before a
-    minibatch's step when its approximate KL exceeds this factor (3) times the learner's median per-update
-    KL over its last 100 updates.
+    minibatch's step when its approximate KL exceeds this factor (3) times the median, over the learner's
+    last 100 updates, of each update's largest minibatch KL.
   - `weight_clip` — **weight clipping relative to the initial scale**: after every optimiser step, each
     weight tensor is clipped to ±κ times its own largest magnitude at construction (κ = 2).
   - `adam_eps`, `adam_beta2` — **Adam's second-moment settings** (1e-4, 0.99).

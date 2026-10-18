@@ -5,8 +5,8 @@
 The connectome PPO rule and the MLP-PPO brain SHALL offer, each off by default:
 
 - `kl_stop_factor`: before each minibatch's optimiser step, if that minibatch's approximate KL exceeds
-  the factor times the median per-update KL over the learner's last 100 updates, the step SHALL NOT be
-  taken and the update's remaining minibatches and epochs SHALL be skipped; no stop SHALL occur before
+  the factor times the median, over the learner's last 100 updates, of each update's largest minibatch
+  KL, the step SHALL NOT be taken and the update's remaining minibatches and epochs SHALL be skipped; no stop SHALL occur before
   100 updates;
 - `weight_clip`: after every optimiser step, each learnable tensor SHALL be clipped elementwise to ±κ
   times its largest absolute value at construction, tensors whose value at construction is zero being
@@ -21,7 +21,7 @@ generator SHALL equal the brain's before the options existed.
 #### Scenario: The KL stop ends the update before the crossing step
 
 - **WHEN** after at least 100 updates a minibatch's approximate KL exceeds the factor times the running
-  median
+  median of each update's largest minibatch KL
 - **THEN** that minibatch SHALL take no optimiser step, neither SHALL any later minibatch of the update,
   and the update's telemetry SHALL record the stop and the number of minibatches stepped
 
