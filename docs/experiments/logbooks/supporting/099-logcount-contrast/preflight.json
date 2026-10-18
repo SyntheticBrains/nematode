@@ -1,0 +1,16 @@
+{
+  "launch": true,
+  "levels": {
+    "log": {
+      "n_scored": 16,
+      "n_seeds": 16,
+      "rn_floor": 0.0,
+      "rn_plateau": 69.16666666666667,
+      "status": "readable",
+      "wt_floor": 0.0,
+      "wt_plateau": 69.95
+    }
+  },
+  "margin_points": 5.0,
+  "saturation_bar": 90.0
+}
