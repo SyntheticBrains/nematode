@@ -97,7 +97,8 @@ What was verified: each item was fetched and read, and the version notes (Lee 20
 | G.3 the class map | 2601–2664 | 48–64 seeds; frozen floors for the new wirings in an 8-seed preflight on 9821–9828 |
 | G.3b the prediction, tested | 2701–2764 | 64 seeds |
 | M.1(a) diagnosis re-runs | 2301–2332 (M.9's) | the 8 collapsed and 8 matched intact seeds re-run deterministically — a diagnostic on committed seeds, licensed by the identity check, not a new registration |
-| M.1(b) remedies | 2301–2332 (M.9's) | the same 16 seeds under each remedy, read by discordant pairs |
+| M.1(b) remedies | 2301–2332 (M.9's) | the same 16 seeds under each remedy and under a placebo re-roll, read against the placebo by seed (D25 amended 2026-10-17); the MLP's retry seeds 9721–9728 as a preflight |
+| M.1(b) KL-stop firing-rate probe | 9893–9894 | 150 episodes each, discarded — *added 2026-10-17 by `add-collapse-remedies`* |
 | M.1(c) confirmatory | 2801–2832 | fresh seeds, ≥ 32 |
 | M.2 wild type against wild type | 2901–2964 | 64 seeds; floor pilot for the chimeras on 9831–9838 |
 | M.3 variance components | 3001–3064 | 8 rewirings × 8 seeds beside the wild type |

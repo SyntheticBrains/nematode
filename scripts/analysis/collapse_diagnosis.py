@@ -216,7 +216,11 @@ def episode_series(lines: list[dict[str, Any]], horizon: int = EPISODES) -> dict
     for name, read in STATISTICS.items():
         sums, counts = np.zeros(horizon), np.zeros(horizon)
         for line in lines:
-            value = read(line)
+            try:
+                value = read(line)
+            except KeyError:
+                # An update stopped before any minibatch records no statistics, only that it stopped.
+                value = None
             episode = int(line["episode"])
             if value is not None and 1 <= episode <= horizon:
                 sums[episode - 1] += float(value)

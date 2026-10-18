@@ -1,0 +1,400 @@
+{
+  "beside": {
+    "collapsed": {
+      "placebo": 2,
+      "remedy": 1
+    },
+    "harmed_against_original": 0,
+    "kl_stop_rate": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rescued_against_original": 7
+  },
+  "drawdown_reduction": {
+    "ci": [
+      -0.07454375000000005,
+      0.11931874999999997
+    ],
+    "mean": 0.025937499999999974,
+    "n": 16,
+    "wilcoxon_p_one_sided": 0.3909759521484375
+  },
+  "early_success_guard": {
+    "ci": [
+      -0.10204791666666664,
+      0.019714583333333337
+    ],
+    "mean": -0.0408125,
+    "n": 16,
+    "wilcoxon_p_one_sided": 0.752288818359375
+  },
+  "mlp_preflight": {
+    "collapsed": 0,
+    "per_seed": [
+      {
+        "original_plateau": 83.73333333333333,
+        "remedy_collapsed": false,
+        "remedy_plateau": 89.06666666666668,
+        "seed": 9721
+      },
+      {
+        "original_plateau": 90.2,
+        "remedy_collapsed": false,
+        "remedy_plateau": 98.33333333333333,
+        "seed": 9722
+      },
+      {
+        "original_plateau": 83.13333333333334,
+        "remedy_collapsed": false,
+        "remedy_plateau": 71.66666666666667,
+        "seed": 9723
+      },
+      {
+        "original_plateau": 84.46666666666667,
+        "remedy_collapsed": false,
+        "remedy_plateau": 0.0,
+        "seed": 9724
+      },
+      {
+        "original_plateau": 94.6,
+        "remedy_collapsed": false,
+        "remedy_plateau": 81.73333333333333,
+        "seed": 9725
+      },
+      {
+        "original_plateau": 81.39999999999999,
+        "remedy_collapsed": false,
+        "remedy_plateau": 0.0,
+        "seed": 9726
+      },
+      {
+        "original_plateau": 78.0,
+        "remedy_collapsed": false,
+        "remedy_plateau": 58.93333333333334,
+        "seed": 9727
+      },
+      {
+        "original_plateau": 57.4,
+        "remedy_collapsed": false,
+        "remedy_plateau": 95.93333333333334,
+        "seed": 9728
+      }
+    ],
+    "plateau_change": {
+      "ci": [
+        -37.87833333333334,
+        -1.3891666666666609
+      ],
+      "mean": -19.65833333333333,
+      "n": 8,
+      "wilcoxon_p_one_sided": 0.90234375
+    }
+  },
+  "passes": false,
+  "round": "adam",
+  "runs": {
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2304": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.081,
+        "early": 0.0013333333333333333,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.14900000000000002,
+        "early": 0.11566666666666667,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2305": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.2739999999999999,
+        "early": 0.48,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.03600000000000003,
+        "early": 0.22633333333333333,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2307": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.04200000000000004,
+        "early": 0.239,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.14800000000000002,
+        "early": 0.291,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2308": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": true,
+        "drawdown": 0.4729999999999999,
+        "early": 0.14233333333333334,
+        "failed": false,
+        "onset": 5625
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.10899999999999999,
+        "early": 0.3506666666666667,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2313": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.11299999999999999,
+        "early": 0.265,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.08899999999999997,
+        "early": 0.438,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2319": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.2280000000000001,
+        "early": 0.449,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.08500000000000008,
+        "early": 0.361,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2328": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.28400000000000003,
+        "early": 0.189,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.15900000000000003,
+        "early": 0.17566666666666667,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_gaponly_ppo_t20-seed2330": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.06699999999999995,
+        "early": 0.3423333333333333,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.21899999999999997,
+        "early": 0.038,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2304": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.04700000000000004,
+        "early": 0.249,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.28400000000000003,
+        "early": 0.212,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2305": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.038999999999999924,
+        "early": 0.5773333333333334,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.07100000000000006,
+        "early": 0.191,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2307": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": true,
+        "drawdown": 0.905,
+        "early": 0.184,
+        "failed": false,
+        "onset": 3913
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.12100000000000011,
+        "early": 0.14766666666666667,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2308": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.125,
+        "early": 0.3556666666666667,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.03399999999999992,
+        "early": 0.34,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2313": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.18499999999999994,
+        "early": 0.6213333333333333,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": true,
+        "drawdown": 0.894,
+        "early": 0.5313333333333333,
+        "failed": false,
+        "onset": 4971
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2319": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.477,
+        "early": 0.563,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.1439999999999999,
+        "early": 0.23466666666666666,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2328": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": true,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.02399999999999991,
+        "early": 0.21066666666666667,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.382,
+        "early": 0.518,
+        "failed": false,
+        "onset": null
+      }
+    },
+    "connectomeppo_small_continuous2d_thermal_klinotaxis_body_wt_ppo_t20-seed2330": {
+      "kl_stop_rate": 0.0,
+      "original_collapsed": false,
+      "placebo": {
+        "collapsed": false,
+        "drawdown": 0.025000000000000022,
+        "early": 0.10566666666666667,
+        "failed": false,
+        "onset": null
+      },
+      "remedy": {
+        "collapsed": false,
+        "drawdown": 0.050000000000000044,
+        "early": 0.15066666666666667,
+        "failed": false,
+        "onset": null
+      }
+    }
+  }
+}

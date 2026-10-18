@@ -172,14 +172,24 @@ class UpdateRecord:
         }
         self._final: dict[str, list[torch.Tensor]] = {}
         self._grads: tuple[float, float] = (0.0, 0.0)
+        self._new_epoch = False
+        self._gate: dict[str, Any] = {}
 
     def read_grads(self, actor: Iterable[nn.Parameter], critic: Iterable[nn.Parameter]) -> None:
         """Read the actor's and the critic's gradient norms, after backward and before clipping."""
         self._grads = (grad_norm(actor), grad_norm(critic))
 
     def begin_epoch(self) -> None:
-        """Start an epoch: the final-epoch statistics keep only the latest one."""
-        self._final = {"new": [], "old": [], "mean": [], "features": [], "residual": []}
+        """Start an epoch: the final-epoch statistics will keep the latest epoch that stepped.
+
+        The reset waits for the epoch's first minibatch, so an update that stops before any
+        minibatch of a new epoch keeps the previous epoch's statistics.
+        """
+        self._new_epoch = True
+
+    def note_gate(self, *, stopped: bool, stepped: int) -> None:
+        """Record whether a KL stop ended the update, and how many minibatches stepped."""
+        self._gate = {"kl_stopped": stopped, "minibatches_stepped": stepped}
 
     def minibatch(  # noqa: PLR0913 - one argument per statistic the minibatch holds
         self,
@@ -194,6 +204,9 @@ class UpdateRecord:
         penultimate: torch.Tensor | None = None,
     ) -> None:
         """Record one minibatch, with the gradient norms ``read_grads`` took for it."""
+        if self._new_epoch or not self._final:
+            self._final = {"new": [], "old": [], "mean": [], "features": [], "residual": []}
+            self._new_epoch = False
         for key, value in (
             ("entropy", entropy),
             ("value_loss", value_loss),
@@ -218,11 +231,14 @@ class UpdateRecord:
         continuous: bool,
     ) -> dict[str, Any]:
         """Assemble the update's line."""
+        if not self._final or not self._final["new"]:
+            return {**self._fixed, **self._gate, "minibatches_recorded": 0}
         new, old = torch.cat(self._final["new"]), torch.cat(self._final["old"])
         features = torch.cat(self._final["features"])
         grads = self._all["grad_norm"]
         out: dict[str, Any] = {
             **self._fixed,
+            **self._gate,
             **{k: _mean(v) for k, v in self._all.items()},
             "clipped_minibatch_fraction": (
                 sum(1 for g in grads if g > self._max_grad_norm) / len(grads) if grads else None
@@ -262,6 +278,9 @@ class NoRecord(UpdateRecord):
         """Read nothing."""
 
     def begin_epoch(self) -> None:
+        """Keep nothing."""
+
+    def note_gate(self, *, stopped: bool, stepped: int) -> None:
         """Keep nothing."""
 
     def minibatch(self, **_: object) -> None:  # type: ignore[override]
