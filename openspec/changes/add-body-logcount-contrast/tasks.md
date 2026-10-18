@@ -10,7 +10,8 @@ seeds, and no count-weight arm.
   `gap_weight_mode: log_count`, and never overwrites. Loader and build tests cover them.
 - [ ] 2. **Harness** `scripts/analysis/body_logcount_contrast.py` (Decisions B, D and F). It provides
   `STEMS` and the `plan`, `preflight`, `table` and `score` subcommands, reads the primary and the gates
-  on episodes 1–3,000, and reports the late windows and the collapse statistic beside. Tests cover the
+  on episodes 1–3,000, and reports the late windows and the collapse statistic beside. It imports Logbook
+  099's verified manifest check rather than copying it. Tests cover the
   window, every verdict row, the gates, the refusals and seed disjointness.
 - [ ] 3. **Before launch** (Decisions C, D and E):
   - smokes on 9899–9900 at 20 episodes;

@@ -80,7 +80,9 @@ All are new bands, disjoint from every committed band.
 over **episodes 1–3,000**: each run's mean success over its first 3,000 episodes, from its per-episode
 series (`collapse.success_series` and `collapse.auc_to`). It uses
 `wp.paired_seed_wilcoxon_bootstrap`, with an 80% percentile interval and the two-sided Wilcoxon p as q
-(a family of one), and is classified by `mc.classify` at **m = 0.0577**. That is the minimum 092 read
+(a family of one), and is classified by `mc.classify` at **m = 0.0577**. The minimum was fixed for
+`auc_success` over 6,000 episodes. It carries to the 3,000-episode window because 092's lead was nearly
+the same over both: +0.115 to 3,000 and +0.126 to 6,000. It is the minimum 092 read
 the body at, and the one the point worm used. The maintainer declined to re-anchor on the count model's
 lead, because that lead is the artefact.
 
@@ -114,7 +116,9 @@ reported.
 
 The spread is 092's per-seed sd over episodes 1–3,000, 0.242, measured on the count model and on Cook.
 On log counts the point worm's spread fell by a third (0.119 to 0.079), but the panel is sized on the
-committed upper value.
+committed upper value. The body's per-seed gaps are heavier-tailed than normal: 092 has learners that
+never took off, such as seed 2301 at −0.15. The Wilcoxon q and the percentile bootstrap do not assume
+normality, so the simulated table is a guide, not a guarantee.
 
 At 128 seeds the standard error is about 0.021. The detectable effect for the two-sided test at 80%
 power is 0.059, about the minimum.
@@ -139,12 +143,19 @@ maintainer chose 128.
 
 ### Decision D: Gates on the verdict's window
 
-Each learning arm must beat its wiring's frozen floor, on the 16 floor seeds, with the plateau taken on
-the first 3,000 episodes. The two learning arms must not both plateau at 90% or more on that window.
+**The plateau on the window** is the instrument's final-quarter tail (`t7.plateau_tail`) applied to
+episodes 1–3,000: mean success over episodes 2,251–3,000. The plateau over 4,501–6,000 is reported beside
+it.
 
-The frozen floors run on 16 seeds because every body floor in 092 was 0.0%. The learning arms' other 112
-seeds carry no floor of their own. A learner that never learns on any seed is reported beside, and stays
-in the reading.
+**The gates**, each on that window:
+
+- **Floor:** each learning arm beats its wiring's frozen floor. That is the paired interval of learning −
+  frozen plateau over the 16 floor seeds (4001–4016), and it must lie above zero.
+- **Saturation:** the two learning arms' mean plateaus over all 128 seeds must not both be at 90% or
+  more.
+
+The frozen floors run on 16 seeds because every body floor in 092 was 0.0%. Any learning run whose
+plateau on the window is 0% is listed beside the reading and stays in it.
 
 **Before launch**, `body_logcount_contrast.py preflight` evaluates these gates on the pilot (seeds
 9895–9898, all four arms at 6,000 episodes) on the same 3,000-episode window. Any level that fails its
@@ -170,11 +181,11 @@ reported beside the verdict.
 - `score`, which produces the manifest, completeness, the windowed reading and gates, the verdict, the
   beside readings, the collapse statistic, a per-seed CSV and the panel JSON.
 
-Its manifest is Logbook 099's, verified:
+Its manifest uses Logbook 099's check, imported from `logcount_contrast.py` rather than copied:
 
 - only runs whose `.exit` is 0 are read;
 - a run must record the config its name claims, and one that does not is refused;
-- every learning run must have all 6,000 episodes;
+- every run, learning and frozen, must have all 6,000 episodes;
 - a missing run is refused, never read as a failure.
 
 The tests run on synthetic success series and manifests:
