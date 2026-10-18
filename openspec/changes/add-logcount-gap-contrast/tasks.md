@@ -19,8 +19,8 @@ Phase 9 G.0-A (roadmap v4.5 § Phase 9; tracker `phase9-tracking` G.0-A), after
   characteristic, gates, D24 audit, cost, launch commands and retention. The tracker's G.1–G.3b items
   gain a note, citing the new protocol requirement, that none registers on log counts before this panel
   has read.
-- [ ] 4. **The panel** from a separate worktree: 256 runs with the output controls, after M.1(b)'s
+- [x] 4. **The panel** from a separate worktree: 256 runs with the output controls, after M.1(b)'s
   rounds release the machine.
-- [ ] 5. **Readout**: Logbook 099 (the reading, the D23 minimum if `placement`, and the audit and
+- [x] 5. **Readout**: Logbook 099 (the reading, the D23 minimum if `placement`, and the audit and
   plateaus beside). Update the tracker's G.0-A item, the roadmap's G.0 entry and the CHANGELOG.
-- [ ] 6. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
+- [x] 6. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
