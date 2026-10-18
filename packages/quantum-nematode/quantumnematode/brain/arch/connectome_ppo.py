@@ -63,6 +63,11 @@ from quantumnematode.brain.arch._policy import (
     raise_on_speed_sign_mismatch,
 )
 from quantumnematode.brain.arch._ppo_buffer import ChunkedRolloutBuffer, RolloutBuffer
+from quantumnematode.brain.arch._ppo_stabilisers import (
+    PPOStabiliserConfig,
+    reapply_adam,
+    shuffle_rng,
+)
 from quantumnematode.brain.arch._registry import register_brain
 from quantumnematode.brain.arch._std_head import (
     LOG_STD_CLAMPED_MAX_KEY,
@@ -305,7 +310,7 @@ _N_ACTIONS = 4
 GAP_LOG_MULTIPLIER_BOUND = 20.0
 
 
-class ConnectomePPOBrainConfig(PlasticityConfigMixin, BrainConfig):
+class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, BrainConfig):
     """Configuration for the connectome-constrained PPO brain."""
 
     # The connectome the brain is built on. "emmons_2024_hermaphrodite" is the same reconstruction
@@ -3527,6 +3532,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             freeze_updates=config.freeze_updates,
             device=self.device,
             enforce_signs=config.enforce_synapse_signs,
+            stabilisers=config,
         )
         self._uses_ppo = config.learning_rule == "ppo"
         if self._uses_ppo:
@@ -3605,7 +3611,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         self.buffer = buffer_type(
             config.rollout_buffer_size,
             self.device,
-            rng=self.rng,
+            rng=shuffle_rng(self.seed) if config.rollout_shuffle_stream else self.rng,
             continuous_actions=self.continuous,
         )
 
@@ -4427,6 +4433,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                 self._ppo_rule.critic.load_state_dict(components["value"].state)
             if "optimizer" in components:
                 self._ppo_rule.optimizer.load_state_dict(components["optimizer"].state)
+                reapply_adam(self._ppo_rule.optimizer, self.config)
         self.buffer.reset()
         # Lazy import for the same reason the constructor's is: the learning-rules
         # package imports this module at load.

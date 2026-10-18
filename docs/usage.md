@@ -29,6 +29,20 @@ A *session* is `--runs` episodes of one scenario with one brain that learns acro
 | `--manyworlds` | Overlay the top two candidate actions at each step (single run only) |
 | `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING`, `ERROR`, `CRITICAL`, or `NONE` |
 
+**PPO stabilisers** (brain config keys on MLP-PPO and connectome PPO, each off by default, and a run with
+all of them off is byte-identical to one without the keys):
+
+- `kl_stop_factor`: stop an update at the first minibatch whose approximate KL exceeds this factor times
+  the median of the learner's last 100 updates' largest minibatch KL;
+- `weight_clip`: after every optimiser step, clip each tensor to ± this factor times its largest
+  magnitude at construction (tensors that start at zero are exempt);
+- `adam_eps`, `adam_beta2`: Adam's epsilon and second-moment decay, re-applied after a saved optimiser
+  state is loaded;
+- `rollout_shuffle_stream`: draw the rollout buffer's minibatch permutations from their own seeded
+  stream, which re-rolls a run's training randomness without changing anything else.
+
+None of them prevented late collapse on the body cell ([Logbook 098](experiments/logbooks/098-collapse-remedies.md)).
+
 Examples:
 
 ```bash

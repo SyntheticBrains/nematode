@@ -24,8 +24,9 @@ from statistics import fmean
 from typing import TYPE_CHECKING, Any, cast
 
 import torch
-from torch import nn, optim
+from torch import nn
 
+from quantumnematode.brain.arch import _ppo_stabilisers as stab
 from quantumnematode.brain.arch import _telemetry as tm
 from quantumnematode.brain.arch._policy import (
     categorical_evaluate_torch,
@@ -79,6 +80,20 @@ class ConnectomePPOBatch:
     chunk_length: int | None = None
 
 
+@dataclass
+class _Evaluated:
+    """One minibatch replayed under the current policy, and its losses."""
+
+    head_out: torch.Tensor
+    hidden: torch.Tensor
+    minibatch: dict[str, torch.Tensor]
+    new_log_probs: torch.Tensor
+    entropy: torch.Tensor
+    policy_loss: torch.Tensor
+    value_loss: torch.Tensor
+    loss: torch.Tensor
+
+
 def _mean(values: list[float]) -> float | None:
     return fmean(values) if values else None
 
@@ -126,6 +141,7 @@ class ConnectomePPORule:
         freeze_updates: bool,
         device: torch.device,
         enforce_signs: bool = False,
+        stabilisers: stab.PPOStabiliserConfig | None = None,
     ) -> None:
         # Critic: scalar value head over the same 302-dim activation vector.
         # Same construction + init calls as pre-extraction (byte-equivalence).
@@ -135,7 +151,20 @@ class ConnectomePPORule:
 
         # Single Adam optimiser over the topology's learnable params + critic.
         learnable = topology.learnable_parameters + list(self.critic.parameters())
-        self.optimizer = optim.Adam(learnable, lr=learning_rate)
+        self.stabilisers = stabilisers or stab.PPOStabiliserConfig()
+        self.optimizer = stab.make_adam(learnable, learning_rate, self.stabilisers)
+        # Measured at construction, before any step or load, so a loaded checkpoint is clipped
+        # against the brain's own initial scale.
+        self.weight_clip = (
+            stab.WeightClip(learnable, self.stabilisers.weight_clip)
+            if self.stabilisers.weight_clip is not None
+            else None
+        )
+        self.kl_stop = (
+            stab.KLStop(self.stabilisers.kl_stop_factor)
+            if self.stabilisers.kl_stop_factor is not None
+            else None
+        )
         # Cached: the same Parameter objects in the same order for the
         # per-minibatch grad clip (the list can never change post-init).
         self._all_params = learnable
@@ -243,7 +272,10 @@ class ConnectomePPORule:
             max_grad_norm=self.max_grad_norm,
         )
 
+        gate = stab.UpdateGate(self.kl_stop)
         for _ in range(self.num_epochs):
+            if gate.stopped:
+                break
             # Final-epoch semantics for the ceiling monitor: the recorded batch
             # reflects the near-final weights of this update.
             update_log_stds.clear()
@@ -253,40 +285,12 @@ class ConnectomePPORule:
                 # minibatch's states are unpacked + run in ONE batched
                 # connectome forward (and the post-K hidden states feed the
                 # critic in one call).
-                new_head_out, hidden, minibatch = self._replay(topo, ppo_batch, raw_minibatch)
-                new_values = self.critic(hidden).squeeze(-1)
-
-                # Re-score actions under the current policy via the shared module:
-                # discrete (Categorical) or continuous (tanh-Gaussian re-scoring the
-                # stored pre-squash samples). Clipped surrogate is shared.
-                if self.continuous:
-                    log_std_b = (
-                        topo.state_dependent_log_std(hidden)
-                        if topo.state_dependent_std
-                        else topo.log_std
-                    )
-                    if topo.state_dependent_std:
-                        update_log_stds.append(log_std_b.detach())
-                    new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
-                        new_head_out,
-                        log_std_b,
-                        minibatch["actions"],
-                        self.action_low,
-                        self.action_high,
-                    )
-                else:
-                    new_log_probs, entropy = categorical_evaluate_torch(
-                        new_head_out,
-                        minibatch["actions"],
-                    )
-                policy_loss = ppo_clip_policy_loss(
-                    new_log_probs,
-                    minibatch["old_log_probs"],
-                    minibatch["advantages"],
-                    self.clip_epsilon,
-                )
-                value_loss = nn.functional.mse_loss(new_values, minibatch["returns"])
-                loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
+                ev = self._evaluate(topo, ppo_batch, raw_minibatch, update_log_stds)
+                new_head_out, hidden, minibatch = ev.head_out, ev.hidden, ev.minibatch
+                new_log_probs, entropy = ev.new_log_probs, ev.entropy
+                policy_loss, value_loss, loss = ev.policy_loss, ev.value_loss, ev.loss
+                if not gate.allow(new_log_probs, minibatch["old_log_probs"]):
+                    break
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -295,7 +299,7 @@ class ConnectomePPORule:
                     self._all_params,
                     self.max_grad_norm,
                 )
-                self.optimizer.step()
+                self._step_optimizer()
 
                 self._project(topo)
                 record.minibatch(
@@ -315,6 +319,8 @@ class ConnectomePPORule:
                 total_losses.append(loss.item())
                 grad_norms.append(grad_norm.item())
 
+        gate.close()
+        record.note_gate(stopped=gate.stopped, stepped=gate.stepped)
         self._write_telemetry(record, update_log_stds)
         extra: dict[str, float] = {}
         if update_log_stds:
@@ -330,6 +336,63 @@ class ConnectomePPORule:
             total_loss=_mean(total_losses),
             grad_norm=_mean(grad_norms),
             extra=extra,
+        )
+
+    def _step_optimizer(self) -> None:
+        """Take the optimiser step, then clip the weights to their construction scale if asked."""
+        self.optimizer.step()
+        if self.weight_clip is not None:
+            self.weight_clip.apply()
+
+    def _evaluate(
+        self,
+        topo: ConnectomeTopology,
+        ppo_batch: ConnectomePPOBatch,
+        raw_minibatch: dict[str, torch.Tensor],
+        update_log_stds: list[torch.Tensor],
+    ) -> _Evaluated:
+        """Replay one minibatch and compute its losses under the current policy."""
+        new_head_out, hidden, minibatch = self._replay(topo, ppo_batch, raw_minibatch)
+        new_values = self.critic(hidden).squeeze(-1)
+
+        # Re-score actions under the current policy via the shared module:
+        # discrete (Categorical) or continuous (tanh-Gaussian re-scoring the
+        # stored pre-squash samples). Clipped surrogate is shared.
+        if self.continuous:
+            log_std_b = (
+                topo.state_dependent_log_std(hidden) if topo.state_dependent_std else topo.log_std
+            )
+            if topo.state_dependent_std:
+                update_log_stds.append(log_std_b.detach())
+            new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
+                new_head_out,
+                log_std_b,
+                minibatch["actions"],
+                self.action_low,
+                self.action_high,
+            )
+        else:
+            new_log_probs, entropy = categorical_evaluate_torch(
+                new_head_out,
+                minibatch["actions"],
+            )
+        policy_loss = ppo_clip_policy_loss(
+            new_log_probs,
+            minibatch["old_log_probs"],
+            minibatch["advantages"],
+            self.clip_epsilon,
+        )
+        value_loss = nn.functional.mse_loss(new_values, minibatch["returns"])
+        loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
+        return _Evaluated(
+            head_out=new_head_out,
+            hidden=hidden,
+            minibatch=minibatch,
+            new_log_probs=new_log_probs,
+            entropy=entropy,
+            policy_loss=policy_loss,
+            value_loss=value_loss,
+            loss=loss,
         )
 
     def _write_telemetry(
