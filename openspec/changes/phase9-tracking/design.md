@@ -91,7 +91,7 @@ What was verified: each item was fetched and read, and the version notes (Lee 20
 | G.0 gate pilot for the deciding levels | 9861–9868 | 64 runs: the `unit` arms and the scattered null beside the count wild type — *added 2026-10-17 by `add-gap-operating-point`* |
 | G.0-A the substrate selection pilot | 9871–9886 | 352 runs: ohmic and log-compressed counts on both block-V cells, with the additive wild type and the MLP control — *added 2026-10-17 by `add-ohmic-gap-coupling`* |
 | G.0-A smokes | 9891–9892 | execution checks only, discarded — *added 2026-10-17 by `add-ohmic-gap-coupling`* |
-| G.0-A the corrected model's point-worm contrast | 3901–3964 | 64 seeds, wild type and gap-only null, learning and frozen, minimum 0.0577 — *reserved 2026-10-17 by `add-ohmic-gap-coupling`* |
+| G.0-A the corrected model's point-worm contrast | 3901–3964 | 64 seeds, wild type and gap-only null, learning and frozen, minimum 0.0577 — *reserved 2026-10-17 by `add-ohmic-gap-coupling`*; *registered 2026-10-18 by `add-logcount-gap-contrast` on log-compressed counts* |
 | G.0(c)–(g) the operating-point arms | 2401–2464 | the 16- and 32-seed arms take the first 16 or 32 of the band |
 | G.1 + G.2, one panel | 2501–2564 | 64 seeds, each arm learning and frozen |
 | G.3 the class map | 2601–2664 | 48–64 seeds; frozen floors for the new wirings in an 8-seed preflight on 9821–9828 |
