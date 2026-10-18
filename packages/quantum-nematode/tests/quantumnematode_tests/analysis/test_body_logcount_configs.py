@@ -1,8 +1,8 @@
 """The body contrast's configs on log counts: each is 092's body config with two keys alone changed.
 
 Covers `add-body-logcount-contrast` design Decision A: every arm loads, differs from its committed
-parent only in the connectome source and the gap weight mode, freezes where its name says, and builds
-on Emmons 2024 with log-compressed counts.
+parent only in the connectome source and the gap weight mode, freezes where its name says, and
+builds on Emmons 2024 with log-compressed counts.
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ def _loaded(path: Path) -> dict[str, Any]:
 
 @pytest.mark.parametrize("role", sorted(gen.ARMS))
 def test_each_config_is_its_parent_with_the_two_keys_alone(role: str) -> None:
+    """Each generated file is the generator's output and its parent with only the two changes."""
     child, parent = gen.ARMS[role]
     path, text = gen.derive(child, parent)
     assert path.read_text() == text
@@ -43,6 +44,7 @@ def test_each_config_is_its_parent_with_the_two_keys_alone(role: str) -> None:
 
 @pytest.mark.parametrize("role", sorted(gen.ARMS))
 def test_each_arm_freezes_where_its_name_says_and_builds(role: str) -> None:
+    """Every arm is on Emmons with log counts, frozen only where named, and builds."""
     child, _ = gen.ARMS[role]
     container = load_simulation_config(str(gen.THERMAL / f"{child}.yml")).brain
     assert container is not None
