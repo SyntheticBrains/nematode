@@ -24,9 +24,9 @@ seeds, and no count-weight arm.
   before any panel run, with the arms, seeds, window, reading, minimum, verdict map, joint outcomes,
   operating characteristic, gates, audit, cost, launch commands and retention. The seed-band table gains
   4001–4128, 9895–9898 and 9899–9900.
-- [ ] 5. **The panel** from a separate worktree: 288 runs with the output controls. Every learning run
-  must reach 6,000 episodes.
-- [ ] 6. **Readout**: Logbook 100. It gives the verdict, the late window and collapse beside it, the
+- [x] 5. **The panel** from a separate worktree: 288 runs with the output controls. Every learning run
+  must reach 6,000 episodes. *(288 of 288 exited 0, 32.1 h.)*
+- [x] 6. **Readout**: Logbook 100. It gives the verdict, the late window and collapse beside it, the
   STOP branch's status with the point worm, and the substrate limit. Update the tracker's G.0-A item,
   the roadmap's G.0 entry and Go/No-Go, and the CHANGELOG. The decomposition restatement registers next.
-- [ ] 7. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
+- [x] 7. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
