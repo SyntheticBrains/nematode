@@ -1,0 +1,29 @@
+{
+  "count": {
+    "action_spread": 0.16678207367658615,
+    "saturated": 0.05776593570772093
+  },
+  "floor": 0.013176868844311684,
+  "gap_off": {
+    "action_spread": 0.02635373768862337,
+    "saturated": 0.0
+  },
+  "launch": true,
+  "log": {
+    "action_spread": 0.04086183977779001,
+    "saturated": 1.2934602636960335e-05
+  },
+  "ohmic": {
+    "action_spread": 0.01761908712796867,
+    "saturated": 0.0
+  },
+  "reference_fraction": 0.5,
+  "seeds": [
+    9905,
+    9912
+  ],
+  "strength": {
+    "action_spread": 0.0373948416672647,
+    "saturated": 0.0
+  }
+}
