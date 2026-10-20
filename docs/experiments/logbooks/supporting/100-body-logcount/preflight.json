@@ -1,0 +1,39 @@
+{
+  "gates": {
+    "beats_floor": true,
+    "readable": true,
+    "saturated": false,
+    "top_plateau": 51.63333333333334,
+    "window": [
+      1,
+      3000
+    ]
+  },
+  "launch": true,
+  "margin_points": 5.0,
+  "never_read": "the gap between the wild type and the null: on four seeds it licenses nothing",
+  "plateaus": {
+    "rn": {
+      "floor": 0.0,
+      "horizon": 80.1,
+      "window": 41.3
+    },
+    "wt": {
+      "floor": 0.0,
+      "horizon": 61.23333333333333,
+      "window": 51.63333333333334
+    }
+  },
+  "saturation_bar": 90.0,
+  "seeds": [
+    9895,
+    9896,
+    9897,
+    9898
+  ],
+  "status": "readable",
+  "window": [
+    1,
+    3000
+  ]
+}
