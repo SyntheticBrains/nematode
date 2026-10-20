@@ -11,7 +11,8 @@ models, the point worm first, and the body only for a model that reads `placemen
   - the refusals, by the validator and at build;
   - the docstrings.
 
-  Tests: the bound, the spectral radius, the unit identity, byte identity, and every refusal.
+  Tests: the bound, the spectral radius, the unit identity, a zero-strength neuron, byte identity, and
+  every refusal.
   `.test_durations` is regenerated.
 
 - [ ] 2. **The probe** (Decision C): the strength wild type against the gap-off brain on the pilot's

@@ -42,8 +42,16 @@ The option is `gap_normalisation: Literal["degree", "strength"]`, defaulting to 
 
 Under `strength`, the matrix of pair weights `w` (after `gap_weight_mode`) is divided symmetrically by
 `√(s_i s_j)`, where `s_i = Σ_j w_ij` is neuron `i`'s gap strength. It is computed on each wiring's own
-matrix, as the degree normaliser is now. A gap-only null's counts travel with their edges, so its
-strengths are its own. `gap_weight_scale` still multiplies afterwards.
+matrix, as the degree normaliser is now. `gap_weight_scale` still multiplies afterwards.
+
+**What this means for the null.** A degree-preserving swap keeps every neuron's partner count, so under
+`degree` both wirings share each neuron's normaliser. It does not keep strengths: the counts travel with
+their edges, so under `strength` the gap-only null re-normalises each neuron by its own new strength.
+The null therefore differs from the wild type in placement, in each neuron's total gap weight (as under
+`degree`), and now also in each neuron's normaliser. D24's table reports the per-neuron strengths beside
+the totals (Decision E).
+
+A neuron with no gap partners has zero strength and keeps zero couplings.
 
 Properties, each pinned by a test:
 
@@ -53,7 +61,8 @@ Properties, each pinned by a test:
 - with `gap_weight_mode: unit`, `s = d`, so `strength` equals `degree` exactly: a built-in identity
   check;
 - `degree`, the default, is byte-identical to today (pinned digests, state-dict keys, outputs, the next
-  draw).
+  draw);
+- a neuron with zero strength has an all-zero row and column.
 
 It is refused:
 
@@ -73,8 +82,10 @@ reads ohmic on fresh seeds.
 
 ### Decision C: The probe for strength, before any run
 
-The probe uses 097's instrument: `gap_substrate_selection.py`'s untrained probe, with the 64 fixed inputs
-of `sign_scale_calibration.py` and the strength pilot's seeds. It measures the strength wild type's
+The probe uses 097's instrument: `sign_scale_calibration.measure` on the 64 fixed inputs
+`sign_scale_calibration.inputs()`, with each arm's brain config from `gap_substrate_selection._connectome_config`,
+on the strength pilot's seeds. It is implemented in the new harness's `probe` subcommand, because
+`gap_substrate_selection.probe` is hard-wired to G.0-A's grid. It measures the strength wild type's
 action spread and saturated fraction against the gap-off brain, and against the count and log models
 beside.
 
@@ -117,22 +128,24 @@ learning arms do not both plateau at 90% or more (`mp.level_passes`).
   Each `placement` model registers its body contrast next. Whether G.1–G.3b reopen on it is a dated
   decision after the body reads.
 - **Both read `no_wiring_effect`:** the STOP statement stands, with four corrections behind it (unit
-  weights, log counts, strength normalisation and ohmic coupling). The 9a synthesis follows.
+  weights, log counts, strength normalisation and ohmic coupling). Ohmic's reading is stated at its
+  operating point: at ×0.03 the median neuron keeps 93% of its own drive, and the untrained action
+  spread is 0.0162 against the gap-off brain's 0.025 (Logbook 097). An ohmic null is therefore a null at
+  weak coupling, and is never read as a null at every conductance. The 9a synthesis follows.
 - **Any other pair:** a dated decision.
 
 **Described beside, never verdicts:**
 
 - episodes to 30% success;
 - each arm's plateau and floor;
-- the two wild types against each other;
-- each model's wild type against Logbook 099's log-count wild type, as description only, because the
-  seeds differ.
+- the two wild types against each other.
 
 ### Decision E: D24 and the gates, before launch
 
 **D24.** `gap_operating_point.matched_statistics` is computed for both models' wild types and nulls on
 the 64 panel draws, and committed as `table.json` before launch. For ohmic it reads the built
-conductance matrix at ×0.03. The shortcut audit (sensor–motor gap pairs, motors at one and two hops)
+conductance matrix at ×0.03. For strength it also reports each wiring's per-neuron strengths (ALA, CANL,
+AVAL), the normalisers the null changes. The shortcut audit (sensor–motor gap pairs, motors at one and two hops)
 is the same as for every gap-only null.
 
 **Gates.** The preflight evaluates each model's level:
@@ -142,7 +155,8 @@ is the same as for every gap-only null.
 
 A level that fails its floor, saturates, sits near the bar, or has no evidence blocks the launch.
 
-**Cost** is taken from the pilots' own run records.
+**Cost** is taken from the pilots' own run records. In G.0-A's pilot, ohmic runs took as long as
+log-count runs: a median of 23.2 minutes learning and 4.8 frozen, against 22.5 and 4.5.
 
 ### Decision F: Sizing and the operating characteristic
 
@@ -157,6 +171,8 @@ registered instrument, including the correction, and stated in the launch record
 
 - **Strength normalisation is new.** The probe protects against an unlearnable operating point, and the
   gates against a model that does not learn.
+- **Ohmic at ×0.03 couples weakly.** A null there may mean the coupling is too weak to carry placement.
+  The reading is stated at its operating point, never generalised to every conductance.
 - **Ohmic learns more slowly.** Its plateau is lower (61% against 70%), so its contrast reads a slower
   learner. That is a property of the model, and it is stated beside the reading.
 - **Two models raise the chance of a spurious `placement`.** The BH-FDR family of two corrects for it.
