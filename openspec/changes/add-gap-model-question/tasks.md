@@ -42,9 +42,9 @@ models, the point worm first, and the body only for a model that reads `placemen
 - [x] 6. **Registration**: `docs/experiments/logbooks/supporting/101-gap-model-question/launch.md`,
   committed before any panel run. The seed-band table gains 4201–4264, 9905–9912 and 9913–9914.
 
-- [ ] 7. **The panel** from a separate worktree: 512 runs with the output controls.
+- [x] 7. **The panel** from a separate worktree: 512 runs with the output controls. *(512 of 512 exited 0, 7.5 h.)*
 
-- [ ] 8. **Readout**: Logbook 101, with what the pair of verdicts does to the STOP statement. Update
+- [x] 8. **Readout**: Logbook 101, with what the pair of verdicts does to the STOP statement. Update
   the tracker, the roadmap and the CHANGELOG.
 
-- [ ] 9. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
+- [x] 9. **Close-out**: full suite, `pre-commit run -a`, `openspec validate --strict`, archive, PR.
