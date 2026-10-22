@@ -8,117 +8,83 @@ it is read once per batch, and detail that does not change a score is detail tha
 A brief describing a phase that closed six months ago scores against questions nobody is asking any
 more, and the digest will look fine while doing it.
 
-Last reviewed: 2026-10-15 — re-aimed at Phase 9's plan (roadmap v4.5): the gap-junction effect
-screened for a model artefact and then taken to mechanism, the learner's late collapse, nulls from
-biological variation, and the ranking through the body behind a trigger. Previous reviews
-2026-10-14 (Phase 8 close), 2026-10-03 (8a close) and 2026-09-20 (Phase 8's start).
+Last reviewed: 2026-10-23 — re-aimed at Phase 10's plan (roadmap v5.0): standard on-lawn assays
+graded against real-worm data, controllers fitted to match the animal, and the wiring question asked
+on behavioural fidelity. Previous reviews 2026-10-15 (Phase 9's start), 2026-10-14 (Phase 8 close),
+2026-10-03 (8a close) and 2026-09-20 (Phase 8's start).
 
 ## What the project is
 
-A closed-loop sensory-motor simulation platform. A simulated *C. elegans* forages, evades
-predators, and navigates thermal and oxygen gradients, while a pluggable brain architecture drives
-it — feedforward, recurrent, spiking, reservoir, quantum, and, as the focal comparison, a network
-constrained to the real 302-neuron connectome. Architectures are trained by reinforcement learning
-or evolved, ranked under a paired-seed statistical protocol, and validated against published
-*C. elegans* behavioural data (klinokinesis and weathervane bias curves, thermotaxis).
+A closed-loop sensory-motor simulation of *C. elegans*. A simulated worm, a point agent in a 2D
+arena with patchy bacterial lawns, is driven by a controller: a mechanistic circuit model, a network
+constrained to the real 302-neuron connectome with neuromodulatory state, or a reward-trained
+network. Its behaviour is graded against real-worm data from standard plate assays.
 
-The organising question is which architecture best learns nematode behaviours, and whether the
-real wiring confers an advantage over matched nulls. Quantum circuits are one architecture family
-in that comparison, not the point of the project.
+The organising question is **how faithfully a simulated worm reproduces the worm's standard
+behaviours, and what the real wiring, synaptic and neuromodulatory, contributes to that fidelity**,
+tested against wiring nulls fitted with the same budget. Quantum circuits and architecture rankings
+on learning speed are no longer the point of the project.
 
 ## What is open right now
 
-These are the live questions — [Phase 9's plan](../../roadmap.md), which screens the one wiring
-effect Phase 8 left standing for a model artefact and then takes it to mechanism. A paper bearing
-on one of them is a 3.
+These are the live questions in [Phase 10's plan](../../roadmap.md). A paper bearing on one of them
+is a 3.
 
-- **What a gap-junction effect in a learned connectome model is made of.** The one wiring effect
-  standing here is gap-junction *placement*: the wild type learns faster than a null whose
-  electrical synapses alone are rewired. It is being screened for a model artefact first — gap
-  junctions enter as additive drive scaled by raw synapse counts, a few hub pairs sit far above a
-  tanh unit's saturation, and the coupling scale was never swept — then taken to mechanism with
-  nulls the field lacks: strength- or totals-preserving placement nulls for electrical synapses,
-  boundary- and class-level gap nulls, contact-constrained nulls, size-matched random scatters. A 3:
-  how electrical synapses should enter a learned or dynamical connectome model; strength-preserving
-  randomisation of sparse, heavy-tailed networks; gap-junction structure-function against a matched
-  null in any connectome; a few count outliers driving a wiring result.
-- **Late policy collapse in long PPO runs.** Policy-gradient learners here learn and then collapse
-  after a few thousand episodes, in every arm, on small tanh policies — an optimiser property, not
-  a wiring one. Wanted: diagnostics that *lead* a collapse (entropy, KL, feature rank, saturated
-  units, gradient norms), remedies with low comparison risk between arms (KL early stopping, weight
-  clipping, optimiser moments, advantage normalisation), and collapse incidence reported as a
-  statistic beside a learning curve. Loss of plasticity in continual learning is the same question.
-- **Why learned policies steer but never modulate runs.** Every substrate and sense here learns the
-  weathervane and never klinokinesis (turning more when heading the wrong way), which theory
-  predicts for a learner given bearing information and a continuous turn. Live: bearing information
-  crossed with a discrete reorientation primitive (pirouette, reversal-plus-reheading) in a
-  reward-driven learner; unit-free klinokinesis measures (reorientation rate across the worm's own
-  dC/dt quantiles, not a ratio in arbitrary units); thermal klinokinesis above against below the
-  cultivation temperature; strategy re-weighting and state-switching in real worms.
-- **Wiring contrasts against biological rather than synthetic variation.** Every null here is a
-  shuffle. Now: a second individual's nerve ring transplanted into the wild type, the male's
-  gap-junction layer read against its own shuffles, and the referee's bar for any two-connectome
-  contrast — a between-individual variability baseline first. Inter-individual gap-junction
-  variability data (none exist for adults), new adult or male *C. elegans* reconstructions with
-  electrical synapses, and two-connectome contrasts that carry or lack such a baseline are 3s.
-- **A placed, state-gated set-point memory at an identified synapse.** The worm's mapped learning
-  sites are gains at identified synapses — the salt set-point in ASER decoded at AIB, the thermal
-  set-point in the AFD→AIY gate — not Hebbian weight changes. The question is whether a rule
-  placed there on the full connectome beats the same rule at a degree-matched random site, and
-  whether the difference vanishes on rewired wiring. Models of these set-point circuits, above all
-  any that compare a placed mechanism with a random placement, and new mechanism at either synapse.
-- **Architecture rankings through a body, and fast overdamped worm bodies.** The anatomical
-  motor-to-muscle map drives a 12-segment kinematic body with an imposed rhythm, and six
-  architecture families are to be ranked through it once. Wanted: resistive-force rod chains at
-  millisecond time steps (overdamped, no inertia), load-sensitive rhythm generation that yields
-  the swim–crawl gait transition, and — the scoop watch — any paper training a policy on a
-  *C. elegans* connectome through a body with a wiring control.
+- **Quantitative references for standard on-lawn behaviour.** Roaming and dwelling (state fractions,
+  bout distributions, food-density dependence), lawn leaving (rates, its coupling to roaming, its
+  dependence on depletion and food quality), local search after removal from food (the decay of the
+  reorientation rate), and the navigation components of chemotaxis (the pirouette rate against
+  dC/dt, weathervane steering). A 3: a new dataset or deposit of tracks for any of these, especially
+  with mutants or batch-matched controls; between-cohort or between-lab variability in them; a
+  standard pipeline that scores them from tracks.
+- **Models of these behaviours graded against data.** Mechanistic, circuit or connectome models of
+  roaming/dwelling, lawn leaving, local search or pirouettes, in closed loop with food, that are
+  graded quantitatively against real worms; above all any that hold out an assay or a mutant, or that
+  compare the real wiring against a null. The scoop watch: an embodied or closed-loop connectome
+  model graded on any on-lawn statistic.
+- **Neuromodulatory state from connectome data.** How serotonin, PDF, tyramine and neuropeptides set
+  persistent behavioural states, and how their receptor placement (monoamine and neuropeptide
+  connectomes) can enter a network model. A 3: receptor-expression or neuropeptide-connectome
+  releases; models that place neuromodulators from data; in-silico mutants graded against published
+  phenotypes (tph-1, pdfr-1, tax-4, npr-1).
+- **Fitting behavioural models to summary statistics.** Simulation-based inference, ABC and
+  evolutionary fitting of animal behaviour models, and their failure under misspecification;
+  parameter-recovery checks; imitation learning from animal tracks; separating fixed measured
+  kinematics from an optimised policy.
+- **Whether reward-trained policies can reproduce innate foraging strategies.** Learned policies here
+  steer but never modulate turning, and leave food without roaming first. Wanted: the conditions under
+  which a reward-maximiser acquires run modulation or state switching, and reasons it should not
+  (innate versus learned strategies, normative accounts of worm foraging).
 
 ## Also worth knowing about
 
 Score 2, not 3: useful without settling anything above.
 
-- **Null-model methodology in other connectomes** — fly visual, walking and nerve-cord wiring
-  against degree-, cost- or type-preserving nulls; shortcut artefacts; what a null fails to
-  preserve. *Added 2026-10-15: the field posts one of these about weekly, all on chemical graphs.
-  It is a 3 only where it reaches electrical synapses, strength preservation or count outliers.*
-- **Gap junctions as dynamics** — electrical-synapse plasticity, stiffness and synchrony of graded
-  networks under strong coupling. *Demoted from 3 on 2026-10-14: the dynamical rung here learned far
-  slower than the memoryless one and closed (Logbook 080). The ohmic-coupling form returns at 3
-  only as the first question above — how electrical synapses should enter the model.*
-- **Operating point and reservoir results** — whether a wiring effect survives the learner's
-  settings, hyperparameter sensitivity surfaces, connectome reservoir computing against nulls.
-  *Demoted from 3 on 2026-10-14 (Logbook 079); the gap model's own operating point is the first
-  question above, and the general question stays here.*
-- **Cross-connectome transfer** — *C. elegans* to *P. pacificus* head circuits, the dauer wiring
-  state, homology between nematode nervous systems, and wiring changes across development or life
-  stage. *Demoted from 3 on 2026-09-20 and kept there 2026-10-15: the P. pacificus data carry no
-  gap junctions and the dauer's are unreleased, so neither can carry the one wiring effect that
-  holds. A release of either gap layer is a 3 under the biological-variation question above.*
-- **Measured synaptic weights and signs on connectome edges** — fitted weights, functional
-  connectivity atlases, per-connection sign predictions. *Demoted from 3 on 2026-10-03: measured
-  weights did not move the wiring effect under gradient learning here, and the result under the
-  local learner was unresolved, so the rung is closed for this phase; new data or a per-connection
-  sign resource is still worth seeing.*
-- **Neuromodulators on connectome models** — serotonin, PDF and other extrasynaptic signalling
-  placed on wired networks, in-silico mutants graded against published phenotypes, and models of
-  roaming/dwelling persistence (NSM, mutual inhibition). *Added 2026-10-11 after B.3 (Logbook 090):
-  the trained connectome used both modulators, but not in the mutants' way, and weakened PDF's
-  inhibition of NSM; work that constrains or imposes these pathways is what a follow-up builds on.*
-- Connectome-driven locomotion controllers and neuromechanical models without a wiring control.
-  *Demoted from 3 on 2026-10-15: the body is frozen for the phase; the scoop watch above is the 3.*
+- **Gap junctions in connectome models, and late PPO collapse.** *Demoted from 3 on 2026-10-23: Phase 9
+  closed both, with the gap-placement effect traced to the model's normaliser and the collapse
+  statistic shipped. A paper showing a connectome result driven by how a connection type is
+  normalised is still worth seeing.*
+- **Null-model methodology in other connectomes**: fly visual, walking and nerve-cord wiring against
+  degree-, cost- or type-preserving nulls; what a null fails to preserve. A 3 only where it grades
+  behaviour against real-animal data.
+- **Thermotaxis and isothermal tracking.** *The second tier, deferred, not dropped (2026-10-23): new
+  circuit mechanism or quantitative references at AFD and AIY are 2s.*
+- **Neuromechanical worm bodies and posture**: rod-chain bodies, eigenworm statistics, omega-turn
+  kinematics, and connectome-driven locomotion controllers. *The body and posture open the next
+  phase.*
+- **O₂ sensing, aggregation and bordering (npr-1), pathogen avoidance learning, satiety
+  quiescence**: the second tier of standard assays.
+- **Cross-connectome transfer and biological variation**: *P. pacificus*, the dauer, the male, new
+  adult reconstructions, and between-individual variability.
+- **Measured synaptic weights and signs**, and whole-brain activity atlases (signal propagation,
+  fitted weights).
 - New connectome datasets or releases for any organism, and the tooling to use them.
 - Whole-organism or whole-brain simulation efforts in any organism, including ones with neither
-  learning nor controls — they bound what this project can claim as novel.
-- Three-factor, neuromodulated and eligibility-trace rules in general, and diagnosed failures of
-  local rules; recurrent or state-space architectures evaluated on *biological* tasks, particularly
-  negative results.
-- Methods for comparing learned solutions across architectures; representational or dynamical
-  similarity measures; statistical protocol for paired-seed model comparison.
-- *C. elegans* behavioural quantification beyond the targets above — locomotion kinematics, bouts,
-  roaming/dwelling, patch-leaving, taxis separated from wall effects. *Demoted from 3 on
-  2026-10-15: the body's instruments exist; the repaired klinokinesis reference is the live one.*
-- Neuromorphic hardware running connectome-scale networks.
+  learning nor controls. They bound what this project can claim as novel.
+- Three-factor, neuromodulated and eligibility-trace rules; recurrent or state-space models evaluated
+  on *biological* tasks, particularly negative results.
+- Statistical protocol for comparing models against animal data (paired designs, held-out
+  validation, posterior-predictive checks).
 
 ## What is not relevant
 

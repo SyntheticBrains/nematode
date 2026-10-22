@@ -270,6 +270,41 @@ label = "Correig-Fraga et al. 2026, structure alone supports fly visual computat
 id = "W7215069349"
 label = "Guan et al. 2026, how much of fly walking is written in the wiring (six null families)"
 
+# Added 2026-10-23 at the Phase 10 plan review: the on-lawn assays the benchmark grades against, the
+# closest modelling precedent, and the neuromodulator connectome the wiring test rewires.
+
+[[openalex.seeds]]
+id = "W4382247350"
+label = "Scheer & Bargmann 2023, sensory neurons couple arousal and foraging decisions (roaming, lawn leaving)"
+
+[[openalex.seeds]]
+id = "W2951313775"
+label = "López-Cruz et al. 2019, parallel multimodal circuits control an innate foraging behaviour (local search)"
+
+[[openalex.seeds]]
+id = "W2098923623"
+label = "Gray, Hill & Bargmann 2005, a circuit for navigation (local search after food removal)"
+
+[[openalex.seeds]]
+id = "W2144433748"
+label = "Calhoun, Chalasani & Sharpee 2014, maximally informative foraging"
+
+[[openalex.seeds]]
+id = "W2295460112"
+label = "Roberts et al. 2016, a stochastic neuronal model predicts random search behaviours"
+
+[[openalex.seeds]]
+id = "W4405102897"
+label = "Haley et al., accept–reject decision-making in multi-patch foraging"
+
+[[openalex.seeds]]
+id = "W2514803758"
+label = "Bentley et al. 2016, the multilayer (monoamine and neuropeptide) connectome"
+
+[[openalex.seeds]]
+id = "W4388424601"
+label = "Ripoll-Sánchez et al. 2023, the neuropeptidergic connectome of C. elegans"
+
 # --- Keyword search ------------------------------------------------------------------------------
 # Preprints whose title or abstract carries a term, on the listed servers, through OpenAlex. Added
 # 2026-10-03 for two reasons found by hand that week. arXiv's query API returns HTTP 406 to GitHub
