@@ -136,16 +136,20 @@ superseded-by-result, unreachable-with-reason. "The next phase" means the direct
 
    The strength normaliser keeps the counts and replaces only the degree-based denominator, so the
    artefact sits in that denominator.
+
 2. **What stands of block V** (Logbook 102):
+
    - on hard350, the chemical wiring at the sensory–motor boundary, with no interior-wiring advantage
      there;
    - on thermal, a residual below the minimum, with the chemical wiring and the autapses not
      separated;
    - through the body, nothing on the corrected model.
+
 3. **Late PPO collapse on the body cell** strikes about one run in eight by 6,000 episodes. Which run
    collapses follows the training stream, not the seed. No registered cause precedes it, and no
    standard remedy beats a placebo re-roll (096, 098). The collapse statistic, and the windowed
    verdict that reads before the hazard, now serve every long panel.
+
 4. **Strength-normalised gap junctions** are a brain option, with every coupling at most 1, a spectral
    radius of 1 and an exact identity under unit weights. They are the standard symmetric
    normalisation for a weighted graph. The project's default remains the original, for byte identity.
