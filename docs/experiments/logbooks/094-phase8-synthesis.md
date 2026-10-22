@@ -1,5 +1,7 @@
 # 094: Phase 8 — The Connectome's Measurable Wiring Advantage Is Gap-Junction Placement, and It Survives the Body (Phase 8 Synthesis)
 
+*(**Restated 2026-10-22**, [Logbook 102](102-decomposition-restated.md): the headline is withdrawn. The gap-junction placement advantage was an artefact of the gap model's degree normaliser (Logbooks 095–101). What stands of block V is the chemical wiring at the sensory–motor boundary on hard350, with no interior-wiring advantage on either cell and none through the body on the corrected model.)*
+
 **Status**: completed. **Every 8b criterion is assigned a status, and Phase 8 is COMPLETE.** The
 shipment decision is **GO to a plan review** for the phase after 8.
 

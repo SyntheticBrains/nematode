@@ -1,5 +1,7 @@
 # 092: Through the Kinematic Body, the Wild Type's Gap-Junction Placement Advantage Survives (Phase 8b M.9)
 
+*(**Restated 2026-10-22**, [Logbook 102](102-decomposition-restated.md): the reading that the gap advantage survives embodiment is withdrawn. On log-compressed counts through the body there is no lead, early or late (Logbook 100). The locomotion findings that do not depend on the wiring contrast stand.)*
+
 **Status**: completed. The registered reading is **`move_wt` → the gap advantage survives
 embodiment.**
 

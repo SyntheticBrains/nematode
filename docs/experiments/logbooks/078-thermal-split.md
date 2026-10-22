@@ -1,5 +1,7 @@
 # 078: On Block V's Thermal Cell, the Null's Rewired Gap Junctions Carry About 84% of the Lead (Phase 8b A.6t follow-up)
 
+*(**Restated 2026-10-22**, [Logbook 102](102-decomposition-restated.md): the gap-junction share above is the degree normaliser's artefact. On the corrected gap model the same contrast reads nothing (Logbooks 099, 101). The remaining below-minimum lead involves no gap rewiring and stands.)*
+
 **Status**: completed — **`gap_junctions`; the remaining lead `lead_below_minimum`.** At a readable
 thermal point (target 35), holding a null's gap junctions at the wild type's moves block V's wiring gap
 toward the null by more than the registered minimum. Against that gap-held null the wild type still

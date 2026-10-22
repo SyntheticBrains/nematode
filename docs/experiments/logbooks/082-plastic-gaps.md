@@ -1,5 +1,7 @@
 # 082: The Wild Type's Gap-Junction Advantage Survives Letting Both Wirings Tune Their Gap Strengths (Phase 8b M.8)
 
+*(**Restated 2026-10-22**, [Logbook 102](102-decomposition-restated.md): the `placement` reading is withdrawn. The lead was read under the degree-normalised count model, and on the corrected gap model there is no lead to attribute (Logbooks 095, 099, 101).)*
+
 **Status**: completed — **`placement`.** On the thermal cell at target 35, under PPO at block V's point,
 a null whose gap junctions alone are rewired trails the wild type by +0.096 `auc_success`. When both
 wirings may tune the strength of every gap junction they have, it still trails by +0.086. The
