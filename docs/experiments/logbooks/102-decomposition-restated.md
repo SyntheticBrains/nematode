@@ -3,8 +3,10 @@
 **Status**: completed. No runs: this logbook restates the readings of Logbooks 074–092 in the light of
 095–101. **Every gap-junction component of block V's advantage was read under the model's
 degree-normalised count weights. On the thermal cell, where it has been re-read, it is absent under
-every correction tried. What stands is the chemical wiring's part: on hard350 the sensory–motor
-boundary, on thermal a lead below the minimum, and nowhere an interior-wiring advantage.**
+every correction tried. What stands is the part that involves no gap rewiring. On hard350 it is the
+chemical wiring at the sensory–motor boundary, with no interior-wiring advantage. On thermal it is a
+residual below the minimum, from the chemical wiring and the autapses together, which were not
+separated, and the interior was not tested there.**
 
 | cell | block V's lead against the degree-preserving null (count model) | the gap-junction part | what is left once the gap junctions are held |
 |---|---|---|---|
@@ -31,9 +33,10 @@ scale (Logbook 095). The corrections since then all remove it on the thermal cel
 | ohmic coupling ×0.03 | +0.021 [+0.007, +0.035], unresolved and below the minimum | 101 |
 | log-compressed counts, through the body (t20) | −0.022 [−0.045, +0.005] | 100 |
 
-The strength normaliser keeps every count and its relative weight within each neuron, and changes only
-the normaliser. That it removes the lead as completely as discarding the counts places the artefact in
-the normaliser. Every reading in Logbooks 074–092 that involves a rewired gap layer was taken under it,
+The strength normaliser keeps every count and replaces only the denominator: the degree-based
+`√(d_i d_j)` becomes the total-strength `√(s_i s_j)`. Because the strengths depend on each partner, the
+effective weights of a neuron's partners change relative to one another as well. That it removes the
+lead as completely as discarding the counts places the artefact in the degree-based denominator. Every reading in Logbooks 074–092 that involves a rewired gap layer was taken under it,
 so each is restated below for what it still says.
 
 ## The readings, restated
@@ -84,9 +87,11 @@ and it survives the body*. Restated:
 > On hard350 under PPO, the wild-type connectome learns faster than its degree-preserving null. About
 > half of that lead came from comparing two gap placements under a gap model whose degree normaliser
 > lets a few high-count pairs couple far above 1. That comparison is an artefact wherever it has been
-> re-read. The other half is the chemical wiring at the sensory–motor boundary. On the thermal cell, the
-> chemical part is a lead below the minimum. **No interior-wiring advantage is detectable on either
-> cell, and no wiring advantage of any kind is detectable through the body on the corrected gap model.**
+> re-read. The other half is the chemical wiring at the sensory–motor boundary, and on hard350 no
+> interior-wiring advantage is detectable. On the thermal cell, what involves no gap rewiring is a
+> residual below the minimum, from the chemical wiring and the autapses together, which were not
+> separated; the interior was not tested there. **No wiring advantage of any kind is detectable through
+> the body on the corrected gap model.**
 
 The phase's STOP condition and its statement (Logbooks 100 and 101) follow from this.
 
