@@ -1,0 +1,25 @@
+{
+  "launch": true,
+  "levels": {
+    "ohmic": {
+      "n_scored": 16,
+      "n_seeds": 16,
+      "rn_floor": 0.0,
+      "rn_plateau": 54.09166666666667,
+      "status": "readable",
+      "wt_floor": 0.0,
+      "wt_plateau": 61.05833333333333
+    },
+    "strength": {
+      "n_scored": 8,
+      "n_seeds": 8,
+      "rn_floor": 0.0,
+      "rn_plateau": 71.25,
+      "status": "readable",
+      "wt_floor": 0.0,
+      "wt_plateau": 62.233333333333334
+    }
+  },
+  "margin_points": 5.0,
+  "saturation_bar": 90.0
+}

@@ -277,7 +277,16 @@ GapWeightMode = Literal["count", "unit", "log_count"]
 # Laplacian, the steady state of ``dv/dt = -v + drive - L v``. Its rows sum to 1, so the coupling
 # averages and adds no loop gain at any conductance; the chemical recurrence is unchanged.
 GapCoupling = Literal["additive", "ohmic"]
+# How each gap pair's weight is normalised. "degree" divides by sqrt(d_i d_j), d the binary gap
+# degree: it counts partners, not their weights, so it does not bound a neuron's gap input.
+# "strength" divides by sqrt(s_i s_j), s_i the sum of neuron i's pair weights: every coupling is
+# then at most 1 and the matrix's spectral radius is 1, while each neuron's partners keep their
+# relative weights. Under "unit" weights s equals d, so the two coincide. A degree-preserving swap
+# keeps every neuron's degree but not its strength, so under "strength" a rewired wiring is
+# normalised by its own strengths.
+GapNormalisation = Literal["degree", "strength"]
 _GAP_WEIGHT_MODES: frozenset[str] = frozenset({"count", "unit", "log_count"})
+_GAP_NORMALISATIONS: frozenset[str] = frozenset({"degree", "strength"})
 # The two wirings that read ``gap_outlier_min_count``, and its default.
 _GAP_OUTLIER_WIRINGS: frozenset[str] = frozenset(
     {"rewired_gap_outliers_held", "rewired_gap_outliers_scattered"},
@@ -418,6 +427,9 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
     # Multiplier on the whole gap matrix after the fan-in scaling, so 0.25 is a quarter of the
     # coupling on every pair. Default 1.0 is byte-identical to the pre-option brain.
     gap_weight_scale: float = Field(default=1.0, gt=0.0)
+    # How each gap pair's weight is normalised; see GapNormalisation. Default "degree" is
+    # byte-identical to the pre-option brain.
+    gap_normalisation: GapNormalisation = "degree"
     # The gap junctions' form of coupling; see GapCoupling. Default "additive" is byte-identical to
     # the pre-option brain.
     gap_coupling: GapCoupling = "additive"
@@ -896,6 +908,25 @@ def _gap_options_refusal(config: ConnectomePPOBrainConfig) -> str | None:
             ),
         ),
         (
+            config.gap_normalisation not in _GAP_NORMALISATIONS,
+            f"Unsupported gap_normalisation: {config.gap_normalisation!r}",
+        ),
+        (
+            config.gap_normalisation == "strength" and not config.enable_gap_junctions,
+            (
+                "gap_normalisation='strength' with enable_gap_junctions=false would be accepted "
+                "and never read: there is no gap matrix to normalise."
+            ),
+        ),
+        (
+            config.gap_normalisation == "strength" and config.plastic_gaps,
+            (
+                "gap_normalisation='strength' with plastic_gaps=true: the plastic multipliers "
+                "rescale the normalised matrix, so the strength bound would not hold once they "
+                "learn."
+            ),
+        ),
+        (
             not config.enable_gap_junctions
             and (config.gap_weight_mode != "count" or config.gap_weight_scale != 1.0),
             (
@@ -1297,6 +1328,7 @@ class ConnectomeTopology(nn.Module):
         gap_weight_mode: GapWeightMode = "count",
         gap_weight_scale: float = 1.0,
         gap_coupling: GapCoupling = "additive",
+        gap_normalisation: GapNormalisation = "degree",
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
@@ -1529,13 +1561,14 @@ class ConnectomeTopology(nn.Module):
         # would accumulate across every update.
         self.w_chem.requires_grad_(not freeze_wiring)
 
-        # ── Gap junctions: symmetric, partner-count scaled, learnable only under plastic_gaps ──
+        # ── Gap junctions: symmetric, normalised, learnable only under plastic_gaps ──
         # Each entry ``G[i, j]`` is the pair's weight (see GapWeightMode) divided by
-        # ``sqrt(d_i * d_j)``, ``d`` the binary gap degree: symmetric, as gap junctions are
-        # bidirectional, which a row-or-column scaling would break. The normaliser counts a
-        # neuron's partners, not their counts, so it does not bound a neuron's gap input: a
+        # ``sqrt(n_i * n_j)``: symmetric, as gap junctions are bidirectional, which a row-or-column
+        # scaling would break. Under "degree" ``n`` is the binary gap degree. That normaliser counts
+        # a neuron's partners, not their counts, so it does not bound a neuron's gap input: a
         # high-count pair between two low-degree neurons couples far above 1 (ALA to CAN reaches
-        # about 90 under "count"), enough to hold both near saturation through the settling.
+        # about 90 under "count"), enough to hold both near saturation through the settling. Under
+        # "strength" ``n`` is the sum of the neuron's pair weights, which bounds every entry by 1.
         if enable_gap_junctions:
             g_gap_np = np.zeros((self.n_neurons, self.n_neurons), dtype=np.float32)
             for gj in connectome.gap_junctions:
@@ -1549,13 +1582,12 @@ class ConnectomeTopology(nn.Module):
                     w = float(gj.weight)
                 g_gap_np[a_i, b_j] = w
                 g_gap_np[b_j, a_i] = w
-            gap_in_degree = (g_gap_np != 0).sum(axis=0)
-            safe_gap_in = np.where(gap_in_degree > 0, gap_in_degree, 1)
-            gap_scale = np.where(
-                gap_in_degree > 0,
-                1.0 / np.sqrt(safe_gap_in.astype(np.float64)),
-                0.0,
-            ).astype(np.float32)
+            if gap_normalisation == "strength":
+                gap_in = g_gap_np.astype(np.float64).sum(axis=0)
+            else:
+                gap_in = (g_gap_np != 0).sum(axis=0).astype(np.float64)
+            safe_gap_in = np.where(gap_in > 0, gap_in, 1.0)
+            gap_scale = np.where(gap_in > 0, 1.0 / np.sqrt(safe_gap_in), 0.0).astype(np.float32)
             # Symmetric scaling: divide G[i,j] by sqrt(d_i * d_j).
             g_gap_np = g_gap_np * gap_scale[:, np.newaxis] * gap_scale[np.newaxis, :]
             if gap_weight_scale != 1.0:
@@ -3490,6 +3522,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             gap_weight_mode=config.gap_weight_mode,
             gap_weight_scale=config.gap_weight_scale,
             gap_coupling=config.gap_coupling,
+            gap_normalisation=config.gap_normalisation,
         ).to(self.device)
         # The two concentrations, serotonin then PDF, carried across an episode's steps.
         self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)
@@ -4225,6 +4258,12 @@ class ConnectomePPOBrain(ClassicalBrain):
                 },
             ),
         }
+        if self.config.gap_normalisation != "degree":
+            # Recorded only off the default, so a default brain saves exactly what it did before
+            # the option existed. A mismatch on load is refused by the gap-matrix wiring check.
+            all_components["training_state"].state["gap_normalisation"] = (
+                self.config.gap_normalisation
+            )
         if self._ppo_rule is not None:
             all_components["value"] = WeightComponent(
                 name="value",
