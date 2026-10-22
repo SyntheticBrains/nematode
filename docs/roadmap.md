@@ -94,11 +94,17 @@ Phase 5 results sharpened the framing in a load-bearing way. M3 Lamarckian inher
 
 ### North Star
 
-Be the platform on which learning — and evolution, where a wiring result makes the search space affordable — operates on the real *C. elegans* connectome in a closed sensory-motor loop, and use it to rank the wild-type connectome against unconstrained, evolved, and quantum architectures on a curated set of nematode behaviours.
+*(**Re-framed 2026-10-23**, roadmap v5.0, D33.)* Be the platform on which a simulated *C. elegans* is
+graded against real-worm data on the worm's standard behaviours, and use it to ask what the real
+connectome, synaptic and neuromodulatory, contributes to that fidelity, against wiring nulls fitted
+with the same budget. Architecture families are the controllers this compares, on fidelity rather
+than on learning speed.
+
+*Historical (until v5.0), kept as the record of what Phases 0–9 aimed at:* Be the platform on which learning — and evolution, where a wiring result makes the search space affordable — operates on the real *C. elegans* connectome in a closed sensory-motor loop, and use it to rank the wild-type connectome against unconstrained, evolved, and quantum architectures on a curated set of nematode behaviours.
 
 *(Restated 2026-10-15, v4.5. The previous wording, "learning and evolution operate", named a clause no phase since 5 had served: Phase 5 evolved MLP and LSTM weights, 6b's NEAT search never ran, and 029's evolved row was a feedforward GA. The restatement keeps evolution in the North Star and names its condition — a wiring result that makes a search space small enough to afford, which the gap-junction class map would be. Phase 9 serves it at zero cost by reading that map two-sided as a local-optimality test of the wild type's gap placement under class-level moves (§ Phase 9, G.3); the placement search itself is a MAY behind it.)*
 
-*Framing note: the platform contribution and the scientific contribution are mutually reinforcing — building the platform answers the architecture-comparison question; the architecture-comparison question motivates each platform layer. If post-Phase-6 evidence shows the connectome wins decisively on the curated behaviours, the headline framing may shift toward "connectome-primary" (a neuroscience result). If the evidence shows the connectome is competitive but not dominant, "optimal-primary" (an architecture result) remains the natural framing. Both readings are platform contributions; the scientific framing follows the evidence.*
+*Framing note (historical, pre-v5.0; superseded by D33's re-framing): the platform contribution and the scientific contribution are mutually reinforcing — building the platform answers the architecture-comparison question; the architecture-comparison question motivates each platform layer. If post-Phase-6 evidence shows the connectome wins decisively on the curated behaviours, the headline framing may shift toward "connectome-primary" (a neuroscience result). If the evidence shows the connectome is competitive but not dominant, "optimal-primary" (an architecture result) remains the natural framing. Both readings are platform contributions; the scientific framing follows the evidence.*
 
 ______________________________________________________________________
 
@@ -1699,14 +1705,14 @@ authoritative plan; amendments are dated in both places.
 | # | Decision | Resolution |
 |---|---|---|
 | **D33** | The project's research question | **Re-framed:** *how faithfully a simulated worm reproduces standard C. elegans behaviour, and what the connectome contributes to that fidelity.* Architecture families remain the comparison's controllers, compared on fidelity rather than learning speed. The architecture ranking on learning speed is halted (2026-10-22) |
-| **D34** | How the benchmark grades | bands from batch-matched real-data spread, computed with the project's own classifier; mutant effects relative to the controller's own wild type. **Void** unless the cohort-held-out real tracks pass and the matched negatives fail: the open-loop Scheer HMM, and primitives fired by stationary Poisson timing. Composite rules depend on closed-loop contingencies |
+| **D34** | How the benchmark grades | bands from batch-matched real-data spread, computed with the project's own classifier; mutant effects relative to the controller's own wild type. **Valid only if** both positive controls pass (cohort-held-out real tracks; held-out real mutant cohorts) and every negative fails: the matched negatives (the open-loop Scheer HMM; primitives fired by stationary Poisson timing) and the trivial ones (a random walk, a correlated random walk, the untrained policy). **Void** if any positive control fails or any negative passes. Composite rules depend on closed-loop contingencies |
 | **D35** | The point worm's time step | **1 worm-second.** One config value from which every step-coupled constant derives; 5 s stays the default |
 | **D36** | Locomotor primitives | run, reversal bout, omega/delta reorientation and pause, with kinematics fixed from data and timing chosen by the controller. Every arm and every negative runs on the same primitives. Reorientations are detected from trajectories, never from primitive labels |
 | **D37** | Fit and hold-out | fit on the wild type only. Local search is held out for C.2 and C.3; C.1's priors are set without search data. Positive controls hold out whole cohorts. The mutants (tph-1 on Scheer only; pdfr-1; tax-4) are fixed perturbations, encoded per controller in a table registered before any fit. npr-1 (O₂-dependent) and cat-2 (dopamine) move to the second tier |
 | **D38** | Fitting methods | NPE for C.1; sep-CMA on the benchmark's weighted distance for C.2, at ≥ 200 animals per evaluation, with the budget, x₀, σ₀ and weights pre-registered and a plateau criterion every arm must meet. Each has a parameter-recovery positive control (F.0). Mutant predictions are registered as posterior-predictive intervals, with an `unidentified` outcome |
 | **D39** | PPO's role | a comparator: C.3 is the C.2 architecture trained by reward, so the contrast isolates the method. No other reward-only panels |
 | **D40** | The wiring reading | the held-out fidelity distance and mutant phenocopy, the wild type against degree-preserving, gap-only (corrected gap model), boundary-held, class-preserving left–right-symmetric and neuromodulator-layer nulls, at equal budget. The minimum is the real between-cohort distance, both directions. Every outcome is named in advance, including "the nulls pass too" |
-| **D41** | Scope | the point worm only; **the body and posture open Phase 11.** Thermotaxis is the second tier, not dropped. No new thermal, predator or multi-agent work |
+| **D41** | Scope | the point worm only; **the body and posture open Phase 11.** Thermotaxis is the second tier, not dropped. The required blocks do no new thermal, predator, multi-agent or oxygen work; the MAY items (thermotaxis on the new primitives; O₂-field bordering with npr-1) remain allowed as optional second-tier comparisons |
 
 #### Required deliverables (MUST)
 
@@ -1754,12 +1760,14 @@ authoritative plan; amendments are dated in both places.
 
 - 🔲 **H** complete before the first registration.
 - 🔲 **E + T** shipped, with the parity test passing and the cost pilot recorded.
-- 🔲 **B** valid: both positive controls pass and every matched negative fails. Or B is void, with the
-  reasons, and the phase ships them.
+- 🔲 **B** valid: both positive controls pass, and every matched and every trivial negative fails. If any
+  positive control fails or any negative passes, B is void, and the phase ships the reasons.
 - 🔲 **N** built, with its null family audited.
 - 🔲 **F.0** read for both methods.
-- 🔲 **C.1–C.4** read, the fidelity table published.
-- 🔲 **W** read on graded distance, whatever the gate says.
+- 🔲 **C.1–C.4** read and the fidelity table published, **if B is valid**. Under the void-B pivot they
+  are not run, recorded as unreachable-with-reason.
+- 🔲 **W** read on graded distance, whatever C.2's pass gate says, **if B is valid**. Under the void-B
+  pivot it is not run, recorded as unreachable-with-reason.
 - 🔲 **The Phase 10 synthesis**, with every criterion assigned a status and the publication decision
   taken.
 
@@ -2069,7 +2077,7 @@ ______________________________________________________________________
 
 ### Phase 10 success levels
 
-- **Minimum viable**: the benchmark valid (both positive controls pass, every matched negative fails), with the 1-s worm, its primitives and assays, and track import. Citable alone.
+- **Minimum viable**: the benchmark valid (both positive controls pass, and every matched and every trivial negative fails), with the 1-s worm, its primitives and assays, and track import. Citable alone.
 - **Target**: C.1–C.4 read and the fidelity table published; W read on graded distance either way.
 - **Stretch**: a controller that passes every first-tier assay and reproduces the pdfr-1 and tax-4 dissociations, with W reading the wild type's wiring, synaptic or neuromodulatory, ahead of its nulls by at least the real between-cohort distance.
 

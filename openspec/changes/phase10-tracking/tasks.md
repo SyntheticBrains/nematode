@@ -30,8 +30,9 @@ nothing in W registers before C.2 has read.
   this tracker's PR). The item closes when the first digest has run against the new brief.
 - [ ] **H.2 The research question re-framed** (D33) in AGENTS.md, the README and the roadmap (lands with
   this tracker's PR; closes on merge).
-- [ ] **H.3 Scenario scope recorded**: thermal, predator, multi-agent and oxygen configs frozen, kept and
-  tested; thermotaxis named as the second tier. It closes when the docs say so in the scenario index.
+- [ ] **H.3 Scenario scope recorded**: thermal, predator, multi-agent and oxygen configs frozen for the
+  required blocks, kept and tested; thermotaxis named as the second tier; the MAY items below stay
+  allowed. It closes when the docs say so in the scenario index.
 - [ ] **H.4 The seed-band table** (design.md), cited by every registration.
 
 ## E + T — the worm, its assays and the batched evaluator (MUST)
@@ -134,5 +135,6 @@ nothing in W registers before C.2 has read.
 ## MAY
 
 - [ ] Thermotaxis on the new primitives (the second tier).
-- [ ] Bordering against an O₂ field, with npr-1.
+- [ ] Bordering against an O₂ field, with npr-1 (an optional second-tier comparison; npr-1 is excluded
+  only as a required mutant test).
 - [ ] A Creamer-dynamics controller graded on the benchmark.

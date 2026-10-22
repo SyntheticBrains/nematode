@@ -55,10 +55,13 @@ additions, and holds the seed-band table. This is a tracking scaffold, not an im
 ### 3. Not in Phase 10
 
 - the architecture ranking on learning speed (halted 2026-10-22);
-- new thermal, predator, multi-agent or oxygen work (thermotaxis is the second tier);
+- new thermal, predator, multi-agent or oxygen work in the required blocks. Thermotaxis is the second
+  tier, and the optional MAY items (thermotaxis on the new primitives; bordering against an O₂ field
+  with npr-1) remain allowed;
 - the body and posture (Phase 11);
 - reward-only panels beyond C.3;
-- npr-1 and cat-2 as mutant tests: O₂ sensing and dopamine are not modelled.
+- npr-1 and cat-2 as **required** mutant tests: O₂ sensing and dopamine are not modelled in the required
+  blocks. npr-1 may still enter as the optional O₂-field bordering comparison.
 
 ## Capabilities
 
