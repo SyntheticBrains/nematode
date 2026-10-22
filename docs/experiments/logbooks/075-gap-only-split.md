@@ -1,5 +1,7 @@
 # 075: The Null's Rewired Gap Junctions Carry A.6's Move on Both Learners (Phase 8 A.6 follow-up)
 
+*(**Restated 2026-10-22**, [Logbook 102](102-decomposition-restated.md): the gap-junction component above compares two gap placements under the degree-normalised count model, the comparison found to be an artefact wherever it has been re-read (Logbooks 095–101). It was not re-read on hard350, so it is no longer cited as a gap-placement effect.)*
+
 **Status**: completed — **`gap_junctions` on both learners.** A.6 found that holding a null's gap
 junctions and autapses at the wild type's moved the wiring gap toward the null. Holding the **gap
 junctions alone**, on the current null's exact chemical graph, reproduces that move at or above the

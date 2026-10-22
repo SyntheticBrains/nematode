@@ -280,10 +280,11 @@ GapCoupling = Literal["additive", "ohmic"]
 # How each gap pair's weight is normalised. "degree" divides by sqrt(d_i d_j), d the binary gap
 # degree: it counts partners, not their weights, so it does not bound a neuron's gap input.
 # "strength" divides by sqrt(s_i s_j), s_i the sum of neuron i's pair weights: every coupling is
-# then at most 1 and the matrix's spectral radius is 1, while each neuron's partners keep their
-# relative weights. Under "unit" weights s equals d, so the two coincide. A degree-preserving swap
-# keeps every neuron's degree but not its strength, so under "strength" a rewired wiring is
-# normalised by its own strengths.
+# then at most 1 and the matrix's spectral radius is 1. The counts are kept, but because each
+# partner's strength enters the denominator, the effective weights of a neuron's partners change
+# relative to one another too. Under "unit" weights s equals d, so the two coincide. A degree-
+# preserving swap keeps every neuron's degree but not its strength, so under "strength" a rewired
+# wiring is normalised by its own strengths.
 GapNormalisation = Literal["degree", "strength"]
 _GAP_WEIGHT_MODES: frozenset[str] = frozenset({"count", "unit", "log_count"})
 _GAP_NORMALISATIONS: frozenset[str] = frozenset({"degree", "strength"})

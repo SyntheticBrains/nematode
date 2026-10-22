@@ -109,8 +109,8 @@ Across the four corrections now read on this cell, the wild type's lead over its
 | ohmic coupling ×0.03 | +0.021 [+0.007, +0.035] | here |
 
 The lead the project carried appears only under the original model, the one whose normaliser lets a few
-high-count pairs couple near 90. Fixing the normaliser alone, which keeps every count and its relative
-weight within each neuron, removes it as completely as discarding the counts does. That localises the
+high-count pairs couple near 90. Fixing the normaliser alone, which keeps every count and replaces only the degree-based denominator
+with the total-strength one, removes it as completely as discarding the counts does. That localises the
 artefact: **it was the normaliser**.
 
 Ohmic coupling is the one model with a residue: a wild-type lead of about 0.02.
