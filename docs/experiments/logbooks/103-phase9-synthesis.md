@@ -84,8 +84,8 @@ superseded-by-result, unreachable-with-reason. "The next phase" means the direct
 | criterion | status | record |
 |---|---|---|
 | R.1 per-family positive controls through the body | **unmet-with-reason** | halted by the maintainer's direction decision of 2026-10-22: the ranking answers a question the STOP has emptied of its main motivation |
-| R.2 the ranking through the body | **unmet-with-reason** | halted on the same decision. Of its trigger, condition (1) (M.1 closed) is met; (2) to (4) were never reached |
-| D27 the body freeze | **unmet-with-reason** | not signed: there is no ranking left for it to freeze a body for |
+| R.2 the ranking through the body | **deferred-with-destination** | the trigger's condition (2), a signed body freeze (D27), is unmet. Condition (1), M.1 closed, is met; (3) and (4) were never evaluated, not shown unmet. Destination: the next phase's stage 2, where controller families are compared on the fidelity benchmark rather than ranked on learning speed through the body |
+| D27 the body freeze | **unmet-with-reason** | the go/no-go decision is **NO-GO**: the freeze is not signed, because no ranking through the body is scheduled to need it |
 
 ### The syntheses
 
