@@ -372,3 +372,23 @@ def test_a_primitive_step_is_labelled_and_backs_up() -> None:
     reversals = [b for b in agent.behaviour if b.primitive == "reversal"]
     assert reversals
     assert all(b.speed_signed is not None and b.speed_signed < 0 for b in reversals)
+
+
+def test_a_multi_agent_run_with_a_primitives_brain_is_refused(tmp_path: Path) -> None:
+    """The primitives run one worm, so an agent's primitives brain is refused at load."""
+    data = _raw(
+        _REPO
+        / "configs"
+        / "scenarios"
+        / "multi_agent_foraging"
+        / "lstmppo_large_5agents_mixed_1F_4L_klinotaxis.yml",
+    )
+    data["multi_agent"]["agents"][0]["brain"] = {
+        "name": "mlpppo",
+        "config": {
+            "action_mode": "continuous",
+            "action_space": "primitives",
+            "sensory_modules": ["food_chemotaxis"],
+        },
+    }
+    _refused(tmp_path, data, "multi_agent must be disabled")

@@ -103,8 +103,14 @@ omega, delta). It SHALL be refused unless `locomotion` is `primitives`.
 
 ### Requirement: Primitives are scoped to the 1-second point worm
 
-`locomotion: primitives` SHALL require the point body, `allow_reversal: false`, and an environment step
-of at most one second.
+`locomotion: primitives` SHALL require the point body, `allow_reversal: false`, an environment step
+of at most one second, and a single worm. A multi-agent run SHALL be refused when the environment or
+any agent's brain uses the primitives.
+
+#### Scenario: A multi-agent run is refused
+
+- **WHEN** a multi-agent config gives one agent a primitives brain
+- **THEN** loading SHALL fail, naming the multi-agent setting
 
 #### Scenario: The 5-second worm is refused
 

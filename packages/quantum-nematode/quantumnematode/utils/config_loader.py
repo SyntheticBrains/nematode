@@ -2741,7 +2741,8 @@ class SimulationConfig(BaseModel):
         reads nothing else. Its bouts last one to fifteen seconds, so it needs a step of at most one
         second; it backs the worm up itself, so reversal is off; and it moves a point worm. The two
         senses it brings are refused where they would read nothing: the locomotor state without
-        the primitives, and food contact without lawns.
+        the primitives, and food contact without lawns. The primitives run one worm, so a
+        multi-agent run is refused whether the environment or any agent's brain asks for them.
         """
         environment = self.environment
         continuous = environment.get_continuous_config() if environment is not None else None
@@ -2768,6 +2769,17 @@ class SimulationConfig(BaseModel):
                 "the food_contact module reads the lawn under the worm; it needs food_model: lawns."
             )
             raise ValueError(msg)
+        if self.multi_agent is not None and self.multi_agent.enabled:
+            agent_spaces = [
+                getattr(agent.brain.config, "action_space", "speed_turn")
+                for agent in self.multi_agent.agents or []
+            ]
+            if locomotion == "primitives" or "primitives" in agent_spaces:
+                msg = (
+                    "locomotion: primitives and action_space: primitives run one worm; "
+                    "multi_agent must be disabled."
+                )
+                raise ValueError(msg)
         if not primitives:
             return self
         assert self.brain is not None  # noqa: S101
