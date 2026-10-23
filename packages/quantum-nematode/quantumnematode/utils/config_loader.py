@@ -2902,9 +2902,11 @@ class SimulationConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate_circular_arena(self) -> "SimulationConfig":
-        """Refuse a circular arena with anything the square's random placement could put outside it.
+        """Refuse a circular arena with anything that could end up outside it.
 
-        A circle takes only a centred lawn and no predators.
+        A circle takes only a centred lawn, no predators (the square's random placement could put
+        either outside it), and the point worm (the kinematic body's segments are clamped to the
+        square).
         """
         environment = self.environment
         if environment is None or environment.get_continuous_config().arena_shape != "circle":
@@ -2922,6 +2924,12 @@ class SimulationConfig(BaseModel):
             raise ValueError(msg)
         if environment.predators is not None and environment.predators.enabled:
             msg = "arena_shape: circle does not place predators; disable them"
+            raise ValueError(msg)
+        if environment.get_continuous_config().body_model == "kinematic":
+            msg = (
+                "arena_shape: circle does not bound the kinematic body, whose segments are clamped "
+                "to the square; use the point worm"
+            )
             raise ValueError(msg)
         return self
 

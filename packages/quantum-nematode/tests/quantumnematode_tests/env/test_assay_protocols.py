@@ -313,3 +313,59 @@ def test_the_committed_assay_configs_are_the_generators(arm: str, protocol: str)
     assert lawns is not None
     assert lawns.intake_fraction == pytest.approx(1e-4, rel=1e-3)
     assert lawns.movement_cost_per_mm == 0.0
+
+
+@pytest.mark.parametrize("seed", range(5991, 6011))
+def test_random_lawns_keep_clear_of_a_kept_worm(tmp_path: Path, seed: int) -> None:
+    """A later phase's random lawns are placed clear of the worm it keeps where it was."""
+    data = _raw("food_removal_calhoun")
+    data["environment"]["foraging"]["lawns"].update(placement="random", radius_mm=2.0)
+    data["environment"]["assay"]["phases"] = [
+        {"name": "bare", "duration_s": 10.0, "food": "none", "place": "keep"},
+        {"name": "assay", "duration_s": 4490.0, "food": "lawns", "place": "keep"},
+    ]
+    config = _load(tmp_path, data)
+    env = create_env_from_config(configure_environment(config), seed=seed)
+    assert isinstance(env, Continuous2DEnvironment)
+    state = env.agents[DEFAULT_AGENT_ID]
+    state.pos_continuous = (6.0, 7.0)
+    env.advance_assay(10)
+    assert env.assay_phase_name == "assay"
+    assert env.lawn_field is not None
+    for cx, cy in env.lawn_field.centres:
+        assert math.hypot(cx - 6.0, cy - 7.0) >= 2.0 + 2.0
+
+
+def test_a_discrete_move_stays_in_the_well() -> None:
+    """The discrete-action fallback is bounded by the circle as well."""
+    from quantumnematode.brain.actions import Action
+
+    env = _env("scheer_lawn")
+    state = env.agents[DEFAULT_AGENT_ID]
+    for action in [Action.FORWARD] * 20 + [Action.LEFT] * 20 + [Action.RIGHT] * 20:
+        env._apply_movement(state, action)
+        x, y = state.pos_continuous  # type: ignore[misc]
+        assert math.hypot(x - 5.0, y - 5.0) <= 5.0 + 1e-9
+
+
+def test_a_centred_lawn_that_does_not_fit_is_refused() -> None:
+    """A centred lawn and its wall clearance must fit inside the arena."""
+    from quantumnematode.env.lawns import LawnField, LawnParams
+
+    rng = np.random.default_rng(0)
+    with pytest.raises(ValueError, match="does not fit"):
+        LawnField.centred(LawnParams(count=1, radius_mm=4.5, wall_clearance_mm=1.0), rng, 10.0)
+    assert LawnField.centred(LawnParams(count=1, radius_mm=4.0), rng, 10.0).radius_mm == 4.0
+
+
+def test_the_kinematic_body_in_a_circle_is_refused(tmp_path: Path) -> None:
+    """The body's segments are clamped to the square, so a circular arena refuses it."""
+    data = yaml.safe_load(
+        (
+            _FORAGING / "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_body_internal.yml"
+        ).read_text(),
+    )
+    data["environment"]["continuous"]["arena_shape"] = "circle"
+    data["environment"]["foraging"]["lawns"].update(count=1, placement="centre")
+    with pytest.raises(ValueError, match="does not bound the kinematic body"):
+        _load(tmp_path, data)

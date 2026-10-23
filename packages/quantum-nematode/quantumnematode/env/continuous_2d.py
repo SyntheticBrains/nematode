@@ -262,7 +262,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
                 lawns,
                 self.rng,
                 world_size_mm=float(self.grid_size),
-                start=[],
+                start=self._assay_lawn_starts(phase.place),
             )
         else:
             self.lawn_field = None
@@ -274,6 +274,20 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             agent_state.position = self._discretise(position)
             agent_state.body = [agent_state.position]
             agent_state.heading_rad = float(self.rng.uniform(-math.pi, math.pi))
+
+    def _assay_lawn_starts(self, place: str) -> list[tuple[float, float]]:
+        """Return where the worms will stand as the phase starts, for random lawns to keep clear of.
+
+        A kept worm stays where it is and a transferred one goes to the arena's centre, so random
+        lawns are placed ``start_clearance_mm`` from those points. The other placements are drawn
+        from the lawns themselves, after them.
+        """
+        if place == "keep":
+            return [self._agent_xy(agent_id) for agent_id in self.agents]
+        if place == "arena_centre":
+            centre = self.continuous.world_size_mm / 2.0
+            return [(centre, centre)]
+        return []
 
     def _assay_placement(self, place: str) -> tuple[float, float]:
         """Return where a phase puts a worm: a lawn's centre, the arena's, or bare agar."""
@@ -385,6 +399,13 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             float(agent_state.position[0]),
             float(agent_state.position[1]),
         )
+        if self.continuous.arena_shape == "circle":
+            agent_state.pos_continuous = project_into_circle(
+                *agent_state.pos_continuous,
+                self.continuous.world_size_mm,
+            )
+            agent_state.position = self._discretise(agent_state.pos_continuous)
+            agent_state.body = [agent_state.position]
         # Mirror the discrete facing into the continuous heading so heading-aware
         # readers (e.g. the Euclidean contact-zone classifier) use the correct facing
         # after a discrete-action move. Derived from the same `_HEADING_OFFSET` the grid

@@ -59,7 +59,8 @@ step's sensing.
 
 `continuous.arena_shape: circle` SHALL bound the worm by a circle of diameter `world_size_mm` centred
 in the square. A move ending outside it SHALL be projected radially onto the wall, and sensing positions
-SHALL be clamped the same way. `square`, the default, SHALL be unchanged.
+SHALL be clamped the same way, on every movement path of the point worm. The kinematic body SHALL be
+refused in a circular arena. `square`, the default, SHALL be unchanged.
 
 #### Scenario: The worm never leaves the well
 
@@ -69,7 +70,8 @@ SHALL be clamped the same way. `square`, the default, SHALL be unchanged.
 ### Requirement: A centred lawn
 
 `lawns.placement: centre` SHALL put a single lawn at the arena centre, and SHALL be refused with
-`count` above 1. `random`, the default, SHALL be unchanged, and SHALL be refused on a circular arena.
+`count` above 1 or when the lawn and its wall clearance do not fit the arena. A later phase's random
+lawns SHALL keep `start_clearance_mm` from where the worm will stand. `random`, the default, SHALL be unchanged, and SHALL be refused on a circular arena.
 
 #### Scenario: Scheer's lawn
 
