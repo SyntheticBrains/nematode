@@ -126,8 +126,11 @@ class BrainConfig(BaseModel):
     # What a continuous action means. "speed_turn" (default) is the normalized (speed, turn) a point
     # worm moves by. "body_drive" is 25 numbers in [-1, 1] for a kinematic body: dorsal drive for
     # each of 12 segments, ventral drive for each, then a direction channel. It must match the
-    # environment's body model, which the simulation configuration checks at load.
-    action_space: Literal["speed_turn", "body_drive"] = "speed_turn"
+    # environment's body model, which the simulation configuration checks at load. "primitives" is
+    # five numbers in [-1, 1] for a point worm under locomotor primitives: run speed, run curvature,
+    # and a start hazard for each of reversal, omega and delta; it must match the environment's
+    # locomotion.
+    action_space: Literal["speed_turn", "body_drive", "primitives"] = "speed_turn"
 
     @model_validator(mode="after")
     def _validate_signed_speed(self) -> BrainConfig:
@@ -144,18 +147,23 @@ class BrainConfig(BaseModel):
         if self.action_space == "speed_turn":
             return self
         if self.action_mode != "continuous":
-            msg = "action_space: body_drive requires action_mode: continuous."
+            msg = f"action_space: {self.action_space} requires action_mode: continuous."
             raise ValueError(msg)
         if self.signed_speed:
+            why = (
+                "whose direction channel already reverses the body"
+                if self.action_space == "body_drive"
+                else "under which backing is the reversal primitive's"
+            )
             msg = (
-                "signed_speed is not read under action_space: body_drive, whose direction channel "
-                "already reverses the body; leave it at its default."
+                f"signed_speed is not read under action_space: {self.action_space}, {why}; leave "
+                "it at its default."
             )
             raise ValueError(msg)
         if self.continuous_std_mode == "state_dependent":
             msg = (
-                "action_space: body_drive does not support continuous_std_mode: state_dependent, "
-                "whose head is sized for two outputs."
+                f"action_space: {self.action_space} does not support continuous_std_mode: "
+                "state_dependent, whose head is sized for two outputs."
             )
             raise ValueError(msg)
         return self

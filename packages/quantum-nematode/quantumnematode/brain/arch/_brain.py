@@ -398,6 +398,20 @@ class BrainParams(BaseModel):
             "quality, so ingestion can be read as a fraction of a full bite; None without lawns."
         ),
     )
+    food_contact: float | None = Field(
+        default=None,
+        description=(
+            "The density of the lawn cell under the worm, 0 off every lawn and blind to the lawn's "
+            "quality, as a mechanosensory sense of bacteria; None without lawns."
+        ),
+    )
+    locomotor_state: str | None = Field(
+        default=None,
+        description=(
+            "The locomotor primitive the worm is in at the start of this step: run, reversal, "
+            "omega or delta; None without primitive locomotion."
+        ),
+    )
     health: float | None = Field(
         default=None,
         description="Current HP (decreases from damage events).",

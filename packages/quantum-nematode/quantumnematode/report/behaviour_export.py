@@ -74,7 +74,7 @@ def write_behaviour_capture(
     return output_path
 
 
-_OPTIONAL_FIELDS = ("speed_signed", "satiety", "intake", "on_lawn")
+_OPTIONAL_FIELDS = ("speed_signed", "satiety", "intake", "on_lawn", "primitive")
 
 
 def _record(step: BehaviourStep) -> dict[str, object]:

@@ -94,6 +94,8 @@ class ModuleName(StrEnum):
     # Social sensing module
     SOCIAL_PROXIMITY = "social_proximity"
     INTERNAL_STATE = "internal_state"
+    FOOD_CONTACT = "food_contact"
+    LOCOMOTOR_STATE = "locomotor_state"
 
     # Pheromone sensing modules
     PHEROMONE_FOOD = "pheromone_food"
@@ -1000,6 +1002,75 @@ SENSORY_MODULES[ModuleName.INTERNAL_STATE] = SensoryModule(
         "Internal state: satiety as a fraction of its maximum. Strength only (1 dimension)."
     ),
     classical_dim=1,
+)
+
+
+def _food_contact_core(params: BrainParams) -> CoreFeatures:
+    """Extract the density of the lawn cell under the worm (0 off every lawn).
+
+    The mechanosensory sense of bacteria behind basal slowing: it reads that bacteria are underfoot
+    and how densely, not how nutritious they are, so a lawn's quality does not enter it.
+
+    Returns
+    -------
+    CoreFeatures
+        strength = the cell's density in [0, 1]; 0 when unknown.
+    """
+    contact = params.food_contact
+    return CoreFeatures(strength=0.0 if contact is None else max(0.0, min(contact, 1.0)))
+
+
+SENSORY_MODULES[ModuleName.FOOD_CONTACT] = SensoryModule(
+    name=ModuleName.FOOD_CONTACT,
+    extract=_food_contact_core,
+    description=(
+        "Food contact: the density of the bacterial lawn under the worm, 0 off a lawn, blind to "
+        "quality (the dopaminergic mechanosensory sense of bacteria). Strength only (1 dimension)."
+    ),
+    classical_dim=1,
+)
+
+# The primitives a worm can be in, in the order the locomotor-state one-hot reports them.
+LOCOMOTOR_STATES: tuple[str, ...] = ("run", "reversal", "omega", "delta")
+
+
+@dataclass
+class LocomotorStateModule(SensoryModule):
+    """The worm's own locomotor primitive as a one-hot over run, reversal, omega and delta.
+
+    Four features do not fit the three-slot core features, so the classical vector is built here;
+    a quantum brain reads a compressed summary.
+    """
+
+    classical_dim: int = len(LOCOMOTOR_STATES)
+
+    def to_classical(self, params: BrainParams) -> np.ndarray:
+        """Return the one-hot of the running primitive; all zeros when unknown."""
+        state = np.zeros(self.classical_dim, dtype=np.float32)
+        if params.locomotor_state in LOCOMOTOR_STATES:
+            state[LOCOMOTOR_STATES.index(params.locomotor_state)] = 1.0
+        return state
+
+    def to_quantum(self, params: BrainParams) -> np.ndarray:
+        """Compress to gate angles: in a bout, backing, and turning, each 0 or pi/2."""
+        kind = params.locomotor_state
+        return np.array(
+            [
+                (kind not in (None, "run")) * np.pi / 2,
+                (kind == "reversal") * np.pi / 2,
+                (kind in ("omega", "delta")) * np.pi / 2,
+            ],
+            dtype=np.float32,
+        )
+
+
+SENSORY_MODULES[ModuleName.LOCOMOTOR_STATE] = LocomotorStateModule(
+    name=ModuleName.LOCOMOTOR_STATE,
+    extract=lambda _params: CoreFeatures(),  # Not used: overridden by to_classical/to_quantum
+    description=(
+        "Locomotor state: which primitive the worm is in (run, reversal, omega, delta), one-hot "
+        "(4 dimensions). Proprioception of its own motor state under locomotor primitives."
+    ),
 )
 
 # --- Pheromone sensing modules ---

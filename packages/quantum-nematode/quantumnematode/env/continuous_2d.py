@@ -29,6 +29,14 @@ from quantumnematode.env.env import (
     DynamicForagingEnvironment,
     PredatorType,
 )
+from quantumnematode.env.primitives import (
+    PrimitiveKind,
+    PrimitiveState,
+    load_kinematics,
+    new_state,
+    running_kind,
+    step_primitives,
+)
 from quantumnematode.env.worm_time import step_worm_seconds
 from quantumnematode.logging_config import logger
 
@@ -86,6 +94,10 @@ class Continuous2DParams:
     body_steering_gain: float | None = None
     # One step's duration in worm-seconds; None takes it from ``max_step_mm`` at the crawl speed.
     step_seconds: float | None = None
+    # How the point worm moves. "free" applies a (speed, turn) action each step. "primitives" moves
+    # it only by runs, reversal bouts and omega/delta turns with fixed kinematics, started by the
+    # controller's hazards (see ``quantumnematode.env.primitives``).
+    locomotion: str = "free"
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -125,6 +137,10 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         # ran tail-to-head; None (the default) records nothing. Set per episode by an evaluation,
         # never by a training run.
         self.posture_log: list[dict[str, object]] | None = None
+        # Per-agent primitive state, created on each agent's first primitive step of the episode,
+        # and the primitive that moved each agent on its last step.
+        self.primitive_states: dict[str, PrimitiveState] = {}
+        self.last_primitive: dict[str, PrimitiveKind] = {}
         # The parent's integer coordinate extent = the continuous world size; the
         # caller does not set grid_size for the continuous substrate.
         kwargs.pop("grid_size", None)
@@ -174,6 +190,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             msg = f"Expected Continuous2DEnvironment from copy(), got {type(new_env).__name__}"
             raise TypeError(msg)
         new_env.bodies = _copy.deepcopy(self.bodies)
+        new_env.primitive_states = _copy.deepcopy(self.primitive_states)
+        new_env.last_primitive = dict(self.last_primitive)
         return new_env
 
     @property
@@ -300,6 +318,13 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         limit = self.continuous.max_step_mm
         floor = -limit if self.continuous.allow_reversal else 0.0
         speed = max(floor, min(float(speed), limit))
+        self._turn_then_move(agent_state, speed, turn)
+
+    def _turn_then_move(self, agent_state: AgentState, distance: float, turn: float) -> None:
+        """Rotate the heading by ``turn``, then move ``distance`` along it, clamped to the arena.
+
+        A negative ``distance`` moves the worm backward along its unchanged heading.
+        """
         heading = _wrap_to_pi(agent_state.heading_rad + float(turn))
         agent_state.heading_rad = heading
 
@@ -311,8 +336,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             float(agent_state.position[1]),
         )
         world = self.continuous.world_size_mm
-        new_x = min(world, max(0.0, origin[0] + speed * math.cos(heading)))
-        new_y = min(world, max(0.0, origin[1] + speed * math.sin(heading)))
+        new_x = min(world, max(0.0, origin[0] + distance * math.cos(heading)))
+        new_y = min(world, max(0.0, origin[1] + distance * math.sin(heading)))
 
         agent_state.pos_continuous = (new_x, new_y)
         agent_state.position = self._discretise((new_x, new_y))
@@ -373,6 +398,31 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         speed = speed_norm * self.continuous.max_step_mm
         turn = turn_norm * self.continuous.max_turn_rad
         self._kinematic_move(self.agents[agent_id], speed, turn)
+
+    def move_agent_primitives(
+        self,
+        action: tuple[float, ...],
+        agent_id: str = DEFAULT_AGENT_ID,
+    ) -> PrimitiveKind:
+        """Advance one agent by one step under the locomotor primitives; return what moved it.
+
+        ``action`` is the controller's five numbers in ``[-1, 1]``: run speed, run curvature, and a
+        start hazard for each of reversal, omega and delta. The agent's episode state (its running
+        bout and which side is ventral) is created on its first primitive step, from the
+        environment's RNG.
+        """
+        state = self.primitive_states.get(agent_id)
+        if state is None:
+            state = new_state(self.rng)
+            self.primitive_states[agent_id] = state
+        step = step_primitives(state, action, self.step_seconds, load_kinematics(), self.rng)
+        self._turn_then_move(self.agents[agent_id], step.displacement_mm, step.heading_change_rad)
+        self.last_primitive[agent_id] = step.kind
+        return step.kind
+
+    def running_primitive(self, agent_id: str = DEFAULT_AGENT_ID) -> PrimitiveKind:
+        """Return the primitive an agent is in at the start of its next step: a bout's, else run."""
+        return running_kind(self.primitive_states.get(agent_id))
 
     # ----- float source placement + capture-radius consumption + Euclidean -----
     # Food sources are placed at real-valued coordinates within the continuous

@@ -43,12 +43,18 @@ class BehaviourStep:
     speed_signed : float | None
         Recorded only when the environment allows reversal: the displacement since the previous
         captured step projected on the heading, in mm, negative when the worm backed up; zero at
-        an episode's first captured step, which follows no move. ``None`` otherwise, and then
-        omitted from the export, so captures without reversal are unchanged.
+        an episode's first captured step, which follows no move. Also recorded under locomotor
+        primitives, whose reversal bouts back the worm up. ``None`` otherwise, and then omitted
+        from the export, so captures without reversal are unchanged.
     satiety, intake, on_lawn : float | None, float | None, bool | None
         Recorded only under the lawn food model: satiety, the quality-weighted food eaten on the
         move into this step, and whether the worm is inside a lawn. ``None`` otherwise, and then
         omitted from the export.
+    primitive : str | None
+        Recorded only under locomotor primitives: the primitive that moved the worm into this step
+        (``run``, ``reversal``, ``omega`` or ``delta``; ``run`` at an episode's first step). For
+        diagnosis only: behaviour is graded from trajectories, never from this label. ``None``
+        otherwise, and then omitted from the export.
     """
 
     step: int
@@ -63,6 +69,7 @@ class BehaviourStep:
     satiety: float | None = None
     intake: float | None = None
     on_lawn: bool | None = None
+    primitive: str | None = None
 
 
 class TerminationReason(StrEnum):

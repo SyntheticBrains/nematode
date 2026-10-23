@@ -1,7 +1,8 @@
 """The 1-second lawn worms, end to end through ``run_simulation.py``.
 
 Covers the step-duration scenarios "The 1-second configs run" and "A campaign run records its step",
-and the realworm-behavioural-validation scenario "A 1-second capture is labelled".
+the realworm-behavioural-validation scenarios "A 1-second capture is labelled" and "A primitive step
+is labelled", for the 1-second worm with free locomotion and on the locomotor primitives.
 """
 
 from __future__ import annotations
@@ -21,6 +22,8 @@ FORAGING = PROJECT_ROOT / "configs" / "scenarios" / "foraging"
 CONFIGS = [
     "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_s1",
     "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1",
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_s1_primitives",
+    "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives",
 ]
 # A short episode keeps the smoke quick: 60 reference steps, 300 one-second steps.
 _REFERENCE_STEPS = 60
@@ -78,3 +81,6 @@ def test_a_one_second_config_runs_records_and_classifies(tmp_path: Path, stem: s
     )
     assert len(episode.states) == (len(steps) - 1) // 10
     assert set(episode.states) <= {rd.ROAMING, rd.DWELLING, rd.OFF_FOOD}
+    # Under the primitives every captured step names its primitive; otherwise none does.
+    primitives = stem.endswith("_primitives")
+    assert all((s.primitive is not None) is primitives for s in steps)

@@ -58,6 +58,7 @@ from quantumnematode.brain.arch._policy import (
     CONTINUOUS_ACTION_DIM,
     categorical_sample_torch,
     continuous_action_bounds,
+    continuous_action_dim,
     continuous_deterministic_action,
     continuous_sample_tanh_gaussian,
     raise_on_speed_sign_mismatch,
@@ -800,13 +801,13 @@ def _wild_type_order(
 
 
 def _body_drive_refusal(config: ConnectomePPOBrainConfig) -> str | None:
-    """Return why the body-drive action cannot run here, or ``None`` when it can."""
-    if config.action_space != "body_drive":
+    """Return why a body-drive or primitives action cannot run here, or ``None`` when it can."""
+    if config.action_space == "speed_turn":
         return None
     if config.learning_rule != "ppo":
         return (
-            f"action_space: body_drive requires learning_rule='ppo', got {config.learning_rule!r}: "
-            "the plastic rules read and write a two-number readout."
+            f"action_space: {config.action_space} requires learning_rule='ppo', got "
+            f"{config.learning_rule!r}: the plastic rules read and write a two-number readout."
         )
     return None
 
@@ -1322,6 +1323,7 @@ class ConnectomeTopology(nn.Module):
         input_gain: float = 1.0,
         plastic_gaps: bool = False,
         body_drive: bool = False,
+        action_dim: int = CONTINUOUS_ACTION_DIM,
         freeze_wiring: bool = False,
         modulator_circuit: ModulatorCircuit | None = None,
         modulator_knockout: ModulatorKnockout = "none",
@@ -1699,7 +1701,7 @@ class ConnectomeTopology(nn.Module):
         # discrete actions -- and reading the action count here would silently break at any other
         # width.
         self.readout_width: ReadoutWidth = readout_width
-        readout_out_dim = CONTINUOUS_ACTION_DIM if continuous else _N_ACTIONS
+        readout_out_dim = action_dim if continuous else _N_ACTIONS
         self.readout = nn.Parameter(
             torch.zeros(readout_out_dim, len(_MOTOR_CLASSES), device=device),
         )
@@ -1727,7 +1729,7 @@ class ConnectomeTopology(nn.Module):
             # neither branch consumes RNG.
             self.log_std = nn.Parameter(
                 torch.full(
-                    (BODY_DRIVE_DIM if body_drive else CONTINUOUS_ACTION_DIM,),
+                    (BODY_DRIVE_DIM if body_drive else action_dim,),
                     initial_log_std,
                     device=device,
                 ),
@@ -3514,6 +3516,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             input_gain=config.input_gain,
             plastic_gaps=config.plastic_gaps,
             body_drive=config.action_space == "body_drive",
+            action_dim=continuous_action_dim(config.action_space),
             freeze_wiring=config.freeze_wiring,
             modulator_circuit=(
                 load_circuit(sorted(connectome.neurons)) if config.modulators else None

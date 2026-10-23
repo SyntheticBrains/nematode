@@ -1,4 +1,14 @@
-## ADDED Requirements
+# locomotor-primitives Specification
+
+## Purpose
+
+The 1-second point worm can move only by locomotor primitives: runs, reversal bouts, and omega and
+delta turns. Their kinematics are fixed from published data. Every controller drives them the same
+way, through five numbers per second: run speed, run curvature, and three start hazards. With the
+primitives come a food-contact sense and a locomotor-state sense, and two non-learning controllers
+that serve as the layer's positive control and the benchmark's Poisson negative.
+
+## Requirements
 
 ### Requirement: The primitive layer
 
@@ -39,8 +49,9 @@ was verified in the text or read from a figure. A test SHALL pin each value to i
 #### Scenario: Executed bouts match their source
 
 - **WHEN** each primitive is forced 2,000 times and every bout is measured from the trajectory alone
-- **THEN** its durations, displacements and heading changes SHALL match draws from the vendored
-  distributions (two-sample KS, p > 0.01)
+- **THEN** its whole-step durations SHALL match source draws rounded to whole steps
+- **AND** its reversal distances and turn angles SHALL match the vendored distributions directly (each
+  a two-sample KS, p > 0.01)
 
 ### Requirement: The hazard interface
 
@@ -58,6 +69,17 @@ its kind SHALL be drawn in proportion to its hazard, both from the environment's
 - **WHEN** a controller holds every hazard constant
 - **THEN** the intervals between bout starts, less the bouts themselves, SHALL be geometric at the
   per-step rate `1 − exp(−Λ Δt)`
+
+### Requirement: Bout boundaries
+
+A start SHALL be drawn only at the beginning of a step with no bout running. A bout's partial last
+step SHALL end it, and no bout SHALL start within that step.
+
+#### Scenario: No start inside a bout's last step
+
+- **WHEN** a reversal of 2.4 s runs at a 1-second step
+- **THEN** it SHALL occupy three steps, the third moving 0.4 s's distance
+- **AND** the earliest next start SHALL be drawn at the fourth step
 
 ### Requirement: A food-contact sense
 
@@ -92,12 +114,15 @@ of at most one second.
 ### Requirement: Non-learning hazard controllers
 
 The package SHALL provide `ConstantHazards` (fixed speed, zero curvature, fixed hazards) and
-`PirouetteHazards` (start hazards `λ_0 · exp(−β · dC/dt)` from the STAM derivative, straight runs).
-Each SHALL drive the layer through the same five-number mapping as a brain.
+`PirouetteHazards` (start hazards `λ_0 · exp(−β · d)`, with `d` the food derivative feature as brains
+see it, and straight runs). Each SHALL implement the Brain protocol, learn nothing, and run through the
+same runner as a brain.
 
 #### Scenario: Klinokinesis is expressible and timing alone is not
 
-- **WHEN** worms start 6 mm off one lawn on seeds 5994–5999 and run for 20 minutes
+- **WHEN** worms start 6 mm off a central lawn at uniform headings on seeds 5994–5999 and run for 1,200
+  one-second steps
 - **THEN** `PirouetteHazards` SHALL reach the lawn more often than `ConstantHazards` at its mean hazard
   and speed, bootstrap-significant at 95%
-- **AND** `ConstantHazards` SHALL reach it no more often than the same controller with zero hazards
+- **AND** the pirouette rule with its sign inverted SHALL reach it less often than `ConstantHazards` at
+  its own mean hazard

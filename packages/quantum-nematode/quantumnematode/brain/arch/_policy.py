@@ -331,9 +331,17 @@ BODY_DRIVE_DIM: int = 25
 """The body-drive action: dorsal and ventral drive for each of 12 segments, then direction."""
 
 
+PRIMITIVES_DIM: int = 5
+"""The primitives action: run speed, run curvature, then three bout start hazards."""
+
+
 def continuous_action_dim(action_space: str) -> int:
-    """Return a continuous action's width: 2 for ``(speed, turn)``, 25 for a body drive."""
-    return BODY_DRIVE_DIM if action_space == "body_drive" else CONTINUOUS_ACTION_DIM
+    """Return a continuous action's width: 2 for (speed, turn), 25 for a body, 5 for primitives."""
+    if action_space == "body_drive":
+        return BODY_DRIVE_DIM
+    if action_space == "primitives":
+        return PRIMITIVES_DIM
+    return CONTINUOUS_ACTION_DIM
 
 
 def continuous_action_bounds(
@@ -345,14 +353,16 @@ def continuous_action_bounds(
     """Return ``(low, high)`` for the normalized continuous action.
 
     For ``(speed, turn)``, speed spans ``[0, 1]``, or ``[-1, 1]`` under signed speed, where a
-    negative value backs the worm up; turn spans ``[-1, 1]`` either way. A body drive spans
-    ``[-1, 1]`` in every entry. Every continuous brain takes its bounds from here, so the action
-    space cannot differ between architectures on one environment.
+    negative value backs the worm up; turn spans ``[-1, 1]`` either way. A body drive and the
+    primitives span ``[-1, 1]`` in every entry; the environment maps the primitives' entries onto
+    speed, curvature and start hazards. Every continuous brain takes its bounds from here, so the
+    action space cannot differ between architectures on one environment.
     """
-    if action_space == "body_drive":
+    if action_space in ("body_drive", "primitives"):
+        width = continuous_action_dim(action_space)
         return (
-            torch.full((BODY_DRIVE_DIM,), -1.0, device=device),
-            torch.ones(BODY_DRIVE_DIM, device=device),
+            torch.full((width,), -1.0, device=device),
+            torch.ones(width, device=device),
         )
     low = torch.tensor([-1.0 if signed_speed else 0.0, -1.0], device=device)
     high = torch.tensor([1.0, 1.0], device=device)

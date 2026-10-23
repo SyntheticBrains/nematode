@@ -70,9 +70,29 @@ nothing in W registers before C.2 has read.
     taking five times the decisions per worm-second, with the same per-decision noise, diffuses
     less. This is learning-relevant, not a conversion fault.
 
-- [ ] **E.2 Locomotor primitives** (D36): run, reversal bout, omega/delta reorientation and pause, with
+- [x] **E.2 Locomotor primitives** (D36): run, reversal bout, omega/delta reorientation and pause, with
   kinematics fixed from data (Broekmans 2016; Gray 2005) and timing chosen by the controller. The
   lawn-edge question is decided in its spec.
+
+  *(Closed 2026-10-24, change `add-locomotor-primitives`, archived as
+  `2026-10-24-add-locomotor-primitives`.)*
+
+  - `continuous.locomotion: primitives` and `action_space: primitives`, for the connectome and
+    MLP-PPO brains.
+  - Five numbers per second drive them: run speed, run curvature, and start hazards for reversal,
+    omega and delta.
+  - Kinematics are in `data/locomotion/primitives.json`.
+  - The **lawn-edge question** is answered with a food-contact sense, the lawn density under the worm.
+    A `locomotor_state` sense is added beside it.
+  - Two non-learning controllers: `ConstantHazards`, B.4's Poisson negative, and `PirouetteHazards`.
+  - **Positive control.** Executed bouts match their sources, read from trajectories. The pirouette
+    rule reaches a lawn 6 mm away more often than constant hazards at its mean rate, and the inverted
+    rule less often.
+  - Configs: `*_lawns_modulated_s1_primitives.yml` and `*_lawns_internal_s1_primitives.yml`.
+  - D36 amended (dated): a pause is a run at zero speed; delta turns are deep dorsal coils; the
+    sources are off food.
+  - **Note for C.3:** the untrained policies' sampled hazards average about 0.1/s per kind, so untrained
+    worms spend most of their time in bouts.
 
 - [ ] **E.3 Assay protocols**: Scheer's small lawn (40 min); food removal onto a bare plate; an off-food
   start; multi-hour episodes with satiety re-calibrated.
@@ -86,6 +106,11 @@ nothing in W registers before C.2 has read.
 - [ ] **B.1 Reference re-extraction**: Scheer & Bargmann 2023 from the Zenodo mirror (8310289), with
   positions and cohort IDs, through the restricted unpickler. Calhoun 2014 and Roberts 2016 tracks;
   López-Cruz 2019 targets. Each with its licence, unit convention and provenance.
+
+  *(Added 2026-10-24 by E.2.)* Check the primitives' off-food kinematics (`data/locomotion/primitives.json`)
+  against Scheer's on-food movement flags (reversal, pause, omega, with the lawn-boundary distance), on
+  cohorts held out of the benchmark. A disagreement beyond the sources' spread is a dated amendment
+  before any fit.
 
 - [ ] **B.2 Readouts**: a trajectory-based reorientation detector, validated against Calhoun's and
   Roberts's omega flags; the classifier run on tracks downsampled to 5 s; the local-search curve; the

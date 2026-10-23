@@ -435,6 +435,7 @@ def _not_step_coupled() -> dict[str, set[str]]:
             "predator_damage_radius_mm",
             "allow_reversal",
             "step_seconds",
+            "locomotion",
         },
         "ForagingConfig": set(ForagingConfig.model_fields) - {"food_model"},
         "LawnConfig": set(LawnConfig.model_fields) - _CONVERTED["LawnConfig"],

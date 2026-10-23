@@ -1123,6 +1123,14 @@ class StandardEpisodeRunner(EpisodeRunner):
                 ):
                     # A kinematic body: the 25-number drive goes to the body.
                     agent.env.move_agent_body(top_action.continuous, agent_id=agent.agent_id)
+                elif top_action.continuous is not None and (
+                    agent.env.continuous.locomotion == "primitives"
+                ):
+                    # Locomotor primitives: run speed, curvature and three start hazards.
+                    agent.env.move_agent_primitives(
+                        top_action.continuous,
+                        agent_id=agent.agent_id,
+                    )
                 elif top_action.continuous is not None:
                     # Continuous-action brains emit a normalized (speed, turn); the
                     # env rescales to physical units.

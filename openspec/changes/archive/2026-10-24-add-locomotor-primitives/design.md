@@ -107,8 +107,11 @@ the same clamped move as today. Pause is a run with `v ≈ 0`.
 worm lies on one side, as the animal does on agar.
 
 **During a bout** the brain is still run each step, so its state and modulators keep their time course
-and the record has an action every step. Its outputs move nothing until the bout ends. A start can be
-drawn on the step the bout ends.
+and the record has an action every step. Its outputs move nothing until the bout ends.
+
+**Bout boundaries.** A start is drawn only at the beginning of a step with no bout running. A bout's
+last step may be partial: the worm moves or turns for the remainder, then stands for the rest of that
+step. No bout starts within it. The next step may draw a start.
 
 **Walls** clamp every displacement as today.
 
@@ -163,7 +166,9 @@ At load:
   - the point body;
   - an environment step of at most 1 s, since bouts last 1–15 s and need second resolution. On D.1's
     5-s cell this means `step_seconds: 1.0`.
-- **`locomotor_state`** requires `locomotion: primitives`.
+- **`locomotor_state`** requires `locomotion: primitives`. Its four features do not fit the
+  three-slot `CoreFeatures` layout, so it follows the precedent of a module with its own extractor and
+  declared size.
 - **`food_contact`** requires `food_model: lawns`.
 
 `utils/step_duration.py` marks the new fields as not step-coupled in its field walk. The kinematics
@@ -172,45 +177,56 @@ are in seconds, and `max_step_mm` and `max_turn_rad` are unread under primitives
 ### Decision E: Capture
 
 `BehaviourStep.primitive: str | None` records `run`, `reversal`, `omega` or `delta` under primitives,
-and is absent otherwise (the optional-field pattern). It is for diagnosis. B's readouts never read it
+and is absent otherwise (the optional-field pattern). `speed_signed` is also recorded under primitives:
+reversal bouts back the worm up, although `allow_reversal` is off. It is for diagnosis. B's readouts never read it
 (D36). A test in B.2 will assert that.
 
 ### Decision F: The non-learning controllers
 
-`quantumnematode/env/hazard_controllers.py` holds two controllers. Each maps a step's sensed state to
-the five raw outputs in `[-1, 1]`, so it drives the layer through the same mapping as a brain.
+`quantumnematode/env/hazard_controllers.py` holds two controllers. Each implements the Brain protocol
+(`run_brain`, `update_memory`, `prepare_episode`, `post_process_episode`, `copy`), learns nothing, and
+returns the five raw outputs in `[-1, 1]` as a continuous `ActionData`. Each is passed to
+`QuantumNematodeAgent(brain=...)`, so it runs through the same runner as every brain:
+
+- satiety, lawn intake and movement cost;
+- capture;
+- episode endings.
+
+They are not registered as configurable brains.
 
 - **`ConstantHazards(v, rates)`**: a fixed run speed, zero curvature and fixed rates. This is the
   Poisson-timed negative.
 - **`PirouetteHazards(v, λ_0, β, rates)`**: the Pierce-Shimomura klinokinesis rule.
-  - The reversal and turn hazards are `λ_0 · exp(−β · dC/dt)`, read from the same STAM derivative the
-    brains see. They rise as the concentration falls.
+  - The reversal and turn hazards are `λ_0 · exp(−β · d)`, rising as the concentration falls.
+  - `d` is the food derivative feature exactly as the brains see it: `tanh(raw · derivative_scale)`,
+    from `BrainParams.food_dconcentration_dt` with E.1's converted scale.
   - Runs are straight at `v`.
-
-They run through a small driver loop. It reads the agent's sensing and calls
-`env.move_agent_primitives`, with no brain.
 
 ## Positive control (protocol principle 4)
 
 The new component is the primitive layer. It needs no learning to be checked.
 
-1. **Kinematics.** Force each primitive with a constant hazard of λ_max for that kind only. Over 2,000
-   bouts per kind:
+1. **Kinematics.** Force each primitive with a constant hazard of λ_max for that kind only, over 2,000
+   bouts per kind. Each bout is measured from the trajectory alone; the labels are not read.
 
-   - each bout's duration, displacement and heading change are measured from the trajectory alone;
-   - their distributions match the vendored ones (two-sample KS against draws from the source
-     distributions, p > 0.01);
-   - omega and delta turn to opposite sides within an episode;
-   - the labels are not read.
+   - **Durations** are whole steps, `⌈D/Δt⌉`, so they are compared with source draws rounded the same
+     way.
+   - **Reversal distance** `v_rev · D` and **turn angle** `θ` are exact, so they are compared directly.
+   - Each comparison is a two-sample KS against draws from the source distributions, p > 0.01.
+   - Omega and delta turn to opposite sides within an episode.
 
 2. **Expressiveness, with a must-fail arm.**
 
-   - **Setup.** On one lawn in a 20 mm arena, worms start 6 mm off the lawn edge, on seeds 5994–5999.
-   - **Arm.** `PirouetteHazards` must reach the lawn within 20 minutes more often than `ConstantHazards`
-     at the same mean hazard and speed, measured on the pirouette arm's own runs. The difference must
-     be bootstrap-significant at 95% over 6 × 32 episodes.
-   - **Must-fail.** `ConstantHazards` alone must reach the lawn no more often than with its hazards set
-     to zero. Timing without sensing is not chemotaxis.
+   - **Setup.** One lawn sits at the centre of a 20 mm arena. Worms start 8.5 mm from the centre (6 mm
+     off the lawn edge, 1.5 mm from the wall) at headings drawn uniformly. Each episode is 1,200
+     one-second steps, on fixture seeds 5994–5999.
+   - **Arm.** `PirouetteHazards` must reach the lawn within the episode more often than
+     `ConstantHazards`, at the same run speed and the mean hazard measured on the pirouette arm's own
+     runs. The difference must be bootstrap-significant at 95% over 6 × 32 episodes.
+   - **Must-fail.** The pirouette rule with β inverted, reorienting when the concentration rises,
+     must reach the lawn less often than `ConstantHazards` at its own mean hazard. Without the sign of
+     dC/dt, timing is not chemotaxis.
+   - **Cost.** About 0.7 million steps over the three arms: a few minutes, so a slow-tier test.
 
    If the pirouette arm fails, the layer cannot express klinokinesis, and E.2 does not close.
 
@@ -227,10 +243,29 @@ The new component is the primitive layer. It needs no learning to be checked.
 - **The brain runs during bouts.** PPO stores actions that moved nothing, which adds credit noise.
   That is C.3's concern. The alternative, skipping the brain during bouts, would stop its clock, and
   the modulators' time course with it.
-- **Log-scaled hazards bias the untrained policy** to about 0.6 reorientations of each kind per
-  minute. That is within the real range, and it is the same for every arm.
+- **Log-scaled hazards and the untrained policy.** The untrained mean is the geometric middle,
+  0.01/s, but exploration noise spreads the raw output over most of `[-1, 1]`. The sampled hazards
+  therefore average about 0.1/s per kind, the arithmetic mean of a log-uniform draw. In smokes the
+  untrained worms spent most of their time in bouts. The non-learning controllers are unaffected.
+  For PPO it is a starting point C.3's registration states.
+- **Five readout rows on four motor classes.** The connectome's orthogonal initialisation of a 5 × 4
+  readout draws differently from 2 × 4. That is expected for a new action space, and `speed_turn` is
+  untouched.
 - **Omega translation set to zero.** The coiled centroid moves little, but not zero. A trajectory
   detector reading displacement at turns may need B.2's tolerance.
+
+### Decision G: D36 amended, dated
+
+This change departs from D36 as written in three ways, so the amendment is dated (2026-10-24) in the
+roadmap's D36 row and in the tracker's design before the change registers:
+
+- **pause** is a run at zero speed, not its own bout;
+- **delta turns** are Broekmans' deep dorsal coils, not shallow turns;
+- **kinematics** come from published values in Zhao 2003, Gray 2005, Broekmans 2016, Pierce-Shimomura
+  1999 and Ben Arous 2009, all off food, with B.1's on-food check.
+
+The positive control's fixture seeds (5994–5999) are test fixtures inside the smoke band, not a
+registration. The tracker's seed table says so.
 
 ## Migration
 
