@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from quantumnematode.env.assay import OFF_LAWN_WALL_MARGIN_MM, AssayParams, project_into_circle
 from quantumnematode.env.body import BodyParams, BodyState, KinematicBody, midline, new_body
 from quantumnematode.env.env import (
     _HEADING_OFFSET,
@@ -29,6 +30,7 @@ from quantumnematode.env.env import (
     DynamicForagingEnvironment,
     PredatorType,
 )
+from quantumnematode.env.lawns import LawnField
 from quantumnematode.env.primitives import (
     PrimitiveKind,
     PrimitiveState,
@@ -98,6 +100,14 @@ class Continuous2DParams:
     # it only by runs, reversal bouts and omega/delta turns with fixed kinematics, started by the
     # controller's hazards (see ``quantumnematode.env.primitives``).
     locomotion: str = "free"
+    # The arena: "square", or "circle" of diameter world_size_mm centred in the square.
+    arena_shape: str = "square"
+    # An assay protocol, or None: the episode as phases of food and placement.
+    assay: AssayParams | None = None
+
+
+# Draws for an off-lawn start before giving up: bare agar is most of any assay's arena.
+_MAX_OFF_LAWN_DRAWS = 10_000
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -141,6 +151,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         # and the primitive that moved each agent on its last step.
         self.primitive_states: dict[str, PrimitiveState] = {}
         self.last_primitive: dict[str, PrimitiveKind] = {}
+        # The assay phase running, or None without an assay; phase 0 begins at construction.
+        self.assay_phase_index: int | None = None
         # The parent's integer coordinate extent = the continuous world size; the
         # caller does not set grid_size for the continuous substrate.
         kwargs.pop("grid_size", None)
@@ -149,6 +161,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             **kwargs,  # type: ignore[arg-type]
         )
         self._init_continuous_positions()
+        if self.continuous.assay is not None:
+            self._begin_assay_phase(0)
 
     def _new_like(self) -> Continuous2DEnvironment:
         """Construct a fresh `Continuous2DEnvironment` with this env's configuration.
@@ -192,7 +206,101 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         new_env.bodies = _copy.deepcopy(self.bodies)
         new_env.primitive_states = _copy.deepcopy(self.primitive_states)
         new_env.last_primitive = dict(self.last_primitive)
+        new_env.assay_phase_index = self.assay_phase_index
         return new_env
+
+    def _initialize_lawns(self) -> None:
+        """Place the lawns, unless an assay's phases do; a centred lawn sits on the true centre.
+
+        Random placement keeps the integer arena extent it always used, so its draws are unchanged.
+        """
+        if self.continuous.assay is not None:
+            self.lawn_field = None
+            return
+        lawns = self.foraging.lawns
+        if lawns is not None and lawns.placement == "centre":
+            self.lawn_field = LawnField.centred(lawns, self.rng, self.continuous.world_size_mm)
+            return
+        super()._initialize_lawns()
+
+    # ----- assay protocols -----
+
+    @property
+    def assay_phase_name(self) -> str | None:
+        """Return the running assay phase's name, or None without an assay."""
+        assay = self.continuous.assay
+        if assay is None or self.assay_phase_index is None:
+            return None
+        return assay.phases[self.assay_phase_index].name
+
+    def assay_record(self) -> dict[str, object] | None:
+        """Return the assay's timing in steps for a behaviour capture, or None without one."""
+        assay = self.continuous.assay
+        return None if assay is None else assay.record(self.step_seconds)
+
+    def advance_assay(self, step_index: int) -> None:
+        """Begin every assay phase whose start falls at or before step ``step_index``'s start."""
+        assay = self.continuous.assay
+        if assay is None or self.assay_phase_index is None:
+            return
+        target = assay.phase_at(step_index * self.step_seconds)
+        while self.assay_phase_index < target:
+            self._begin_assay_phase(self.assay_phase_index + 1)
+
+    def _begin_assay_phase(self, index: int) -> None:
+        """Turn the phase's lawns on, freshly placed, or off, then place every worm as it says."""
+        assay = self.continuous.assay
+        if assay is None:
+            return
+        phase = assay.phases[index]
+        self.assay_phase_index = index
+        lawns = self.foraging.lawns
+        if phase.food == "lawns" and lawns is not None and lawns.placement == "centre":
+            self.lawn_field = LawnField.centred(lawns, self.rng, self.continuous.world_size_mm)
+        elif phase.food == "lawns" and lawns is not None:
+            self.lawn_field = LawnField.place(
+                lawns,
+                self.rng,
+                world_size_mm=float(self.grid_size),
+                start=[],
+            )
+        else:
+            self.lawn_field = None
+        if phase.place == "keep":
+            return
+        for agent_state in self.agents.values():
+            position = self._assay_placement(phase.place)
+            agent_state.pos_continuous = position
+            agent_state.position = self._discretise(position)
+            agent_state.body = [agent_state.position]
+            agent_state.heading_rad = float(self.rng.uniform(-math.pi, math.pi))
+
+    def _assay_placement(self, place: str) -> tuple[float, float]:
+        """Return where a phase puts a worm: a lawn's centre, the arena's, or bare agar."""
+        world = self.continuous.world_size_mm
+        if place == "arena_centre":
+            return (world / 2.0, world / 2.0)
+        field = self.lawn_field
+        if field is None:
+            msg = f"assay placement {place!r} needs the phase's lawns"
+            raise ValueError(msg)
+        if place == "lawn_centre":
+            return (float(field.centres[0][0]), float(field.centres[0][1]))
+        clearance = field.radius_mm + self.foraging.lawns.start_clearance_mm  # type: ignore[union-attr]
+        margin = OFF_LAWN_WALL_MARGIN_MM
+        for _ in range(_MAX_OFF_LAWN_DRAWS):
+            if self.continuous.arena_shape == "circle":
+                radius = world / 2.0 - margin
+                distance = radius * math.sqrt(float(self.rng.random()))
+                angle = float(self.rng.uniform(-math.pi, math.pi))
+                x = world / 2.0 + distance * math.cos(angle)
+                y = world / 2.0 + distance * math.sin(angle)
+            else:
+                x, y = (float(v) for v in self.rng.uniform(margin, world - margin, size=2))
+            if all(math.hypot(x - cx, y - cy) >= clearance for cx, cy in field.centres):
+                return (x, y)
+        msg = f"no bare agar {clearance:g} mm clear of every lawn in a {world:g} mm arena"
+        raise ValueError(msg)
 
     @property
     def step_seconds(self) -> float:
@@ -338,6 +446,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         world = self.continuous.world_size_mm
         new_x = min(world, max(0.0, origin[0] + distance * math.cos(heading)))
         new_y = min(world, max(0.0, origin[1] + distance * math.sin(heading)))
+        if self.continuous.arena_shape == "circle":
+            new_x, new_y = project_into_circle(new_x, new_y, world)
 
         agent_state.pos_continuous = (new_x, new_y)
         agent_state.position = self._discretise((new_x, new_y))

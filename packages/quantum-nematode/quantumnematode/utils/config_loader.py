@@ -113,6 +113,7 @@ from quantumnematode.utils.step_duration import StepDerivation, derive_step_coup
 
 if TYPE_CHECKING:
     from quantumnematode.env import DynamicForagingEnvironment
+    from quantumnematode.env.assay import AssayParams
     from quantumnematode.env.theme import Theme
 
 BrainConfigType = (
@@ -302,6 +303,8 @@ class LawnConfig(BaseModel):
     start_on_lawn: bool = False
     start_clearance_mm: float = Field(default=2.0, ge=0.0)
     wall_clearance_mm: float = Field(default=1.0, ge=0.0)
+    # "random" (default) scatters the lawns; "centre" puts one lawn at the arena's centre.
+    placement: Literal["random", "centre"] = "random"
 
     @model_validator(mode="after")
     def _validate_quality(self) -> "LawnConfig":
@@ -309,6 +312,13 @@ class LawnConfig(BaseModel):
         low, high = self.quality
         if low < 0 or high < low:
             msg = f"lawn quality must be [low, high] with 0 <= low <= high, got {self.quality}"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_placement(self) -> "LawnConfig":
+        if self.placement == "centre" and self.count != 1:
+            msg = f"lawns.placement: centre places one lawn, but count is {self.count}"
             raise ValueError(msg)
         return self
 
@@ -328,6 +338,7 @@ class LawnConfig(BaseModel):
             start_on_lawn=self.start_on_lawn,
             start_clearance_mm=self.start_clearance_mm,
             wall_clearance_mm=self.wall_clearance_mm,
+            placement=self.placement,
         )
 
 
@@ -1139,6 +1150,9 @@ class Continuous2DConfig(BaseModel):
     # kinematics, started by the controller's hazards. It needs a brain with action_space:
     # primitives, the point body, reversal off, and a step of at most one second.
     locomotion: Literal["free", "primitives"] = "free"
+    # The arena's shape: "square" (default) or "circle", a circle of diameter world_size_mm
+    # centred in the square, whose wall the worm slides along as it does a square one's.
+    arena_shape: Literal["square", "circle"] = "square"
 
     @model_validator(mode="after")
     def _validate_kinematic_needs_reversal(self) -> "Continuous2DConfig":
@@ -1393,6 +1407,79 @@ def assert_associative_observation_clean(
         raise ValueError(msg)
 
 
+class AssayPhaseConfig(BaseModel):
+    """One phase of an assay protocol: its length, its food and where the worm is put."""
+
+    name: str = Field(min_length=1)
+    duration_s: float = Field(gt=0.0)
+    food: Literal["lawns", "none"]
+    place: Literal["keep", "lawn_centre", "off_lawn", "arena_centre"] = "keep"
+
+    @model_validator(mode="after")
+    def _validate_place(self) -> "AssayPhaseConfig":
+        if self.place in ("lawn_centre", "off_lawn") and self.food != "lawns":
+            msg = (
+                f"assay phase {self.name!r} places the worm {self.place} but has food: "
+                f"{self.food}; that placement needs the phase's lawns"
+            )
+            raise ValueError(msg)
+        return self
+
+
+class AssayConfig(BaseModel):
+    """An assay protocol: phases in order, the phase a reference records, and its analysis start.
+
+    The worm's satiety and its controller's state carry across phases; each phase turns the lawns
+    on, freshly placed, or off, and places the worm. The phases' durations are the episode's length.
+    """
+
+    name: str = Field(min_length=1)
+    phases: list[AssayPhaseConfig] = Field(min_length=1)
+    assay_phase: str
+    analysis_from_s: float = Field(default=0.0, ge=0.0)
+
+    @model_validator(mode="after")
+    def _validate_phases(self) -> "AssayConfig":
+        names = [phase.name for phase in self.phases]
+        if len(set(names)) != len(names):
+            msg = f"assay {self.name!r} repeats a phase name: {names}"
+            raise ValueError(msg)
+        if self.assay_phase not in names:
+            msg = f"assay {self.name!r} names assay_phase {self.assay_phase!r}, not one of {names}"
+            raise ValueError(msg)
+        duration = self.phases[names.index(self.assay_phase)].duration_s
+        if self.analysis_from_s >= duration:
+            msg = (
+                f"assay {self.name!r} starts its analysis {self.analysis_from_s:g} s into a "
+                f"{duration:g}-s assay phase"
+            )
+            raise ValueError(msg)
+        return self
+
+    def total_s(self) -> float:
+        """Return the protocol's length in worm-seconds."""
+        return sum(phase.duration_s for phase in self.phases)
+
+    def to_params(self) -> "AssayParams":
+        """Convert to the environment's assay parameters."""
+        from quantumnematode.env.assay import AssayParams, AssayPhase
+
+        return AssayParams(
+            name=self.name,
+            phases=tuple(
+                AssayPhase(
+                    name=phase.name,
+                    duration_s=phase.duration_s,
+                    food=phase.food,
+                    place=phase.place,
+                )
+                for phase in self.phases
+            ),
+            assay_phase=self.assay_phase,
+            analysis_from_s=self.analysis_from_s,
+        )
+
+
 class EnvironmentConfig(BaseModel):
     """Configuration for the dynamic foraging environment."""
 
@@ -1421,6 +1508,8 @@ class EnvironmentConfig(BaseModel):
     # the foraging/predator/thermal dynamics are inactive and the episode is driven by the
     # conditioning/reversal/delay/response phase machine.
     associative_memory_task: AssociativeMemoryTaskConfig | None = None
+    # An assay protocol (off by default): the episode as phases of food and placement.
+    assay: AssayConfig | None = None
 
     @model_validator(mode="after")
     def _validate_continuous_env_type(self) -> "EnvironmentConfig":
@@ -2599,6 +2688,8 @@ class CoevolutionConfig(BaseModel):
 
 
 _BODY_DRIVE_BRAINS = frozenset({"connectomeppo", "mlpppo"})
+# How far an assay's durations may sit off the step grid, in seconds or steps.
+_ASSAY_TOLERANCE = 1e-6
 """Brains that emit the 25-number body drive."""
 
 
@@ -2805,6 +2896,93 @@ class SimulationConfig(BaseModel):
             msg = (
                 f"locomotion: primitives needs a step of at most 1 s, since its bouts last one to "
                 f"fifteen seconds; this config's step is {step:g} s. Set step_seconds: 1.0."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_circular_arena(self) -> "SimulationConfig":
+        """Refuse a circular arena with anything the square's random placement could put outside it.
+
+        A circle takes only a centred lawn and no predators.
+        """
+        environment = self.environment
+        if environment is None or environment.get_continuous_config().arena_shape != "circle":
+            return self
+        foraging = environment.foraging
+        lawns = foraging.lawns if foraging is not None else None
+        if foraging is None or foraging.food_model != "lawns" or lawns is None:
+            msg = "arena_shape: circle needs food_model: lawns with a centred lawn"
+            raise ValueError(msg)
+        if lawns.placement != "centre":
+            msg = (
+                "arena_shape: circle needs lawns.placement: centre; random placement is drawn "
+                "in the square and could put a lawn outside the circle"
+            )
+            raise ValueError(msg)
+        if environment.predators is not None and environment.predators.enabled:
+            msg = "arena_shape: circle does not place predators; disable them"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_assay(self) -> "SimulationConfig":
+        """Refuse an assay outside its scope.
+
+        An assay is a single worm on the continuous substrate under the lawn food model. Its phases
+        decide where the worm starts, so ``start_on_lawn`` is off. Satiety does not end it: a worm
+        off food for hours is hungry, not dead. Its phases set its length, so ``max_steps`` times
+        the step its per-step values are written for must equal their sum. That step is the
+        full-speed step of ``max_step_mm`` at the crawl speed, the same before and after the
+        step-duration conversion.
+        """
+        environment = self.environment
+        assay = environment.assay if environment is not None else None
+        if environment is None or assay is None:
+            return self
+        continuous = environment.get_continuous_config()
+        foraging = environment.foraging
+        lawns = foraging.lawns if foraging is not None else None
+        scope = (
+            environment.env_type == "continuous_2d"
+            and foraging is not None
+            and foraging.food_model == "lawns"
+            and not (self.multi_agent is not None and self.multi_agent.enabled)
+        )
+        if not scope:
+            msg = (
+                f"assay {assay.name!r} runs one worm on the continuous substrate under "
+                "food_model: lawns"
+            )
+            raise ValueError(msg)
+        if lawns is not None and lawns.start_on_lawn:
+            msg = f"assay {assay.name!r} places the worm itself; set lawns.start_on_lawn: false"
+            raise ValueError(msg)
+        satiety = self.satiety or SatietyConfig()
+        if satiety.starvation_ends_episode:
+            msg = (
+                f"assay {assay.name!r} needs satiety.starvation_ends_episode: false; a worm off "
+                "food for hours is hungry, not dead"
+            )
+            raise ValueError(msg)
+        if self.manyworlds_mode is not None:
+            msg = f"assay {assay.name!r} runs on the standard episode runner; drop manyworlds_mode"
+            raise ValueError(msg)
+        if self.max_steps is None:
+            msg = f"assay {assay.name!r} needs max_steps, its phases' length in steps"
+            raise ValueError(msg)
+        reference = step_worm_seconds(continuous.max_step_mm)
+        written = [phase.duration_s for phase in assay.phases] + [assay.analysis_from_s]
+        if any(abs(t / reference - round(t / reference)) > _ASSAY_TOLERANCE for t in written):
+            msg = (
+                f"assay {assay.name!r}'s durations and analysis start must be whole multiples of "
+                f"the {reference:g}-s step its values are written for"
+            )
+            raise ValueError(msg)
+        if abs(self.max_steps * reference - assay.total_s()) > _ASSAY_TOLERANCE:
+            msg = (
+                f"assay {assay.name!r} lasts {assay.total_s():g} s but max_steps {self.max_steps} "
+                f"x the {reference:g}-s step is {self.max_steps * reference:g} s"
             )
             raise ValueError(msg)
         return self
@@ -3651,6 +3829,8 @@ def create_env_from_config(
                 body_steering_gain=continuous_config.body_steering_gain,
                 step_seconds=continuous_config.step_seconds,
                 locomotion=continuous_config.locomotion,
+                arena_shape=continuous_config.arena_shape,
+                assay=env_config.assay.to_params() if env_config.assay is not None else None,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,

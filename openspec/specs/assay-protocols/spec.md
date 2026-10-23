@@ -1,4 +1,14 @@
-## ADDED Requirements
+# assay-protocols Specification
+
+## Purpose
+
+Standard lawn assays are reproduced as protocols, so a simulated worm runs the assay its reference
+ran: the same arena, lawn, start, food history, duration and analysis window. An episode is a sequence
+of phases of food and placement, and the worm's satiety and controller state carry across a transfer.
+Satiety is a slow reserve that never ends an assay. Captures record each step's phase and the
+protocol's timing.
+
+## Requirements
 
 ### Requirement: An assay is a list of phases
 
@@ -25,7 +35,8 @@ controller's state and its primitive state SHALL carry across phases unchanged.
 
 #### Scenario: The phases fix the episode's length
 
-- **WHEN** a config's `max_steps` times its step differs from the sum of its phases' durations
+- **WHEN** a config's `max_steps` times its reference step (the step its `max_step_mm` implies) differs
+  from the sum of its phases' durations
 - **THEN** loading SHALL fail, naming both
 
 #### Scenario: No assay is unchanged
@@ -35,7 +46,9 @@ controller's state and its primitive state SHALL carry across phases unchanged.
 
 ### Requirement: The assay's scope
 
-An `assay` SHALL require `food_model: lawns`, the continuous substrate, one worm, `start_on_lawn: false`, and `satiety.starvation_ends_episode: false`.
+An `assay` SHALL require `food_model: lawns`, the continuous substrate, one worm, `start_on_lawn: false`, `satiety.starvation_ends_episode: false`, and no `manyworlds_mode`. The `lawn_centre` and
+`off_lawn` placements SHALL require their phase's `food: lawns`. A phase SHALL begin before its first
+step's sensing.
 
 #### Scenario: Starvation would end an assay
 
@@ -66,18 +79,29 @@ SHALL be clamped the same way. `square`, the default, SHALL be unchanged.
 ### Requirement: Satiety as a slow reserve
 
 `satiety.starvation_ends_episode: false` SHALL keep satiety clamped at zero and run the episode to its
-end. The generated assay configs SHALL set satiety to empty over 12 h of basal decay off food, and
-SHALL set the movement cost to zero.
+end. The generated assay configs SHALL set satiety to empty over 12 h of basal decay off food, SHALL
+set the movement cost to zero, and SHALL give a lawn cell under a stationary worm a half-life of about
+2 h.
 
 #### Scenario: Twelve hours off food
 
 - **WHEN** a worm in an assay config spends 43,200 worm-seconds on a bare plate
 - **THEN** its satiety SHALL reach zero at 43,200 s, within one step, and the episode SHALL continue
 
-#### Scenario: A dwelling worm stays fed
+#### Scenario: Off food the reserve is linear
 
-- **WHEN** a worm dwells on a fresh lawn for 90 minutes
-- **THEN** its satiety SHALL stay above 90% of its maximum
+- **WHEN** a worm spends 5,400 worm-seconds off food
+- **THEN** its satiety SHALL be 87.5% of its maximum
+
+#### Scenario: Fresh food keeps the reserve full
+
+- **WHEN** a worm is on a fresh lawn cell at every step
+- **THEN** its satiety SHALL stay at its maximum
+
+#### Scenario: An assay lawn outlasts the assay
+
+- **WHEN** a worm stands still on an assay lawn for 90 minutes
+- **THEN** the cell under it SHALL keep at least 40% of its density
 
 ### Requirement: Generated assay configs
 

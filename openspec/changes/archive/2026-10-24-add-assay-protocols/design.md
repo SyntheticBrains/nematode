@@ -75,11 +75,23 @@ Every placement but `keep` draws a uniform heading.
 **State across phases.** The worm's satiety, its controller (brain state, modulators, STAM buffer) and
 its primitive state carry across phases unchanged, as the animal's do across a transfer.
 
-**Timing.** The phases' durations sum to the episode's length. The config's `max_steps` times its step
-must equal that sum, checked at load. The check is made on the written config and again on the derived
-one.
+**Timing.** The phases' durations sum to the episode's length. The config's `max_steps` times its
+**reference step** must equal that sum, checked at load. The reference step is
+`step_worm_seconds(max_step_mm)`, the step its per-step values are written for. That is 5 s on the
+written config and the configured step on the derived one, so the same check holds before and after
+E.1's derivation. On López-Cruz's config, 1,080 written steps × 5 s and 5,400 derived steps × 1 s
+both make 5,400 s.
 
 The runner's step loop starts phase `i` at the first step whose start time is `Σ_{j<i} duration_j`.
+A phase begins **before that step's sensing**, so the step's observation and capture already see the
+new food and the moved worm.
+
+`lawn_centre` and `off_lawn` require the phase's `food: lawns`.
+
+**The transfer's odour step.** At a removal the odour falls to zero, while the STAM buffer still holds
+the lawn's concentrations. For one step the worm senses a large negative change. Real worms sense
+their removal too, and López-Cruz drops the first 2 minutes as affected by the transfer, so the step
+is kept and the buffer carries over. B's bins start after it.
 
 Rejected: a fixed set of named protocols in code. The phases are four lines of config each, and B may
 need a variant (a shorter fed phase, a second transfer) without new code.
@@ -94,7 +106,10 @@ need a variant (a shorter fed phase, a second transfer) without new code.
   - `centre` puts a single lawn at the arena centre, and is refused with `count` above 1.
   - `random` is refused on a circular arena: the square placement could put a lawn outside the
     circle.
-- **Assays require** `food_model: lawns`, the continuous substrate, one worm, and `start_on_lawn: false`. The protocol's `place` decides the start instead.
+- **Assays require** `food_model: lawns`, the continuous substrate, one worm, `start_on_lawn: false`,
+  and no `manyworlds_mode`. The protocol's `place` decides the start instead. The phase clock lives in
+  the standard episode runner only.
+- **Head-sweep sample points** are clamped into the circle as well as the square.
 
 ### Decision C: Satiety as a slow reserve
 
@@ -105,10 +120,25 @@ The assay configs set the reserve to empty over 12 h of basal decay:
 
 - `satiety_decay_rate` = 300 / (43,200 s / 5 s) = 0.0347 per reference step, 0.00694/s at 1 s;
 - `initial_satiety` = 300;
-- `satiety_per_intake` = 0.3, D.1's value;
 - `movement_cost_per_mm` = 0.
 
-A worm on a lawn keeps topping up, so it stays near full. Off food it falls to half in 6 h. The
+Off food the reserve falls linearly: 87.5% after 90 minutes, half at 6 h, zero at 12 h.
+
+**Lawn depletion over an assay.** At D.1's intake (2% of a cell per 5-s step) a stationary worm halves
+its 1-mm cell in about 170 s. That is shorter than the real dwelling bout (τ = 482 s), so depletion,
+not state, would end dwelling. Real OP50 lawns are not visibly grazed by one worm in an hour. D.1 chose
+its rate so that worms would leave its patch cell.
+
+The assay configs therefore set:
+
+- a per-cell half-life of about 2 h under a stationary worm: a per-second intake of 1 × 10⁻⁴, written
+  as `intake_fraction: 0.0005` for the 5-s reference step;
+- `satiety_per_intake: 3.0`, so a fresh cell still restores about 0.09/s, more than ten times the
+  decay.
+
+Depletion stays in the model at this slower rate. This was the maintainer's decision of 2026-10-24.
+The half-life is chosen without a direct measurement, grounded only in lawns surviving an hour. Reward
+per second of eating falls with it, and C.3 sets its own reward. The
 references say:
 
 - 30 min off food changes the response to refeeding;
@@ -166,8 +196,10 @@ The new component is the protocol layer. Its checks need no learning:
 3. **The circular wall.** No position leaves the circle over 10,000 random moves, and a worm driven
    outward slides along the wall.
 4. **The reserve.**
-   - Off food, satiety reaches 0 at 43,200 s (±1 step) and the episode runs on.
-   - On a fresh lawn, a dwelling worm's satiety stays above 90% for 90 min.
+   - On the satiety manager directly: off food, satiety is linear, 87.5% at 5,400 s and 0 at
+     43,200 s (±1 step). A worm moved to a fresh cell each step stays at its maximum.
+   - Through the runner: a reserve set near empty reaches zero and the episode runs to `max_steps`.
+   - On an assay lawn, a stationary worm's cell keeps at least 40% of its density after 90 minutes.
 5. **Timing.**
    - A config whose `max_steps` and phase sum disagree is refused.
    - The capture's phase starts and analysis window match the protocol.
@@ -185,6 +217,9 @@ The new component is the protocol layer. Its checks need no learning:
   mismatch shows as every controller failing the same statistic.
 - **No locomotion cost.** A reward-trained controller has no energetic reason to slow down. That is
   C.3's to set; fitted controllers do not read reward.
+- **The depletion rate is a choice.** It is grounded in lawns outlasting an assay, not in a measured
+  grazing rate. If B's dwelling-duration or leaving-with-depletion statistics fail every controller,
+  this is the first parameter to revisit.
 - **Satiety's linear decay.** The reserve falls linearly, not with the animal's dynamics. It is a slow
   state the controller can read, not a model of metabolism.
 

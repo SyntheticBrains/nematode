@@ -52,6 +52,8 @@ class LawnParams:
     start_on_lawn: bool = False
     start_clearance_mm: float = 2.0
     wall_clearance_mm: float = 1.0
+    # "random" scatters the lawns; "centre" puts a single lawn at the arena's centre.
+    placement: str = "random"
 
 
 @dataclass(frozen=True)
@@ -173,6 +175,18 @@ class LawnField:
             )
         )
         return cls(np.array(centres), r, params.cell_mm, qualities)
+
+    @classmethod
+    def centred(
+        cls,
+        params: LawnParams,
+        rng: np.random.Generator,
+        world_size_mm: float,
+    ) -> LawnField:
+        """Return one lawn at the arena's centre, its quality drawn as random placement draws it."""
+        q_lo, q_hi = params.quality
+        quality = rng.uniform(q_lo, q_hi, size=1) if q_hi > q_lo else np.full(1, q_lo)
+        return cls(np.full((1, 2), world_size_mm / 2.0), params.radius_mm, params.cell_mm, quality)
 
     def copy(self) -> LawnField:
         """Return an independent copy, densities included."""

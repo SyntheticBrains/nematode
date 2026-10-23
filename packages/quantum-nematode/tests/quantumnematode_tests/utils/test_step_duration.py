@@ -426,6 +426,7 @@ def _not_step_coupled() -> dict[str, set[str]]:
             "foraging",
             "health",
             "sensing",
+            "assay",
         },
         "Continuous2DConfig": {
             "world_size_mm",
@@ -436,11 +437,12 @@ def _not_step_coupled() -> dict[str, set[str]]:
             "allow_reversal",
             "step_seconds",
             "locomotion",
+            "arena_shape",
         },
         "ForagingConfig": set(ForagingConfig.model_fields) - {"food_model"},
         "LawnConfig": set(LawnConfig.model_fields) - _CONVERTED["LawnConfig"],
         "SensingConfig": set(SensingConfig.model_fields) - _CONVERTED["SensingConfig"],
-        "SatietyConfig": {"initial_satiety", "satiety_gain_per_food"},
+        "SatietyConfig": {"initial_satiety", "satiety_gain_per_food", "starvation_ends_episode"},
         "RewardConfig": set(RewardConfig.model_fields)
         - _CONVERTED["RewardConfig"]
         - _REFUSED["RewardConfig"],
@@ -463,6 +465,8 @@ _PINNED_FIELD_COUNTS = {
     "ConnectomePPOBrainConfig": len(ConnectomePPOBrainConfig.model_fields),
     "MLPPPOBrainConfig": len(MLPPPOBrainConfig.model_fields),
 }
+# LawnConfig.placement and the assay's durations in seconds were added on 2026-10-24, and are
+# not step-coupled.
 # Audited 2026-10-23. Under lawns: ForagingConfig's point-food and depletion fields are unread, and
 # the Fick kernel is static; SensingConfig's modes are structure, ``lateral_scale`` spatial and the
 # adaptive epsilon a concentration; RewardConfig's predator, health and temperature terms are
@@ -470,7 +474,7 @@ _PINNED_FIELD_COUNTS = {
 # are plasticity (refused), PPO's training budget, or structure.
 _EXPECTED_FIELD_COUNTS = {
     "ForagingConfig": 22,
-    "LawnConfig": 13,
+    "LawnConfig": 14,
     "SensingConfig": 20,
     "RewardConfig": 15,
     "ConnectomePPOBrainConfig": 86,

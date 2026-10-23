@@ -20,6 +20,7 @@ from quantumnematode.env import (
     DEFAULT_AGENT_ID,
     DynamicForagingEnvironment,
 )
+from quantumnematode.env.assay import project_into_circle
 from quantumnematode.env.env import Direction
 from quantumnematode.env.theme import DEFAULT_THEME, DarkColorRichStyleConfig, Theme
 from quantumnematode.logging_config import logger
@@ -133,6 +134,7 @@ def _continuous_lateral_offsets(
     heading_rad: float,
     sweep: float,
     grid_size: int,
+    circle_world_mm: float | None = None,
 ) -> tuple[tuple[float, float], tuple[float, float]]:
     """Compute left/right head-sweep sample points for a continuous heading.
 
@@ -157,7 +159,8 @@ def _continuous_lateral_offsets(
     Returns
     -------
     tuple[tuple[float, float], tuple[float, float]]
-        ``(left_position, right_position)`` clamped to ``[0, grid_size - 1]``.
+        ``(left_position, right_position)`` clamped to ``[0, grid_size - 1]``, and then, in a
+        circular arena of diameter ``circle_world_mm``, moved radially onto its wall if outside it.
     """
     perp_x = -math.sin(heading_rad)
     perp_y = math.cos(heading_rad)
@@ -170,6 +173,9 @@ def _continuous_lateral_offsets(
         min(upper, max(0.0, position[0] - sweep * perp_x)),
         min(upper, max(0.0, position[1] - sweep * perp_y)),
     )
+    if circle_world_mm is not None:
+        left = project_into_circle(left[0], left[1], circle_world_mm)
+        right = project_into_circle(right[0], right[1], circle_world_mm)
     return left, right
 
 
@@ -280,6 +286,9 @@ class SatietyConfig(BaseModel):
     initial_satiety: float = DEFAULT_SATIETY_INITIAL
     satiety_decay_rate: float = DEFAULT_SATIETY_DECAY_RATE
     satiety_gain_per_food: float = DEFAULT_SATIETY_GAIN_PER_FOOD  # Fraction of max
+    # Whether an empty reserve ends the episode. False keeps satiety at zero and runs the episode
+    # to its end, as an assay does: a worm off food for hours is hungry, not dead.
+    starvation_ends_episode: bool = True
 
 
 class RewardConfig(BaseModel):
@@ -860,6 +869,7 @@ class QuantumNematodeAgent:
                     agent_state.heading_rad,
                     sweep,
                     self.env.grid_size,
+                    self._circle_world_mm(),
                 )
             else:
                 heading = agent_state.direction
@@ -1019,6 +1029,17 @@ class QuantumNematodeAgent:
             return None
         return float(lawns.intake_fraction * field.qualities.max())
 
+    def _circle_world_mm(self) -> float | None:
+        """Return a circular arena's diameter, or None in a square one."""
+        continuous = getattr(self.env, "continuous", None)
+        if getattr(continuous, "arena_shape", "square") != "circle":
+            return None
+        return float(continuous.world_size_mm)  # type: ignore[union-attr]
+
+    def _capture_phase(self) -> str | None:
+        """Return the running assay phase's name; None without an assay."""
+        return getattr(self.env, "assay_phase_name", None)
+
     def _food_contact(self) -> float | None:
         """Return the density of the lawn cell under the worm: 0 off a lawn, None without lawns."""
         field = self.env.lawn_field
@@ -1056,9 +1077,15 @@ class QuantumNematodeAgent:
         self,
         position: tuple[float, float],
     ) -> tuple[float | None, float | None, bool | None]:
-        """Return the step's satiety, intake and whether it is on a lawn; all None without lawns."""
+        """Return the step's satiety, intake and whether it is on a lawn; all None without lawns.
+
+        On an assay's bare-plate phase, under the lawn food model with no lawns out, the worm still
+        has a satiety, eats nothing, and is off every lawn.
+        """
         field = self.env.lawn_field
         if field is None:
+            if self.env.foraging.food_model == "lawns":
+                return float(self.current_satiety), 0.0, False
             return None, None, None
         return (
             float(self.current_satiety),
@@ -1368,6 +1395,7 @@ class QuantumNematodeAgent:
                     intake=_intake,
                     on_lawn=_on_lawn,
                     primitive=self._capture_primitive(),
+                    phase=self._capture_phase(),
                 ),
             )
 
@@ -1396,7 +1424,9 @@ class QuantumNematodeAgent:
             max_satiety=self.max_satiety,
             # What the last move ate, under the lawn food model, and the most one move can eat
             food_ingested=(
-                None if self.env.lawn_field is None else float(self._episode_tracker.step_intake)
+                None
+                if self.env.foraging.food_model != "lawns"
+                else float(self._episode_tracker.step_intake)
             ),
             max_food_ingested=self._max_food_ingested(),
             # The bacteria under the worm, and its own locomotor primitive
@@ -1704,6 +1734,7 @@ class QuantumNematodeAgent:
             agent_state.heading_rad,
             sweep,
             self.env.grid_size,
+            self._circle_world_mm(),
         )
 
         adaptive_background: float | None = None
@@ -1777,9 +1808,11 @@ class QuantumNematodeAgent:
                 for k in env.body_curvature(self.agent_id)  # type: ignore[attr-defined]
             )
             extras["body_reversed"] = env.body_reversed(self.agent_id)  # type: ignore[attr-defined]
-        if env.lawn_field is not None:
+        if env.foraging.food_model == "lawns":
             extras["intake"] = float(self._episode_tracker.step_intake)
-            extras["on_lawn"] = env.lawn_field.lawn_at(pos) is not None
+            extras["on_lawn"] = (
+                env.lawn_field is not None and env.lawn_field.lawn_at(pos) is not None
+            )
         modulators = getattr(self.brain, "modulator_concentrations", None)
         if modulators is not None:
             extras["modulators"] = (float(modulators[0]), float(modulators[1]))

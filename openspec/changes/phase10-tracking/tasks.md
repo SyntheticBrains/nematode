@@ -94,8 +94,28 @@ nothing in W registers before C.2 has read.
   - **Note for C.3:** the untrained policies' sampled hazards average about 0.1/s per kind, so untrained
     worms spend most of their time in bouts.
 
-- [ ] **E.3 Assay protocols**: Scheer's small lawn (40 min); food removal onto a bare plate; an off-food
+- [x] **E.3 Assay protocols**: Scheer's small lawn (40 min); food removal onto a bare plate; an off-food
   start; multi-hour episodes with satiety re-calibrated.
+
+  *(Closed 2026-10-24, change `add-assay-protocols`, archived as `2026-10-24-add-assay-protocols`.)*
+
+  - `environment.assay` is a list of phases. Each sets its food (lawns or a bare plate) and the worm's
+    placement (keep, the lawn's centre, bare agar, or the arena centre as a transfer). Satiety and the
+    controller's state carry across phases.
+  - New options: a circular arena, a centred lawn, and `starvation_ends_episode`.
+  - Eight generated configs on the 1-s primitives worm: Scheer, López-Cruz, Calhoun and Flavell, each
+    for the MLP and the connectome.
+  - Captures record each step's phase, and the file records the protocol's timing.
+
+  **Dated corrections (2026-10-24):**
+
+  - Scheer's worms start on bare agar and find the lawn; the "off-food start" is Scheer's.
+  - López-Cruz 2019 reports no exponential fit (see B.2).
+  - Hunger runs on hours, the food memory on minutes: satiety is a 12-h reserve that never ends an
+    assay, and the memory is the controller's.
+  - The assay lawn halves under a still worm in about 2 h, against D.1's 3 min. This is the
+    maintainer's choice, the first parameter to revisit if dwelling or leaving statistics fail every
+    controller.
 
 - [ ] **T.1 The batched evaluator**, about 8–12 engineering days: many animals per call, no per-step
   Python, carrying E.2's primitives and E.3's assays. A parity test against the per-step runner, and
@@ -115,6 +135,15 @@ nothing in W registers before C.2 has read.
 - [ ] **B.2 Readouts**: a trajectory-based reorientation detector, validated against Calhoun's and
   Roberts's omega flags; the classifier run on tracks downsampled to 5 s; the local-search curve; the
   repaired pirouette quintile ratio (the old K.1).
+
+  *(Added 2026-10-24 by E.3.)* López-Cruz 2019 has no αe^(−γt)+β fit. On its deposited CC BY data
+  (Mendeley 10.17632/prdtw5jgcd.1), the wild type gives γ = 0.115 ± 0.011/min only from the 4–6 min
+  bin: 0.089 from 2 min and 0.137 from 6 min. The curve rises before it decays. B registers:
+
+  - the readout: reorientations that begin with a reversal, per 2-min bin;
+  - the fit's start bin;
+  - the time zero, after checking the recording's 4-min offset from removal against the bins;
+  - γ, from the deposited data.
 
 - [ ] **B.3 Bands and the grading rule** (D34): from batch-matched cohorts with the project's
   classifier; mutant effects relative to the controller's own wild type; composite rules that depend
