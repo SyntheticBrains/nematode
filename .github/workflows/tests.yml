@@ -138,15 +138,33 @@ jobs:
       # overshoot a block. On the current suite the two score 1.00x and 1.05x, and `least_duration`
       # is additionally independent of collection order, which is what keeps the shards' views of
       # the split identical.
+      #
+      # Each shard also times its own tests on the runner and writes them to its copy of
+      # .test_durations (`--clean-durations` keeps only this shard's tests, after the split has been
+      # read). The five files are uploaded below, and their union is the suite timed on CI hardware,
+      # which is what the split has to balance: a file timed on a laptop mis-weights tests whose speed
+      # differs between the two, and the shards drift apart. See AGENTS.md § CI sharding.
       - name: Run tests
         run: |
           uv run pytest -m "not nightly" \
             --splits 5 --group ${{ matrix.group }} \
             --durations-path .test_durations \
             --splitting-algorithm least_duration \
+            --store-durations --clean-durations \
             -n logical \
             --cov --cov-branch --cov-report=xml \
             --tb=short --color=yes
+
+      - name: Upload this shard's measured durations
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-durations-shard-${{ matrix.group }}
+          path: .test_durations
+          retention-days: 14
+          if-no-files-found: error
+          # The file is a dotfile, which upload-artifact skips unless told otherwise.
+          include-hidden-files: true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7

@@ -115,17 +115,40 @@ own split as balanced to 1.03x. It cannot see the problem, because it scores eac
 split with the same stale numbers that produced it.
 
 The `test durations freshness` pre-commit hook is the guard: it fails when more
-than 10% of the collected suite has no recorded duration. Regenerate with:
+than 10% of the collected suite has no recorded duration.
+
+**Refresh it from CI, not from a laptop.** The split has to balance CI's runners,
+and tests do not keep their relative speeds between a Mac and a runner. On
+2026-10-24 a file timed locally split into shards of 499s, 1026s, 1046s, 1082s
+and 1194s of test time on CI, balanced to 1.00x by its own numbers. So every CI
+shard times its own tests and uploads them as the artifact
+`test-durations-shard-<n>` (14 days' retention). The union of one run's five
+files is the suite timed on CI. Take a run whose five shards all passed:
+
+```bash
+dir=$(mktemp -d)
+gh run download <run-id> --pattern 'test-durations-shard-*' --dir "$dir"
+uv run python scripts/merge_test_durations.py "$dir"
+```
+
+Download into a new, empty directory every time. `gh` puts each artifact in its
+own `test-durations-shard-<n>/` folder there, which is what the script reads. A
+reused directory can still hold an earlier run's folders. The script refuses
+fewer than five files, and any test that appears in two of them. Refresh this way when shard times drift apart, and after a PR that adds
+heavy tests, from that PR's own run. Then run `pre-commit`.
+
+**Locally**, for example to cover a new module before its first CI run, regenerate with:
 
 ```bash
 uv run pytest -m "not nightly" --store-durations --clean-durations --durations-path .test_durations
 ```
 
+These are laptop timings, so prefer the CI refresh as soon as a run exists.
 `--clean-durations` drops entries for tests that no longer exist; without it the
-file accumulates them. This takes ~2.5 minutes and matches how CI runs, since
-`-n logical` comes from `addopts`. `pytest-split` writes the file without a
-trailing newline, so run `pre-commit` afterwards — the `fix end of files` hook
-adds it, and CI's Code Quality job fails without it.
+file accumulates them. This takes ~2.5 minutes, since `-n logical` comes from
+`addopts`. `pytest-split` writes the file without a trailing newline, so run
+`pre-commit` afterwards — the `fix end of files` hook adds it, and CI's Code
+Quality job fails without it.
 
 Locally the suite is unsharded; `-n logical` in `addopts` uses every logical core.
 
