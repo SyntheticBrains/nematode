@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 from quantumnematode.agent import (
     ManyworldsModeConfig,
@@ -108,6 +108,7 @@ from quantumnematode.optimizers.learning_rate import (
     LearningRateMethod,
     PerformanceBasedLearningRate,
 )
+from quantumnematode.utils.step_duration import StepDerivation, derive_step_coupled
 
 if TYPE_CHECKING:
     from quantumnematode.env import DynamicForagingEnvironment
@@ -1129,6 +1130,9 @@ class Continuous2DConfig(BaseModel):
     # The kinematic body's steering gain: how strongly a dorsal-ventral drive difference bends each
     # segment. Unset keeps the body's calibrated default; set only to calibrate it.
     body_steering_gain: float | None = Field(default=None, gt=0.0)
+    # The step's duration in worm-seconds, set by the loader from the top-level ``step_seconds``
+    # and never written in a config; None takes it from ``max_step_mm`` at the crawl speed.
+    step_seconds: float | None = Field(default=None, gt=0.0)
 
     @model_validator(mode="after")
     def _validate_kinematic_needs_reversal(self) -> "Continuous2DConfig":
@@ -2598,6 +2602,10 @@ class SimulationConfig(BaseModel):
     seed: int | None = None
     brain: BrainContainerConfig | None = None
     max_steps: int | None = None
+    # One step's duration in worm-seconds. The config's per-step values stay written for its
+    # reference step, a full-speed step of its ``max_step_mm`` at the crawl speed; when this is set
+    # the loader converts each of them to it. None converts nothing.
+    step_seconds: float | None = Field(default=None, gt=0.0)
     shots: int | None = None
     body_length: int | None = None
     qubits: int | None = None
@@ -2624,6 +2632,13 @@ class SimulationConfig(BaseModel):
     # and select_encoder() returns a HyperparameterEncoder regardless
     # of brain.name.
     hyperparam_schema: list[ParamSchemaEntry] | None = None
+
+    _step_derivation: StepDerivation | None = PrivateAttr(default=None)
+
+    @property
+    def step_derivation(self) -> StepDerivation | None:
+        """Return the record of the step conversion the loader applied; None if it applied none."""
+        return self._step_derivation
 
     @model_validator(mode="after")
     def _validate_lawns(self) -> "SimulationConfig":
@@ -3032,10 +3047,28 @@ def load_simulation_config(config_path: str) -> SimulationConfig:
     with Path(config_path).open() as file:
         data = yaml.safe_load(file)
         _warn_unknown_brain_config_keys(data, config_path)
+        _refuse_written_environment_step(data)
         config = SimulationConfig(**data)
         _assert_bit_memory_invariant_from_raw(data, config)
         _assert_associative_invariant_from_raw(data, config)
-        return config
+        return derive_step_coupled(config)
+
+
+def _refuse_written_environment_step(data: object) -> None:
+    """Refuse a config that writes ``environment.continuous.step_seconds`` itself.
+
+    That field carries the top-level ``step_seconds`` into the environment once the loader has
+    converted the step-coupled constants; written directly, it would set the environment's step
+    with none of them converted.
+    """
+    environment = data.get("environment") if isinstance(data, dict) else None
+    continuous = environment.get("continuous") if isinstance(environment, dict) else None
+    if isinstance(continuous, dict) and "step_seconds" in continuous:
+        msg = (
+            "environment.continuous.step_seconds is set by the loader; set the top-level "
+            "step_seconds instead, which converts every step-coupled constant with it."
+        )
+        raise ValueError(msg)
 
 
 def _assert_bit_memory_invariant_from_raw(data: object, config: SimulationConfig) -> None:
@@ -3534,6 +3567,7 @@ def create_env_from_config(
                 body_model=continuous_config.body_model,
                 body_substeps=continuous_config.body_substeps,
                 body_steering_gain=continuous_config.body_steering_gain,
+                step_seconds=continuous_config.step_seconds,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,

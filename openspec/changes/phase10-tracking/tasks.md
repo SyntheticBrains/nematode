@@ -28,8 +28,8 @@ nothing in W registers before C.2 has read.
 
 - [ ] **H.1 The literature watch re-aimed** at Phase 10's questions (`context.md`, `seeds.toml`; lands with
   this tracker's PR). The item closes when the first digest has run against the new brief.
-- [ ] **H.2 The research question re-framed** (D33) in AGENTS.md, the README and the roadmap (lands with
-  this tracker's PR; closes on merge).
+- [x] **H.2 The research question re-framed** (D33) in AGENTS.md, the README and the roadmap (lands with
+  this tracker's PR; closes on merge). *(Closed 2026-10-23: PR #470 merged.)*
 - [ ] **H.3 Scenario scope recorded**: thermal, predator, multi-agent and oxygen configs frozen for the
   required blocks, kept and tested; thermotaxis named as the second tier; the MAY items below stay
   allowed. It closes when the docs say so in the scenario index.
@@ -37,7 +37,7 @@ nothing in W registers before C.2 has read.
 
 ## E + T — the worm, its assays and the batched evaluator (MUST)
 
-- [ ] **E.1 One step-duration value** (D35): every step-coupled constant derived from it. These include:
+- [x] **E.1 One step-duration value** (D35): every step-coupled constant derived from it. These include:
 
   - modulator decay, body step, the classifier's window and step;
   - the STAM length, the adaptive-sensor α, `membrane_tau_steps`;
@@ -45,6 +45,30 @@ nothing in W registers before C.2 has read.
   - `max_turn_rad`, `max_steps`, and PPO γ.
 
   The 5-s default stays byte-identical, and a test asserts the derivation. A 1-s point worm configured.
+
+  *(Closed 2026-10-23, change `add-step-duration`, archived as `2026-10-23-add-step-duration`.)*
+
+  - A top-level `step_seconds` is added. Configs stay written for their 5-s reference step, and the
+    loader converts every step-coupled constant. Unset, nothing is derived.
+  - The positive control passes: distance, heading, satiety, a grazed cell, the STAM weights and the
+    adaptive baseline match at 5 s and 1 s. An unconverted 1-s worm covers five times the ground.
+  - Generated configs `*_lawns_modulated_s1.yml` and `*_lawns_internal_s1.yml`.
+  - The classifier reads 1-s captures at 5 s, and the bias-curve harness refuses them.
+
+  **Dated amendments (2026-10-23):**
+
+  - "Body step" moves to Phase 11 (D41). The kinematic body is refused at a non-default step: its
+    reversal and refractory counts have no rule.
+  - The training budget is not converted: rollout buffer, BPTT chunk, epochs, learning rate,
+    entropy. C.3's registration sets it.
+  - `membrane_tau_steps` is converted only under leaky dynamics.
+
+  **Smoke note for T.1**, three untrained episodes per arm (base seed 5991):
+
+  - A worm-hour is 3,600 steps at 1 s against 720 at 5 s.
+  - The untrained 1-s worms starved later in worm time than the 5-s ones, and ate more. A policy
+    taking five times the decisions per worm-second, with the same per-decision noise, diffuses
+    less. This is learning-relevant, not a conversion fault.
 
 - [ ] **E.2 Locomotor primitives** (D36): run, reversal bout, omega/delta reorientation and pause, with
   kinematics fixed from data (Broekmans 2016; Gray 2005) and timing chosen by the controller. The

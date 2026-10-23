@@ -17,11 +17,24 @@ if TYPE_CHECKING:
     from quantumnematode.report.dtypes import BehaviourStep, SimulationResult
 
 BEHAVIOUR_CAPTURE_FILENAME = "behaviour_capture.json"
+# The step a capture is taken at when it does not say: the point worm's full-speed step at 1 mm.
+DEFAULT_CAPTURE_STEP_SECONDS = 5.0
+
+
+def capture_step_seconds(data: dict[str, object]) -> float:
+    """Return the step, in worm-seconds, a loaded capture was taken at; 5 when it does not say."""
+    value = data.get("step_seconds", DEFAULT_CAPTURE_STEP_SECONDS)
+    if not isinstance(value, int | float):
+        msg = f"a capture's step_seconds must be a number, got {value!r}"
+        raise TypeError(msg)
+    return float(value)
 
 
 def write_behaviour_capture(
     results: list[SimulationResult],
     data_dir: Path,
+    *,
+    step_seconds: float | None = None,
 ) -> Path | None:
     """Write the per-run behavioural series to ``<data_dir>/behaviour_capture.json``.
 
@@ -31,6 +44,9 @@ def write_behaviour_capture(
         The completed runs; only those carrying a captured ``behaviour`` series are written.
     data_dir : Path
         Directory to write ``behaviour_capture.json`` into (created if missing).
+    step_seconds : float | None
+        The runs' step in worm-seconds. Recorded only when it is not the default 5, so a capture at
+        the default step is unchanged; a reader takes an absent key as 5.
 
     Returns
     -------
@@ -50,8 +66,11 @@ def write_behaviour_capture(
         return None
     data_dir.mkdir(parents=True, exist_ok=True)
     output_path = data_dir / BEHAVIOUR_CAPTURE_FILENAME
+    payload: dict[str, object] = {"runs": runs}
+    if step_seconds is not None and step_seconds != DEFAULT_CAPTURE_STEP_SECONDS:
+        payload["step_seconds"] = step_seconds
     with output_path.open("w") as f:
-        json.dump({"runs": runs}, f)
+        json.dump(payload, f)
     return output_path
 
 

@@ -101,7 +101,18 @@ step is `s` and its ratio is 1. A second application derives nothing. A test app
 and compares the results.
 
 **The record.** At load, the loader logs one INFO line per derived constant, with its authored and
-derived values. The run log therefore records what ran, beside the existing `Config:` line.
+derived values. Under `--no-file-log`, which every campaign passes, log messages go nowhere, and the
+campaign runner keeps only stdout. So `run_simulation` also prints, to stdout:
+
+- one `Step: <s> s (reference <s_ref> s, ×<r>)` line, beside its `Config:` line;
+- then one line per derived constant.
+
+The per-run campaign log therefore records what ran. A default run prints nothing new.
+
+**Blocks left unset.** A config that omits `satiety` or `reward` gets their defaults later, at
+`configure_satiety` and from the agent. An unset `max_steps` becomes 100 in `run_simulation`. At a
+non-default step, the derivation fills in the default `satiety` and `reward` blocks before converting
+them, so a default is converted like a written value. It refuses an unset `max_steps`.
 
 ### Decision C: The derivation table
 
@@ -109,12 +120,13 @@ Write `k = 1/r = s/s_ref`. Each step-coupled constant on the lawn point worm has
 
 | Kind | Rule | Constants |
 |---|---|---|
-| amount per step | `x · k` | `continuous.max_step_mm`, `continuous.max_turn_rad`, `satiety.satiety_decay_rate`, `lawns.regrowth_per_step`, `reward.penalty_step`, `reward.penalty_boundary_collision`, `brain.config.modulator_step_seconds` (connectome) |
+| full-speed step | `s · CRAWL_SPEED_MM_PER_S` (equal to `x · k`, written so the re-derived ratio is exactly 1) | `continuous.max_step_mm` |
+| amount per step | `x · k` | `continuous.max_turn_rad`, `satiety.satiety_decay_rate`, `lawns.regrowth_per_step`, `reward.penalty_step`, `reward.penalty_boundary_collision`, `brain.config.modulator_step_seconds` (connectome) |
 | fraction removed per step | `1 − (1 − p)^k` | `lawns.intake_fraction`, `sensing.adaptive_chemosensor_alpha` |
 | discount per step | `d^k` | `brain.config.gamma`, `brain.config.gae_lambda` |
 | exponent rate per step | `λ · k` | `sensing.stam_decay_rate` (weights `exp(−λ i)`) |
 | length in steps | `n · r` (exact integer) | `max_steps`, `sensing.stam_buffer_size`, `reward.stuck_position_threshold` |
-| time constant in steps | `τ · r` | `brain.config.membrane_tau_steps` (connectome, leaky) |
+| time constant in steps | `τ · r`, under `dynamics: leaky` only | `brain.config.membrane_tau_steps` (connectome) |
 | per-step difference feature | `scale · r` | `sensing.derivative_scale` |
 
 Why each rule:
@@ -132,7 +144,9 @@ Why each rule:
   reference steps stays one hour, and the stuck threshold keeps its window.
 - **The STAM rate** keeps each sample's weight as a function of its age in seconds, so the half-life
   stays about 35 s (6.9 reference steps).
-- **The membrane time constant** stays in seconds, `τ_steps · s`. `forward_pass_depth` is not
+- **The membrane time constant** stays in seconds, `τ_steps · s`. It is converted only under leaky
+  dynamics. Under the default settling dynamics the brain refuses any value but 1.0
+  (`connectome_ppo.py`, the leaky-only option check), and nothing reads it. `forward_pass_depth` is not
   derived: it is propagation hops per decision, not a time constant. The leaky sub-step is therefore
   `s / depth`, five times finer at 1 s. That is a smaller Euler step on the same ODE, not a different
   model.
@@ -167,17 +181,35 @@ and the reason, when any of the following holds:
   would need their own rules);
 - `brain.name` is not `connectomeppo` or `mlpppo`;
 - within-lifetime plasticity is on (`learning_rule ≠ ppo`, or `enable_activity_traces`). Its trace
-  decay and rate are per-step and would need their own validation.
+  decay and rate are per-step and would need their own validation;
+- `hyperparam_schema` is set. Hyperparameter evolution rewrites brain values after load, so it would
+  write them at the configured step, not the reference;
+- `max_steps` is unset.
 
 Each refusal has a test. A frozen scenario keeps working at its default.
 
+**The field walk.** One test walks every field of the models the lawn point worm reads, and checks
+each against a table that assigns it a rule or marks it "not step-coupled", with a reason. The test
+fails on any field the table does not cover. The models are:
+
+- `SimulationConfig`'s own fields;
+- `EnvironmentConfig`, `Continuous2DConfig`, `SensingConfig`, `ForagingConfig` and `LawnConfig`;
+- `SatietyConfig` and `RewardConfig`;
+- `ConnectomePPOBrainConfig`;
+- `MLPPPOBrainConfig`, with its mixins (`PlasticityConfigMixin`, `PPOStabiliserConfig`, `BrainConfig`).
+
 ### Decision E: The environment's step duration
 
-`Continuous2DParams` gains `step_seconds: float | None = None`, mapped from the top-level key by
-`create_env_from_config`. `ContinuousEnvironment` sets `BodyParams.step_seconds` from it when set, and
-from `step_worm_seconds(max_step_mm)` otherwise, which is today's path. The kinematic body is refused at
-a non-default step (Decision D), so the body only ever sees today's value or an equal one. The replay
-already records `env.body_params.step_seconds`.
+The derivation writes the configured step into `Continuous2DConfig.step_seconds`. That field is
+never written in a config: the loader refuses a YAML that sets it, since it would set the
+environment's step with nothing converted. `create_env_from_config` maps it onto
+`Continuous2DParams.step_seconds`, so every caller that builds an environment from a loaded config
+gets the step without new plumbing.
+
+`Continuous2DEnvironment.step_seconds` is the configured step when set, and
+`step_worm_seconds(max_step_mm)` otherwise, which is today's path. `BodyParams.step_seconds` reads it.
+The kinematic body is refused at a non-default step (Decision D), so the body only ever sees today's
+value. The replay already records `env.body_params.step_seconds`.
 
 ### Decision F: Captures and the classifier
 
@@ -185,14 +217,23 @@ already records `env.body_params.step_seconds`.
   only when the run's step differs from 5.0. A default capture is byte-identical. A reader treats an
   absent key as 5.0.
 - **Classifier.** A new `downsample_to_reference(x, y, step_seconds)` keeps every `r`-th position for a
-  track sampled at a step that divides 5 s. It refuses any other step. `lawn_states.py` and
-  `patch_leaving_reference.py` take the step from the capture or the config, never from
-  `rd.STEP_SECONDS`, and downsample before `window_measures`. The HMM and its 10-s windows are applied
-  unchanged. This is the roadmap's registered fallback. B.2 checks it on real tracks re-sampled to 1 s
-  and 5 s.
-  - **Per-step measures at 1 s.** Satiety, intake and on-lawn status are read at the downsampled
-    positions' steps. Intake is summed over each 5-s block, so on-lawn hours and intake totals are
-    unchanged in meaning.
+  track sampled at a step that divides 5 s. It refuses any other step. `roaming_dwelling` gains
+  `WINDOW_SECONDS = 10.0`. Every consumer that today computes `STEP_SECONDS × WINDOW_STEPS` uses it
+  instead: `lawn_states.py`, and `patch_leaving_reference.py`, which reads only the vendored real
+  windows at 5 s and needs nothing else. The HMM and its 10-s windows are applied unchanged. This is
+  the roadmap's registered fallback. B.2 checks it on real tracks re-sampled to 1 s and 5 s.
+  - **`lawn_states.py` at 1 s.** It takes the step from the config it captures under. The
+    downsampled positions give only speed and turning. Every other per-step measure is read over every
+    native step that each window spans: `r · WINDOW_STEPS + 1` steps, as today's window spans three.
+    These are:
+    - on-lawn and off-lawn status, which must hold at every one of those steps, as today;
+    - the modulator concentrations, averaged;
+    - intake.
+  - **Density from intake.** A window's eaten-cell density is the mean, over its non-zero bites at
+    the native step, of each bite divided by the step's own (converted) intake fraction times
+    quality. A bite is the fraction of the cell's density it removes, so each bite recovers its
+    cell's density exactly, at any step. At 5 s this is today's rule. A sum over a 5-s block would
+    not be exact: the worm can eat on only some of a block's steps, or cross cells within it.
 - **Bias-curve harness.** `behavioural_chemotaxis_validation.py` refuses a capture with
   `step_seconds ≠ 5`, naming B.2. Its turn-rate ratio and `theta_sharp` are per-transition statistics
   calibrated at 5 s.
@@ -205,7 +246,8 @@ already records `env.body_params.step_seconds`.
 - `mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1.yml`.
 
 `test_lawn_configs.py` loads both and asserts their derived values. A smoke run of three episodes each,
-on seeds 5991–5993, checks that they execute and that a captured episode classifies. It also records
+from base seed 5991 (the smoke band), checks that they execute and that a captured episode classifies. A smoke-tier
+pytest (`@pytest.mark.smoke`) runs each 1-s config for a few steps, so CI keeps them executing. It also records
 wall-clock per worm-hour beside the 5-s arms', as a note for T.1, not a pilot.
 
 ## Positive control (protocol principle 4)

@@ -182,6 +182,35 @@ class TestCapture:
         assert set(step) == {f for f in BehaviourStep.__dataclass_fields__ if f not in optional}
 
 
+class TestCaptureStep:
+    """Covers "A 1-second capture is labelled" and "A default capture is unchanged"."""
+
+    def _write(self, tmp_path: Path, step_seconds: float | None) -> dict:
+        agent = _agent(reversal=False)
+        agent.run_episode(RewardConfig(), max_steps=5)
+
+        class _Run:
+            run, seed, behaviour = 1, 0, agent.behaviour
+
+        path = write_behaviour_capture(
+            [_Run()],  # type: ignore[list-item]
+            tmp_path,
+            step_seconds=step_seconds,
+        )
+        assert path is not None
+        return json.loads(path.read_text())
+
+    def test_a_default_capture_is_unchanged(self, tmp_path: Path) -> None:
+        assert set(self._write(tmp_path, 5.0)) == {"runs"}
+        assert set(self._write(tmp_path, None)) == {"runs"}
+
+    def test_a_one_second_capture_is_labelled(self, tmp_path: Path) -> None:
+        data = self._write(tmp_path, 1.0)
+        assert data["step_seconds"] == 1.0
+        assert behaviour_export.capture_step_seconds(data) == 1.0
+        assert behaviour_export.capture_step_seconds({"runs": []}) == 5.0
+
+
 class TestStepConstant:
     def test_one_body_length_is_five_worm_seconds(self) -> None:
         assert step_worm_seconds(1.0) == pytest.approx(5.0)

@@ -126,3 +126,41 @@ def test_the_body_demo_configs_are_the_generators(arm: str) -> None:
     assert config.brain is not None
     assert config.brain.config.action_space == "body_drive"
     assert getattr(config.brain.config, "freeze_updates", False) is arm.endswith("_frozen")
+
+
+@pytest.mark.parametrize("arm", gen.ONE_SECOND_ARMS)
+def test_the_committed_one_second_configs_are_the_generators(arm: str) -> None:
+    """Each 1-second arm is its base plus ``step_seconds: 1.0``, and loads converted to it.
+
+    Covers the step-duration spec's scenario "A 1-s lawn worm's derived values".
+    """
+    path, text = gen.derive_one_second(arm)
+    assert path.read_text() == text
+    config = load_simulation_config(str(path))
+    base_path = gen.FORAGING / f"{gen.stem(arm)}.yml"
+    base = load_simulation_config(str(base_path))
+    assert config.step_seconds == 1.0
+    assert config.step_derivation is not None
+    assert config.step_derivation.ratio == 5
+    assert config.max_steps == 5 * gen.MAX_STEPS
+    environment, base_environment = config.environment, base.environment
+    assert environment is not None
+    assert base_environment is not None
+    continuous = environment.get_continuous_config()
+    assert continuous.max_step_mm == pytest.approx(0.2)
+    assert continuous.max_turn_rad == pytest.approx(3.141593 / 5)
+    assert continuous.step_seconds == 1.0
+    sensing = environment.get_sensing_config()
+    assert sensing.stam_buffer_size == 150
+    lawns = environment.foraging.lawns if environment.foraging else None
+    assert lawns is not None
+    assert lawns.intake_fraction == pytest.approx(1.0 - 0.98**0.2)
+    assert config.brain is not None
+    assert base.brain is not None
+    assert getattr(config.brain.config, "gamma", None) == pytest.approx(0.99**0.2)
+    # Nothing outside the conversion moves: the brain's other settings and the lawns' geometry.
+    unconverted = {"gamma", "gae_lambda", "modulator_step_seconds", "membrane_tau_steps"}
+    for key, value in base.brain.config:
+        if key not in unconverted:
+            assert getattr(config.brain.config, key) == value, key
+    assert lawns.radius_mm == base_environment.foraging.lawns.radius_mm  # type: ignore[union-attr]

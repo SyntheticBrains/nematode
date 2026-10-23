@@ -465,6 +465,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
     if config_file:
         config = load_simulation_config(config_file)
         logger.info(f"Initializing simulation config: {config}")
+        # Printed, not only logged: a campaign keeps a run's stdout, and its file log is off.
+        if config.step_derivation is not None:
+            print("\n".join(config.step_derivation.lines()), flush=True)
 
         # Handle seed precedence: CLI > config file > auto-generated
         if args.seed is not None:
@@ -1265,7 +1268,11 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             skip_path_data=True,
         )
         export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
-        behaviour_path = write_behaviour_capture(all_results, data_dir)
+        behaviour_path = write_behaviour_capture(
+            all_results,
+            data_dir,
+            step_seconds=getattr(agent.env, "step_seconds", None),
+        )
         if behaviour_path is not None:
             logger.info("Wrote behavioural capture to %s", behaviour_path)
     else:

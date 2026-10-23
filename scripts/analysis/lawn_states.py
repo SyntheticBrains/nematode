@@ -12,8 +12,9 @@ above zero.
 
 1. Each run's final weights (or, for a floor, the seed's untrained policy) are evaluated frozen for
    held-out episodes with behaviour capture.
-2. Each episode's positions, one per 5-second step, are cut into 10-second windows. A window is on a
-   lawn when all three of its position samples are.
+2. Each episode's positions are read once per 5-second step, a shorter step's track downsampled to
+   it, and cut into 10-second windows. A window is on a lawn when the worm is at every step it
+   spans.
 3. The states come from the model calibrated on real worms
    (:func:`quantumnematode.validation.roaming_dwelling.load_calibrated_hmm`), within each on-lawn run.
 
@@ -193,38 +194,46 @@ class Episode:
     speed: np.ndarray | None = None
 
 
-def episode_windows(
+def episode_windows(  # noqa: PLR0913
     steps: list[BehaviourStep],
     classifier: rd.GaussianClassifier,
     intake_fraction: float,
     quality: float,
     concentrations: np.ndarray | None = None,
+    step_seconds: float = rd.STEP_SECONDS,
 ) -> Episode:
     """Cut one episode's captured steps into windows; classify them; recover the cell's density.
 
-    A window spans three position samples, two steps. It is on a lawn when all three are. Its
-    density is the mean density of the cells eaten from in it, or NaN where the worm ate nothing.
-    ``concentrations``, one ``(serotonin, PDF)`` row per captured step, is averaged the same way.
+    Speeds and turns are measured from the positions once per 5-second step, a shorter step's track
+    downsampled to it, so a window spans three of those samples. Everything else is read at every
+    captured step the window spans: it is on a lawn when the worm is at each of them, and its density
+    is the mean density of the cells eaten from in it, each bite divided by the step's own
+    ``intake_fraction`` times quality, or NaN where the worm ate nothing. ``concentrations``, one
+    ``(serotonin, PDF)`` row per captured step, is averaged over the same steps.
     """
     x = np.array([s.x for s in steps])
     y = np.array([s.y for s in steps])
     on = np.array([bool(s.on_lawn) for s in steps])
     off = ~on
     eaten = np.array([s.intake or 0.0 for s in steps])
-    speed, angular = rd.window_measures(x, y)
+    stride = rd.reference_stride(step_seconds)
+    span = stride * rd.WINDOW_STEPS
+    speed, angular = rd.window_measures(*rd.downsample_to_reference(x, y, step_seconds))
     n = len(speed)
-    on_window = np.array([on[2 * k : 2 * k + 3].all() for k in range(n)], dtype=bool)
-    off_window = np.array([off[2 * k : 2 * k + 3].all() for k in range(n)], dtype=bool)
+    on_window = np.array([on[span * k : span * (k + 1) + 1].all() for k in range(n)], dtype=bool)
+    off_window = np.array([off[span * k : span * (k + 1) + 1].all() for k in range(n)], dtype=bool)
     states = classifier.states(speed, angular, on_window)
     density = np.full(n, np.nan)
     for k in range(n):
-        bites = eaten[2 * k + 1 : 2 * k + 3]
+        bites = eaten[span * k + 1 : span * (k + 1) + 1]
         bites = bites[bites > 0]
         if bites.size:
             density[k] = float(bites.mean()) / (intake_fraction * quality)
     per_window = None
     if concentrations is not None and len(concentrations) >= len(steps):
-        per_window = np.array([concentrations[2 * k : 2 * k + 3].mean(axis=0) for k in range(n)])
+        per_window = np.array(
+            [concentrations[span * k : span * (k + 1) + 1].mean(axis=0) for k in range(n)],
+        )
     return Episode(
         states=states,
         density=density,
@@ -258,7 +267,7 @@ def concentrations_by_state(episodes: list[Episode]) -> dict[str, float | None]:
 
 def bout_durations(states: np.ndarray, state: int) -> list[float]:
     """Return the durations (seconds) of complete bouts of ``state`` inside on-lawn runs."""
-    window_s = rd.STEP_SECONDS * rd.WINDOW_STEPS
+    window_s = rd.WINDOW_SECONDS
     durations: list[float] = []
     for start, stop in rd.on_food_runs(states != rd.OFF_FOOD):
         run = states[start:stop]
@@ -295,7 +304,7 @@ def leaving_readings(episodes: list[Episode]) -> dict[str, Any]:
     exits = [list(e.exits) for e in episodes]
     n_exits = sum(len(x) for x in exits)
     on_windows = sum(int(np.sum(s != rd.OFF_FOOD)) for s in states)
-    on_hours = on_windows * rd.STEP_SECONDS * rd.WINDOW_STEPS / 3600.0
+    on_hours = on_windows * rd.WINDOW_SECONDS / 3600.0
     on_states = np.concatenate([s[s != rd.OFF_FOOD] for s in states]) if states else np.zeros(0)
     overall = float(np.mean(on_states == rd.ROAMING)) if on_states.size else None
     band = np.concatenate([rd.pre_exit_band(s, x) for s, x in zip(states, exits, strict=True)])
@@ -352,8 +361,9 @@ def capture(
 ) -> tuple[Any, ...]:
     """Run ``episodes`` frozen held-out episodes with behaviour capture.
 
-    Returns the captured steps, each episode's intake, the lawns, and, for a brain with modulators,
-    each episode's ``(serotonin, PDF)`` concentrations as each step saw them (otherwise None).
+    Returns the captured steps, each episode's intake, the lawns, for a brain with modulators each
+    episode's ``(serotonin, PDF)`` concentrations as each step saw them (otherwise None), and the
+    step's duration in worm-seconds.
     ``overrides`` replaces brain-config fields for the evaluation, as an acute knockout does.
     """
     brain, config, sensing = harness.build_brain(config_path, seed, overrides)
@@ -404,7 +414,7 @@ def capture(
         if traced is not None:
             traced.append(np.array(seen, dtype=float).reshape(-1, 2))
             seen.clear()
-    return captured, intakes, lawns, traced
+    return captured, intakes, lawns, traced, getattr(agent.env, "step_seconds", rd.STEP_SECONDS)
 
 
 def evaluate_run(job: tuple[str, int, list[str], int, str]) -> dict[str, Any]:
@@ -424,7 +434,13 @@ def evaluate_run(job: tuple[str, int, list[str], int, str]) -> dict[str, Any]:
         if weights is None:
             return {"arm": arm, "seed": seed, "missing": True}
     config = gen.FORAGING / f"{gen.stem(arm, cell)}.yml"
-    captured, intakes, lawns, traced = capture(config, seed, weights, episodes, overrides)
+    captured, intakes, lawns, traced, step_seconds = capture(
+        config,
+        seed,
+        weights,
+        episodes,
+        overrides,
+    )
     classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
     quality = float(lawns.quality[0]) if lawns.quality[0] == lawns.quality[1] else float("nan")
     windows = [
@@ -434,6 +450,7 @@ def evaluate_run(job: tuple[str, int, list[str], int, str]) -> dict[str, Any]:
             lawns.intake_fraction,
             quality,
             None if traced is None else traced[i],
+            step_seconds,
         )
         for i, steps in enumerate(captured)
     ]

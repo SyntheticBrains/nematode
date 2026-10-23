@@ -38,7 +38,8 @@ maintainer's decision of 2026-10-23.
     threshold;
   - **the derivative feature** is expressed per reference step.
 
-  The derived values are logged at load, and the derivation is idempotent.
+  The derived values are logged at load and printed to stdout, so a campaign's per-run log keeps them;
+  the derivation is idempotent.
 
 - **Refused at load** (the maintainer's choice, 2026-10-23; D41's scope). A non-default step is
   refused, with the reason, when anything it touches has no declared derivation:

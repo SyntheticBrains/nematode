@@ -5,6 +5,8 @@ import math
 import sys
 from pathlib import Path
 
+import pytest
+
 # The analysis script lives in scripts/analysis/ and imports the package, so put that directory on
 # the path first (walk up to the repo root, robust to this test's nesting depth).
 _root = Path(__file__).resolve()
@@ -194,3 +196,21 @@ def test_an_empty_count_keeps_the_summary_valid_json():
     _kept, report = bcv.exclude_walls({1: [[]]}, arena_mm=20.0, margin_mm=1.0)
     assert report["fraction_kept"] is None
     json.dumps(report, allow_nan=False)
+
+
+def test_a_capture_at_another_step_is_refused(tmp_path):
+    """The per-transition statistics are calibrated at 5 s; a 1-s capture is refused unread.
+
+    Covers the realworm-behavioural-validation scenario "A 1-second capture is refused".
+    """
+    path = tmp_path / "behaviour_seed42.json"
+    path.write_text(
+        json.dumps(
+            {
+                "runs": [{"run": 1, "seed": 42, "steps": _klinokinesis_steps()}],
+                "step_seconds": 1.0,
+            },
+        ),
+    )
+    with pytest.raises(SystemExit, match="1-s step"):
+        bcv.load_manifest(_manifest(tmp_path, [(42, path)]))

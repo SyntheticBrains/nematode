@@ -12,10 +12,10 @@ Biological basis:
 
 Timescale mapping:
     With default parameters (buffer_size=30, decay_rate=0.1), the half-life
-    is ~7 steps (ln(2)/0.1 ≈ 6.9). If each simulation step represents
-    ~1-2 seconds of biological time, this maps to ~10-15 seconds of salient
-    memory — appropriate for the short-term chemotaxis comparisons that
-    ASE sensory neurons perform during head sweeps.
+    is ~7 steps (ln(2)/0.1 ≈ 6.9). At the continuous point worm's default
+    step of 5 worm-seconds that is ~35 seconds of salient memory over a
+    150-second buffer; a shorter configured step converts both parameters so
+    the half-life and the buffer keep their lengths in seconds.
 """
 
 from __future__ import annotations

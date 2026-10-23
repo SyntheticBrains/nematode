@@ -51,7 +51,7 @@ def leaving(states: list[np.ndarray], exits: list[list[int]]) -> dict[str, Any]:
     )
     before: dict[str, float] = {}
     for seconds in (10, 30, 60, 180):
-        span = seconds // int(rd.STEP_SECONDS * rd.WINDOW_STEPS)
+        span = seconds // int(rd.WINDOW_SECONDS)
         pooled = np.concatenate(
             [rd.pre_exit_band(s, e, near=0, far=span) for s, e in zip(states, exits, strict=True)],
         )
@@ -83,13 +83,13 @@ def reference(windows_path: Path = WINDOWS_PATH) -> dict[str, Any]:
     ]
     labelled = [np.where(w["on_food"][i], w["labels"][i], rd.OFF_FOOD) for i in range(n)]
     n_exits = sum(len(e) for e in exits)
-    on_hours = float(w["on_food"].sum()) * rd.STEP_SECONDS * rd.WINDOW_STEPS / 3600.0
+    on_hours = float(w["on_food"].sum()) * rd.WINDOW_SECONDS / 3600.0
     return {
         "source": "Scheer & Bargmann 2023 wild type (PD1074, OD2 small lawns), 1,586 animals",
         "exit_rule": "the first window of an out-of-lawn run after an in-lawn run",
         "band_seconds": [
-            rd.EXIT_NEAR_WINDOWS * rd.STEP_SECONDS * rd.WINDOW_STEPS,
-            rd.EXIT_FAR_WINDOWS * rd.STEP_SECONDS * rd.WINDOW_STEPS,
+            rd.EXIT_NEAR_WINDOWS * rd.WINDOW_SECONDS,
+            rd.EXIT_FAR_WINDOWS * rd.WINDOW_SECONDS,
         ],
         "animals": n,
         "animals_leaving": sum(bool(e) for e in exits),

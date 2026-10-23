@@ -31,8 +31,11 @@ applied unchanged to simulated tracks.
 #### Scenario: A 1-second track is read at 5 seconds
 
 - **WHEN** a track captured at a 1-second step is classified
-- **THEN** every fifth position SHALL be kept, its intake summed over each 5-second block, and the
-  windows decoded with the unchanged model
+- **THEN** every fifth position SHALL be kept for speed and turning, and the windows decoded with the
+  unchanged model
+- **AND** a window SHALL be on a lawn only when every 1-second step it spans is
+- **AND** its eaten-cell density SHALL be the mean of its 1-second bites, each divided by the
+  1-second step's own intake fraction times quality
 
 #### Scenario: A step that does not divide 5 seconds is refused
 

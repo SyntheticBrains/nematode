@@ -486,7 +486,8 @@ def test_an_acute_arm_evaluates_the_trained_weights_with_its_knockout(
         overrides: dict[str, object] | None = None,
     ) -> tuple[object, ...]:
         seen.update(config=config, seed=seed, weights=found, overrides=overrides)
-        return [], [], type("L", (), {"quality": (1.0, 1.0), "intake_fraction": 0.02})(), None
+        lawns = type("L", (), {"quality": (1.0, 1.0), "intake_fraction": 0.02})()
+        return [], [], lawns, None, 5.0
 
     monkeypatch.setattr(ls.bc, "final_weights", lambda _log: weights)
     monkeypatch.setattr(ls, "capture", fake_capture)
@@ -497,3 +498,34 @@ def test_an_acute_arm_evaluates_the_trained_weights_with_its_knockout(
     assert seen["weights"] == weights
     assert seen["overrides"] == {"modulator_knockout": "pdfr1"}
     assert seen["config"] == ls.gen.FORAGING / f"{ls.gen.stem('modulated')}.yml"
+
+
+def test_a_one_second_track_is_read_at_five_seconds() -> None:
+    """A 1-s episode classifies as its 5-s subsample, its density read from every 1-s bite.
+
+    Covers the realworm-behavioural-validation scenario "A 1-second track is read at 5 seconds".
+    """
+    fraction = 1.0 - 0.9**0.2
+    xs = [0.02 * i for i in range(21)]
+    bites = [0.0] + [fraction * (1.0 - fraction) ** i for i in range(20)]
+    steps = _steps(xs, [True] * 21, bites)
+    classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
+    one = ls.episode_windows(steps, classifier, fraction, 1.0, step_seconds=1.0)
+    five = ls.episode_windows(steps[::5], classifier, 0.1, 1.0)
+    np.testing.assert_array_equal(one.states, five.states)
+    assert one.speed == pytest.approx(five.speed)
+    # Each 1-s bite recovers the density of the cell it came from; the window's is their mean.
+    expected = [(1.0 - fraction) ** np.arange(10 * k, 10 * k + 10) for k in range(2)]
+    assert one.density == pytest.approx([float(np.mean(e)) for e in expected])
+
+
+def test_one_off_lawn_second_takes_its_window_off_the_lawn() -> None:
+    """A window is on a lawn only when the worm is at every 1-s step it spans."""
+    xs = [0.02 * i for i in range(21)]
+    on = [True] * 21
+    on[13] = False
+    steps = _steps(xs, on, [0.0] * 21)
+    classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
+    episode = ls.episode_windows(steps, classifier, 0.02, 1.0, step_seconds=1.0)
+    assert episode.states[0] != rd.OFF_FOOD
+    assert episode.states[1] == rd.OFF_FOOD
