@@ -1,10 +1,10 @@
 # Quantum Nematode Project Roadmap
 
-**Vision**: Determine the most efficient brain architecture for nematode-like embodied tasks, using the *Caenorhabditis elegans* connectome as the focal comparison point against unconstrained and evolved alternatives. The platform brings learning, evolution, and a curated subset of biologically-faithful sensing into one closed sensory-motor loop, so that architecture comparisons answer scientific questions rather than rank benchmarks.
+**Vision**: Determine how faithfully a simulated *Caenorhabditis elegans* can reproduce the worm's standard behaviours, graded against real-worm data, and what the real connectome contributes to that fidelity. *(Re-framed 2026-10-23, v5.0, D33, after Phase 9's STOP. Until v5.0 the vision was to determine the most efficient brain architecture for nematode-like embodied tasks, with the connectome as the focal comparison point; architecture families remain the comparison's controllers, compared on fidelity.)*
 
-**Version**: 4.5
+**Version**: 5.0
 
-**Last Updated**: 2026-10-15
+**Last Updated**: 2026-10-23
 
 **Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 
@@ -65,10 +65,13 @@ ______________________________________________________________________
 | **7** | — | Deepen — plasticity + cross-species transfer | ✅ **COMPLETE (SPLIT, 2026-09-19)** — see [Logbook 069](experiments/logbooks/069-phase7-synthesis.md) and § Phase 7's resolved work. **7a shipped, 7b deferred to the phase after 7 (D14, 2026-09-15)**; the D10 primary is unmet and was unmeetable in the closing scope, since every learner that reaches competence leaves `w_chem` frozen (the resolved history is in § Phase 7 progress record) | Biologically-plausible plasticity on the connectome — rate-based three-factor rules, resolved as the 2×2 plastic wild-type vs plastic rewired-null (spiking-STDP is MAY). Cross-species **head-circuit** transfer using the Cook et al. 2025 *P. pacificus* data (head-only, chemical-synapse-only), with the dauer connectome (Yim et al. 2024) as a scope-matched within-species condition. Optional biological-validation collaboration and paper drafts |
 | **8** | — | Ground, then embody — measured substrate + body | ✅ **COMPLETE** *(2026-10-14, [Logbook 094](experiments/logbooks/094-phase8-synthesis.md): every 8b criterion assigned a status; block V decomposed — no interior chemical-wiring advantage once the null's gap junctions and sensory–motor boundary are held; gap-junction placement is the wiring effect that holds, and it survives the kinematic body ([Logbook 092](experiments/logbooks/092-thermal-body.md)); shipment decision **GO to a plan review** for the phase after 8)* *(8a: 2026-09-26, [Logbook 076](experiments/logbooks/076-8a-synthesis.md): every 8a criterion assigned a status; the D20 gate written as **GO**; block V holds with its conditions named, about half of its `auc_success` lead having come from the null's rewired gap junctions; D21 makes the chemical-only null 8b's primary)* — planned as v4.3, 2026-09-20; **8b re-planned 2026-10-03 (v4.4)**: the carried controls run before the body, B.2b is MUST, C.2 is gated on a measured cost pilot, and D22 fixes the step and absorbs proprioception into C.1c; tracker [`phase8-tracking`](../openspec/changes/archive/2026-10-14-phase8-tracking/tasks.md); pre-structured as two shipments (D20) | **8a**: the init-vs-rewiring control on block V (D15), the operating-point robustness surface (D16), measured synaptic signs and strengths on the Cook edges (Creamer–Leifer–Pillow; D17), the null-strength control (A.6). **8b**: the carried controls first (thermal coverage of A.6, the hop predictor with a boundary-preserving null, the dynamics rung with plastic gap junctions), then a step–time calibration, reversal, the anatomical motor-to-muscle readout into a kinematic 2D body (D18/D19/D22), patchy lawns + internal state, body-level validation, the six-family ranking re-run through the body; the rod-chain body behind a measured cost pilot. Cross-species, multi-agent, evolution, 3D and whole-organism fidelity are out of scope — see § Phase 8 |
 | **9** | — | Screen, then mechanism — the gap junctions, and the ranking under a trigger | ✅ **COMPLETE** (2026-10-22, [Logbook 103](experiments/logbooks/103-phase9-synthesis.md): the STOP branch, the gap-placement advantage traced to the gap model's degree normaliser; next, a plan review for *fidelity on the plate*) — was 🔲 **PLANNED** *(2026-10-15, v4.5, from the Phase 9 plan review and its three-lens critique; decisions D23–D32; tracker [`phase9-tracking`](../openspec/changes/archive/2026-10-22-phase9-tracking/tasks.md); two shipments split by success, § Go/No-Go)* | **9a**: the gap model's operating-point screen (G.0 — unit weights, gap-off, the gap scale, count outliers, depth, the shortcut audit) before any gap contrast; the instrument at long horizons (M.1 late PPO collapse, M.2 wild type against wild type, M.3 variance components); the mechanism block (placement × totals, interior against boundary, the class map as scatters with both rival predictions, the named class tested); per-family positive controls through the body. **9b**: the six-family ranking through the kinematic body once, behind four named conditions; the boundary-held gap null through the body; the male's gap layer as a replication; the contact-constrained null; the klinokinesis 2×2; a placed set-point memory; the rod-chain cost pilot and the JIT spike. Cross-species, NEAT, a further chemical rung, the dynamical substrate and whole-organism fidelity are out — see § Phase 9 |
+| **10** | — | Fidelity on the plate — standard lawn assays, graded against the worm | 🔲 **PLANNED** *(2026-10-23, v5.0, D33–D41; tracker [`phase10-tracking`](../openspec/changes/phase10-tracking/tasks.md))* | A graded benchmark of standard on-lawn assays from public real-worm data; controllers fitted to match the animal; the wiring question, synaptic and neuromodulatory, asked on behavioural fidelity |
 
 ______________________________________________________________________
 
 ## Executive Summary
+
+*(**Re-framed 2026-10-23**, roadmap v5.0, D33: the project's question is now **how faithfully a simulated worm reproduces standard C. elegans behaviour, graded against real-worm data, and what the connectome contributes to that fidelity**. The paragraph below states the question as it stood until v5.0, kept as the record of what Phases 0–9 asked.)*
 
 The Quantum Nematode project asks one primary research question expressed along two comparison dimensions: *what is the most efficient brain architecture for nematode-like embodied tasks, and how does the C. elegans connectome rank against unconstrained and evolved alternatives — when learning and evolution operate on it in a closed sensory-motor loop?*
 
@@ -91,11 +94,17 @@ Phase 5 results sharpened the framing in a load-bearing way. M3 Lamarckian inher
 
 ### North Star
 
-Be the platform on which learning — and evolution, where a wiring result makes the search space affordable — operates on the real *C. elegans* connectome in a closed sensory-motor loop, and use it to rank the wild-type connectome against unconstrained, evolved, and quantum architectures on a curated set of nematode behaviours.
+*(**Re-framed 2026-10-23**, roadmap v5.0, D33.)* Be the platform on which a simulated *C. elegans* is
+graded against real-worm data on the worm's standard behaviours, and use it to ask what the real
+connectome, synaptic and neuromodulatory, contributes to that fidelity, against wiring nulls fitted
+with the same budget. Architecture families are the controllers this compares, on fidelity rather
+than on learning speed.
+
+*Historical (until v5.0), kept as the record of what Phases 0–9 aimed at:* Be the platform on which learning — and evolution, where a wiring result makes the search space affordable — operates on the real *C. elegans* connectome in a closed sensory-motor loop, and use it to rank the wild-type connectome against unconstrained, evolved, and quantum architectures on a curated set of nematode behaviours.
 
 *(Restated 2026-10-15, v4.5. The previous wording, "learning and evolution operate", named a clause no phase since 5 had served: Phase 5 evolved MLP and LSTM weights, 6b's NEAT search never ran, and 029's evolved row was a feedforward GA. The restatement keeps evolution in the North Star and names its condition — a wiring result that makes a search space small enough to afford, which the gap-junction class map would be. Phase 9 serves it at zero cost by reading that map two-sided as a local-optimality test of the wild type's gap placement under class-level moves (§ Phase 9, G.3); the placement search itself is a MAY behind it.)*
 
-*Framing note: the platform contribution and the scientific contribution are mutually reinforcing — building the platform answers the architecture-comparison question; the architecture-comparison question motivates each platform layer. If post-Phase-6 evidence shows the connectome wins decisively on the curated behaviours, the headline framing may shift toward "connectome-primary" (a neuroscience result). If the evidence shows the connectome is competitive but not dominant, "optimal-primary" (an architecture result) remains the natural framing. Both readings are platform contributions; the scientific framing follows the evidence.*
+*Framing note (historical, pre-v5.0; superseded by D33's re-framing): the platform contribution and the scientific contribution are mutually reinforcing — building the platform answers the architecture-comparison question; the architecture-comparison question motivates each platform layer. If post-Phase-6 evidence shows the connectome wins decisively on the curated behaviours, the headline framing may shift toward "connectome-primary" (a neuroscience result). If the evidence shows the connectome is competitive but not dominant, "optimal-primary" (an architecture result) remains the natural framing. Both readings are platform contributions; the scientific framing follows the evidence.*
 
 ______________________________________________________________________
 
@@ -1625,6 +1634,173 @@ Verified against the review's six sweeps of 2026-10-14 and the W40–W42 digests
 
 ______________________________________________________________________
 
+### Phase 10: Fidelity on the Plate — Standard Lawn Assays, Graded Against the Worm
+
+**Status**: 🔲 **PLANNED** *(2026-10-23, roadmap v5.0, from the Phase 10 plan review and its
+adversarial critique; decisions D33–D41; tracker [`phase10-tracking`](../openspec/changes/phase10-tracking/tasks.md))*.
+
+**Goal**: build a graded benchmark of standard on-lawn *C. elegans* assays from public real-worm data,
+make the point worm able to do what those assays score, and fit controllers to match the animal. Then
+ask the connectome question on the new metric: **fitted identically, does the real wiring, including its
+neuromodulator layer, reproduce held-out behaviour and mutant phenotypes better than its nulls?**
+
+**Why this phase.** Phase 9 closed on its STOP branch
+([Logbook 103](experiments/logbooks/103-phase9-synthesis.md)): the connectome's learning-speed advantage
+over its nulls was the gap model's degree normaliser. Across Phases 6–8, reward-trained learners never
+reproduced the statistics that define the worm's own strategies:
+
+- they steer but never modulate turning;
+- they leave lawns without roaming first ([088](experiments/logbooks/088-patch-leaving.md));
+- their serotonin and PDF knockouts do not phenocopy ([090](experiments/logbooks/090-modulators.md)).
+
+The literature agrees. Animal-matched behaviour comes from fitting to the animal, not from reward
+alone. The maintainer chose this direction on 2026-10-22 (*fidelity on the plate*), and the re-framing
+of the project's question on 2026-10-23.
+
+**What the review established** (`build/phase10-review-2026-10.md`, gitignored, with its sources):
+
+- **The gap is narrower than "no one has used a null", but it holds.** BAAIWorm (2024) and WormWars
+  (2026) use shuffled-connectome nulls, but score locomotion or task fitness, not real-worm statistics.
+  Roberts et al. 2016 grade a connectome-abstracted model on search behaviour and mutants, but with no
+  closed loop and no null. No closed-loop circuit model of roaming/dwelling or lawn leaving was found
+  from 2024–2026. The claim is the conjunction: a closed loop, lawn statistics, a mutant hold-out, and
+  nulls fitted at equal budget.
+- **The data are open.**
+  - Scheer & Bargmann 2023 (CC0) is the anchor: roaming/dwelling and leaving, with mutants.
+  - López-Cruz 2019 (CC BY) gives local-search targets.
+  - Calhoun 2014 and Roberts 2016 (CC0) give raw search tracks.
+  - Haley 2025 (CC BY) covers multi-patch decisions.
+  - The Open Worm Movement Database (CC BY) covers posture, for Phase 11.
+  - Bentley 2016 (CC BY) gives the monoamine layer; Ripoll-Sánchez 2023 gives the neuropeptide
+    connectome, licence to confirm.
+- **Simulation cost is the same per step in every scenario** (about 1.1 ms on the connectome point
+  worm, 2.5–3 ms through the body). The phase is engineering-led; its machine cost sits in fitting.
+- **What the repository lacks:**
+  - time resolution: 5 s per step hides reversals, omega turns and pirouettes;
+  - locomotor primitives;
+  - assay protocols: no food removal, no off-food start;
+  - a behavioural fitness, a connectome encoder and a batched evaluator;
+  - a data-derived neuromodulator layer.
+
+**How to orient**: the living sub-task checklist is in
+[openspec/changes/phase10-tracking/tasks.md](../openspec/changes/phase10-tracking/tasks.md), with the
+seed-band table and the execution standards in that change's design.md. This section is the
+authoritative plan; amendments are dated in both places.
+
+#### Phase 10 shipment tracker
+
+| Block | Scope | Class | Status |
+|---|---|---|---|
+| **H** | The literature watch re-aimed; the research question re-framed in AGENTS.md, the README and this roadmap; scenario scope recorded (thermal, predator, multi-agent and oxygen configs frozen, kept and tested); the tracker and seed bands | MUST, first | 🔲 |
+| **E + T** | One step-duration value from which every step-coupled constant derives (5 s default, byte-identical); a 1-s point worm; locomotor primitives (run, reversal bout, omega/delta reorientation, pause) with kinematics fixed from data; assay protocols (Scheer's small lawn; food removal; off-food start; multi-hour episodes); a batched evaluator that carries them, with a parity test against the per-step runner and a cost pilot | MUST | 🔲 |
+| **B** | The benchmark: Scheer re-extracted with positions and cohorts; bands from the project's classifier on real tracks; trajectory-based reorientation detection; matched negatives; a cohort-held-out real-track positive control; a mutant positive control; track import independent of the simulator | MUST; the gate for everything after | 🔲 |
+| **N** | The neuromodulator layer from data: Bentley 2016's monoamine layer and Ripoll-Sánchez 2023's neuropeptide connectome (licence confirmed first), replacing the hand-placed four-pathway circuit, with its own null family and D24-style audit | MUST | 🔲 |
+| **F.0** | The fitting methods' positive control: parameter recovery for NPE and for CMA-ES at known parameters | MUST | 🔲 |
+| **C** | Controllers: C.1 a mechanistic baseline (NPE, priors without search data); C.2 the connectome with its slow variable stated and its feasibility checked (sep-CMA on the benchmark's distance, budget pre-registered, plateau criterion); C.3 the same architecture trained by reward; C.4 the fidelity table, with C.2 against C.1 | MUST | 🔲 |
+| **W** | The wiring question on fidelity: the wild type against synaptic, gap and neuromodulator-layer nulls, a fresh rewiring draw per null fit, 8–16 per arm, sized after the cost pilot and F.0; minimum = the held-out distance between two real wild-type cohorts, both directions; read on graded distance whatever the gate says | MUST, after C.2 | 🔲 |
+| **Synthesis** | Every criterion assigned a status; the publication decision (D30's destination) | MUST | 🔲 |
+
+#### Pre-registered design decisions (2026-10-23 plan review and critique)
+
+| # | Decision | Resolution |
+|---|---|---|
+| **D33** | The project's research question | **Re-framed:** *how faithfully a simulated worm reproduces standard C. elegans behaviour, and what the connectome contributes to that fidelity.* Architecture families remain the comparison's controllers, compared on fidelity rather than learning speed. The architecture ranking on learning speed is halted (2026-10-22) |
+| **D34** | How the benchmark grades | bands from batch-matched real-data spread, computed with the project's own classifier; mutant effects relative to the controller's own wild type. **Valid only if** both positive controls pass (cohort-held-out real tracks; held-out real mutant cohorts) and every negative fails: the matched negatives (the open-loop Scheer HMM; primitives fired by stationary Poisson timing) and the trivial ones (a random walk, a correlated random walk, the untrained policy). **Void** if any positive control fails or any negative passes. Composite rules depend on closed-loop contingencies |
+| **D35** | The point worm's time step | **1 worm-second.** One config value from which every step-coupled constant derives; 5 s stays the default |
+| **D36** | Locomotor primitives | run, reversal bout, omega/delta reorientation and pause, with kinematics fixed from data and timing chosen by the controller. Every arm and every negative runs on the same primitives. Reorientations are detected from trajectories, never from primitive labels |
+| **D37** | Fit and hold-out | fit on the wild type only. Local search is held out for C.2 and C.3; C.1's priors are set without search data. Positive controls hold out whole cohorts. The mutants (tph-1 on Scheer only; pdfr-1; tax-4) are fixed perturbations, encoded per controller in a table registered before any fit. npr-1 (O₂-dependent) and cat-2 (dopamine) move to the second tier |
+| **D38** | Fitting methods | NPE for C.1; sep-CMA on the benchmark's weighted distance for C.2, at ≥ 200 animals per evaluation, with the budget, x₀, σ₀ and weights pre-registered and a plateau criterion every arm must meet. Each has a parameter-recovery positive control (F.0). Mutant predictions are registered as posterior-predictive intervals, with an `unidentified` outcome |
+| **D39** | PPO's role | a comparator: C.3 is the C.2 architecture trained by reward, so the contrast isolates the method. No other reward-only panels |
+| **D40** | The wiring reading | the held-out fidelity distance and mutant phenocopy, the wild type against degree-preserving, gap-only (corrected gap model), boundary-held, class-preserving left–right-symmetric and neuromodulator-layer nulls, at equal budget. The minimum is the real between-cohort distance, both directions. Every outcome is named in advance, including "the nulls pass too" |
+| **D41** | Scope | the point worm only; **the body and posture open Phase 11.** Thermotaxis is the second tier, not dropped. The required blocks do no new thermal, predator, multi-agent or oxygen work; the MAY items (thermotaxis on the new primitives; O₂-field bordering with npr-1) remain allowed as optional second-tier comparisons |
+
+#### Required deliverables (MUST)
+
+1. **H — housekeeping**, before the first registration (the shipment tracker's H row).
+2. **E + T — the worm, its assays, and the batched evaluator** (D35, D36), about 14–20 engineering days,
+   with a parity test and a measured cost pilot that sizes W.
+3. **B — the benchmark** (D34), about 8–12 engineering days. It is citable on its own: the minimum-viable
+   outcome.
+4. **N — the neuromodulator layer from data**, about 6–10 engineering days. It covers the receptor
+   placement that W's neuromodulator nulls rewire, and the slow variable C.2 depends on.
+5. **F.0 — parameter recovery** for both fitting methods.
+6. **C.1–C.4 — controllers and the fidelity table** (D37–D39).
+7. **W — the wiring question on fidelity** (D40), sized after the cost pilot.
+8. **The Phase 10 synthesis.**
+
+#### Recommended deliverables (SHOULD)
+
+- Haley 2025's patch-acceptance assay against encounter number.
+- WCON track export.
+- The novelty spot-checks owed at B's registration (NeuroSparkSNT; a search window wider than
+  2024–2026).
+
+#### Optional deliverables (MAY)
+
+- thermotaxis on the new primitives (the second tier);
+- bordering against an O₂ field, with npr-1;
+- a Creamer-dynamics controller graded on the benchmark.
+
+#### Biological validation targets (Phase 10)
+
+- **Roaming and dwelling** (Scheer & Bargmann 2023; Flavell 2013): on-lawn roaming fraction; dwelling
+  τ ≈ 482 s; roaming double-exponential (75 s and 520 s); food-density dependence.
+- **Lawn leaving** (Scheer; Bendesky 2011): about 1 event per 95–100 min; 80% of events from roaming;
+  leaving rising with depletion.
+- **Local search** (López-Cruz 2019; Gray 2005; Calhoun 2014): reorientation rate αe^(−γt)+β over 2–44 min
+  after removal, with γ ≈ 0.11 per minute.
+- **Chemotaxis components** (Pierce-Shimomura 1999; Iino & Yoshida 2009): the pirouette rate against
+  dC/dt, as the repaired unit-free quintile ratio; the weathervane regression.
+- **Mutants:**
+  - pdfr-1: less roaming, normal leaving, more search;
+  - tax-4: less roaming, normal leaving;
+  - tph-1: more roaming and more leaving, graded on Scheer only.
+
+#### Phase 10 exit criteria
+
+- 🔲 **H** complete before the first registration.
+- 🔲 **E + T** shipped, with the parity test passing and the cost pilot recorded.
+- 🔲 **B** valid: both positive controls pass, and every matched and every trivial negative fails. If any
+  positive control fails or any negative passes, B is void, and the phase ships the reasons.
+- 🔲 **N** built, with its null family audited.
+- 🔲 **F.0** read for both methods.
+- 🔲 **C.1–C.4** read and the fidelity table published, **if B is valid**. Under the void-B pivot they
+  are not run, recorded as unreachable-with-reason.
+- 🔲 **W** read on graded distance, whatever C.2's pass gate says, **if B is valid**. Under the void-B
+  pivot it is not run, recorded as unreachable-with-reason.
+- 🔲 **The Phase 10 synthesis**, with every criterion assigned a status and the publication decision
+  taken.
+
+#### Risk-mitigation: failure modes and pivots
+
+| Failure mode | Trigger | Pivot |
+|---|---|---|
+| **The benchmark cannot tell worms from non-worms** | a positive control fails, or a matched negative passes | revise the statistics and bands before anything is graded; never grade on a void benchmark |
+| **The 1-s step breaks calibrations** | the classifier drifts on re-sampled real tracks | classify on tracks downsampled to 5 s, keeping the calibration; re-calibrate otherwise |
+| **The mechanistic baseline cannot pass** | C.1 fails the wild type | the primitives or the benchmark are wrong; fixed before C.2, or the phase ships B and the diagnosis |
+| **The connectome cannot be fitted** | C.2's distance plateaus far above C.1's | report the fidelity table (a 30-parameter mechanism beats the connectome); W is still read on graded distance |
+| **The batched evaluator under-delivers** | the cost pilot puts W above its budget | fewer draws per arm, stated as the sensitivity's limit, never a re-read |
+| **The slow variable cannot reach the targets** | C.2's feasibility check shows no 9-minute decay | the slow state comes from the data-derived neuromodulator layer's fitted timescales; if none reaches it, the claim is scoped to the faster assays |
+| **The wiring effect is small** | W's spread swamps the minimum | a clean negative with the benchmark behind it, with the WormWars precedent cited |
+| **A licence is unclear** | Ripoll-Sánchez's terms cannot be confirmed | Bentley 2016's CC BY layer only; PDF placed from the primary literature, stated |
+
+#### Where Phase 10 is first-in-field (novelty map)
+
+| Claim | Nearest precedent (2026-10) | Payoff if positive |
+|---|---|---|
+| **A graded benchmark of standard on-lawn assays for simulated worms**, with real-track positive controls and matched negatives | none found; Tierpsy/OWMD feature sets describe real worms, not simulated ones | a field resource, citable alone |
+| **A closed-loop connectome controller with neuromodulatory state, graded on held-out lawn assays and mutant phenotypes against equal-budget nulls**, including a neuromodulator-layer null | BAAIWorm (nulls, no behavioural grading); Roberts 2016 (graded, no loop, no null); WormWars (nulls, task fitness) | the first test of what the wiring, synaptic and neuromodulatory, contributes to behavioural fidelity |
+| **The pdfr-1 and tax-4 dissociation** reproduced by a simulated worm | none found | a mechanistic account of how roaming and leaving come apart |
+
+#### Go/No-Go Decision
+
+- **GO (ship) if:** B is valid; C.1–C.4 are read; W is read on graded distance; and the synthesis
+  assigns every criterion a status.
+- **PIVOT if B is void and cannot be repaired:** the phase ships the benchmark's failure analysis as a
+  methods result, and the plan review re-aims.
+- **The connectome reading is never a gate.** A null result on W, with a valid benchmark, ships as a
+  finding.
+
 ## Architecture-Comparison Protocol
 
 Phase 2's 300-session quantum architecture campaign — covering 15 quantum and hybrid variants against matched-capacity classical baselines — established that grid-world complexity is below the threshold for quantum advantage on every variant tested. Quantum is therefore *one architecture family among many* in the project's comparison sweep, not a separate goal or a separate phase.
@@ -1898,6 +2074,12 @@ Phase 7 closes cleanly and external visibility follows.
 Publication, external collaboration, and community-launch metrics are not codified as success-level requirements — the project pursues them when evidence and context justify, not on a phase-locked schedule.
 
 ______________________________________________________________________
+
+### Phase 10 success levels
+
+- **Minimum viable**: the benchmark valid (both positive controls pass, and every matched and every trivial negative fails), with the 1-s worm, its primitives and assays, and track import. Citable alone.
+- **Target**: C.1–C.4 read and the fidelity table published; W read on graded distance either way.
+- **Stretch**: a controller that passes every first-tier assay and reproduces the pdfr-1 and tax-4 dissociations, with W reading the wild type's wiring, synaptic or neuromodulatory, ahead of its nulls by at least the real between-cohort distance.
 
 ## Relationship to External Projects
 
