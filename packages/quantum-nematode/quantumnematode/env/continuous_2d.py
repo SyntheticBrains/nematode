@@ -84,6 +84,8 @@ class Continuous2DParams:
     body_substeps: int = 20
     # The kinematic body's steering gain; None keeps the body's calibrated default.
     body_steering_gain: float | None = None
+    # One step's duration in worm-seconds; None takes it from ``max_step_mm`` at the crawl speed.
+    step_seconds: float | None = None
 
 
 def _wrap_to_pi(angle: float) -> float:
@@ -113,7 +115,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         self.bodies: dict[str, BodyState] = {}
         body_params = BodyParams(
             body_length_mm=self.continuous.body_length_mm,
-            step_seconds=step_worm_seconds(self.continuous.max_step_mm),
+            step_seconds=self.step_seconds,
             substeps=self.continuous.body_substeps,
         )
         if self.continuous.body_steering_gain is not None:
@@ -173,6 +175,12 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             raise TypeError(msg)
         new_env.bodies = _copy.deepcopy(self.bodies)
         return new_env
+
+    @property
+    def step_seconds(self) -> float:
+        """Return one step's duration in worm-seconds: as configured, else a full-speed step's."""
+        configured = self.continuous.step_seconds
+        return step_worm_seconds(self.continuous.max_step_mm) if configured is None else configured
 
     @property
     def body_params(self) -> BodyParams:

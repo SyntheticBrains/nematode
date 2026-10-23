@@ -32,6 +32,10 @@ import json
 import math
 from pathlib import Path
 
+from quantumnematode.report.behaviour_export import (
+    DEFAULT_CAPTURE_STEP_SECONDS,
+    capture_step_seconds,
+)
 from quantumnematode.report.dtypes import BehaviourStep
 from quantumnematode.validation.behavioural_agreement import grade_statistic
 from quantumnematode.validation.behavioural_curves import (
@@ -94,6 +98,14 @@ def load_manifest(manifest: Path) -> dict[int, list[list[BehaviourStep]]]:
         if seed in seeds:
             print(f"  WARN seed {seed}: duplicate manifest entry - overwriting previous")
         data = json.loads(capture_path.read_text())
+        step = capture_step_seconds(data)
+        if step != DEFAULT_CAPTURE_STEP_SECONDS:
+            msg = (
+                f"seed {seed}: {capture_path} was captured at a {step:g}-s step; the turn-rate "
+                f"ratio and theta_sharp are per-transition statistics calibrated at the "
+                f"{DEFAULT_CAPTURE_STEP_SECONDS:g}-s step, so this harness reads only captures at it"
+            )
+            raise SystemExit(msg)
         runs = [_steps_from_dicts(run["steps"]) for run in data.get("runs", []) if run["steps"]]
         if not runs:
             print(f"  WARN seed {seed}: no captured steps in {capture_path} - dropped")

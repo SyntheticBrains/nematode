@@ -166,3 +166,41 @@ class TestLeaving:
         assert len(band) == 15
         assert set(band) == {r}
         assert rd.last_window_before_exits(states, [21]).tolist() == [d]
+
+
+class TestShorterSteps:
+    """A shorter step's track is read at the classifier's 5-s step.
+
+    Covers "A 1-second track is read at 5 seconds" and "A step that does not divide 5 seconds is
+    refused".
+    """
+
+    def test_a_one_second_track_is_measured_at_five_seconds(self) -> None:
+        """A 1-s track's measures are its every-fifth-sample subsample's."""
+        rng = np.random.default_rng(5991)
+        x, y = _track(list(np.cumsum(rng.normal(0.0, 20.0, 60))), 0.1)
+        sub_x, sub_y = rd.downsample_to_reference(x, y, 1.0)
+        np.testing.assert_array_equal(sub_x, x[::5])
+        np.testing.assert_array_equal(sub_y, y[::5])
+        speed, angular = rd.window_measures(sub_x, sub_y)
+        expected_speed, expected_angular = rd.window_measures(x[::5], y[::5])
+        np.testing.assert_array_equal(speed, expected_speed)
+        np.testing.assert_array_equal(angular, expected_angular)
+
+    def test_the_measuring_step_is_returned_as_it_is(self) -> None:
+        """A 5-s track is kept whole."""
+        x, y = _track([0.0] * 6, 0.5)
+        sub_x, sub_y = rd.downsample_to_reference(x, y, rd.STEP_SECONDS)
+        np.testing.assert_array_equal(sub_x, x)
+        np.testing.assert_array_equal(sub_y, y)
+        assert rd.reference_stride(rd.STEP_SECONDS) == 1
+
+    @pytest.mark.parametrize("step", [2.0, 3.0, 10.0])
+    def test_a_step_that_does_not_divide_five_seconds_is_refused(self, step: float) -> None:
+        """Only a step dividing the measuring step a whole number of times can be read."""
+        with pytest.raises(ValueError, match="whole number"):
+            rd.reference_stride(step)
+
+    def test_the_window_is_ten_seconds(self) -> None:
+        """The window's length in seconds is the measuring step times its steps per window."""
+        assert rd.WINDOW_SECONDS == 10.0

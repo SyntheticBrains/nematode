@@ -30,6 +30,9 @@ import numpy as np
 
 STEP_SECONDS = 5.0
 WINDOW_STEPS = 2
+WINDOW_SECONDS = STEP_SECONDS * WINDOW_STEPS
+# How far a track's step may sit from dividing the measuring step a whole number of times.
+_STRIDE_TOLERANCE = 1e-9
 OFF_FOOD = -1
 DWELLING = 0
 ROAMING = 1
@@ -60,6 +63,40 @@ def step_measures(
             cosine = np.where(norms > 0, dot / norms, np.nan)
         turn[1:] = np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0)))
     return speed, turn
+
+
+def reference_stride(step_seconds: float) -> int:
+    """Return how many samples at ``step_seconds`` span one measuring step of ``STEP_SECONDS``.
+
+    Raises
+    ------
+    ValueError
+        If ``step_seconds`` does not divide the measuring step a whole number of times: the
+        model's speeds and turns are calibrated at that step, and a track can only be read at it.
+    """
+    quotient = STEP_SECONDS / step_seconds
+    stride = round(quotient)
+    if stride < 1 or abs(quotient - stride) > _STRIDE_TOLERANCE * stride:
+        msg = (
+            f"a track sampled every {step_seconds:g} s cannot be read at the classifier's "
+            f"{STEP_SECONDS:g}-s step: the step must divide it a whole number of times"
+        )
+        raise ValueError(msg)
+    return stride
+
+
+def downsample_to_reference(
+    x: np.ndarray,
+    y: np.ndarray,
+    step_seconds: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the positions of a track sampled every ``step_seconds``, kept once per measuring step.
+
+    Every ``reference_stride(step_seconds)``-th position is kept, starting from the first, so a
+    track at the measuring step is returned as it is.
+    """
+    stride = reference_stride(step_seconds)
+    return np.asarray(x)[::stride], np.asarray(y)[::stride]
 
 
 def window_measures(
