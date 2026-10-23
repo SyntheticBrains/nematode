@@ -164,3 +164,23 @@ def test_the_committed_one_second_configs_are_the_generators(arm: str) -> None:
         if key not in unconverted:
             assert getattr(config.brain.config, key) == value, key
     assert lawns.radius_mm == base_environment.foraging.lawns.radius_mm  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("arm", list(gen.PRIMITIVE_MODULES))
+def test_the_committed_primitives_configs_are_the_generators(arm: str) -> None:
+    """Each primitives arm is its 1-second arm on the locomotor primitives, and loads."""
+    path, text = gen.derive_primitives(arm)
+    assert path.read_text() == text
+    config = load_simulation_config(str(path))
+    assert config.step_seconds == 1.0
+    assert config.environment is not None
+    continuous = config.environment.get_continuous_config()
+    assert continuous.locomotion == "primitives"
+    assert not continuous.allow_reversal
+    assert config.brain is not None
+    brain = config.brain.config
+    assert getattr(brain, "action_space", None) == "primitives"
+    assert not getattr(brain, "signed_speed", True)
+    modules = [str(m) for m in getattr(brain, "sensory_modules", None) or []]
+    for module in gen.PRIMITIVE_MODULES[arm]:
+        assert module in modules

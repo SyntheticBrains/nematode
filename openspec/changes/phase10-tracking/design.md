@@ -84,11 +84,21 @@ here are cited by each registration.
 | C.2 fit restarts and grading | 5801–5864 | fit seeds; grading animals drawn from 5101–5356 |
 | C.3 reward-trained comparator | 5901–5916 | 16 training seeds |
 | W rewiring draws and fits | 6001–6256 | one fresh draw per null fit, 8–16 per arm, sized after the cost pilot |
-| Smokes | 5991–5999 | execution checks only, discarded |
+| Smokes | 5991–5999 | execution checks only, discarded; E.2's positive-control fixtures use 5994–5999 as fixed test seeds, not a registration |
+
+### Amendment of 2026-10-24: D36
+
+Dated with change `add-locomotor-primitives`, and in the roadmap's D36 row.
+
+- A pause is a run at zero speed.
+- Delta turns are the deep dorsal coils of Broekmans 2016.
+- The kinematics are published off-food values, and B.1 checks them on food.
+- Controllers drive the primitives through start hazards.
 
 ## Open Questions (resolved in per-milestone changes, not here)
 
-- E.2: whether the point worm senses the lawn edge mechanically.
+- E.2: whether the point worm senses the lawn edge mechanically. *(Resolved 2026-10-24: a food-contact
+  sense, the lawn density under the worm.)*
 - E.3: the exact protocol matched to each reference, including time on food before removal, and the
   plate geometry.
 - B: the composite pass rule per assay, and the weights in the benchmark's distance.

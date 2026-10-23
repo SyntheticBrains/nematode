@@ -73,6 +73,7 @@ from quantumnematode.env.env import (
 )
 from quantumnematode.env.lawns import LawnParams
 from quantumnematode.env.predator_brain import PredatorBrainConfig
+from quantumnematode.env.worm_time import step_worm_seconds
 from quantumnematode.initializers import (
     ManualParameterInitializer,
     RandomPiUniformInitializer,
@@ -1133,6 +1134,11 @@ class Continuous2DConfig(BaseModel):
     # The step's duration in worm-seconds, set by the loader from the top-level ``step_seconds``
     # and never written in a config; None takes it from ``max_step_mm`` at the crawl speed.
     step_seconds: float | None = Field(default=None, gt=0.0)
+    # How the point worm moves: "free" (default, byte-identical) applies a (speed, turn) action;
+    # "primitives" moves it only by runs, reversal bouts and omega/delta turns with fixed
+    # kinematics, started by the controller's hazards. It needs a brain with action_space:
+    # primitives, the point body, reversal off, and a step of at most one second.
+    locomotion: Literal["free", "primitives"] = "free"
 
     @model_validator(mode="after")
     def _validate_kinematic_needs_reversal(self) -> "Continuous2DConfig":
@@ -2728,6 +2734,82 @@ class SimulationConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _validate_primitives_match_environment(self) -> "SimulationConfig":
+        """Refuse a primitives brain without primitive locomotion, or either outside its scope.
+
+        A primitives brain emits five numbers that only the primitive layer reads, and the layer
+        reads nothing else. Its bouts last one to fifteen seconds, so it needs a step of at most one
+        second; it backs the worm up itself, so reversal is off; and it moves a point worm. The two
+        senses it brings are refused where they would read nothing: the locomotor state without
+        the primitives, and food contact without lawns. The primitives run one worm, so a
+        multi-agent run is refused whether the environment or any agent's brain asks for them.
+        """
+        environment = self.environment
+        continuous = environment.get_continuous_config() if environment is not None else None
+        locomotion = continuous.locomotion if continuous is not None else "free"
+        brain_config = self.brain.config if self.brain is not None else None
+        action_space = getattr(brain_config, "action_space", "speed_turn")
+        primitives = action_space == "primitives"
+        if primitives != (locomotion == "primitives"):
+            msg = (
+                f"environment.continuous.locomotion is {locomotion} but brain.config.action_space "
+                f"is {action_space}: primitive locomotion needs a primitives brain, and a "
+                "primitives brain primitive locomotion."
+            )
+            raise ValueError(msg)
+        modules = [str(m) for m in getattr(brain_config, "sensory_modules", None) or []]
+        if "locomotor_state" in modules and not primitives:
+            msg = (
+                "the locomotor_state module reads the primitives; it needs locomotion: primitives."
+            )
+            raise ValueError(msg)
+        foraging = environment.foraging if environment is not None else None
+        if "food_contact" in modules and (foraging is None or foraging.food_model != "lawns"):
+            msg = (
+                "the food_contact module reads the lawn under the worm; it needs food_model: lawns."
+            )
+            raise ValueError(msg)
+        if self.multi_agent is not None and self.multi_agent.enabled:
+            agent_spaces = [
+                getattr(agent.brain.config, "action_space", "speed_turn")
+                for agent in self.multi_agent.agents or []
+            ]
+            if locomotion == "primitives" or "primitives" in agent_spaces:
+                msg = (
+                    "locomotion: primitives and action_space: primitives run one worm; "
+                    "multi_agent must be disabled."
+                )
+                raise ValueError(msg)
+        if not primitives:
+            return self
+        assert self.brain is not None  # noqa: S101
+        assert continuous is not None  # noqa: S101
+        if self.brain.name not in _BODY_DRIVE_BRAINS:
+            msg = (
+                f"action_space: primitives is implemented for {sorted(_BODY_DRIVE_BRAINS)}, not "
+                f"{self.brain.name!r}."
+            )
+            raise ValueError(msg)
+        if continuous.body_model != "point" or continuous.allow_reversal:
+            msg = (
+                "locomotion: primitives moves the point worm and backs it up itself; it needs "
+                "body_model: point and allow_reversal: false."
+            )
+            raise ValueError(msg)
+        step = (
+            self.step_seconds
+            if self.step_seconds is not None
+            else step_worm_seconds(continuous.max_step_mm)
+        )
+        if step > 1.0:
+            msg = (
+                f"locomotion: primitives needs a step of at most 1 s, since its bouts last one to "
+                f"fifteen seconds; this config's step is {step:g} s. Set step_seconds: 1.0."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def _validate_evolution_coevolution_exclusive(self) -> "SimulationConfig":
         """Reject configs that set both `evolution` and `coevolution`.
 
@@ -3568,6 +3650,7 @@ def create_env_from_config(
                 body_substeps=continuous_config.body_substeps,
                 body_steering_gain=continuous_config.body_steering_gain,
                 step_seconds=continuous_config.step_seconds,
+                locomotion=continuous_config.locomotion,
             ),
             viewport_size=env_config.viewport_size,
             max_body_length=max_body_length if max_body_length is not None else 6,

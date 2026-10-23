@@ -415,3 +415,15 @@ statistics are per transition, calibrated at that step.
 
 - **WHEN** the harness is given a capture carrying `"step_seconds": 1.0`
 - **THEN** it SHALL exit with an error naming the step, and write no output
+
+### Requirement: Capture records the primitive
+
+Under `locomotion: primitives`, each captured step SHALL record which primitive moved the worm: run,
+reversal, omega or delta, and its signed speed along the heading. Under free locomotion the primitive
+field SHALL be absent, and the capture file byte-identical to before. No grading readout SHALL read
+the primitive field.
+
+#### Scenario: A primitive step is labelled
+
+- **WHEN** a worm under primitives reverses with behaviour capture on
+- **THEN** each of that bout's captured steps SHALL carry `primitive: reversal`

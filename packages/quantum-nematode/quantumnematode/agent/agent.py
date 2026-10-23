@@ -1019,6 +1019,39 @@ class QuantumNematodeAgent:
             return None
         return float(lawns.intake_fraction * field.qualities.max())
 
+    def _food_contact(self) -> float | None:
+        """Return the density of the lawn cell under the worm: 0 off a lawn, None without lawns."""
+        field = self.env.lawn_field
+        if field is None:
+            return None
+        agent_state = self.env.agents[self.agent_id]
+        position = agent_state.pos_continuous or (
+            float(agent_state.position[0]),
+            float(agent_state.position[1]),
+        )
+        cell = field.cell_at(position)
+        return 0.0 if cell is None else float(field.density[cell])
+
+    def _locomotor_state(self) -> str | None:
+        """Return the primitive the worm is in as this step starts; None without primitives."""
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        if not isinstance(self.env, Continuous2DEnvironment):
+            return None
+        if self.env.continuous.locomotion != "primitives":
+            return None
+        return self.env.running_primitive(self.agent_id)
+
+    def _capture_primitive(self) -> str | None:
+        """Return the primitive that moved the worm into this step; None without primitives."""
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
+        if not isinstance(self.env, Continuous2DEnvironment):
+            return None
+        if self.env.continuous.locomotion != "primitives":
+            return None
+        return self.env.last_primitive.get(self.agent_id, "run")
+
     def _capture_lawn_fields(
         self,
         position: tuple[float, float],
@@ -1045,7 +1078,10 @@ class QuantumNematodeAgent:
         move travelled along. Zero at an episode's first captured step, which follows no move.
         """
         continuous = getattr(self.env, "continuous", None)
-        if not getattr(continuous, "allow_reversal", False):
+        backs_up = getattr(continuous, "allow_reversal", False) or (
+            getattr(continuous, "locomotion", "free") == "primitives"
+        )
+        if not backs_up:
             return None
         if not self.behaviour:
             return 0.0
@@ -1331,6 +1367,7 @@ class QuantumNematodeAgent:
                     satiety=_satiety,
                     intake=_intake,
                     on_lawn=_on_lawn,
+                    primitive=self._capture_primitive(),
                 ),
             )
 
@@ -1362,6 +1399,9 @@ class QuantumNematodeAgent:
                 None if self.env.lawn_field is None else float(self._episode_tracker.step_intake)
             ),
             max_food_ingested=self._max_food_ingested(),
+            # The bacteria under the worm, and its own locomotor primitive
+            food_contact=self._food_contact(),
+            locomotor_state=self._locomotor_state(),
             # Health state
             health=health,
             max_health=max_health,

@@ -1,0 +1,74 @@
+{
+  "description": "Fixed kinematics of the point worm's locomotor primitives. Every value is from published off-food data; 'verified' means read in the text, 'figure' means read from a figure by eye (about +/-10%).",
+  "v_max_mm_per_s": {
+    "value": 0.2,
+    "source": "Zhao et al. 2003 J Neurosci 10.1523/JNEUROSCI.23-12-05319.2003, Fig 3A: 184 um/s at the start of off-food locomotion; Ben Arous et al. 2009 PLoS One 10.1371/journal.pone.0007584, Fig 2E: about 0.17 mm/s without food. Equal to the crawl speed the step duration derives from.",
+    "condition": "off food",
+    "status": "verified"
+  },
+  "omega_max_deg_per_s": {
+    "value": 50.0,
+    "source": "Pierce-Shimomura et al. 1999 J Neurosci 10.1523/JNEUROSCI.19-21-09557.1999, Results: a turning rate above 50 deg/s defines a sharp turn, so a run turns below it.",
+    "condition": "off food",
+    "status": "verified"
+  },
+  "reversal_speed_mm_per_s": {
+    "value": 0.14,
+    "source": "Zhao et al. 2003, Fig 5A: mean reversal speed 140 um/s.",
+    "condition": "off food",
+    "status": "verified"
+  },
+  "reversal_duration_s": {
+    "distribution": "gamma",
+    "mean": 2.69,
+    "sd": 1.75,
+    "source": "Zhao et al. 2003, Fig 5B: 2.3 +/- 1.6 s for reversals without a following omega (n = 249) and 3.4 +/- 1.8 s with one (n = 135), pooled by count (mean and SD of the mixture).",
+    "condition": "off food",
+    "status": "verified"
+  },
+  "omega_angle_deg": {
+    "distribution": "truncated_normal",
+    "mean": 155.0,
+    "sd": 25.0,
+    "low": 90.0,
+    "high": 200.0,
+    "side": "ventral",
+    "source": "Broekmans et al. 2016 eLife 10.7554/eLife.17227, Fig 4C: foraging omega turns reorient ventrally, mostly 100-200 deg, peak near 150-160 deg.",
+    "condition": "off food (copper ring)",
+    "status": "figure"
+  },
+  "omega_duration_s": {
+    "distribution": "gamma",
+    "mean": 7.0,
+    "sd": 3.0,
+    "source": "Broekmans et al. 2016, Fig 4-figure supplement 1: escape omega turns 7 +/- 3 s; foraging omega duration is not reported.",
+    "condition": "off food (escape)",
+    "status": "verified"
+  },
+  "delta_angle_deg": {
+    "distribution": "truncated_normal",
+    "mean": 90.0,
+    "sd": 30.0,
+    "low": 30.0,
+    "high": 170.0,
+    "side": "dorsal",
+    "source": "Broekmans et al. 2016, Fig 4C: delta turns over-turn through the ventral side to reorient dorsally, about 30-170 deg, peak near 80-100 deg.",
+    "condition": "off food (copper ring)",
+    "status": "figure"
+  },
+  "delta_duration_s": {
+    "distribution": "gamma",
+    "mean": 6.0,
+    "sd": 2.0,
+    "source": "Broekmans et al. 2016, Fig 4-figure supplement 1: delta turns 6 +/- 2 s (N = 348).",
+    "condition": "off food",
+    "status": "verified"
+  },
+  "hazard_range_per_s": {
+    "low": 0.0001,
+    "high": 1.0,
+    "source": "Gray et al. 2005 PNAS 10.1073/pnas.0409009101, Fig 1E: short reversals, long reversals and omegas range from about 0.05 to 3 per minute (0.0008-0.05 per second) across on-food, early off-food and dispersal conditions; the range spans them with margin.",
+    "condition": "on and off food",
+    "status": "figure"
+  }
+}
