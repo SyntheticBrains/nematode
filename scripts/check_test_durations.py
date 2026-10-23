@@ -35,9 +35,9 @@ MARKER = "not nightly"
 # accumulated drift rather than on any one contribution. The 2026-09-13 drift reached 25%.
 MAX_UNKNOWN_FRACTION = 0.10
 REFRESH = (
-    "gh run download <run-id> --pattern 'test-durations-shard-*' --dir /tmp/durations && "
-    "uv run python scripts/merge_test_durations.py /tmp/durations  (CI timings; see AGENTS.md "
-    "§ CI sharding), or locally: "
+    'dir=$(mktemp -d) && gh run download <run-id> --pattern "test-durations-shard-*" '
+    '--dir "$dir" && uv run python scripts/merge_test_durations.py "$dir"  '
+    "(CI timings; see AGENTS.md § CI sharding), or locally: "
     'uv run pytest -m "not nightly" --store-durations --clean-durations '
     "--durations-path .test_durations"
 )

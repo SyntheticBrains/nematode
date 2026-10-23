@@ -126,12 +126,15 @@ shard times its own tests and uploads them as the artifact
 files is the suite timed on CI. Take a run whose five shards all passed:
 
 ```bash
-gh run download <run-id> --pattern 'test-durations-shard-*' --dir /tmp/durations
-uv run python scripts/merge_test_durations.py /tmp/durations
+dir=$(mktemp -d)
+gh run download <run-id> --pattern 'test-durations-shard-*' --dir "$dir"
+uv run python scripts/merge_test_durations.py "$dir"
 ```
 
-The script refuses fewer than five files, and any test that appears in two of
-them. Refresh this way when shard times drift apart, and after a PR that adds
+Download into a new, empty directory every time. `gh` puts each artifact in its
+own `test-durations-shard-<n>/` folder there, which is what the script reads. A
+reused directory can still hold an earlier run's folders. The script refuses
+fewer than five files, and any test that appears in two of them. Refresh this way when shard times drift apart, and after a PR that adds
 heavy tests, from that PR's own run. Then run `pre-commit`.
 
 **Locally**, for example to cover a new module before its first CI run, regenerate with:

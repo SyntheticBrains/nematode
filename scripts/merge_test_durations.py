@@ -9,11 +9,13 @@ and the shards drift apart even though the split looks balanced by its own numbe
 
 Usage::
 
-    gh run download <run-id> --pattern 'test-durations-shard-*' --dir /tmp/durations
-    uv run python scripts/merge_test_durations.py /tmp/durations
+    dir=$(mktemp -d)
+    gh run download <run-id> --pattern 'test-durations-shard-*' --dir "$dir"
+    uv run python scripts/merge_test_durations.py "$dir"
 
-The run must be one whose five shards all passed: a failed shard uploads nothing, and the script
-refuses fewer than five files.
+Download into a new, empty directory every time: a reused one can still hold an earlier run's
+``test-durations-shard-<n>/`` folders. The run must be one whose five shards all passed: a failed
+shard uploads nothing, and the script refuses fewer than five files.
 """
 
 from __future__ import annotations
