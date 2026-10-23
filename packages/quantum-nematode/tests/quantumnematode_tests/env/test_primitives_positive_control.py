@@ -41,7 +41,9 @@ _CONFIG = (
 _K = load_kinematics()
 _BOUTS = 2000
 _RUN_SPEED = 0.1
-_FIXTURE_SEEDS = range(5994, 6000)
+# Two fixture seeds of 32 episodes per arm: the effect is far larger than 64 episodes can miss,
+# and a longer test runs alone at the end of its CI shard, which xdist cannot spread.
+_FIXTURE_SEEDS = range(5994, 5996)
 
 
 def _forced_bouts(kind: str, seed: int) -> list[dict[str, float]]:
@@ -184,16 +186,22 @@ def _bootstrap_lower(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.percentile(diffs, 2.5))
 
 
+_BASE_HAZARDS = (0.02, 0.01, 0.01)
+
+
 @pytest.mark.slow
-def test_klinokinesis_is_expressible_and_timing_alone_is_not() -> None:
-    """Pirouettes find the lawn more often than matched constant hazards; inverted, less often."""
-    base = (0.02, 0.01, 0.01)
-    pirouette = PirouetteHazards(0.15, base, beta=3.0)
+def test_klinokinesis_is_expressible() -> None:
+    """Pirouettes find the lawn more often than constant hazards at their own mean rate."""
+    pirouette = PirouetteHazards(0.15, _BASE_HAZARDS, beta=3.0)
     reached = _reach(pirouette)
     matched = _reach(ConstantHazards(0.15, pirouette.mean_run_hazards()))
     assert _bootstrap_lower(reached, matched) > 0.0
 
-    inverted = PirouetteHazards(0.15, base, beta=-3.0)
-    reached_inverted = _reach(inverted)
-    matched_inverted = _reach(ConstantHazards(0.15, inverted.mean_run_hazards()))
-    assert _bootstrap_lower(matched_inverted, reached_inverted) > 0.0
+
+@pytest.mark.slow
+def test_timing_alone_is_not_chemotaxis() -> None:
+    """The inverted rule finds the lawn less often than constant hazards at its own mean rate."""
+    inverted = PirouetteHazards(0.15, _BASE_HAZARDS, beta=-3.0)
+    reached = _reach(inverted)
+    matched = _reach(ConstantHazards(0.15, inverted.mean_run_hazards()))
+    assert _bootstrap_lower(matched, reached) > 0.0

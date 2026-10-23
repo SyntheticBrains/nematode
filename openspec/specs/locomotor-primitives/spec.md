@@ -126,7 +126,7 @@ same runner as a brain.
 
 #### Scenario: Klinokinesis is expressible and timing alone is not
 
-- **WHEN** worms start 6 mm off a central lawn at uniform headings on seeds 5994–5999 and run for 1,200
+- **WHEN** worms start 6 mm off a central lawn at uniform headings on seeds 5994–5995, 32 episodes each, and run for 1,200
   one-second steps
 - **THEN** `PirouetteHazards` SHALL reach the lawn more often than `ConstantHazards` at its mean hazard
   and speed, bootstrap-significant at 95%
