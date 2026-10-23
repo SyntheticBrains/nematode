@@ -55,6 +55,9 @@ class BehaviourStep:
         (``run``, ``reversal``, ``omega`` or ``delta``; ``run`` at an episode's first step). For
         diagnosis only: behaviour is graded from trajectories, never from this label. ``None``
         otherwise, and then omitted from the export.
+    phase : str | None
+        Recorded only under an assay protocol: the name of the phase this step ran in. ``None``
+        otherwise, and then omitted from the export.
     """
 
     step: int
@@ -70,6 +73,7 @@ class BehaviourStep:
     intake: float | None = None
     on_lawn: bool | None = None
     primitive: str | None = None
+    phase: str | None = None
 
 
 class TerminationReason(StrEnum):

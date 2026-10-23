@@ -670,7 +670,8 @@ class StandardEpisodeRunner(EpisodeRunner):
             A termination result if the agent starved (or None), and the
             updated reward value.
         """
-        if not agent._satiety_manager.is_starved():
+        satiety = agent._satiety_manager
+        if not satiety.starvation_ends_episode or not satiety.is_starved():
             return None, reward
 
         logger.warning("Failed to complete episode: agent starved!")
@@ -1065,6 +1066,12 @@ class StandardEpisodeRunner(EpisodeRunner):
                     return result
                 continue
 
+            # An assay protocol's phase starts before the step's sensing, so the step already sees
+            # its food and the worm where the phase puts it.
+            advance_assay = getattr(agent.env, "advance_assay", None)
+            if advance_assay is not None:
+                advance_assay(step_index)
+
             gradient_strength, _gradient_direction = agent.env.get_state(agent.path[-1])
 
             # Track if agent stays in same position
@@ -1276,7 +1283,7 @@ class StandardEpisodeRunner(EpisodeRunner):
             # Handle max steps reached. A lawn episode has no food target: reaching the step limit
             # alive is how it succeeds.
             if agent._episode_tracker.steps >= max_steps:
-                survived = agent.env.lawn_field is not None
+                survived = agent.env.foraging.food_model == "lawns"
                 if survived:
                     logger.info("Completed episode: survived to max steps on lawns.")
                 else:

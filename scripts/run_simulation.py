@@ -941,8 +941,9 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             total_reward = agent._episode_tracker.rewards
 
             # Determine success and track termination types
-            # A lawn episode has no food target: it succeeds by surviving to the step limit.
-            on_lawns = agent.env.lawn_field is not None
+            # A lawn episode has no food target: it succeeds by surviving to the step limit. It is a
+            # lawn episode by its food model, whether or not an assay phase has the lawns out.
+            on_lawns = agent.env.foraging.food_model == "lawns"
             success = step_result.termination_reason in (
                 (TerminationReason.MAX_STEPS,)
                 if on_lawns
@@ -1268,10 +1269,15 @@ def main() -> None:  # noqa: C901, PLR0912, PLR0915
             skip_path_data=True,
         )
         export_performance_metrics_to_csv(metrics=metrics, data_dir=data_dir)
+        from quantumnematode.env.continuous_2d import Continuous2DEnvironment
+
         behaviour_path = write_behaviour_capture(
             all_results,
             data_dir,
             step_seconds=getattr(agent.env, "step_seconds", None),
+            assay=(
+                agent.env.assay_record() if isinstance(agent.env, Continuous2DEnvironment) else None
+            ),
         )
         if behaviour_path is not None:
             logger.info("Wrote behavioural capture to %s", behaviour_path)

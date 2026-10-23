@@ -37,6 +37,7 @@ class SatietyManager:
         """
         self.max_satiety = config.initial_satiety
         self.decay_rate = config.satiety_decay_rate
+        self.starvation_ends_episode = config.starvation_ends_episode
         self._current_satiety = config.initial_satiety
 
     @property

@@ -35,6 +35,7 @@ def write_behaviour_capture(
     data_dir: Path,
     *,
     step_seconds: float | None = None,
+    assay: dict[str, object] | None = None,
 ) -> Path | None:
     """Write the per-run behavioural series to ``<data_dir>/behaviour_capture.json``.
 
@@ -47,6 +48,9 @@ def write_behaviour_capture(
     step_seconds : float | None
         The runs' step in worm-seconds. Recorded only when it is not the default 5, so a capture at
         the default step is unchanged; a reader takes an absent key as 5.
+    assay : dict | None
+        The runs' assay protocol in steps (its phases' start steps, the assay phase and the analysis
+        window); recorded only under an assay.
 
     Returns
     -------
@@ -69,12 +73,14 @@ def write_behaviour_capture(
     payload: dict[str, object] = {"runs": runs}
     if step_seconds is not None and step_seconds != DEFAULT_CAPTURE_STEP_SECONDS:
         payload["step_seconds"] = step_seconds
+    if assay is not None:
+        payload["assay"] = assay
     with output_path.open("w") as f:
         json.dump(payload, f)
     return output_path
 
 
-_OPTIONAL_FIELDS = ("speed_signed", "satiety", "intake", "on_lawn", "primitive")
+_OPTIONAL_FIELDS = ("speed_signed", "satiety", "intake", "on_lawn", "primitive", "phase")
 
 
 def _record(step: BehaviourStep) -> dict[str, object]:
