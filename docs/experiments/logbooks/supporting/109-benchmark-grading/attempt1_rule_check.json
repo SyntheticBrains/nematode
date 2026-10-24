@@ -1,0 +1,99 @@
+{
+  "attempt": 1,
+  "outcome": "both checks failed their 0.90 gate; nothing was written",
+  "checks": {
+    "small_lawn": {
+      "splits": 200,
+      "size": 200,
+      "bar": 2.8375969129437877,
+      "joint_pass_rate": 0.8,
+      "failures_by_statistic": {
+        "roaming_fraction": 9,
+        "roaming_bout_s": 15,
+        "dwelling_bout_s": 13,
+        "exits_per_on_lawn_hour": 9,
+        "pre_exit_enrichment": 10,
+        "time_on_lawn": 3
+      },
+      "gate": 0.9,
+      "passes": false
+    },
+    "local_search": {
+      "splits": 200,
+      "bar": 2.8375969129437877,
+      "graded_batches": 1800,
+      "joint_pass_rate": 0.8627777777777778,
+      "gate": 0.9,
+      "passes": false
+    }
+  },
+  "diagnosis": {
+    "note": "band data only; scripts beside this file",
+    "small_lawn": {
+      "z_sd_per_statistic": {
+        "roaming_fraction": 1.4,
+        "roaming_bout_s": 1.47,
+        "dwelling_bout_s": 1.37,
+        "exits_per_on_lawn_hour": 1.64,
+        "pre_exit_enrichment": 1.43,
+        "time_on_lawn": 1.5
+      },
+      "joint_pass_registered": 0.78,
+      "joint_pass_with_centre_uncertainty": 0.865
+    },
+    "local_search": {
+      "z_sd": [
+        1.39,
+        1.53
+      ],
+      "joint_pass_registered": 0.863,
+      "joint_pass_t_prediction_interval": 0.948,
+      "batches": 27,
+      "band_batches": 17
+    }
+  },
+  "split": {
+    "seed": 2031,
+    "draw": 1,
+    "held_out_probability": 0.3333333333333333,
+    "held_out_share_bounds": [
+      0.28,
+      0.38
+    ],
+    "held_out_share": 0.3770491803278688,
+    "kept_in_bands": {
+      "070115_071015": "pdfr-1's same-date control"
+    },
+    "batches": 27,
+    "sides": {
+      "012217_012517": "bands",
+      "022216_022516": "bands",
+      "022415_022715": "bands",
+      "030215_030515": "bands",
+      "030617_031217": "held_out",
+      "031615_032515": "held_out",
+      "031715_032315": "held_out",
+      "040715_041015": "bands",
+      "040815_041115": "held_out",
+      "042417_042617": "bands",
+      "042915_050815": "bands",
+      "070115_071015": "bands",
+      "070315_071015": "bands",
+      "070815_071115": "held_out",
+      "072218_072518": "bands",
+      "081116_081416": "bands",
+      "082216_082616": "held_out",
+      "102216_102516": "held_out",
+      "121316_121616": "bands",
+      "_071018": "bands",
+      "_071315": "held_out",
+      "_072018": "bands",
+      "_072718": "bands",
+      "_080517": "bands",
+      "_081518": "bands",
+      "_091515": "held_out",
+      "_111315": "held_out"
+    },
+    "drawn_from": "each batch's date string and n; no behavioural field"
+  }
+}

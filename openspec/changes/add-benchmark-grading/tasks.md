@@ -109,3 +109,11 @@ Gates and seeds fixed here are registered by this change's commit, before any ba
 - [ ] 9.2 `openspec validate add-benchmark-grading --strict`.
 - [ ] 9.3 Archive, with the new spec's Purpose fixed.
 - [ ] 9.4 PR.
+
+## 10. The registered retry (amendment of 2026-10-24)
+
+- [x] 10.1 Attempt 1's record and the band-only diagnosis committed under
+  `supporting/109-benchmark-grading/`, with the amendment, before the retry runs.
+- [ ] 10.2 The centre term, κ (seed 2033) and local search's t prediction interval in
+  `benchmark_bands.py`. The check is re-read on seed 2034.
+- [ ] 10.3 Run it. If either check fails, stop and record.

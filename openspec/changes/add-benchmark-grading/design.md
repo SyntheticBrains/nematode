@@ -254,3 +254,43 @@ From the B.3 survey of 2026-10-24.
 
 None blocking. D38's N = 200 is taken as the simulated population's size, and C may register a
 different N with the bands recomputed at it.
+
+## Amendment of 2026-10-24: the registered retry
+
+**Attempt 1 failed both of the rule's own checks**, and nothing was written:
+
+- the small lawn's joint pass rate was 0.80;
+- local search's per-batch joint pass rate was 0.86;
+- the gate for each was 0.90.
+
+The record is `supporting/109-benchmark-grading/attempt1_rule_check.json`. The diagnosis, on band data only, has its scripts beside it.
+
+**What the diagnosis found: the bands were too narrow.**
+
+- **Small lawn.** Graded against bands from the other half of the dates, a 200-animal population's z had an SD of 1.37–1.64 per statistic, where a correct scale gives 1.0.
+  - Part of this is the centre's own uncertainty, which the bootstrap scale left out: adding it lifts the joint pass rate to 0.865.
+  - The rest is date-to-date spread the bootstrap over dates does not capture.
+- **Local search.** The scale was an SD from about nine batches per half, read at a normal bar. A Student-t prediction interval passes at 0.948.
+
+The maintainer chose a registered retry. **This amendment is committed before the retry runs.** The gates (0.90 each), the bar (z\* = 2.84 for the wild type), the statistics, the weights and the data are unchanged.
+
+1. **The centre's uncertainty enters every Scheer scale.**
+   - σ_centre is the SD of the pooled statistic over a cluster bootstrap of the band dates at their full size.
+   - The scale becomes √(σ_boot(n)² + σ_centre²).
+   - For a mutant's Δ, σ_centre comes from the paired bootstrap at the mutant's full paired size.
+2. **A calibration factor κ per statistic, measured on band data before the check.**
+   - Over 200 half-splits of the OD 2 band dates (seed 2033), bands from one half at n = 200, under step 1's scale, grade a 200-animal population drawn from the other half.
+   - κ_s is the SD of that statistic's z, floored at 1. Every Scheer scale for that statistic is multiplied by it:
+     - the small lawn;
+     - the uniform lawn, before its floor, which is the corrected small-lawn scale;
+     - the mutants' Δ, before the √2 floor, which uses the corrected wild-type scale.
+   - κ is measured at halves of about 20 dates and applied to bands from 41, so it is conservative.
+3. **Local search uses a Student-t prediction interval.** With k band batches and the wild type's m = 11 statistics, the scale is the batches' SD times √(1 + 1/k) times t_{k−1}(1 − 0.05/22) / z\*(11). The common bar z\* then grades it at the prediction interval's level. pdfr-1's Δ takes √2 times that scale.
+4. **The check is re-read on fresh half-splits** (seed 2034), with κ fixed from step 2:
+   - the small lawn at N = 200;
+   - local search per held-back batch, its band at that half's k;
+   - each gated at 0.90.
+
+   If either check fails again, B.3 stops with the record, and the bands are re-planned in a new change.
+
+**What it costs.** The bands get wider: on the small lawn, by κ ≈ 1.4–1.6 times the bootstrap scale before the centre term. That makes it easier for a negative to pass. The preflight reads that before B.4 registers, and the bands are not tuned on it.

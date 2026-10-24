@@ -114,6 +114,16 @@ is reached, subsampling the last. There SHALL be 2,000 resamples with a fixed se
   strings, a third held out by a fixed seed. pdfr-1's paired batches SHALL be kept as band data and
   left out of the draw.
 
+The registered retry of 2026-10-24 SHALL also apply:
+
+- every Scheer scale SHALL be κ_s · √(σ_boot(n)² + σ_centre²), with σ_centre the pooled statistic's
+  bootstrap SD over the band dates at their full size (for a mutant, the paired dates at the mutant's
+  full size);
+- κ_s SHALL be the SD of that statistic's z over 200 half-splits of the OD 2 band dates by a fixed
+  seed, under the centre-corrected scale, floored at 1;
+- local search's scale SHALL be the band batches' SD × √(1 + 1/k) × t_{k−1}(1 − 0.05/22) / z\*(11),
+  for k band batches.
+
 No held-out date or batch SHALL be read.
 
 #### Scenario: A band grows as the population shrinks
@@ -176,6 +186,8 @@ z\* and over 200 half-splits by a fixed seed:
   with a per-batch joint pass rate of at least 0.90.
 
 The uniform lawn SHALL be left out, since two dates cannot be halved, and the record SHALL say so.
+
+The retry's check SHALL be read on half-splits drawn by a seed other than κ's, with κ fixed.
 
 #### Scenario: A failing check stops the bands
 
