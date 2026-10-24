@@ -46,10 +46,12 @@ The maintainer's decisions of 2026-10-24:
 ## What was built
 
 - **`quantumnematode.benchmark.grading`** reads real and simulated tracks through one path.
+
   - 1-s positions are read at 5 s and cut into 10-s windows.
   - A window is on the lawn when every 1-s sample in its span is. On the small lawns that is the lawn's boundary, for real worms, or footprint, for simulated ones. On the uniform well every sample is on the lawn.
   - Each animal reduces to a tally of sums, so a population's statistics are ratios of summed tallies and a bootstrap resample is a sum.
   - Bout means are censoring-aware: a state's time over its completed bouts.
+
 - **The statistics.** The wild type is graded on 11:
 
   | Family | Statistics |
@@ -59,15 +61,21 @@ The maintainer's decisions of 2026-10-24:
   | López-Cruz's local search | γ, and the early/late ratio, both level-free |
 
   The mutants are tph-1 against N2, and pdfr-1 and tax-4 against PD1074. Each is graded on Δ roaming fraction and Δ exits per on-lawn hour, and pdfr-1 also on Δγ and Δ early/late.
+
 - **The pass rule.**
+
   - |z| ≤ 2.84 for each wild-type statistic, Bonferroni over 11.
   - Each mutant is its own family: 2.24 for two statistics, 2.50 for four.
   - A mutant's Δ must also take the reference's sign wherever the reference's interval excludes zero.
   - An undefined statistic fails and enters the distance at the cap, |z| = 10.
+
 - **The distance.**
+
   - D is the weighted RMS of the capped z's. Each assay weighs a third, split equally among its statistics.
   - D_fit leaves local search out, as D37 holds it out of the fit.
+
 - **The scripts.**
+
   - `benchmark_classifier.py` (the recalibration);
   - `benchmark_bands.py` (the bands and the rule's checks);
   - `benchmark_grade.py` (grades a batched run or a set of captures);
@@ -156,7 +164,9 @@ Two cautions for B.4, as description:
 ## Reported, not graded
 
 - **The geometric rule against the authors' masks:** 98.4% of windows agree with their in-lawn runs, and 99.5% of seconds with their midbody-in-lawn flag.
+
 - **Roaming fraction, ours against the authors' labels:** 0.169 against 0.108 on the small lawn, and 0.213 against 0.148 on the uniform well. Our classifier reads more roaming, as D.1's did.
+
 - **Density, roaming fraction on band dates:**
 
   | | OD 1 | OD 2 | OD 4 |
@@ -165,7 +175,9 @@ Two cautions for B.4, as description:
   | the one shared date | 0.333 | 0.209 | 0.192 |
 
   Roaming falls with density, as Scheer reports.
+
 - **γ, two ways:** B.2's fit of the pooled Fig. 1C curve gives 0.114 per minute. The band's centre, the mean of the band batches' fits, is 0.108.
+
 - **Flavell 2013's timescales** (dwelling τ ≈ 482 s; roaming 75 and 520 s) and **the quintile ratio's reference** (2.26–2.58) are reported, not graded.
 
 **Limits.**

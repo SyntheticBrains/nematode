@@ -1,6 +1,7 @@
 # benchmark-grading Specification
 
 ## Purpose
+
 Grade simulated worms against real worms on standard on-lawn and search assays. Real and simulated
 tracks are read through one window rule and one classifier. Each statistic has a band built from
 real worms' between-date spread, on band cohorts only. There is a per-statistic pass at a
