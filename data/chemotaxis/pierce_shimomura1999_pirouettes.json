@@ -1,0 +1,223 @@
+{
+ "description": "Pirouette initiation rate against dC/dt 4 s earlier, digitised from Pierce-Shimomura, Morse & Lockery (1999), J Neurosci 19(21):9557-9569, Figure 8 (the black curves, smoothed by the authors with a 4001-point box filter). The reference for the dC/dt quintile ratio.",
+ "source": {
+  "citation": "Pierce-Shimomura JT, Morse TM, Lockery SR (1999). The fundamental role of pirouettes in Caenorhabditis elegans chemotaxis. J Neurosci 19(21):9557-9569. doi:10.1523/JNEUROSCI.19-21-09557.1999; PMC6782915.",
+  "figure": "Figure 8A (biotin gradient, 32,458 points) and 8B (NH4Cl gradient, 29,171 points), page 9564",
+  "copyright": "(c) 1999 Society for Neuroscience. The PDF is not vendored; only values read from the figure are, with the citation.",
+  "pdf_sha256": "2b823a28d61a7b14aa178e9c54ce44334508613c34ecea8935a26b0fa81fab27"
+ },
+ "method": "Page 8 rendered at 500 dpi with PyMuPDF. Axes calibrated from the tick marks' pixel positions (rate 0 to 0.14 s^-1 on the left axis; dC/dt ticks at -0.2/-0.1/0/0.1 in A and -0.1/0/0.1 in B, fitted linearly). At each listed dC/dt, every thin black stroke in that pixel column was listed as a rate; the authors' dashed spontaneous-rate line (0.029-0.0297) and their black point-count histogram (lowest strokes) were set aside and the remaining stroke read as the curve. Where the curve crosses the dashed line or falls steeply (A near 0; B near -0.005) the stroke is thickened and its centre is read. Reading error is about half a stroke width, +/-0.0007 s^-1. Script: scripts/analysis/pierce_shimomura_digitise.py (needs the PDF, downloaded by browser).",
+ "calibration_check": "The dashed line reads 0.029-0.0297 s^-1 in both panels; the paper's text gives the spontaneous rate in a uniform concentration as r = 0.0296 +/- 0.00213 s^-1 (n = 47).",
+ "units": {
+  "dcdt": "mM s^-1",
+  "rate": "pirouette initiations s^-1"
+ },
+ "curves": {
+  "biotin": [
+   {
+    "dcdt": -0.18,
+    "rate": 0.0505
+   },
+   {
+    "dcdt": -0.12,
+    "rate": 0.0505
+   },
+   {
+    "dcdt": -0.08,
+    "rate": 0.0505
+   },
+   {
+    "dcdt": -0.06,
+    "rate": 0.0492
+   },
+   {
+    "dcdt": -0.05,
+    "rate": 0.0483
+   },
+   {
+    "dcdt": -0.04,
+    "rate": 0.0448
+   },
+   {
+    "dcdt": -0.03,
+    "rate": 0.0413
+   },
+   {
+    "dcdt": -0.02,
+    "rate": 0.0376
+   },
+   {
+    "dcdt": -0.01,
+    "rate": 0.0385
+   },
+   {
+    "dcdt": -0.005,
+    "rate": 0.0341
+   },
+   {
+    "dcdt": 0.003,
+    "rate": 0.0247
+   },
+   {
+    "dcdt": 0.006,
+    "rate": 0.0219
+   },
+   {
+    "dcdt": 0.01,
+    "rate": 0.0201
+   },
+   {
+    "dcdt": 0.015,
+    "rate": 0.0186
+   },
+   {
+    "dcdt": 0.02,
+    "rate": 0.0208
+   },
+   {
+    "dcdt": 0.03,
+    "rate": 0.0205
+   },
+   {
+    "dcdt": 0.04,
+    "rate": 0.02
+   },
+   {
+    "dcdt": 0.05,
+    "rate": 0.0186
+   },
+   {
+    "dcdt": 0.06,
+    "rate": 0.0177
+   },
+   {
+    "dcdt": 0.07,
+    "rate": 0.0171
+   },
+   {
+    "dcdt": 0.08,
+    "rate": 0.0171
+   },
+   {
+    "dcdt": 0.1,
+    "rate": 0.0189
+   },
+   {
+    "dcdt": 0.12,
+    "rate": 0.0189
+   },
+   {
+    "dcdt": 0.15,
+    "rate": 0.0196
+   },
+   {
+    "dcdt": 0.18,
+    "rate": 0.0196
+   }
+  ],
+  "NH4Cl": [
+   {
+    "dcdt": -0.11,
+    "rate": 0.0378
+   },
+   {
+    "dcdt": -0.09,
+    "rate": 0.0378
+   },
+   {
+    "dcdt": -0.07,
+    "rate": 0.0378
+   },
+   {
+    "dcdt": -0.05,
+    "rate": 0.0378
+   },
+   {
+    "dcdt": -0.04,
+    "rate": 0.0385
+   },
+   {
+    "dcdt": -0.03,
+    "rate": 0.0376
+   },
+   {
+    "dcdt": -0.02,
+    "rate": 0.0359
+   },
+   {
+    "dcdt": -0.015,
+    "rate": 0.0341
+   },
+   {
+    "dcdt": -0.01,
+    "rate": 0.0328
+   },
+   {
+    "dcdt": -0.005,
+    "rate": 0.0294
+   },
+   {
+    "dcdt": 0.0,
+    "rate": 0.0255
+   },
+   {
+    "dcdt": 0.005,
+    "rate": 0.0221
+   },
+   {
+    "dcdt": 0.01,
+    "rate": 0.0212
+   },
+   {
+    "dcdt": 0.015,
+    "rate": 0.0181
+   },
+   {
+    "dcdt": 0.02,
+    "rate": 0.017
+   },
+   {
+    "dcdt": 0.03,
+    "rate": 0.0151
+   },
+   {
+    "dcdt": 0.04,
+    "rate": 0.0167
+   },
+   {
+    "dcdt": 0.05,
+    "rate": 0.017
+   },
+   {
+    "dcdt": 0.06,
+    "rate": 0.017
+   },
+   {
+    "dcdt": 0.07,
+    "rate": 0.017
+   },
+   {
+    "dcdt": 0.08,
+    "rate": 0.017
+   },
+   {
+    "dcdt": 0.1,
+    "rate": 0.0167
+   },
+   {
+    "dcdt": 0.12,
+    "rate": 0.0167
+   }
+  ]
+ },
+ "reference_ratio": {
+  "rule": "the curve's rate at its most negative digitised dC/dt over its rate at its most positive, the figure's extreme bins standing for the worm's extreme dC/dt quintiles (ranks only; the figure's dC/dt axis is not mapped onto a simulated worm's)",
+  "biotin": 2.577,
+  "NH4Cl": 2.263,
+  "span": [
+   2.263,
+   2.577
+  ]
+ },
+ "beside": "Lee 2026 (bioRxiv) is cited for 0.533 -> 0.056 s^-1, a ratio of 9.5, about four times the digitised ratios; its units and measure were not checked, and it is not the reference."
+}

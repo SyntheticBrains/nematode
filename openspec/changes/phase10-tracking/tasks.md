@@ -201,7 +201,7 @@ nothing in W registers before C.2 has read.
     food-dependent kinematics keyed on food contact, or the off-food values kept with the on-food gap
     stated.
 
-- [ ] **B.2 Readouts**: a trajectory-based reorientation detector, validated against Calhoun's and
+- [x] **B.2 Readouts**: a trajectory-based reorientation detector, validated against Calhoun's and
   Roberts's omega flags; the classifier run on tracks downsampled to 5 s; the local-search curve; the
   repaired pirouette quintile ratio (the old K.1).
 
@@ -213,6 +213,26 @@ nothing in W registers before C.2 has read.
   - the fit's start bin;
   - the time zero, after checking the recording's 4-min offset from removal against the bins;
   - γ, from the deposited data.
+
+  *(Closed 2026-10-24, change `add-benchmark-readouts`, archived as
+  `2026-10-24-add-benchmark-readouts`;
+  [Logbook 107](../../../docs/experiments/logbooks/107-benchmark-readouts.md).)*
+
+  - **The reversal-onset detector** reads 1-s positions alone and was tuned on Roberts.
+    - The registered preflight stopped the first run before any held-out data were read (in-sample
+      0.62/0.68 against 0.70).
+    - Retried at bars set from the instrument (0.55/0.60), registered before running, it passes
+      Roberts held-out (0.66/0.72), simulated primitives (0.87/0.92), Calhoun (0.53, ρ 0.67) and the
+      dead worms.
+    - It fails Scheer on food (0.43/0.45), so the maintainer **scoped it to off-food readouts**. B.3
+      grades on-lawn behaviour through the classifier and lawn statistics, never on-lawn reversal
+      counts.
+  - **López-Cruz:** the bins are recording time (removal + 4 min). The fit runs from the wild type's
+    peak bin over 8–44 min after removal: γ = 0.114 [0.101, 0.127] per min
+    (`data/benchmark/lopezcruz2019_reference.json`).
+  - **The quintile ratio's reference**, digitised from Pierce-Shimomura 1999's Figure 8, is 2.26–2.58.
+    Lee 2026's 9.5 is cited beside it, unverified.
+  - **The classifier** reads 1-s captures through its 5-s path unchanged.
 
 - [ ] **B.3 Bands and the grading rule** (D34): from batch-matched cohorts with the project's
   classifier; mutant effects relative to the controller's own wild type; composite rules that depend

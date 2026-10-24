@@ -1,0 +1,105 @@
+{
+ "description": "The local-search reference: L\u00f3pez-Cruz 2019's Fig. 1C wild type, reorientations per 2-min bin, fitted as alpha * exp(-gamma * (t - t0)) + beta with t in minutes after removal. Deposited bins are recording time, which began 4 min after removal.",
+ "time_zero": "food removal; recording bin [a, a + 2) min = [a + 4, a + 6) min after removal",
+ "fit_window_recording_min": [
+  4.0,
+  40.0
+ ],
+ "bootstrap": {
+  "kind": "parametric, normal at each bin's mean and SEM",
+  "resamples": 2000,
+  "seed": 107
+ },
+ "reference": {
+  "genotype": "wt",
+  "row": 3,
+  "n": 413,
+  "window_after_removal_min": [
+   8.0,
+   44.0
+  ],
+  "bins": 18,
+  "t0_min": 9.0,
+  "alpha": 2.541905093715609,
+  "gamma_per_min": 0.11404024106013527,
+  "beta": 0.39674682478549783,
+  "gamma_interval_95": [
+   0.10114658502502812,
+   0.12679084108749977
+  ]
+ },
+ "described": {
+  "start_one_bin_earlier": {
+   "genotype": "wt",
+   "row": 3,
+   "n": 413,
+   "window_after_removal_min": [
+    6.0,
+    44.0
+   ],
+   "bins": 19,
+   "t0_min": 7.0,
+   "alpha": 2.772302785382336,
+   "gamma_per_min": 0.08675296208136168,
+   "beta": 0.2799866181123871,
+   "gamma_interval_95": [
+    0.07803762585864364,
+    0.09561168571510573
+   ]
+  },
+  "start_one_bin_later": {
+   "genotype": "wt",
+   "row": 3,
+   "n": 413,
+   "window_after_removal_min": [
+    10.0,
+    44.0
+   ],
+   "bins": 17,
+   "t0_min": 11.0,
+   "alpha": 2.1782756485160846,
+   "gamma_per_min": 0.13814139213783094,
+   "beta": 0.45405190419510494,
+   "gamma_interval_95": [
+    0.12264488517826926,
+    0.1539464921771552
+   ]
+  },
+  "pdfr-1": {
+   "genotype": "pdfr-1(ok3425)",
+   "row": 91,
+   "n": 56,
+   "window_after_removal_min": [
+    8.0,
+    44.0
+   ],
+   "bins": 18,
+   "t0_min": 9.0,
+   "alpha": 4.453883751186872,
+   "gamma_per_min": 0.14330649586365685,
+   "beta": 1.366657311888963,
+   "gamma_interval_95": [
+    0.11323863125467913,
+    0.17562035638182064
+   ]
+  },
+  "pdfr-1_control": {
+   "genotype": "wt",
+   "row": 90,
+   "n": 57,
+   "window_after_removal_min": [
+    8.0,
+    44.0
+   ],
+   "bins": 18,
+   "t0_min": 9.0,
+   "alpha": 2.2054346916144,
+   "gamma_per_min": 0.1835570776061357,
+   "beta": 0.5062310410919996,
+   "gamma_interval_95": [
+    0.1374553315086437,
+    0.23836995997983867
+   ]
+  }
+ }
+}

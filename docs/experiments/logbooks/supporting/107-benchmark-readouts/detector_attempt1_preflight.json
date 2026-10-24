@@ -1,0 +1,219 @@
+{
+ "description": "Tune the reversal-onset detector on Roberts 2016 and read every gate once.",
+ "split": {
+  "seed": 2028,
+  "calibrate": [
+   "C15",
+   "C162",
+   "C57"
+  ],
+  "validate": [
+   "C186",
+   "C21"
+  ]
+ },
+ "grid": {
+  "theta_deg": [
+   90.0,
+   105.0,
+   120.0,
+   135.0,
+   150.0
+  ],
+  "window_s": [
+   2,
+   3,
+   5
+  ],
+  "kappa": [
+   0.1,
+   0.25,
+   0.5
+  ],
+  "refractory_s": [
+   2,
+   3,
+   5
+  ],
+  "retrace": [
+   false,
+   true
+  ]
+ },
+ "gates": {
+  "roberts_held_out": {
+   "recall": 0.7,
+   "precision": 0.7
+  },
+  "roberts_dead_per_min": 0.1,
+  "simulated": {
+   "recall": 0.8,
+   "precision": 0.8
+  },
+  "scheer_held_out_on_food": {
+   "recall": 0.5,
+   "precision": 0.5
+  },
+  "calhoun": {
+   "recall": 0.5,
+   "spearman": 0.5
+  }
+ },
+ "chosen": {
+  "theta_deg": 135.0,
+  "window_s": 3,
+  "kappa": 0.25,
+  "refractory_s": 5,
+  "retrace": false
+ },
+ "in_sample": {
+  "recall": 0.6224328593996841,
+  "precision": 0.6784330606973741,
+  "f1": 0.6492276004119465,
+  "reference": 2532,
+  "detected": 2323
+ },
+ "top_10": [
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": false
+   },
+   "recall": 0.6224328593996841,
+   "precision": 0.6784330606973741,
+   "f1": 0.6492276004119465,
+   "reference": 2532,
+   "detected": 2323
+  },
+  {
+   "params": {
+    "theta_deg": 90.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6204581358609794,
+   "precision": 0.6786177105831533,
+   "f1": 0.6482360222818238,
+   "reference": 2532,
+   "detected": 2315
+  },
+  {
+   "params": {
+    "theta_deg": 105.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6196682464454977,
+   "precision": 0.6780466724286949,
+   "f1": 0.647544366487825,
+   "reference": 2532,
+   "detected": 2314
+  },
+  {
+   "params": {
+    "theta_deg": 120.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6196682464454977,
+   "precision": 0.6780466724286949,
+   "f1": 0.647544366487825,
+   "reference": 2532,
+   "detected": 2314
+  },
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": false
+   },
+   "recall": 0.6109794628751974,
+   "precision": 0.6866400355082113,
+   "f1": 0.6466039707419017,
+   "reference": 2532,
+   "detected": 2253
+  },
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6184834123222749,
+   "precision": 0.6773356401384083,
+   "f1": 0.6465730800990916,
+   "reference": 2532,
+   "detected": 2312
+  },
+  {
+   "params": {
+    "theta_deg": 90.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6050552922590837,
+   "precision": 0.6863799283154122,
+   "f1": 0.6431570109151973,
+   "reference": 2532,
+   "detected": 2232
+  },
+  {
+   "params": {
+    "theta_deg": 105.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6050552922590837,
+   "precision": 0.6863799283154122,
+   "f1": 0.6431570109151973,
+   "reference": 2532,
+   "detected": 2232
+  },
+  {
+   "params": {
+    "theta_deg": 120.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6050552922590837,
+   "precision": 0.6863799283154122,
+   "f1": 0.6431570109151973,
+   "reference": 2532,
+   "detected": 2232
+  },
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6038704581358609,
+   "precision": 0.6868823000898473,
+   "f1": 0.6427070197562,
+   "reference": 2532,
+   "detected": 2226
+  }
+ ],
+ "preflight": "stopped: the best in-sample result is below the held-out bar"
+}
