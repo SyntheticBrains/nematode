@@ -39,7 +39,9 @@ From the B.3 survey of 2026-10-24.
 - An exit is the first wholly off-lawn window after an on-lawn run.
 - The wild type gives 0.206 exits per on-lawn hour, and the pre-exit band (30–180 s) is 0.29 above the
   overall roaming fraction.
-- Scheer's own leaving rate, about 0.65/h, counts a different event.
+- Scheer reports leaving as events per animal per 40-min assay (Fig. 1H), counting an event when
+  the whole body leaves. The roadmap's published rate is about one event per 95–100 min (Bendesky
+  2011). The project's sustained rule counts fewer: a whole 10-s window off the lawn.
 
 **López-Cruz** (`data/benchmark/lopezcruz2019_reorientations.json`):
 - The deposit has 58 wild-type rows. Most repeat a control reused for several mutants.
@@ -72,7 +74,11 @@ From the B.3 survey of 2026-10-24.
 1. **The classifier is refitted on band dates, and the gate is on band dates too.**
    - The OD 2 wild type's 41 band dates are split two thirds and one third by date (seed 2029).
    - The model is fitted with `GaussianHMM.fit_labelled` on the two thirds, against the authors' labels.
+   - Only windows that are both on the lawn by the geometric rule and labelled roaming or dwelling
+     enter the fit, as runs of consecutive such windows. The gate decodes the same runs.
    - It is gated at κ ≥ 0.6 on the third: the gate D.1 used.
+   - D.1 passed at κ = 0.63, three points above the bar, with twice the fit animals and an
+     animal-level split. A date-level split may come in lower. A failure spends no held-out data.
    - The fitted model is what ships, not a refit on all band dates, so the gate's reading belongs to
      the model that is used.
    - If the gate fails, the script stops and the maintainer decides. The registered fallback is D.1's
@@ -80,12 +86,18 @@ From the B.3 survey of 2026-10-24.
    - Mutants and density arms are read by the same model, unchanged.
 
 2. **One window rule, by geometry.**
-   - For real worms, a second is on the lawn when the midbody lies inside Scheer's boundary for its
-     background slot (`boundary_distance`, already validated against the authors' centroid distance).
-   - For simulated worms, it is on the lawn when its position lies in the lawn's footprint, in a phase
-     with lawns: the capture's existing on-lawn flag.
-   - A window is on the lawn when every second in it is. A window with a missing sample is
-     unclassified.
+   - For real worms on the small lawns, a second is on the lawn when the midbody lies inside
+     Scheer's boundary for its background slot (`boundary_distance`, positive inside, already
+     validated against the authors' centroid distance). On the OD 2 wild type it agrees with the
+     per-frame `midbody_in_lawn` flag on about 99% of seconds.
+   - **The uniform well has no boundary.** In the store its 64 radii are NaN, its in-lawn flag is 0 on
+     every frame, and its positions are relative to the first position, not a lawn centre. The bacteria
+     cover the well, so on the uniform well every sample is on the lawn, for real and simulated worms
+     alike.
+   - For simulated worms, a second is on the lawn when its position lies in the lawn's footprint, in a
+     phase with lawns: the capture's existing on-lawn flag.
+   - A window is on the lawn when every 1-s sample in its span is, as `episode_windows` reads it, not
+     only its three 5-s samples. A window with a missing sample is unclassified.
    - D.1's `in_lawn_run` comes from the authors' processing, which has no simulated counterpart. Its
      agreement with the geometric rule is reported.
 
@@ -100,6 +112,9 @@ From the B.3 survey of 2026-10-24.
    - The mean is the state's total time over its completed bouts: the exponential MLE under right
      censoring.
    - The 40-min window truncates long dwelling bouts, and this reads real and simulated worms alike.
+   - The estimator is the mean only for exponential bouts, and roaming bouts are double-exponential
+     (Flavell 2013). It is one fixed estimator, applied the same way to both, not a claim about the
+     distribution.
 
 5. **The graded statistics.** The definitions below are fixed. On real tracks every value is
    recomputed by this pipeline.
@@ -141,10 +156,16 @@ From the B.3 survey of 2026-10-24.
        difference of two independent batches.
    - **López-Cruz:** a batch is one distinct date string. Where two rows share one, the larger n is
      kept.
-     - The 29 batches are split by date, a third held out (seed 2031), with the Scheer split's
+     - pdfr-1's same-date control (row 90) is one of the 29. That pair (rows 90 and 91) is kept as
+       band data and never drawn into the hold-out. So B.4 has no held-out mutant cohort for local
+       search, and says so.
+     - The other 28 batches are split by date, a third held out (seed 2031), with the Scheer split's
        procedure.
-     - μ is the band batches' mean, and σ their SD, at their own size, n ≈ 55. That is conservative
-       for N = 200, and stated.
+     - μ is the mean of the band batches' per-batch fits, and σ their SD, at their own size, n ≈ 55.
+       That is conservative for N = 200, and stated.
+     - μ is not B.2's 0.114: that is one fit of the pooled Fig. 1C curve, and a fit of a pooled curve
+       is not the mean of the fits. μ is used because it is on the same scale as σ. B.2's value is
+       reported beside it.
      - pdfr-1's one paired batch gives its Δ a σ of √2 times the wild type's.
 
 7. **The pass rule.**
@@ -155,9 +176,10 @@ From the B.3 survey of 2026-10-24.
    - **Each mutant is its own family:**
      - tph-1 and tax-4 have 2 statistics, so z\* = 2.24;
      - pdfr-1 has 4, so z\* = 2.50.
-     - **Direction:** where the reference's 95% bootstrap interval for Δ excludes zero, the simulated Δ
+     - **Direction:** where the reference's interval μ ± 1.96σ for Δ excludes zero, the simulated Δ
        must have its sign. Where it includes zero, as for "normal leaving", the magnitude test alone
-       applies: it is the equivalence band.
+       applies: it is the equivalence band. σ is the band's scale after any inflation, so a thin arm
+       cannot resolve a direction from resampling three dates.
    - **The roadmap's expected directions** (pdfr-1: less roaming, normal leaving, more search; tax-4:
      less roaming, normal leaving; tph-1: more roaming, more leaving) are checked against the
      references and reported. The rule uses the references' own intervals.
@@ -170,21 +192,29 @@ From the B.3 survey of 2026-10-24.
      minimises, since D37 holds local search out of the fit.
    - **W's minimum, the rule registered here and read in B.4:**
      - Split the held-out wild-type dates into two halves by date, 1,000 times.
-     - For each split, take z = (s_A − s_B)/σ at each half's size and form D from those z's.
+     - For each split, take z = (s_A − s_B)/σ, with σ the band's scale at a half's size (not √2σ),
+       and form D from those z's. It is an empirical floor, so the scale only has to be the one D
+       uses.
      - W's registered minimum effect is that distribution's 95th percentile: the distance two real
        batches show by chance.
 
-9. **The rule's own check, before any simulated worm** (a gate, registered here).
-   - Split the OD 2 wild type's band dates into halves, 200 times (seed 2032).
-   - Build the small-lawn bands on one half, at the other half's size, and grade the other half. Do
-     the same for López-Cruz's band batches.
-   - **The gate:** the joint pass rate of the wild-type statistics graded this way is ≥ 0.90.
+9. **The rule's own check, before any simulated worm** (two gates, registered here). It is read at
+   the operating point: populations of N = 200.
+   - **The small lawn.** Split the OD 2 wild type's band dates into halves, 200 times (seed 2032).
+     Build the bands on one half at n = 200. From the other half, draw one 200-animal population by
+     the bands' own date resampling, and grade it on the six statistics at the wild-type z\* = 2.84.
+     **Gate:** a joint pass rate ≥ 0.90.
+   - **López-Cruz.** Split the band batches into halves, 200 times (same seed). Build the band on one
+     half, and grade each batch of the other half alone on γ and early/late, at the same z\*. That is
+     the unit σ describes. **Gate:** a per-batch joint pass rate ≥ 0.90.
    - The uniform lawn has two band dates and cannot be halved, so it is left out and stated.
-   - A failure stops the change, before the bands are committed.
+   - A failure of either gate stops the change before the bands are committed.
 
 10. **The preflight, as description.**
-    - ConstantHazards, the Poisson negative at its default rates, and PirouetteHazards, E.2's positive
-      control, each run 64 animals per assay through the batched evaluator. Seeds 9101–9164.
+    - Two controllers, each running 64 animals per assay through the batched evaluator, on seeds
+      9101–9164, at the D36 pilot's registered settings:
+      - ConstantHazards, the Poisson negative: run speed 0.15 mm/s, hazards (0.02, 0.01, 0.01)/s;
+      - PirouetteHazards, E.2's positive control: the same, with β = 3.
     - Each is graded at n = 64 and reported.
     - It runs after D36's amendment merges.
     - If ConstantHazards passes the wild type, the benchmark cannot yet tell a Poisson worm from the
@@ -195,8 +225,13 @@ From the B.3 survey of 2026-10-24.
     - the worm placed on it at the centre;
     - 60 min, analysed from 20 min.
 
-    It is the uniform-lawn reference with tracks and dates. `uniform_lawn_flavell` stays, and Flavell's
-    timescales are reported from it.
+    - The lawn's radius equals the well's, with `wall_clearance_mm: 0`. The default clearance of 1 mm
+      would trip the lawn-fits-the-arena check.
+    - The circle arena holds the worm at r ≤ 5 mm. So "always on the lawn" needs the rim to count as
+      on the lawn in both runners: `_cells_under` tests `<=`, and implementation checks `lawn_at`.
+
+    It is the uniform-lawn reference with tracks and dates. `uniform_lawn_flavell` stays. Only
+    Flavell 2013's published timescales are reported, with no simulated reading.
 
 ## Risks / Trade-offs
 
@@ -211,6 +246,9 @@ From the B.3 survey of 2026-10-24.
   The cluster bootstrap pools dates up to n, so a 200-animal resample holds about 25 exits.
 - **[The geometric rule differs from D.1's]** → the agreement is reported, and the classifier is
   refitted under the rule it is used with.
+- **[Tracking noise]** → real dwelling speeds carry tracking noise of a few µm per sample, and
+  simulated ones carry none. This classifier asymmetry was inherited from D.1. It is named as a
+  limit, not corrected.
 
 ## Open Questions
 
