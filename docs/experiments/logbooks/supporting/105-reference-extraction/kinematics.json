@@ -1,0 +1,666 @@
+{
+  "description": "Check the locomotor primitives' published off-food kinematics against real worms on food.",
+  "cohorts": "held-out OD 2 wild-type dates (data/benchmark/scheer2023_split.json)",
+  "bout_rule": {
+    "merge_gap_frames": 1,
+    "min_bout_frames": 2
+  },
+  "strata_mm": 0.5,
+  "bootstrap": {
+    "unit": "recording date",
+    "resamples": 2000,
+    "seed": 105
+  },
+  "verdicts": {
+    "reversal_duration_s": {
+      "acted_on": true,
+      "source": "Zhao et al. 2003, Fig 5B: 2.3 +/- 1.6 s (n = 249) and 3.4 +/- 1.8 s (n = 135)",
+      "span": [
+        2.0972082398321668,
+        3.709838667696593
+      ],
+      "disagreement": true,
+      "inside": {
+        "n": 24890,
+        "value": 2.047033614570778,
+        "interval_95": [
+          2.011222119928959,
+          2.0833617792356502
+        ]
+      }
+    },
+    "reversal_speed_mm_per_s": {
+      "acted_on": false,
+      "source": "Zhao et al. 2003, Fig 5A: mean 140 um/s; no SD or n stated",
+      "published": 0.14,
+      "inside": {
+        "n": 17632,
+        "value": 0.06896026420070465,
+        "interval_95": [
+          0.0668242680363404,
+          0.07144221297718442
+        ]
+      }
+    },
+    "omega_duration_s": {
+      "acted_on": false,
+      "source": "Broekmans et al. 2016: escape omegas 7 +/- 3 s, no n; foraging not reported",
+      "published": 7.0,
+      "inside": {
+        "n": 219,
+        "value": 4.036529680365297,
+        "interval_95": [
+          3.6591796442414175,
+          4.569151976173226
+        ]
+      }
+    },
+    "forward_speed_p95_mm_per_s": {
+      "acted_on": false,
+      "source": "v_max_mm_per_s, a maximum",
+      "published": 0.2,
+      "inside": {
+        "n": 347542,
+        "value": 0.08477027781009096,
+        "interval_95": [
+          0.07878975156627063,
+          0.09126883367283706
+        ]
+      }
+    },
+    "turning_rate_p95_deg_per_s": {
+      "acted_on": false,
+      "source": "omega_max_deg_per_s, a maximum",
+      "published": 50.0,
+      "inside": {
+        "n": 155210,
+        "value": 175.16696961655182,
+        "interval_95": [
+          174.59620863975027,
+          175.6532437452483
+        ]
+      }
+    },
+    "pause_fraction": {
+      "acted_on": false,
+      "source": "none: a pause is a run at zero speed",
+      "inside": {
+        "n": 1268914,
+        "value": 0.5146077669566259,
+        "interval_95": [
+          0.47646572992595665,
+          0.5441212892221656
+        ]
+      }
+    }
+  },
+  "filtered": {
+    "animals": 573,
+    "cohorts": 24,
+    "reversal_duration_s": {
+      "inside": {
+        "n": 24890,
+        "value": 2.047033614570778,
+        "interval_95": [
+          2.011222119928959,
+          2.0833617792356502
+        ]
+      },
+      "edge": {
+        "n": 71197,
+        "value": 2.004368161579842,
+        "interval_95": [
+          1.9830519877841084,
+          2.0249780416804155
+        ]
+      },
+      "outside": {
+        "n": 169,
+        "value": 3.301775147928994,
+        "interval_95": [
+          2.9941487687829436,
+          3.6666666666666665
+        ]
+      }
+    },
+    "reversal_speed_mm_per_s": {
+      "inside": {
+        "n": 17632,
+        "value": 0.06896026420070465,
+        "interval_95": [
+          0.0668242680363404,
+          0.07144221297718442
+        ]
+      },
+      "edge": {
+        "n": 49317,
+        "value": 0.07622603858361544,
+        "interval_95": [
+          0.07434956213742211,
+          0.07787523469090409
+        ]
+      },
+      "outside": {
+        "n": 148,
+        "value": 0.17357773336822105,
+        "interval_95": [
+          0.14828603664811738,
+          0.20518208900359214
+        ]
+      }
+    },
+    "omega_duration_s": {
+      "inside": {
+        "n": 219,
+        "value": 4.036529680365297,
+        "interval_95": [
+          3.6591796442414175,
+          4.569151976173226
+        ]
+      },
+      "edge": {
+        "n": 425,
+        "value": 4.923921568627452,
+        "interval_95": [
+          4.434098510582701,
+          5.4942339595660155
+        ]
+      },
+      "outside": {
+        "n": 45,
+        "value": 2.3629629629629627,
+        "interval_95": [
+          2.0237956810631235,
+          2.7015834290088017
+        ]
+      }
+    },
+    "forward_speed_p95_mm_per_s": {
+      "inside": {
+        "n": 347542,
+        "value": 0.08477027781009096,
+        "interval_95": [
+          0.07878975156627063,
+          0.09126883367283706
+        ]
+      },
+      "edge": {
+        "n": 748204,
+        "value": 0.07789736837660183,
+        "interval_95": [
+          0.07403155990758871,
+          0.08132035415564781
+        ]
+      },
+      "outside": {
+        "n": 3190,
+        "value": 0.2854097834898059,
+        "interval_95": [
+          0.2503094248459986,
+          0.3103060502028831
+        ]
+      }
+    },
+    "turning_rate_p95_deg_per_s": {
+      "inside": {
+        "n": 155210,
+        "value": 175.16696961655182,
+        "interval_95": [
+          174.59620863975027,
+          175.6532437452483
+        ]
+      },
+      "edge": {
+        "n": 344588,
+        "value": 176.63353933657072,
+        "interval_95": [
+          176.2914003191622,
+          177.10945201303215
+        ]
+      },
+      "outside": {
+        "n": 2849,
+        "value": 53.30519535067284,
+        "interval_95": [
+          46.703767658215725,
+          59.904526810624745
+        ]
+      }
+    },
+    "pause_fraction": {
+      "inside": {
+        "n": 1268914,
+        "value": 0.5146077669566259,
+        "interval_95": [
+          0.47646572992595665,
+          0.5441212892221656
+        ]
+      },
+      "edge": {
+        "n": 2794500,
+        "value": 0.49756485954553586,
+        "interval_95": [
+          0.47382702785528213,
+          0.5231958823569891
+        ]
+      },
+      "outside": {
+        "n": 11257,
+        "value": 0.0682242160433508,
+        "interval_95": [
+          0.024792624804384635,
+          0.11116079888079501
+        ]
+      }
+    }
+  },
+  "unfiltered": {
+    "animals": 573,
+    "cohorts": 24,
+    "reversal_duration_s": {
+      "inside": {
+        "n": 28085,
+        "value": 1.802338140169723,
+        "interval_95": [
+          1.757461440825142,
+          1.8471426437033753
+        ]
+      },
+      "edge": {
+        "n": 79342,
+        "value": 1.759551477569677,
+        "interval_95": [
+          1.732430208038221,
+          1.7887471869872158
+        ]
+      },
+      "outside": {
+        "n": 186,
+        "value": 2.948028673835126,
+        "interval_95": [
+          2.710103996119095,
+          3.28948761580639
+        ]
+      }
+    },
+    "reversal_speed_mm_per_s": {
+      "inside": {
+        "n": 17082,
+        "value": 0.07184218958547092,
+        "interval_95": [
+          0.06938828885058933,
+          0.07477702112840758
+        ]
+      },
+      "edge": {
+        "n": 46860,
+        "value": 0.08087536370569247,
+        "interval_95": [
+          0.07856119324432195,
+          0.08282302421449779
+        ]
+      },
+      "outside": {
+        "n": 147,
+        "value": 0.17898330509065263,
+        "interval_95": [
+          0.15343938459957637,
+          0.21174978707411257
+        ]
+      }
+    },
+    "omega_duration_s": {
+      "inside": {
+        "n": 241,
+        "value": 3.6984785615491007,
+        "interval_95": [
+          3.349361823747527,
+          4.144150371569727
+        ]
+      },
+      "edge": {
+        "n": 476,
+        "value": 4.432072829131652,
+        "interval_95": [
+          3.94384703589038,
+          4.991155422491192
+        ]
+      },
+      "outside": {
+        "n": 52,
+        "value": 2.0769230769230766,
+        "interval_95": [
+          1.7452705627705627,
+          2.407478632478632
+        ]
+      }
+    },
+    "forward_speed_p95_mm_per_s": {
+      "inside": {
+        "n": 347384,
+        "value": 0.08480536411546098,
+        "interval_95": [
+          0.07881449664368934,
+          0.09126924450995143
+        ]
+      },
+      "edge": {
+        "n": 747857,
+        "value": 0.07789736837660186,
+        "interval_95": [
+          0.07405130990099239,
+          0.0813203541556479
+        ]
+      },
+      "outside": {
+        "n": 3190,
+        "value": 0.2854097834898059,
+        "interval_95": [
+          0.2503094248459986,
+          0.3103060502028831
+        ]
+      }
+    },
+    "turning_rate_p95_deg_per_s": {
+      "inside": {
+        "n": 155099,
+        "value": 175.13554005543423,
+        "interval_95": [
+          174.59239475873417,
+          175.61227857477016
+        ]
+      },
+      "edge": {
+        "n": 344358,
+        "value": 176.6335393365706,
+        "interval_95": [
+          176.28471089457162,
+          177.10945201303198
+        ]
+      },
+      "outside": {
+        "n": 2849,
+        "value": 53.30519535067284,
+        "interval_95": [
+          46.703767658215725,
+          59.904526810624745
+        ]
+      }
+    },
+    "pause_fraction": {
+      "inside": {
+        "n": 1268914,
+        "value": 0.5146077669566259,
+        "interval_95": [
+          0.47646572992595665,
+          0.5441212892221656
+        ]
+      },
+      "edge": {
+        "n": 2794500,
+        "value": 0.49756485954553586,
+        "interval_95": [
+          0.47382702785528213,
+          0.5231958823569891
+        ]
+      },
+      "outside": {
+        "n": 11257,
+        "value": 0.0682242160433508,
+        "interval_95": [
+          0.024792624804384635,
+          0.11116079888079501
+        ]
+      }
+    }
+  },
+  "missing_frames": "Bouts are kept whether or not they touch a frame the tracker lost, as the registered rule states. A first run of this script skipped such bouts; it is reported beside, as description, under bouts_touching_missing_frames_dropped. It removed every omega, since the skeleton fails while the worm coils.",
+  "bouts_touching_missing_frames_dropped": {
+    "verdicts": {
+      "reversal_duration_s": {
+        "acted_on": true,
+        "source": "Zhao et al. 2003, Fig 5B: 2.3 +/- 1.6 s (n = 249) and 3.4 +/- 1.8 s (n = 135)",
+        "span": [
+          2.0972082398321668,
+          3.709838667696593
+        ],
+        "disagreement": true,
+        "inside": {
+          "n": 24862,
+          "value": 2.0450620759928135,
+          "interval_95": [
+            2.0088179596877582,
+            2.0819050103040957
+          ]
+        }
+      },
+      "reversal_speed_mm_per_s": {
+        "acted_on": false,
+        "source": "Zhao et al. 2003, Fig 5A: mean 140 um/s; no SD or n stated",
+        "published": 0.14,
+        "inside": {
+          "n": 17606,
+          "value": 0.06895188438538588,
+          "interval_95": [
+            0.06681700088316754,
+            0.07144161553318167
+          ]
+        }
+      },
+      "omega_duration_s": {
+        "acted_on": false,
+        "source": "Broekmans et al. 2016: escape omegas 7 +/- 3 s, no n; foraging not reported",
+        "published": 7.0,
+        "inside": {
+          "n": 0,
+          "value": NaN,
+          "interval_95": [
+            NaN,
+            NaN
+          ]
+        }
+      },
+      "forward_speed_p95_mm_per_s": {
+        "acted_on": false,
+        "source": "v_max_mm_per_s, a maximum",
+        "published": 0.2,
+        "inside": {
+          "n": 347542,
+          "value": 0.08477027781009096,
+          "interval_95": [
+            0.07878975156627063,
+            0.09126883367283706
+          ]
+        }
+      },
+      "turning_rate_p95_deg_per_s": {
+        "acted_on": false,
+        "source": "omega_max_deg_per_s, a maximum",
+        "published": 50.0,
+        "inside": {
+          "n": 155210,
+          "value": 175.16696961655182,
+          "interval_95": [
+            174.59620863975027,
+            175.6532437452483
+          ]
+        }
+      },
+      "pause_fraction": {
+        "acted_on": false,
+        "source": "none: a pause is a run at zero speed",
+        "inside": {
+          "n": 1268914,
+          "value": 0.5146077669566259,
+          "interval_95": [
+            0.47646572992595665,
+            0.5441212892221656
+          ]
+        }
+      }
+    },
+    "filtered": {
+      "animals": 573,
+      "cohorts": 24,
+      "reversal_duration_s": {
+        "inside": {
+          "n": 24862,
+          "value": 2.0450620759928135,
+          "interval_95": [
+            2.0088179596877582,
+            2.0819050103040957
+          ]
+        },
+        "edge": {
+          "n": 71077,
+          "value": 2.00038455946837,
+          "interval_95": [
+            1.9793593082487213,
+            2.021129781406796
+          ]
+        },
+        "outside": {
+          "n": 131,
+          "value": 2.9745547073791347,
+          "interval_95": [
+            2.6288863636363633,
+            3.4010964912280697
+          ]
+        }
+      },
+      "reversal_speed_mm_per_s": {
+        "inside": {
+          "n": 17606,
+          "value": 0.06895188438538588,
+          "interval_95": [
+            0.06681700088316754,
+            0.07144161553318167
+          ]
+        },
+        "edge": {
+          "n": 49204,
+          "value": 0.07622460330340179,
+          "interval_95": [
+            0.0743609373446221,
+            0.07787044903751374
+          ]
+        },
+        "outside": {
+          "n": 111,
+          "value": 0.1768267165530126,
+          "interval_95": [
+            0.14766869173356695,
+            0.2238985701405826
+          ]
+        }
+      },
+      "omega_duration_s": {
+        "inside": {
+          "n": 0,
+          "value": NaN,
+          "interval_95": [
+            NaN,
+            NaN
+          ]
+        },
+        "edge": {
+          "n": 0,
+          "value": NaN,
+          "interval_95": [
+            NaN,
+            NaN
+          ]
+        },
+        "outside": {
+          "n": 0,
+          "value": NaN,
+          "interval_95": [
+            NaN,
+            NaN
+          ]
+        }
+      },
+      "forward_speed_p95_mm_per_s": {
+        "inside": {
+          "n": 347542,
+          "value": 0.08477027781009096,
+          "interval_95": [
+            0.07878975156627063,
+            0.09126883367283706
+          ]
+        },
+        "edge": {
+          "n": 748204,
+          "value": 0.07789736837660183,
+          "interval_95": [
+            0.07403155990758871,
+            0.08132035415564781
+          ]
+        },
+        "outside": {
+          "n": 3190,
+          "value": 0.2854097834898059,
+          "interval_95": [
+            0.2503094248459986,
+            0.3103060502028831
+          ]
+        }
+      },
+      "turning_rate_p95_deg_per_s": {
+        "inside": {
+          "n": 155210,
+          "value": 175.16696961655182,
+          "interval_95": [
+            174.59620863975027,
+            175.6532437452483
+          ]
+        },
+        "edge": {
+          "n": 344588,
+          "value": 176.63353933657072,
+          "interval_95": [
+            176.2914003191622,
+            177.10945201303215
+          ]
+        },
+        "outside": {
+          "n": 2849,
+          "value": 53.30519535067284,
+          "interval_95": [
+            46.703767658215725,
+            59.904526810624745
+          ]
+        }
+      },
+      "pause_fraction": {
+        "inside": {
+          "n": 1268914,
+          "value": 0.5146077669566259,
+          "interval_95": [
+            0.47646572992595665,
+            0.5441212892221656
+          ]
+        },
+        "edge": {
+          "n": 2794500,
+          "value": 0.49756485954553586,
+          "interval_95": [
+            0.47382702785528213,
+            0.5231958823569891
+          ]
+        },
+        "outside": {
+          "n": 11257,
+          "value": 0.0682242160433508,
+          "interval_95": [
+            0.024792624804384635,
+            0.11116079888079501
+          ]
+        }
+      }
+    }
+  },
+  "disagreements": [
+    "reversal_duration_s"
+  ]
+}

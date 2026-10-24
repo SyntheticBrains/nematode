@@ -1,4 +1,13 @@
-## ADDED Requirements
+# benchmark-references Specification
+
+## Purpose
+
+The benchmark's real-worm reference data: Scheer & Bargmann 2023 at 1 s with cohort fields and a
+fixed cohort split, Calhoun 2014 and Roberts 2016 search tracks, and López-Cruz 2019's
+reorientation bins, each vendored with its provenance, read by one loader, and checked against what
+the project calibrated on before; and the locomotor primitives' kinematics checked on food.
+
+## Requirements
 
 ### Requirement: Vendored real-worm reference sets with provenance
 
@@ -28,7 +37,8 @@ Only CC0 or CC BY sources SHALL be vendored, and never the original deposit file
 ### Requirement: Scheer tracks at 1 s with cohort fields
 
 `data/benchmark/scheer2023_tracks.npz` SHALL hold, for every animal of the wild type at OD 2, OD 1, OD 4
-and on a uniform lawn, and of tph-1, pdfr-1 and tax-4:
+and on a uniform lawn, of the N2 wild type at OD 2 (tph-1's batch-matched control), and of tph-1,
+pdfr-1 and tax-4:
 
 - the midbody position at 1 s, in µm, as int16 (int32 for an arm whose range exceeds int16), with
   −32768 where missing;
@@ -62,7 +72,7 @@ file by video name, source file and row, SHALL reproduce `data/roaming_dwelling/
 - at least 95% of the Fig. 1 animals matched;
 - `on_food`, `off_lawn` and `labels` identical;
 - `speed` within √2 µm / 5 s;
-- the classifier's roaming observation identical on at least 99.5% of on-food windows;
+- the calibrated model's likelier emission state identical on at least 99.5% of on-food windows;
 - the calibrated classifier's decoded states agreeing on at least 99% of on-food windows.
 
 #### Scenario: The re-derived windows match

@@ -75,6 +75,12 @@ All seven arms are read from `GenotypeComparisons_021523.pkl`:
 - `PD1074_od2_Data`, `PD1074_od1_Data`, `PD1074_od4_Data` and `PD1074_od2_uniformlawn_Data`;
 - `MT15434_tph1mg280_od2_Data`, `CX14295_pdfr1ok3425_od2_Data` and `CX13078_tax4p678_od2_Data`.
 
+*(Amended 2026-10-24, the maintainer's decision, after extraction showed it:)* **`N2_od2_Data` is an
+eighth arm.** tph-1 is an N2-background strain recorded only beside the N2 wild type: all five of its
+dates have N2 animals and none has PD1074. Without N2 it would have no batch-matched control, which D34
+requires. N2 is kept as its own arm, never pooled with PD1074, and the split constrains it like the
+other arms.
+
 The Fig. 1 file is read only to compare its wild type with `PD1074_od2_Data`. Animals are matched by
 video name, source file and row. The result is recorded either way: the matched count, and whether the
 positions are equal. `PD1074_od2_Data` is what is stored, since the mutants' batch-matched controls are
@@ -102,11 +108,12 @@ The restricted unpickler moves from the D.1 script into a shared helper,
 | `date` | (A,) int32 | YYYYMMDD |
 | `source_row` | (A,) int32 | the animal's row in its source dict |
 | `origin` | (A,) int8 | 0: the lawn centre; 1: the animal's first valid position |
+| `fig1_row` | (A,) int32 | the animal's row in the Fig. 1 file, −1 if it has none (Decision A's match, kept so Decision D's check needs only vendored files) |
 
 **Why micrometres in int16.** Tracking resolves about one pixel, some tens of µm, so 1 µm is far below
-the noise. int16 holds ±32.767 mm. If an arm's positions exceed that, that arm's positions are stored
-as int32 in their own arrays (`x_um_wide`, `y_um_wide`, with an index), and the fact is recorded. A
-non-finite value outside the missing mask is refused, naming the animal.
+the noise. int16 holds ±32.767 mm. If any position exceeds that, the store's positions are int32
+instead, and the loader reads either. *(Amended in implementation: one type for the whole store rather
+than per-arm wide arrays, which the loader would have had to merge.)*
 
 **Why 1 s for positions and 3 frames/s for flags.** The point worm steps at 1 s (D35), and positions at
 1 s give B.2's detector its input. The flags keep the source's own resolution, because a reversal lasts
@@ -160,8 +167,10 @@ do, the check fails and the extraction stops. The re-derived windows must give:
 - `on_food`, `off_lawn` and `labels` identical to `scheer2023_windows.npz` on the matched animals;
 - `speed` within the bound implied by the 0.5 µm rounding: each step's displacement is off by at most
   √2 µm, so a window's mean speed by at most √2 µm / 5 s;
-- the classifier's observation, whether speed × slope exceeds angular speed at the calibrated slope,
-  identical on at least 99.5% of on-food windows;
+- the calibrated model's per-window evidence, the state whose Gaussian emission is likelier, identical
+  on at least 99.5% of on-food windows. *(Amended in implementation: the instrument is the
+  Gaussian-emission model, `calibration_retry.json`. The slope line's observation belongs to the model
+  that failed its gate.)*
 - the calibrated classifier's decoded states agreeing on at least 99% of on-food windows.
 
 Angular speed has no closed bound: a turn's rounding error grows without limit as a step's
@@ -178,7 +187,10 @@ positions only. It writes `docs/experiments/logbooks/supporting/105-reference-ex
 
 **Bouts.** A reversal bout is a run of the reversal flag after gaps of one frame are merged. Runs
 shorter than two frames (0.67 s) are dropped. An omega bout is built the same way from the omega flag.
-Both the filtered and the unfiltered values are reported; the rule reads the filtered one.
+Both the filtered and the unfiltered values are reported; the rule reads the filtered one. A bout is kept whether or not it touches a frame the tracker lost (`missing`). *(Noted in
+implementation: the rule as written does not exclude them. The first run of the script did, and that
+reading is reported beside, as description. It removed every omega, since the omega flag always
+coincides with lost frames while the worm coils.)*
 
 | Quantity | From | Compared with |
 |---|---|---|
@@ -228,7 +240,7 @@ neither, and the bands keep two thirds of the dates.
   statistics: turn timing and rates, never speeds or distances. Vendored as
   `data/benchmark/calhoun2014_tracks.npz`:
 
-  - positions at 1 s (every third frame), int16;
+  - positions at 1 s (every third frame), as hundredths of a pixel in int32;
   - the per-frame pirouette, omega and non-omega flags, bit-packed.
 
   The file has no cohort fields, so Calhoun can validate B.2's detector but cannot be a
@@ -240,9 +252,9 @@ neither, and the bands keep two thirds of the dates.
   as `data/benchmark/roberts2016_tracks.npz`:
 
   - the five wild-type cohorts' positions at 1 s, in µm;
-  - each time point's worm number and the by-eye `state`, at 1 s by the state of the first sample in
-    the second;
-  - the Viterbi states from `IBW files/`;
+  - each frame's by-eye `state` and the Viterbi states from `IBW files/`, kept per frame at 29.97
+    frames/s. *(Amended in implementation: a reversal lasts a few seconds, so a 1-s state would blur the
+    starts B.2's detector is timed against. Per-frame states compress to little.)*
   - the cohort IDs;
   - the dead-worm tracks, separately, as a tracking-noise floor for B.2's false-positive rate.
 

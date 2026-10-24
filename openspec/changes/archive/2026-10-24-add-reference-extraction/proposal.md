@@ -25,7 +25,8 @@ The maintainer's decisions of 2026-10-24 are marked (decided).
 
   - **genotypes (decided):** wild type (PD1074, OD 2) with tph-1, pdfr-1 and tax-4 (D37's mutants),
     plus wild type at OD 1, at OD 4 and on a uniform lawn, for the food-density target. npr-1 and
-    cat-2 stay out (second tier);
+    cat-2 stay out (second tier). *(Amended 2026-10-24, decided: the N2 wild type is added as tph-1's
+    batch-matched control, since tph-1 was recorded only beside N2.)*;
   - **a 1-s track store, vendored (decided):** per animal, the midbody position in micrometres as
     int16, relative to the lawn centre (or, on the uniform lawn, which has no boundary, to the
     animal's first position); the authors' per-frame flags at 3 frames/s (reversal, omega, pause, head

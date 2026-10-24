@@ -1,0 +1,127 @@
+{
+  "source": "GenotypeComparisons_021523.pkl",
+  "arms": {
+    "PD1074_od2_Data": {
+      "animals": 1586,
+      "frames": 7200,
+      "has_boundary": true,
+      "centre_spread_um_p99": 55.664001846918566,
+      "centre_spread_um_max": 528.4422475790004,
+      "boundary_check": {
+        "median_abs_difference_mm": 0.02347768973245068,
+        "p95_abs_difference_mm": 0.07529780557876738,
+        "sign_agreement_clear_of_edge": 0.9996483379302878,
+        "inside_agrees_with_midbody_in_lawn": 0.9947127511802704
+      },
+      "absent_flags": [],
+      "dates": 65
+    },
+    "PD1074_od1_Data": {
+      "animals": 45,
+      "frames": 7200,
+      "has_boundary": true,
+      "centre_spread_um_p99": 25.3605854262594,
+      "centre_spread_um_max": 26.74563348264633,
+      "boundary_check": {
+        "median_abs_difference_mm": 0.024070913894840507,
+        "p95_abs_difference_mm": 0.0752828203733864,
+        "sign_agreement_clear_of_edge": 0.9999897276808185,
+        "inside_agrees_with_midbody_in_lawn": 0.9925226066212177
+      },
+      "absent_flags": [],
+      "dates": 1
+    },
+    "PD1074_od4_Data": {
+      "animals": 83,
+      "frames": 7200,
+      "has_boundary": true,
+      "centre_spread_um_p99": 11.117973056283406,
+      "centre_spread_um_max": 11.568130405002393,
+      "boundary_check": {
+        "median_abs_difference_mm": 0.021521531924661552,
+        "p95_abs_difference_mm": 0.06845647983689393,
+        "sign_agreement_clear_of_edge": 0.9999895120480348,
+        "inside_agrees_with_midbody_in_lawn": 0.998080329261925
+      },
+      "absent_flags": [],
+      "dates": 3
+    },
+    "PD1074_od2_uniformlawn_Data": {
+      "animals": 100,
+      "frames": 7200,
+      "has_boundary": false,
+      "absent_flags": [
+        "HeadPokesAll",
+        "MidbodyInLawn"
+      ],
+      "dates": 3
+    },
+    "N2_od2_Data": {
+      "animals": 1380,
+      "frames": 7200,
+      "has_boundary": true,
+      "centre_spread_um_p99": 65.52877848476871,
+      "centre_spread_um_max": 274.150308608986,
+      "boundary_check": {
+        "median_abs_difference_mm": 0.025095473882843833,
+        "p95_abs_difference_mm": 0.08459937522913998,
+        "sign_agreement_clear_of_edge": 0.9987302634208067,
+        "inside_agrees_with_midbody_in_lawn": 0.989597402839017
+      },
+      "absent_flags": [],
+      "dates": 70
+    },
+    "MT15434_tph1mg280_od2_Data": {
+      "animals": 139,
+      "frames": 7200,
+      "has_boundary": true,
+      "centre_spread_um_p99": 35.27403154897953,
+      "centre_spread_um_max": 43.37965606474395,
+      "boundary_check": {
+        "median_abs_difference_mm": 0.024102330932174842,
+        "p95_abs_difference_mm": 0.07531488186402892,
+        "sign_agreement_clear_of_edge": 0.999872320051072,
+        "inside_agrees_with_midbody_in_lawn": 0.9920035955729508
+      },
+      "absent_flags": [],
+      "dates": 5
+    },
+    "CX14295_pdfr1ok3425_od2_Data": {
+      "animals": 395,
+      "frames": 7200,
+      "has_boundary": true,
+      "centre_spread_um_p99": 34.56438550902447,
+      "centre_spread_um_max": 45.19175533894807,
+      "boundary_check": {
+        "median_abs_difference_mm": 0.024427522371137433,
+        "p95_abs_difference_mm": 0.0795622882406334,
+        "sign_agreement_clear_of_edge": 0.9995165838592722,
+        "inside_agrees_with_midbody_in_lawn": 0.9941619861654689
+      },
+      "absent_flags": [],
+      "dates": 16
+    },
+    "CX13078_tax4p678_od2_Data": {
+      "animals": 499,
+      "frames": 7200,
+      "has_boundary": true,
+      "centre_spread_um_p99": 29.862131292850645,
+      "centre_spread_um_max": 38.46271240052566,
+      "boundary_check": {
+        "median_abs_difference_mm": 0.022867817833619797,
+        "p95_abs_difference_mm": 0.07468769836043555,
+        "sign_agreement_clear_of_edge": 0.9997758862618279,
+        "inside_agrees_with_midbody_in_lawn": 0.9929181991337583
+      },
+      "absent_flags": [],
+      "dates": 19
+    }
+  },
+  "store_bytes": 32524565,
+  "fig1": {
+    "fig1_animals": 1586,
+    "matched": 1586,
+    "matched_fraction": 1.0,
+    "positions_equal": 1586
+  }
+}
