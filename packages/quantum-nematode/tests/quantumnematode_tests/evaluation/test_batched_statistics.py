@@ -1,10 +1,14 @@
 """The batched evaluator against the per-step runner on full assays: graded statistics agree.
 
 Covers the batched-evaluation spec's parity requirement at the statistic level. On seeds 5001-5032,
-over full Scheer and Flavell assays, each statistic's paired difference has a 95% bootstrap interval
+over full Scheer and Flavell assays, each statistic's paired difference has a bootstrap interval
 containing zero: no bias between the two runners is detected. Over a full hour the closed sensory
 loop decorrelates some pairs, as float32 rounding grows near a steep lawn edge. Their differences
 are then those of independent animals, so the check is for bias, not identity.
+
+The four tests make twenty checks, so each interval is Bonferroni-corrected to hold the family at a
+95% level: a 99.75% interval per check. At 95% per check, unbiased seed bands failed somewhere about
+half the time, and which pairs decorrelate differs between BLAS builds.
 """
 
 from __future__ import annotations
@@ -25,6 +29,10 @@ _SEEDS = list(range(5001, 5033))
 _BOUTS = {"reversal", "omega", "delta"}
 # Differences this small are float rounding: the statistic is the same.
 _IDENTICAL = 1e-9
+# Five statistics in each of four tests, held together at a family-wise 5%.
+_CHECKS = 20
+_ALPHA = 0.05 / _CHECKS
+_RESAMPLES = 20000
 
 
 def _statistics(steps: list, intake_fraction: float, max_satiety: float) -> dict[str, float]:  # type: ignore[type-arg]
@@ -47,15 +55,16 @@ def _statistics(steps: list, intake_fraction: float, max_satiety: float) -> dict
 
 def _bootstrap_interval(diff: np.ndarray) -> tuple[float, float]:
     rng = np.random.default_rng(5001)
-    means = [rng.choice(diff, len(diff)).mean() for _ in range(2000)]
-    return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+    means = rng.choice(diff, (_RESAMPLES, len(diff))).mean(axis=1)
+    tail = 100.0 * _ALPHA / 2.0
+    return float(np.percentile(means, tail)), float(np.percentile(means, 100.0 - tail))
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
 @pytest.mark.parametrize("controller", ["mlp", "pirouette"])
 def test_graded_statistics_agree(controller: str, protocol: str) -> None:
-    """Paired per-animal statistics: each difference's 95% interval contains zero."""
+    """Paired per-animal statistics: each difference's corrected interval contains zero."""
     config, single, batched = p.build(controller, protocol)
     lawns = config.environment.foraging.lawns
     max_satiety = config.satiety.initial_satiety

@@ -65,8 +65,9 @@ On seeds from 5001–5032, for each supported controller and each assay:
   runner's within 1e-5 over 50 steps;
 - over 300 steps its bouts' kinds and start steps SHALL match exactly; over the first 150 its positions
   and headings SHALL match within 1e-3, and its satiety and lawn densities within 1e-6;
-- over full Scheer and Flavell assays, each graded statistic's paired difference SHALL have a 95%
-  bootstrap interval containing zero.
+- over full Scheer and Flavell assays, each graded statistic's paired difference SHALL have a
+  bootstrap interval containing zero, the intervals Bonferroni-corrected to hold all the checks
+  together at a 95% family-wise level.
 
 #### Scenario: A deliberately broken evaluator fails
 

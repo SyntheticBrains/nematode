@@ -1,0 +1,334 @@
+{
+  "description": "Layer-3 statistic parity on twelve null seed bands: how often the per-check 95% rule and the Bonferroni rule (99.75% per check, 20 checks) fail where no bias exists, and the MLP's paired differences pooled over all 384 animals.",
+  "commit": "abfda383",
+  "method": "each band runs the four layer-3 tests' statistics (MLP and pirouette rule on full Scheer and Flavell assays) on 32 seeds; percentile bootstrap, 20000 resamples; differences below 1e-9 count as identical",
+  "summary": {
+    "bands": 12,
+    "bands_failing_95_per_check": 6,
+    "bands_failing_bonferroni": 0,
+    "non_identical_checks": 115,
+    "checks_failing_95": 15
+  },
+  "bands": {
+    "6001-6032": {
+      "fail_95_per_check": [],
+      "fail_bonferroni": [],
+      "identical": [
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6101-6132": {
+      "fail_95_per_check": [
+        "mlp/scheer_lawn/roaming",
+        "mlp/scheer_lawn/intake"
+      ],
+      "fail_bonferroni": [],
+      "identical": [
+        "mlp/uniform_lawn_flavell/satiety",
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6201-6232": {
+      "fail_95_per_check": [
+        "mlp/scheer_lawn/on_lawn",
+        "mlp/scheer_lawn/intake"
+      ],
+      "fail_bonferroni": [],
+      "identical": [
+        "mlp/uniform_lawn_flavell/satiety",
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6301-6332": {
+      "fail_95_per_check": [
+        "mlp/scheer_lawn/on_lawn",
+        "mlp/scheer_lawn/intake"
+      ],
+      "fail_bonferroni": [],
+      "identical": [
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6401-6432": {
+      "fail_95_per_check": [],
+      "fail_bonferroni": [],
+      "identical": [
+        "mlp/uniform_lawn_flavell/satiety",
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6501-6532": {
+      "fail_95_per_check": [
+        "mlp/scheer_lawn/on_lawn",
+        "mlp/scheer_lawn/bouts_per_min",
+        "mlp/scheer_lawn/intake"
+      ],
+      "fail_bonferroni": [],
+      "identical": [
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6601-6632": {
+      "fail_95_per_check": [],
+      "fail_bonferroni": [],
+      "identical": [
+        "mlp/uniform_lawn_flavell/satiety",
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6701-6732": {
+      "fail_95_per_check": [],
+      "fail_bonferroni": [],
+      "identical": [
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6801-6832": {
+      "fail_95_per_check": [],
+      "fail_bonferroni": [],
+      "identical": [
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "6901-6932": {
+      "fail_95_per_check": [
+        "mlp/uniform_lawn_flavell/on_lawn",
+        "mlp/uniform_lawn_flavell/roaming",
+        "mlp/uniform_lawn_flavell/intake"
+      ],
+      "fail_bonferroni": [],
+      "identical": [
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "7001-7032": {
+      "fail_95_per_check": [],
+      "fail_bonferroni": [],
+      "identical": [
+        "mlp/uniform_lawn_flavell/satiety",
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    },
+    "7101-7132": {
+      "fail_95_per_check": [
+        "mlp/scheer_lawn/on_lawn",
+        "mlp/scheer_lawn/satiety",
+        "mlp/scheer_lawn/intake"
+      ],
+      "fail_bonferroni": [],
+      "identical": [
+        "pirouette/scheer_lawn/on_lawn",
+        "pirouette/scheer_lawn/roaming",
+        "pirouette/scheer_lawn/bouts_per_min",
+        "pirouette/scheer_lawn/satiety",
+        "pirouette/scheer_lawn/intake",
+        "pirouette/uniform_lawn_flavell/on_lawn",
+        "pirouette/uniform_lawn_flavell/roaming",
+        "pirouette/uniform_lawn_flavell/bouts_per_min",
+        "pirouette/uniform_lawn_flavell/satiety",
+        "pirouette/uniform_lawn_flavell/intake"
+      ]
+    }
+  },
+  "pooled_mlp_384_animals": {
+    "mlp/scheer_lawn/on_lawn": {
+      "reference_mean": 0.7388498263888889,
+      "batched_mean": 0.7385221354166666,
+      "mean_difference": -0.00032769097222222547,
+      "interval_95": [
+        -0.006084400318287039,
+        0.005386302806712961
+      ],
+      "sd_difference": 0.05722654232382209
+    },
+    "mlp/scheer_lawn/roaming": {
+      "reference_mean": 0.965924977842025,
+      "batched_mean": 0.9664976048468761,
+      "mean_difference": 0.0005726270048509712,
+      "interval_95": [
+        -0.0016845040536188542,
+        0.002881660446006169
+      ],
+      "sd_difference": 0.02298962666573428
+    },
+    "mlp/scheer_lawn/bouts_per_min": {
+      "reference_mean": 1.047309027777778,
+      "batched_mean": 1.0475694444444443,
+      "mean_difference": 0.0002604166666666721,
+      "interval_95": [
+        -0.011371527777777777,
+        0.01163194444444445
+      ],
+      "sd_difference": 0.11372120823170251
+    },
+    "mlp/scheer_lawn/satiety": {
+      "reference_mean": 0.999910548457437,
+      "batched_mean": 0.9998878938910108,
+      "mean_difference": -2.2654566426096555e-05,
+      "interval_95": [
+        -7.902547460927024e-05,
+        1.8283079038851027e-05
+      ],
+      "sd_difference": 0.0005012735418115121
+    },
+    "mlp/scheer_lawn/intake": {
+      "reference_mean": 0.2608711644749006,
+      "batched_mean": 0.2607781371384479,
+      "mean_difference": -9.302733645275311e-05,
+      "interval_95": [
+        -0.0020657145254491614,
+        0.0018594841468329106
+      ],
+      "sd_difference": 0.019550974328695635
+    },
+    "mlp/uniform_lawn_flavell/on_lawn": {
+      "reference_mean": 0.9906978202160494,
+      "batched_mean": 0.989773823302469,
+      "mean_difference": -0.0009239969135802478,
+      "interval_95": [
+        -0.002759946469907407,
+        0.0008883584104938224
+      ],
+      "sd_difference": 0.018313496539855742
+    },
+    "mlp/uniform_lawn_flavell/roaming": {
+      "reference_mean": 0.9937069453653645,
+      "batched_mean": 0.9935538044736617,
+      "mean_difference": -0.00015314089170284594,
+      "interval_95": [
+        -0.0004897948443540286,
+        0.00019019794544953216
+      ],
+      "sd_difference": 0.0033606149064372187
+    },
+    "mlp/uniform_lawn_flavell/bouts_per_min": {
+      "reference_mean": 0.7537905092592593,
+      "batched_mean": 0.7574363425925927,
+      "mean_difference": 0.0036458333333333364,
+      "interval_95": [
+        -0.002401620370370365,
+        0.009577546296296301
+      ],
+      "sd_difference": 0.06103914178088276
+    },
+    "mlp/uniform_lawn_flavell/satiety": {
+      "reference_mean": 0.9999725718557096,
+      "batched_mean": 0.9999743200231479,
+      "mean_difference": 1.748167438274673e-06,
+      "interval_95": [
+        -3.0140817901287468e-06,
+        7.535204475321866e-06
+      ],
+      "sd_difference": 5.214772650251975e-05
+    },
+    "mlp/uniform_lawn_flavell/intake": {
+      "reference_mean": 0.5334676874475645,
+      "batched_mean": 0.5330069130589733,
+      "mean_difference": -0.00046077438859109333,
+      "interval_95": [
+        -0.0014373803904028095,
+        0.0005051237180993423
+      ],
+      "sd_difference": 0.009763034772192078
+    }
+  }
+}

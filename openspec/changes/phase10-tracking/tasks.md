@@ -130,21 +130,24 @@ nothing in W registers before C.2 has read.
 
     - state within 1e-5 over 50 steps;
     - bouts exact over 300 steps, positions within 1e-3 over 150;
-    - full-assay statistics with no detected bias.
+    - full-assay statistics with no detected bias, Bonferroni-corrected over the twenty checks after
+      the per-check 95% rule false-alarmed on CI (6 of 12 null bands failed it, none fail the
+      corrected rule).
 
     Two deliberate faults were caught.
 
   - **Cost pilot**, per core at 256 animals, on seeds 5001–5032:
 
-    - MLP: 2.7–3.8 µs per animal-step (76–96×);
-    - connectome: 6.1–7.3 µs (48–51×);
+    - MLP: 2.6–3.8 µs per animal-step (77–98×);
+    - connectome: 6.1–7.3 µs (48–52×);
     - hazard rules: 1.6–2.8 µs.
 
-    One 200-animal evaluation over all four assays takes 12.5 s on the MLP and 25 s on the connectome.
+    One 200-animal evaluation over all four assays, timed at N = 200, takes 13 s on the MLP and 27 s
+    on the connectome.
 
-  - **W's sizing inputs:** panel cost = (1 + null arms × draws) × population × generations × 25 s. At
-    20 × 200, 5 arms and 8–16 draws, that is 1,150–2,270 core-hours. Threads do not speed the evaluator,
-    so the fits parallelise by process.
+  - **W's sizing inputs:** panel cost = (1 + null arms × draws) × population × generations × 27 s. At
+    20 × 200, 5 arms and 8–16 draws, that is 1,210–2,390 core-hours. Default threads speed the
+    connectome by about 15% on up to 18 threads, so the fits parallelise by process.
 
 ## B — the benchmark (MUST; the gate for everything after)
 
