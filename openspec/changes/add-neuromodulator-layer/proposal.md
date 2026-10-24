@@ -35,6 +35,10 @@ The maintainer's decisions of 2026-10-24 are marked (decided).
     product of its producer and receptor sets (checked on all 92), so both sets are recovered without
     the MIT expression table.
   - Bentley's 22 couples are added; they include PDF-1, which the 92 do not.
+  - Gene names are canonicalised to WormBase's first, since Bentley's pdf-2 is Ripoll-Sánchez's
+    NLP-37.
+  - No common potency cut applies. Each couple records its EC50: PDF-1's is micromolar. A named
+    sensitivity applies Ripoll-Sánchez's 500 nM rule to every couple.
   - Each producer and receptor cell records its source, so either source can be dropped as a
     sensitivity.
   - Monoamines come from Bentley, with its exclusions kept.
@@ -54,13 +58,15 @@ The maintainer's decisions of 2026-10-24 are marked (decided).
 - **Batched evaluation.** `BatchedConnectome` carries the data layer, with parity tests against the
   per-step brain, since C.2 fits through it.
 - **Positive controls for the new component:**
-  - restricted to the hand-placed couples and cells, the data layer reproduces the hand-placed field's
-    currents exactly;
+  - restricted to the hand-placed couples, link and drive, the data layer reproduces the hand-placed
+    field's currents exactly;
+  - a ligand given a 9-minute timescale holds its state for minutes, the job C.2 needs it for;
   - a table compares the data's cells with every link the hand-placed circuit verified, recording each
     disagreement rather than patching it.
 - **N.3, the receptor-placement null (decided: count per receptor, by class):**
-  - each receptor gene's expressing classes are redrawn from classes of the same size, so its class
-    count and cell count are kept exactly, and left/right pairs move together;
+  - each receptor gene's cells, grouped by anatomical class, move to classes of the same size on the
+    same member positions. Its class count and cell count are kept exactly, and left/right pairs
+    move together. Classes come from a new table checked against WormAtlas's 118;
   - producers are held;
   - it carries D24's matched-statistics table in the model's units and the shortcut audit.
 

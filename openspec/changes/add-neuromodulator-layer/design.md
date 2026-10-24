@@ -85,12 +85,26 @@ checksums, and writes `data/neuromodulators/layer.json`. Only the derived file i
 - **`couples`:** one per (ligand, receptor gene), with its receptor cells, each cell tagged with its
   sources. Each couple also records its sign class (`fixed`, with a sign and citation, or `fitted`) and
   its EC50 where a source gives one.
-  - Peptide couples are the union of Ripoll-Sánchez's 92 and Bentley's 22, keyed by lowercased gene
-    names.
-  - Monoamine couples come from Bentley's receptor rows, excluded rows dropped. dop-5 and dop-6 are
-    left out, as in Bentley's main network.
+  - Peptide couples are the union of Ripoll-Sánchez's 92 and Bentley's 22, keyed by **canonical gene
+    names**. `data/neuromodulators/gene_synonyms.json` maps every source name to its WormBase public
+    name, each entry checked against its WormBase gene page at implementation. Bentley's pdf-2 and
+    Ripoll-Sánchez's NLP-37 are one gene, so they become one ligand. After canonicalisation, a couple
+    that still matches under two names is refused.
+  - **The union applies no common potency cut.** Ripoll-Sánchez admits couples at EC50 ≤ 500 nM.
+    Bentley's 13 further couples include micromolar ones: flp-1 → npr-4 at 0.4–9 µM, nlp-1 → npr-11 at
+    1–100 µM, and pdf-1 → pdfr-1 at 0.4–5 µM, against 114 nM for pdf-2 → pdfr-1. Each couple records
+    its EC50 range and its source. **A named sensitivity, `ec50_500nM`, applies Ripoll-Sánchez's rule
+    to every couple.** It removes PDF-1, which matters behaviourally (Flavell 2013) but is a weak agonist
+    in heterologous assays.
+  - Monoamine couples come from Bentley's receptor rows, excluded rows dropped. Each couple's ligand is
+    the row's `monoamine` column: for example, ser-2 is a tyramine receptor and ser-3 an octopamine
+    one. dop-5 and dop-6 are left out, as in Bentley's main network.
 - **`drives`:** sensory inputs onto a producer, outside any couple. Food ingestion onto NSM is kept
-  from the hand-placed field (Rhoades 2019, DEL-3/DEL-7).
+  from the hand-placed field (Rhoades 2019, DEL-3/DEL-7). Drives are sensory only.
+- **`links`:** a ligand acting on named cells with a fixed sign and a cited mechanism, but no
+  receptor gene. Each is tagged to the receptor gene whose knockout removes it. The data layer has
+  no links, since its sources place only receptor genes. The hand-placed spec uses one: PDF's
+  inhibition of NSM, removed by pdfr-1's knockout.
 - **`provenance`:** URLs, checksums, licences and the extraction date.
 
 Names are matched to the brain's connectome. A cell the connectome lacks is reported and skipped,
@@ -100,6 +114,9 @@ never invented, as `load_circuit` does now.
 
 `data/neuromodulators/receptor_signs.json` lists each monoamine receptor's coupling and sign with a
 citation. It is verified against the source's text at implementation, as the hand-placed circuit was.
+
+The mapping below is the layer's rule, not a claim about every cell: cAMP and Gq signalling can
+excite or inhibit depending on the cell.
 
 | Coupling | Sign |
 |---|---|
@@ -122,8 +139,8 @@ With `modulator_layer: data`, the brain keeps one concentration per ligand, K in
   `modulator_step_seconds`. `τ_k` defaults to the hand-placed 60 s for every ligand, and
   `modulator_timescales_s`, a mapping from ligand to seconds, overrides it. These are C.2's encoder
   parameters; PPO does not train them, since the concentrations sit outside the gradient.
-- **Current:** `I = (c[ligand(j)] · s_j)_j @ M`. M is a J × N map with a 1 on each couple's receptor
-  cells (about 130 couples).
+- **Current:** `I = (c[ligand(j)] · s_j)_j @ M`. M is a J × N map with a 1 on each couple's or link's
+  cells (about 121 couples once pdf-2 and nlp-37 are merged: 104 peptide and 17 monoamine).
   - **Fixed couples:** `s_j = sign_j · softplus(ρ_j)`, starting at 1, as now.
   - **Fitted couples:** `s_j = w_j`, a free signed value starting at 0.
   - **Drives:** rows of their own, as the ingestion row is now.
@@ -138,8 +155,9 @@ With `modulator_layer: data`, the brain keeps one concentration per ligand, K in
   the pdf-1 pool at zero);
 - a **receptor gene's** knockout zeroes its couples' rows (pdfr-1 removes both PDF couples).
 
-The hand-placed `modulator_knockout` keeps its two values and meaning. Neither is a mutant encoding;
-D37's table chooses those.
+The hand-placed `modulator_knockout` keeps its two values and meaning. Each knob refuses the other
+layer: `modulator_knockout` is refused with `modulator_layer: data`, and `modulator_knockout_genes`
+with `hand_placed`. Neither is a mutant encoding; D37's table chooses those.
 
 ### Decision E: Batched evaluation
 
@@ -152,10 +170,17 @@ the data layer with a fixed draw of nonzero fitted strengths. The evaluator's de
 
 1. **The machinery reproduces the hand-placed field.** A layer spec built from the hand-placed circuit
    reproduces `_build_modulators`' currents, concentrations and knockouts bitwise, over random states
-   and both knockouts. Its couples are serotonin through MOD-1 and PDF through PDFR-1, its PDF-onto-NSM
-   link and ingestion drive are drive rows, and every sign is fixed.
+   and both knockouts. Its parts are:
 
-2. **The data against the verified circuit.** A table, `docs/experiments/logbooks/supporting/106-neuromodulator-layer/circuit_agreement.json`,
+   - two fixed couples: serotonin through MOD-1, and PDF through PDFR-1;
+   - one link: PDF onto NSM, tagged to pdfr-1;
+   - one drive: ingestion onto NSM.
+
+2. **The slow variable.** With one ligand's τ set to 540 s at a 1-s step, a stopped release leaves its
+   concentration at 1/e of its start within one step of 540, and a fixed couple's receptor current
+   follows it. This is the layer's job for C.2: holding state for minutes.
+
+3. **The data against the verified circuit.** A table, `docs/experiments/logbooks/supporting/106-neuromodulator-layer/circuit_agreement.json`,
    lists each link the hand-placed circuit verified and whether each source has it:
 
    - NSM releasing serotonin;
@@ -169,16 +194,31 @@ the data layer with a fixed draw of nonzero fitted strengths. The evaluator's de
 
 ### Decision G: N.3, the receptor-placement null
 
-For each receptor gene, the classes expressing it are replaced by classes drawn without replacement
-from the classes of the same size in the connectome. A class is a neuron's name with its left/right
-and numeric suffix removed, as `class_members` does. So:
+**Classes.** `quantumnematode.connectome.neuron_classes` assigns each of the 302 neurons its anatomical
+class by C. elegans naming:
+
+- the numbered ventral-cord classes (AS, DA, DB, DD, VA, VB, VC, VD) drop their digits;
+- other names drop a side suffix (L, R, DL, DR, VL, VR, D, V) only where another name shares the
+  stem. So RMED, RMEV, RMEL and RMER are RME, while AVL stays AVL.
+
+A test requires the 118 classes WormAtlas gives for the hermaphrodite's 302 neurons, and checks named
+examples (OLQ has 4 cells, IL1 6, VD 13, SAB 3).
+
+**The move.** For each receptor gene, its cells are grouped by class, giving k cells of a class of
+size n. Each group moves to a class of the same size n, drawn without replacement among the classes
+of that size, and lands on the same member positions: the k cells take the target class's members in
+the source's order of suffix or digit. So:
 
 - each receptor's class count and cell count are kept exactly;
 - left/right pairs move together;
 - a receptor gene with several ligands keeps one placement across its couples.
 
-Producers, drives and signs are held. A wiring config names the draw by seed:
-`modulator_layer_null: receptor_placement` with `modulator_layer_null_seed`.
+A class whose size is unique (for example VD, 13) can only map to itself. The share of each
+receptor's cells pinned this way is reported in the audit.
+
+Producers, drives and signs are held. A config names the draw by seed, `modulator_layer_null: receptor_placement` with
+`modulator_layer_null_seed`, beside the brain's existing `wiring` options and validated the same
+way.
 
 **What it does not preserve, stated:**
 
@@ -190,7 +230,8 @@ Producers, drives and signs are held. A wiring config names the draw by seed:
 `scripts/analysis/neuromodulator_null_audit.py`, over 64 draws (seeds 7501–7564) against the data
 layer:
 
-- each receptor's cell count (exact by construction);
+- each receptor's cell count (exact by construction), and the share of its cells pinned by a unique
+  class size;
 - the per-neuron receptor load: mean, 99th percentile and maximum, over all couples and over fixed
   couples;
 - the per-neuron fixed-sign balance;
