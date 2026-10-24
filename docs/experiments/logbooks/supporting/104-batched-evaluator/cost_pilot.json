@@ -1,0 +1,268 @@
+{
+  "description": "Batched evaluator against the per-step runner, per core.",
+  "commit": "9316118308bed5771b80d4ef19b2c6a161738862",
+  "machine": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "processor": "arm"
+  },
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "torch": 1
+  },
+  "seeds": {
+    "batched": "5001-5032, repeated to N",
+    "reference": "5001-5008"
+  },
+  "target_us_per_animal_step": 25.0,
+  "results": {
+    "mlp/scheer_lawn": {
+      "steps": 3600,
+      "reference_us_per_animal_step": 253.60745801461033,
+      "batched_us_per_animal_step": {
+        "32": 6.47715205761617,
+        "128": 3.2368278910629065,
+        "256": 2.6472437422045103
+      },
+      "speedup_per_core": 95.8005694645318,
+      "target_met": true,
+      "evaluation_200_s": 1.9060154943872474
+    },
+    "mlp/food_removal_lopezcruz": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 272.4771672445867,
+      "batched_us_per_animal_step": {
+        "32": 7.2099872165751915,
+        "128": 4.1565814889408,
+        "256": 3.6080762925781458
+      },
+      "speedup_per_core": 75.51868229756543,
+      "target_met": true,
+      "evaluation_200_s": 3.8967223959843977
+    },
+    "mlp/food_removal_calhoun": {
+      "steps": 4500,
+      "reference_us_per_animal_step": 246.5442326372593,
+      "batched_us_per_animal_step": {
+        "32": 6.103837382397614,
+        "128": 3.39338787671295,
+        "256": 2.875891456521155
+      },
+      "speedup_per_core": 85.72793388227994,
+      "target_met": true,
+      "evaluation_200_s": 2.588302310869039
+    },
+    "mlp/uniform_lawn_flavell": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 292.6063946775954,
+      "batched_us_per_animal_step": {
+        "32": 8.225088251357967,
+        "128": 4.512671802566965,
+        "256": 3.8371446694159035
+      },
+      "speedup_per_core": 76.25628426517899,
+      "target_met": true,
+      "evaluation_200_s": 4.144116242969176
+    },
+    "connectome/scheer_lawn": {
+      "steps": 3600,
+      "reference_us_per_animal_step": 309.7024189951804,
+      "batched_us_per_animal_step": {
+        "32": 11.951238064082442,
+        "128": 6.96189887144606,
+        "256": 6.058360324408972
+      },
+      "speedup_per_core": 51.11984141111542,
+      "target_met": true,
+      "evaluation_200_s": 4.362019433574459
+    },
+    "connectome/food_removal_lopezcruz": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 332.475396409993,
+      "batched_us_per_animal_step": {
+        "32": 12.181379965180962,
+        "128": 7.648159661483887,
+        "256": 6.850297610678051
+      },
+      "speedup_per_core": 48.53444555339314,
+      "target_met": true,
+      "evaluation_200_s": 7.398321419532295
+    },
+    "connectome/food_removal_calhoun": {
+      "steps": 4500,
+      "reference_us_per_animal_step": 304.0498240863801,
+      "batched_us_per_animal_step": {
+        "32": 11.498148438274965,
+        "128": 7.180156611462331,
+        "256": 6.27658572051991
+      },
+      "speedup_per_core": 48.44191374497705,
+      "target_met": true,
+      "evaluation_200_s": 5.648927148467918
+    },
+    "connectome/uniform_lawn_flavell": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 347.361325230277,
+      "batched_us_per_animal_step": {
+        "32": 13.473861157156838,
+        "128": 8.186018760035815,
+        "256": 7.263256414228602
+      },
+      "speedup_per_core": 47.82446129119189,
+      "target_met": true,
+      "evaluation_200_s": 7.84431692736689
+    },
+    "constant/scheer_lawn": {
+      "steps": 3600,
+      "reference_us_per_animal_step": 134.1026302139249,
+      "batched_us_per_animal_step": {
+        "32": 4.622627317682296,
+        "128": 2.041948784305229,
+        "256": 1.5742122839886483
+      },
+      "speedup_per_core": 85.1871323695578,
+      "target_met": true,
+      "evaluation_200_s": 1.1334328444718267
+    },
+    "constant/food_removal_lopezcruz": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 157.32110627275824,
+      "batched_us_per_animal_step": {
+        "32": 5.014769485569559,
+        "128": 2.7170395080449654,
+        "256": 2.3260036291335213
+      },
+      "speedup_per_core": 67.6357957065455,
+      "target_met": true,
+      "evaluation_200_s": 2.512083919464203
+    },
+    "constant/food_removal_calhoun": {
+      "steps": 4500,
+      "reference_us_per_animal_step": 131.4408761423288,
+      "batched_us_per_animal_step": {
+        "32": 4.131618056110003,
+        "128": 2.1551650764498236,
+        "256": 1.785082031144864
+      },
+      "speedup_per_core": 73.63296131440472,
+      "target_met": true,
+      "evaluation_200_s": 1.6065738280303776
+    },
+    "constant/uniform_lawn_flavell": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 175.17236689821368,
+      "batched_us_per_animal_step": {
+        "32": 6.516230954460937,
+        "128": 3.37913990161151,
+        "256": 2.8359663743955297
+      },
+      "speedup_per_core": 61.76813959423291,
+      "target_met": true,
+      "evaluation_200_s": 3.0628436843471722
+    },
+    "pirouette/scheer_lawn": {
+      "steps": 3600,
+      "reference_us_per_animal_step": 134.52994215185754,
+      "batched_us_per_animal_step": {
+        "32": 4.566522717747527,
+        "128": 2.030934153683322,
+        "256": 1.5516852929269793
+      },
+      "speedup_per_core": 86.69924421213702,
+      "target_met": true,
+      "evaluation_200_s": 1.1172134109074252
+    },
+    "pirouette/food_removal_lopezcruz": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 163.37187499933256,
+      "batched_us_per_animal_step": {
+        "32": 4.8818740335129265,
+        "128": 2.7173889611731283,
+        "256": 2.329698561172538
+      },
+      "speedup_per_core": 70.1257569207183,
+      "target_met": true,
+      "evaluation_200_s": 2.516074446066341
+    },
+    "pirouette/food_removal_calhoun": {
+      "steps": 4500,
+      "reference_us_per_animal_step": 135.0857708344443,
+      "batched_us_per_animal_step": {
+        "32": 4.149232347521724,
+        "128": 2.17155396320676,
+        "256": 1.8199320026421142
+      },
+      "speedup_per_core": 74.22572416899723,
+      "target_met": true,
+      "evaluation_200_s": 1.637938802377903
+    },
+    "pirouette/uniform_lawn_flavell": {
+      "steps": 5400,
+      "reference_us_per_animal_step": 179.17489391510134,
+      "batched_us_per_animal_step": {
+        "32": 6.228653067039515,
+        "128": 3.276901644750507,
+        "256": 2.7706746723870985
+      },
+      "speedup_per_core": 64.66832634692967,
+      "target_met": true,
+      "evaluation_200_s": 2.9923286461780667
+    }
+  },
+  "budget_formula": "one fit = population x generations x sum over assays of a 200-animal evaluation; panel = (1 + null arms x draws per arm) x one fit",
+  "budget_illustration": {
+    "settings": {
+      "population": 20,
+      "generations": 200,
+      "null_arms": 5,
+      "draws_per_arm": [
+        8,
+        16
+      ]
+    },
+    "mlp": {
+      "evaluation_all_assays_s": 12.53515644420986,
+      "one_fit_core_hours": 13.927951604677624,
+      "panel_core_hours": {
+        "8": 571.0460157917826,
+        "16": 1128.1640799788875
+      }
+    },
+    "connectome": {
+      "evaluation_all_assays_s": 25.253584928941564,
+      "one_fit_core_hours": 28.05953880993507,
+      "panel_core_hours": {
+        "8": 1150.4410912073379,
+        "16": 2272.8226436047407
+      }
+    },
+    "constant": {
+      "evaluation_all_assays_s": 8.31493427631358,
+      "one_fit_core_hours": 9.238815862570643,
+      "panel_core_hours": {
+        "8": 378.7914503653964,
+        "16": 748.3440848682221
+      }
+    },
+    "pirouette": {
+      "evaluation_all_assays_s": 8.263555305529735,
+      "one_fit_core_hours": 9.181728117255261,
+      "panel_core_hours": {
+        "8": 376.4508528074657,
+        "16": 743.7199774976762
+      }
+    }
+  },
+  "default_threads_us_per_animal_step_n256": {
+    "mlp/scheer_lawn": 2.6338108538463225,
+    "mlp/food_removal_lopezcruz": 3.6139411828049495,
+    "mlp/food_removal_calhoun": 2.8847602718289838,
+    "mlp/uniform_lawn_flavell": 3.872325303712353,
+    "connectome/scheer_lawn": 6.065317971004132,
+    "connectome/food_removal_lopezcruz": 6.869346908994582,
+    "connectome/food_removal_calhoun": 6.350896881890043,
+    "connectome/uniform_lawn_flavell": 7.345721902580677
+  }
+}
