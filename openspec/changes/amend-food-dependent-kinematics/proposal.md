@@ -17,7 +17,8 @@ That matters for what B grades on a lawn. The roaming/dwelling classifier reads 
 10-s windows. A slow worm whose reversals carry it nearly three times too far is read as roaming more
 often than its runs warrant. On Flavell's uniform lawn, seeds 9001–9064, a slow controller (0.02 mm/s
 runs, reversal hazard 0.05/s) was classified **23.3% roaming with the off-food reversals and 0% with
-on-food ones**. Fast controllers barely moved. C fits controllers against these statistics, so the
+on-food ones**. That first pilot drew on-food durations with the off-food CV (SD 1.33 s), before the
+SD was measured. Task 5.1 re-runs it on the vendored 0.899 s. Fast controllers barely moved. C fits controllers against these statistics, so the
 bias would be fitted into every arm.
 
 The maintainer chose the form on 2026-10-24: **food-dependent kinematics, as its own change landing
@@ -67,8 +68,12 @@ bouts.
   regenerated.
 - **Default behaviour**:
   - Free locomotion is untouched and byte-identical.
-  - Under primitives, a reversal on a lawn changes, with no extra RNG draws: the gamma draw is one
-    call either way, so every random stream stays aligned.
+  - Under primitives, a reversal on a lawn changes. Its gamma is still one call, but a gamma draw's
+    rejection sampler uses a shape-dependent share of the generator's stream. So a seed's later draws
+    shift once a reversal starts on a lawn, and runs under the new default are not comparable draw by
+    draw with earlier ones.
+  - Two guarantees stand: `off_food` is byte-identical to before the option, and the per-step runner
+    and the batched evaluator make the same calls in the same order, so their parity holds.
 - **Committed records**:
   - Logbook 104's cost pilot and calibration, and B.2's simulated detector validation, ran before the
     amendment. They stay records of `reversal_kinematics: off_food`, the setting that reproduces them.

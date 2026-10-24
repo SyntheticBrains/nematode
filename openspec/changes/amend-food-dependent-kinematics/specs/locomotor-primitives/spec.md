@@ -37,8 +37,9 @@ position at the start of the step lies in a lawn's cell footprint, in a phase th
 the cell's density. A bout's kinematics SHALL be fixed when it starts.
 
 Under `reversal_kinematics: off_food` every reversal SHALL draw the off-food entries, and runs SHALL be
-byte-identical to before the option. Either setting SHALL draw the same number of values from the RNG.
-Setting `reversal_kinematics` with `locomotion: free` SHALL be refused.
+byte-identical to before the option. Under either setting, the per-step runner and the batched evaluator
+SHALL make the same RNG calls in the same order. Setting `reversal_kinematics` with `locomotion: free`
+SHALL be refused.
 
 Omega and delta bouts SHALL be unaffected.
 

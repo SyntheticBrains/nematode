@@ -4,7 +4,9 @@
   `kinematics.reversal_duration` and sets its speed to `-kinematics.reversal_speed_mm_per_s`.
   - The per-step environment calls it through `step_primitives`, from `move_agent_primitives`.
   - The batched evaluator calls `_start_bout` directly, from `_start_bouts`.
-  - `GammaDuration.sample` makes one `rng.gamma` call, whatever its parameters.
+  - `GammaDuration.sample` makes one `rng.gamma` call, whatever its parameters. That call's
+    Marsaglia–Tsang rejection loop uses a shape-dependent share of the stream. Checked: 200 draws at
+    the off-food shape (2.36) and the on-food shape (5.18) leave `default_rng(1)` in different states.
 - **"On a lawn" already has one meaning:**
   - Per step: `lawn_field.cell_at(position) is not None`. `lawn_field` is `None` in a phase without
     lawns. It is the same test as `Agent._food_contact`'s, and as the capture's `on_lawn`.
@@ -69,8 +71,14 @@
 
 - **[Records before the amendment differ under the default]** → they name their setting, and
   `off_food` reproduces them exactly. The logbook lists them.
-- **[The positive-control fixtures move]** → E.2's PirouetteHazards positive control runs on lawns.
-  Its test is re-run under the default. If a gate moves, the fixture is re-read under `off_food`, and
-  the new reading is reported beside it.
+- **[The positive-control fixtures]** → E.2's positive control
+  (`test_primitives_positive_control.py`) reads the first step on which the worm reaches the lawn.
+  Every bout before that step starts off food, so its reading cannot move. It runs in the full suite as
+  usual.
+- **[Seeds shift after an on-lawn reversal]** → expected, and stated. No committed record compares runs
+  across the two settings draw by draw.
 - **[Gamma overstates the body by a third of a second]** → it is reported, and smaller than the 1-s
   step's own rounding.
+- **[The on-food speed leans long]** → it is measured over a bout's whole seconds, so bouts that span no
+  whole second (7,258 of 24,890) do not enter it. Tracking noise of a few µm per sample also lengthens the
+  path at 0.07 mm/s. Both are reported in the logbook. Neither changes the speed's order of magnitude.

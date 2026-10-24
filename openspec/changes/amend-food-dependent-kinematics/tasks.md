@@ -23,7 +23,8 @@ food-dependent kinematics, as its own change landing before B.4.
 - [ ] 3.1 `_start_bout` and `step_primitives` take whether the worm is on a lawn. A reversal draws its
   condition's entries, with one gamma draw either way.
 - [ ] 3.2 `continuous.reversal_kinematics: food_dependent | off_food` in `config_loader.py`, passed to
-  the environment's config. Refuse it when explicitly set with free locomotion.
+  the environment's config. Refuse it when explicitly set with free locomotion. Classify it as not
+  step-coupled in `test_step_duration.py`'s `Continuous2DConfig` set.
 - [ ] 3.3 `Continuous2DEnvironment.move_agent_primitives`: on a lawn by `lawn_field.cell_at`, before the
   move.
 - [ ] 3.4 `BatchedEvaluator._start_bouts`: on a lawn by `_cells_under(pos) >= 0`, before the move.
@@ -32,14 +33,15 @@ food-dependent kinematics, as its own change landing before B.4.
 
 - [ ] 4.1 Pin both new entries. A `measured` entry without a record is refused.
 - [ ] 4.2 Reversals forced on a lawn and off every lawn each match their condition, by duration and
-  distance (KS, p > 0.01). A depleted cell draws on-food. A bout crossing the edge keeps its speed.
+  distance (KS, p > 0.01). The existing forced-bout test runs in a 1-km world without lawns, so it
+  covers off food. Add a variant from a lawn's centre, the lawn too large to leave in 2,000 bouts. A depleted cell draws on-food. A bout crossing the edge keeps its speed.
   An assay's no-food phase draws off-food.
 - [ ] 4.3 `off_food` is byte-identical to before the option on a lawn assay, positions and RNG state.
 - [ ] 4.4 The free-locomotion refusal.
 - [ ] 4.5 The batched parity suite passes on the new default. A batched evaluator that ignores the lawn
   fails the trajectory check.
-- [ ] 4.6 E.2's positive control re-run under the default. Any gate that moves is reported beside its
-  `off_food` reading.
+- [ ] 4.6 E.2's positive control runs in the full suite as usual. It reads the first step on the lawn,
+  so it cannot move.
 
 ## 5. The pilot, on the vendored values
 
@@ -49,8 +51,13 @@ food-dependent kinematics, as its own change landing before B.4.
 
 ## 6. Documentation and tracker
 
-- [ ] 6.1 Logbook 108: the disagreement, the form chosen, the gamma's fit, the pilot, and the records
-  that stay under `off_food`.
+- [ ] 6.1 Logbook 108:
+  - the disagreement and the form chosen;
+  - the gamma's fit;
+  - the speed's whole-second measurement and tracking noise;
+  - the pilot, both its first run (SD 1.33 s) and the re-run;
+  - the records that stay under `off_food`;
+  - the stream shift after an on-lawn reversal.
 - [ ] 6.2 The roadmap's D36 row amended and dated. The tracker: E.2's and B.1's amendment notes closed,
   and 9001–9064 added to the seed table as used.
 - [ ] 6.3 AGENTS.md's primitives entry, `docs/usage.md`, `configs/README.md`, and the CHANGELOG.
