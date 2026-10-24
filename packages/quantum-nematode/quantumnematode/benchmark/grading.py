@@ -375,10 +375,24 @@ def _early_late(starts_min: np.ndarray, means: np.ndarray) -> np.ndarray:
 
 
 def _presence(ratios: np.ndarray) -> dict[str, float | bool]:
-    finite = ratios[np.isfinite(ratios)]
-    if len(finite) < len(ratios):
-        return {"lower_bound": math.nan, "present": False}
-    lower = float(np.quantile(finite, PRESENCE_QUANTILE))
+    """Return the early/late ratios' lower bound and whether it exceeds 1.
+
+    A resample with early onsets and no late ones gives +inf, the strongest decline, and stays in
+    the upper tail. An indeterminate 0/0 resample shows no decline, so it is placed below every
+    other value. A bound that cannot be read is no evidence of search.
+    """
+    values = np.where(np.isnan(ratios), -np.inf, np.asarray(ratios, dtype=float))
+    if np.all(np.isfinite(values)):
+        lower = float(np.quantile(values, PRESENCE_QUANTILE))
+    else:
+        # Linear interpolation between order statistics, which stays defined at infinities.
+        ordered = np.sort(values)
+        position = PRESENCE_QUANTILE * (len(ordered) - 1)
+        below, above = ordered[math.floor(position)], ordered[math.ceil(position)]
+        fraction = position - math.floor(position)
+        lower = float(
+            below if below == above or fraction == 0.0 else below + fraction * (above - below),
+        )
     return {"lower_bound": lower, "present": bool(lower > 1.0)}
 
 

@@ -451,6 +451,51 @@ def test_a_flat_population_fails_local_search(monkeypatch: pytest.MonkeyPatch) -
     assert result["lower_bound"] > 1.0
 
 
+def test_no_late_onsets_is_the_strongest_decline() -> None:
+    """+inf draws (early onsets, no late ones) stay in the upper tail; 0/0 draws count as no decline."""
+    finite = np.linspace(1.5, 3.0, 1900)
+    with_inf = g._presence(np.concatenate([finite, np.full(100, np.inf)]))
+    assert with_inf["present"]
+    assert with_inf["lower_bound"] == pytest.approx(
+        float(
+            np.quantile(
+                np.concatenate([finite, np.full(100, np.inf)]),
+                g.PRESENCE_QUANTILE,
+            ),
+        ),
+    )
+    assert g._presence(np.full(2000, np.inf))["present"]
+    indeterminate = g._presence(np.concatenate([finite, np.full(100, np.nan)]))
+    assert not indeterminate["present"]
+    assert indeterminate["lower_bound"] == -math.inf
+    assert not g._presence(np.full(2000, np.nan))["present"]
+
+
+def test_absent_search_fails_local_search_in_a_grading(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With every statistic passing, local search passes only when search is present."""
+    bands = bg.load_bands()
+    populations = {family: [[]] * 200 for family in g.FAMILIES}
+    monkeypatch.setattr(bg, "classifier", lambda _b: None)
+    monkeypatch.setattr(bg, "family_values", lambda _f, _a, _c: {})
+
+    def passing(_values: object, family_bands: dict[str, g.Band], _bar: float) -> object:
+        return {name: g.Reading(0.0, band, 0.0, True) for name, band in family_bands.items()}
+
+    monkeypatch.setattr(bg.g, "grade", passing)
+    for present, expected in ((True, True), (False, False)):
+        monkeypatch.setattr(
+            bg.g,
+            "simulated_search_presence",
+            lambda _a, p=present: {"lower_bound": 2.0 if p else 0.9, "present": p},
+        )
+        result = bg.grade_populations(populations, bands)
+        assert result["family_passes"]["small_lawn"]
+        assert result["family_passes"]["uniform_lawn"]
+        assert result["family_passes"]["local_search"] is expected
+        assert result["wild_type_passes"] is expected
+        assert result["local_search_presence"]["present"] is present
+
+
 def test_the_band_batches_are_present() -> None:
     """Every López-Cruz band batch's presence bound exceeds 1."""
     record = json.loads(bb.RECORD_PATH.read_text())
