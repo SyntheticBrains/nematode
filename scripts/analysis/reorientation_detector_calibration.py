@@ -74,7 +74,9 @@ def _rate(true_positive: int, total: int) -> float:
 
 
 def score(
-    detections: list[np.ndarray], references: list[np.ndarray], tolerance: float,
+    detections: list[np.ndarray],
+    references: list[np.ndarray],
+    tolerance: float,
 ) -> dict[str, float]:
     """Pooled recall, precision and F1 over animals."""
     matched = sum(
@@ -104,13 +106,16 @@ def _roberts(tracks: refs.SearchTracks, rows: list[int]) -> tuple[list[Any], lis
 
 
 def _detect(
-    positions: list[Any], params: ro.DetectorParams, floor: float | None,
+    positions: list[Any],
+    params: ro.DetectorParams,
+    floor: float | None,
 ) -> list[np.ndarray]:
     return [ro.reversal_onsets(x, y, params, floor=floor).astype(float) for x, y in positions]
 
 
 def tune(
-    positions: list[Any], references: list[np.ndarray],
+    positions: list[Any],
+    references: list[np.ndarray],
 ) -> tuple[ro.DetectorParams, list[dict[str, Any]]]:
     """Return the grid's best combination by F1 on the calibration cohorts, and the ranked grid."""
     ranked = []
@@ -123,7 +128,9 @@ def tune(
 
 
 def forward_turn_rate(
-    tracks: refs.SearchTracks, rows: list[int], params: ro.DetectorParams,
+    tracks: refs.SearchTracks,
+    rows: list[int],
+    params: ro.DetectorParams,
 ) -> dict[str, float]:
     """Return detections while the tracker reads forward with no reverse within 2 s, per minute."""
     assert tracks.state is not None  # noqa: S101
@@ -168,7 +175,9 @@ def simulated(params: ro.DetectorParams) -> dict[str, Any]:
     )
     config = load_simulation_config(str(path))
     trajectories = BatchedEvaluator(
-        config, BatchedConstantHazards(0.15, HAZARDS), SIMULATED_SEEDS,
+        config,
+        BatchedConstantHazards(0.15, HAZARDS),
+        SIMULATED_SEEDS,
     ).run()
     reversal = PRIMITIVE_KINDS.index("reversal")
     turns = {PRIMITIVE_KINDS.index(k) for k in ("omega", "delta")}
@@ -255,7 +264,7 @@ def dead(tracks: refs.SearchTracks, params: ro.DetectorParams) -> dict[str, floa
 
 
 def _verdict(value: dict[str, float], gate: dict[str, float]) -> bool:
-    return all(value[k] >= bar for k, bar in gate.items())
+    return bool(all(value[k] >= bar for k, bar in gate.items()))
 
 
 def run() -> dict[str, Any]:
@@ -293,7 +302,7 @@ def run() -> dict[str, Any]:
     gates = {
         "roberts_held_out": held | {"passes": _verdict(held, bar)},
         "roberts_dead": (d := dead(tracks, params))
-        | {"passes": d["per_minute"] <= GATES["roberts_dead_per_min"]},
+        | {"passes": bool(d["per_minute"] <= GATES["roberts_dead_per_min"])},
         "simulated": (s := simulated(params)) | {"passes": _verdict(s, GATES["simulated"])},
         "scheer_held_out_on_food": (h := scheer(params))
         | {"passes": _verdict(h, GATES["scheer_held_out_on_food"])},

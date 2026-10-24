@@ -1,4 +1,13 @@
-## ADDED Requirements
+# benchmark-readouts Specification
+
+## Purpose
+
+The benchmark's trajectory readouts, read alike from real and simulated 1-s tracks: a reversal-onset
+detector tuned on Roberts 2016 and gated on held-out real and simulated tracks, used off food only;
+the local-search curve and López-Cruz 2019's decay reference; the classifier's 1-s path; and the
+dC/dt quintile ratio with its digitised Pierce-Shimomura 1999 reference.
+
+## Requirements
 
 ### Requirement: Reversal onsets from positions alone
 
@@ -58,6 +67,17 @@ NOT register on the detector until the maintainer decides.
 
 - **WHEN** the detector reads Roberts's dead-worm tracks
 - **THEN** it SHALL report detected onsets per minute against the 0.1 gate
+
+### Requirement: The detector is used off food only
+
+Having failed Scheer's on-food gate (recall 0.426 and precision 0.455 against 0.50) while passing every
+off-food one, the detector SHALL be applied only to off-food readouts. Benchmark statistics on a lawn
+SHALL NOT be built from its onset counts.
+
+#### Scenario: An on-lawn statistic
+
+- **WHEN** B.3 registers a statistic graded on a lawn
+- **THEN** it SHALL use the roaming/dwelling classifier or lawn statistics, not the detector's onsets
 
 ### Requirement: The local-search curve and its decay
 

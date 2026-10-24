@@ -141,6 +141,18 @@ simulated tracks go through the same detector, so its misses are shared, and the
 simulated, Scheer and Calhoun gates still guard what it counts. This is the one registered retry; a
 second failure goes back to the maintainer.
 
+**Read 2026-10-24, and scoped by the maintainer.** On the retry, every off-food gate passed:
+
+- Roberts held-out: recall 0.658 and precision 0.716;
+- simulated: 0.871 and 0.920;
+- Calhoun: recall 0.532 and ρ 0.665;
+- the dead worms: no detections.
+
+Scheer's on-food gate failed, at recall 0.426 and precision 0.455 against 0.50. **The detector is
+registered for off-food readouts only**: the local-search curve, and the quintile ratio on off-food
+captures. The Scheer result is its on-food limit. B.3 grades on-lawn behaviour through the
+roaming/dwelling classifier and lawn statistics, never through on-food reversal counts.
+
 **Forward turns, described.** Two false-positive rates are reported beside the gates:
 
 - on Roberts's held-out cohorts, detections while the tracker reads forward with no reverse state

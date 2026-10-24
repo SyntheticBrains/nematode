@@ -6,6 +6,11 @@ This directory contains published C. elegans chemotaxis data for validating simu
 
 - `literature_ci_values.json` - Published chemotaxis index (CI) values from peer-reviewed literature
 
+`pierce_shimomura1999_pirouettes.json` holds the pirouette initiation rate against dC/dt, digitised
+from Pierce-Shimomura et al. 1999's Figure 8 (biotin and NH4Cl), with the method, the axis
+calibration, and the reference ratio for the benchmark's dC/dt quintile ratio (2.26–2.58). It was
+digitised with `scripts/analysis/pierce_shimomura_digitise.py`; the paper's PDF is not vendored.
+
 ## Chemotaxis Index (CI)
 
 The chemotaxis index is the standard metric in C. elegans research for quantifying attraction/avoidance behavior:

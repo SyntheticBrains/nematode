@@ -3,10 +3,13 @@
 Every readout takes positions sampled each second, never a primitive label, posture or a source's
 own flag:
 
-- :func:`reversal_onsets` finds reorientations that begin with a reversal: a step that turns back
-  against the track's recent heading, moves at least a minimum distance and, with ``retrace`` on,
-  brings the worm back toward where it was. The minimum distance is relative to the track's own
-  median step, with an absolute floor where the units are mm, so pixels and millimetres read alike.
+- :func:`reversal_onsets` finds reorientations that begin with a reversal, off food. Validated
+  against real and simulated off-food tracks, it misses most reversals on a lawn, where they are
+  short and slow (recall 0.43 against Scheer's on-food reversal flags), so lawn statistics are not
+  built from it. An onset is a step that turns back against the track's recent heading, moves at
+  least a minimum distance and, with ``retrace`` on, heads back toward where the worm was. The
+  minimum distance is relative to the track's own median step, with an absolute floor where the
+  units are mm, so pixels and millimetres read alike.
 - :func:`reference_onsets` turns a source's per-frame reverse label into onset times, by one bout
   rule.
 - :func:`match_onsets` pairs detected and reference onsets within a tolerance.

@@ -104,3 +104,51 @@ def test_units_cancel_in_the_quintile_ratio() -> None:
     ratio = ro.quintile_ratio([onsets], [dcdt], [present])
     assert ratio == ro.quintile_ratio([onsets], [dcdt * 1e-3], [present])
     assert ratio > 2.0
+
+
+def test_a_simulated_one_second_capture_classifies_through_the_five_second_path() -> None:
+    """Covers "A simulated 1-s capture": classified at 1 s, it gives the 5-s capture's states.
+
+    On Flavell's uniform lawn the worm is always on food, so the two differ only in how the
+    positions are sampled, which ``downsample_to_reference`` makes the same.
+    """
+    import sys
+    from dataclasses import replace
+    from pathlib import Path
+
+    import quantumnematode.brain  # noqa: F401
+    from quantumnematode.env.hazard_controllers import PirouetteHazards  # noqa: F401
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedPirouetteHazards
+    from quantumnematode.utils.config_loader import load_simulation_config
+    from quantumnematode.validation import roaming_dwelling as rd
+
+    repo = Path(__file__).resolve().parents[5]
+    sys.path.insert(0, str(repo / "scripts" / "analysis"))
+    import lawn_states as ls  # pyright: ignore[reportMissingImports]
+
+    path = (
+        repo
+        / "configs/scenarios/foraging"
+        / (
+            "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives"
+            "_assay_uniform_lawn_flavell.yml"
+        )
+    )
+    config = load_simulation_config(str(path)).model_copy(update={"max_steps": 601})
+    trajectories = BatchedEvaluator(
+        config,
+        BatchedPirouetteHazards(0.15, (0.02, 0.01, 0.01), beta=3.0),
+        [7601],
+    ).run()
+    steps = trajectories.to_behaviour_steps(0)
+    assert config.environment is not None
+    assert config.environment.foraging is not None
+    lawns = config.environment.foraging.lawns
+    assert lawns is not None
+    classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm())
+    one = ls.episode_windows(steps, classifier, lawns.intake_fraction, 1.0, step_seconds=1.0)
+    every_fifth = [replace(s, step=k) for k, s in enumerate(steps[::5])]
+    five = ls.episode_windows(every_fifth, classifier, lawns.intake_fraction, 1.0, step_seconds=5.0)
+    assert np.array_equal(one.states, five.states)
+    assert (one.states != rd.OFF_FOOD).all()

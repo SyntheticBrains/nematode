@@ -176,3 +176,17 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
   dates). tax-4 and tph-1 are absent.
 - **Command:** `uv run --with xlrd python scripts/analysis/extract_benchmark_references.py lopezcruz --xls CompleteForagingAssayData.xls --out data/benchmark/lopezcruz2019_reorientations.json`
   (`xlrd` reads the legacy `.xls`; the project does not depend on it).
+
+## `lopezcruz2019_reference.json`
+
+- **What it is:** the local-search reference, fitted from `lopezcruz2019_reorientations.json` (SHA-256
+  `3a8b42babbb75f39abaea216b480cd18acf053ff047f2aa77d56c906e584d6b7`) by `scripts/analysis/local_search_reference.py`. It is derived from López-Cruz et al. 2019,
+  so carries that deposit's licence. **Licence:** CC BY 4.0.
+- **Time zero:** food removal. The deposited bins are recording time, which began 4 min after removal,
+  so a bin labelled \[a, a + 2) min covers \[a + 4, a + 6) min after removal.
+- **The fit:** alpha * exp(-gamma * (t - t0)) + beta by least squares on the Fig. 1C wild type's bin
+  means (row 3, n = 413), over recording 4–40 min (8–44 min after removal, 18 bins). It starts at the
+  wild type's peak bin, with t0 = 9 min. gamma = 0.114 per min, with a 95% interval of [0.101, 0.127]
+  from a parametric bootstrap over the bins' mean and SEM (2,000 resamples, seed 107).
+- **Described beside it:** starting one bin earlier gives gamma 0.087, one bin later 0.138; pdfr-1
+  (row 91) gives 0.143 against 0.184 for its same-dates wild type (row 90).

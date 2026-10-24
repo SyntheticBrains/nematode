@@ -1,0 +1,271 @@
+{
+ "description": "Tune the reversal-onset detector on Roberts 2016 and read every gate once.",
+ "split": {
+  "seed": 2028,
+  "calibrate": [
+   "C15",
+   "C162",
+   "C57"
+  ],
+  "validate": [
+   "C186",
+   "C21"
+  ]
+ },
+ "grid": {
+  "theta_deg": [
+   90.0,
+   105.0,
+   120.0,
+   135.0,
+   150.0
+  ],
+  "window_s": [
+   2,
+   3,
+   5
+  ],
+  "kappa": [
+   0.1,
+   0.25,
+   0.5
+  ],
+  "refractory_s": [
+   2,
+   3,
+   5
+  ],
+  "retrace": [
+   false,
+   true
+  ]
+ },
+ "gates": {
+  "roberts_held_out": {
+   "recall": 0.55,
+   "precision": 0.6
+  },
+  "roberts_dead_per_min": 0.1,
+  "simulated": {
+   "recall": 0.8,
+   "precision": 0.8
+  },
+  "scheer_held_out_on_food": {
+   "recall": 0.5,
+   "precision": 0.5
+  },
+  "calhoun": {
+   "recall": 0.5,
+   "spearman": 0.5
+  }
+ },
+ "chosen": {
+  "theta_deg": 135.0,
+  "window_s": 3,
+  "kappa": 0.25,
+  "refractory_s": 5,
+  "retrace": false
+ },
+ "in_sample": {
+  "recall": 0.6224328593996841,
+  "precision": 0.6784330606973741,
+  "f1": 0.6492276004119465,
+  "reference": 2532,
+  "detected": 2323
+ },
+ "top_10": [
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": false
+   },
+   "recall": 0.6224328593996841,
+   "precision": 0.6784330606973741,
+   "f1": 0.6492276004119465,
+   "reference": 2532,
+   "detected": 2323
+  },
+  {
+   "params": {
+    "theta_deg": 90.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6204581358609794,
+   "precision": 0.6786177105831533,
+   "f1": 0.6482360222818238,
+   "reference": 2532,
+   "detected": 2315
+  },
+  {
+   "params": {
+    "theta_deg": 105.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6196682464454977,
+   "precision": 0.6780466724286949,
+   "f1": 0.647544366487825,
+   "reference": 2532,
+   "detected": 2314
+  },
+  {
+   "params": {
+    "theta_deg": 120.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6196682464454977,
+   "precision": 0.6780466724286949,
+   "f1": 0.647544366487825,
+   "reference": 2532,
+   "detected": 2314
+  },
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": false
+   },
+   "recall": 0.6109794628751974,
+   "precision": 0.6866400355082113,
+   "f1": 0.6466039707419017,
+   "reference": 2532,
+   "detected": 2253
+  },
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 3,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6184834123222749,
+   "precision": 0.6773356401384083,
+   "f1": 0.6465730800990916,
+   "reference": 2532,
+   "detected": 2312
+  },
+  {
+   "params": {
+    "theta_deg": 90.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6050552922590837,
+   "precision": 0.6863799283154122,
+   "f1": 0.6431570109151973,
+   "reference": 2532,
+   "detected": 2232
+  },
+  {
+   "params": {
+    "theta_deg": 105.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6050552922590837,
+   "precision": 0.6863799283154122,
+   "f1": 0.6431570109151973,
+   "reference": 2532,
+   "detected": 2232
+  },
+  {
+   "params": {
+    "theta_deg": 120.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6050552922590837,
+   "precision": 0.6863799283154122,
+   "f1": 0.6431570109151973,
+   "reference": 2532,
+   "detected": 2232
+  },
+  {
+   "params": {
+    "theta_deg": 135.0,
+    "window_s": 5,
+    "kappa": 0.25,
+    "refractory_s": 5,
+    "retrace": true
+   },
+   "recall": 0.6038704581358609,
+   "precision": 0.6868823000898473,
+   "f1": 0.6427070197562,
+   "reference": 2532,
+   "detected": 2226
+  }
+ ],
+ "preflight": "passed",
+ "results": {
+  "roberts_held_out": {
+   "recall": 0.6578947368421053,
+   "precision": 0.7158590308370044,
+   "f1": 0.6856540084388186,
+   "reference": 1482,
+   "detected": 1362,
+   "passes": true
+  },
+  "roberts_dead": {
+   "onsets": 0,
+   "minutes": 4.2,
+   "per_minute": 0.0,
+   "passes": true
+  },
+  "simulated": {
+   "recall": 0.8712765957446809,
+   "precision": 0.9198801946836391,
+   "f1": 0.8949189582953925,
+   "reference": 2820,
+   "detected": 2671,
+   "forward_turn_bouts": 2791,
+   "forward_turns_detected": 184,
+   "forward_turn_share": 0.06592619132927266,
+   "passes": true
+  },
+  "scheer_held_out_on_food": {
+   "recall": 0.42637962719873984,
+   "precision": 0.45503143596812695,
+   "f1": 0.44023984299608576,
+   "reference": 95225,
+   "detected": 89229,
+   "animals": 573,
+   "passes": false
+  },
+  "calhoun": {
+   "recall": 0.5317965023847376,
+   "precision": 0.9,
+   "f1": 0.6685542971352432,
+   "reference": 3774,
+   "detected": 2230,
+   "spearman": 0.6654717853839038,
+   "passes": true
+  }
+ },
+ "forward_turns_roberts_held_out": {
+  "forward_detections": 110,
+  "detections": 1362,
+  "per_minute": 0.2660617343068204,
+  "share": 0.08076358296622614
+ },
+ "all_gates_pass": false
+}
