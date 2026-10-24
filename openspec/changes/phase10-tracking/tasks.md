@@ -117,9 +117,37 @@ nothing in W registers before C.2 has read.
     maintainer's choice, the first parameter to revisit if dwelling or leaving statistics fail every
     controller.
 
-- [ ] **T.1 The batched evaluator**, about 8–12 engineering days: many animals per call, no per-step
+- [x] **T.1 The batched evaluator**, about 8–12 engineering days: many animals per call, no per-step
   Python, carrying E.2's primitives and E.3's assays. A parity test against the per-step runner, and
   a cost pilot (seeds 5001–5032) that sizes W.
+
+  *(Closed 2026-10-24, change `add-batched-evaluator`, archived as `2026-10-24-add-batched-evaluator`;
+  [Logbook 104](../../../docs/experiments/logbooks/104-batched-evaluator.md).)*
+
+  - `quantumnematode/evaluation/`: `BatchedEvaluator` and four controllers, with per-animal streams.
+
+  - **Parity** in three layers:
+
+    - state within 1e-5 over 50 steps;
+    - bouts exact over 300 steps, positions within 1e-3 over 150;
+    - full-assay statistics with no detected bias, Bonferroni-corrected over the twenty checks after
+      the per-check 95% rule false-alarmed on CI (6 of 12 null bands failed it, none fail the
+      corrected rule).
+
+    Two deliberate faults were caught.
+
+  - **Cost pilot**, per core at 256 animals, on seeds 5001–5032:
+
+    - MLP: 2.6–3.8 µs per animal-step (77–98×);
+    - connectome: 6.1–7.3 µs (48–52×);
+    - hazard rules: 1.6–2.8 µs.
+
+    One 200-animal evaluation over all four assays, timed at N = 200, takes 13 s on the MLP and 27 s
+    on the connectome.
+
+  - **W's sizing inputs:** panel cost = (1 + null arms × draws) × population × generations × 27 s. At
+    20 × 200, 5 arms and 8–16 draws, that is 1,210–2,390 core-hours. Default threads speed the
+    connectome by about 15% on up to 18 threads, so the fits parallelise by process.
 
 ## B — the benchmark (MUST; the gate for everything after)
 
