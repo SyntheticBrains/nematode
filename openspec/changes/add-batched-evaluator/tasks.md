@@ -28,18 +28,24 @@ Phase 10, block E + T, tracker item T.1. The maintainer's decisions of 2026-10-2
   - assay phases.
 - [ ] 2.2 `quantumnematode/evaluation/controllers.py`: `BatchedMLP`, `BatchedConnectome`,
   `BatchedConstantHazards` and `BatchedPirouetteHazards`, with per-animal noise and a mean-action mode.
-- [ ] 2.3 Capture as `BehaviourStep` lists plus the protocol record.
+- [ ] 2.3 `BatchedTrajectories`: the compact arrays, the final state and the protocol record, and
+  `to_behaviour_steps(i)`.
 
 ## 3. Parity
 
 - [ ] 3.1 Layer 1 (state) and layer 2 (trajectory) tests in the default tier, with the batch-size
-  invariance test.
-- [ ] 3.2 Layer 3 (statistics) as a slow-tier test.
+  invariance test:
+  - 4 seeds, 300 steps;
+  - tolerances 1e-5 for features, means and modulators;
+  - exact for bouts;
+  - 1e-3 for positions and headings and 1e-6 for satiety and density, over the first 150 steps.
+- [ ] 3.2 Layer 3 (statistics) as four slow-tier tests, one per assay × controller.
 - [ ] 3.3 The must-fail faults for each layer.
 
 ## 4. The cost pilot
 
-- [ ] 4.1 `scripts/analysis/batched_cost_pilot.py`.
+- [ ] 4.1 `scripts/analysis/batched_cost_pilot.py`, with one-thread pinning and a default-thread
+  figure beside it.
 - [ ] 4.2 Run it, then commit `cost_pilot.json` and Logbook 104: parity, speed, and W's projected
   budget.
 

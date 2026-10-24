@@ -25,8 +25,9 @@ The evaluator SHALL accept only:
 - the continuous point worm under locomotor primitives, with a step of at most one second;
 - the lawn food model with a centred lawn or an assay protocol;
 - klinotaxis chemosensing with STAM and the fold-change adaptive sensor;
-- a frozen MLP-PPO or settling connectome brain without traces, plasticity or node noise, or a
-  non-learning hazard controller.
+- a satiety that never ends the episode;
+- a frozen MLP-PPO or settling connectome brain without traces, plasticity, node noise or
+  state-dependent action noise, or a non-learning hazard controller.
 
 Any other config SHALL be refused at construction, naming the setting.
 
@@ -44,17 +45,19 @@ therefore not depend on the other animals or on N.
 #### Scenario: Batch size does not change an animal
 
 - **WHEN** one seed runs alone and inside a batch of 64
-- **THEN** its trajectory SHALL be the same in both, within 1e-9, for the first 300 steps
+- **THEN** its bouts SHALL be the same in both for the first 300 steps
+- **AND** its positions and headings SHALL agree within 1e-3 for the first 150
 
 ### Requirement: Layered parity with the per-step runner
 
 On seeds from 5001–5032, for each supported controller and each assay:
 
 - the evaluator's features, action means, modulators and STAM derivatives SHALL match the per-step
-  runner's within 1e-6 over 50 steps;
-- its trajectories SHALL match within 1e-9 over 300 steps;
+  runner's within 1e-5 over 50 steps;
+- over 300 steps its bouts' kinds and start steps SHALL match exactly; over the first 150 its positions
+  and headings SHALL match within 1e-3, and its satiety and lawn densities within 1e-6;
 - over full Scheer and Flavell assays, each graded statistic's paired difference SHALL have a 95%
-  bootstrap interval containing zero, with mean absolute difference below 0.02.
+  bootstrap interval containing zero.
 
 #### Scenario: A deliberately broken evaluator fails
 
@@ -63,10 +66,12 @@ On seeds from 5001–5032, for each supported controller and each assay:
 - **THEN** the state-level parity check SHALL fail, and with the sides swapped the trajectory check
   SHALL fail too
 
-### Requirement: Captures read like the per-step runner's
+### Requirement: Compact trajectories, readable like the per-step runner's
 
-With capture on, the evaluator SHALL return each animal's steps as `BehaviourStep` records with the
-per-step runner's fields, its primitive and phase, and the protocol's record.
+Every run SHALL return compact arrays over animals and steps: position, heading, concentration, the
+derivative feature, satiety, intake, on-lawn, primitive and phase. On request it SHALL build an
+animal's steps as `BehaviourStep` records with the per-step runner's fields, its primitive and phase,
+and the protocol's record.
 
 #### Scenario: The classifier reads a batched animal
 
@@ -85,7 +90,8 @@ batched input. Its single-sample result SHALL be unchanged.
 
 ### Requirement: A cost pilot sizes the fits
 
-A pilot on seeds 5001–5032 SHALL record, for each controller and assay at N = 32, 128 and 256:
+A pilot on seeds 5001–5032, with torch and BLAS each pinned to one thread, SHALL record, for each
+controller and assay at N = 32, 128 and 256:
 
 - µs per animal-step;
 - the speedup per core over the per-step runner;

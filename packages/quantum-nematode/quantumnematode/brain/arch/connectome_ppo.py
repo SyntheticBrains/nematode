@@ -2010,6 +2010,20 @@ class ConnectomeTopology(nn.Module):
             float(h.index_select(-1, self._pdf_release_indices).clamp_min(0.0).mean()),
         )
 
+    def modulator_release_batched(self, h: torch.Tensor) -> torch.Tensor:
+        """Return each row's release ``(B, 2)`` from settled rates ``(B, N)``, row by row.
+
+        Each row's serotonin and PDF release is the mean of its own release cells' positive rates,
+        as :meth:`modulator_release` computes it for one state.
+        """
+        return torch.stack(
+            [
+                h.index_select(-1, self._serotonin_release_indices).clamp_min(0.0).mean(-1),
+                h.index_select(-1, self._pdf_release_indices).clamp_min(0.0).mean(-1),
+            ],
+            dim=-1,
+        )
+
     def _build_ohmic(self, device: torch.device) -> None:
         """Precompute the ohmic operator ``(I + L)^-1`` from the fixed gap matrix.
 
