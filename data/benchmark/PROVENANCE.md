@@ -190,3 +190,38 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
   from a parametric bootstrap over the bins' mean and SEM (2,000 resamples, seed 107).
 - **Described beside it:** starting one bin earlier gives gamma 0.087, one bin later 0.138; pdfr-1
   (row 91) gives 0.143 against 0.184 for its same-dates wild type (row 90).
+
+## `classifier.json`
+
+- **Derived by** `scripts/analysis/benchmark_classifier.py` from `scheer2023_tracks.npz`, on band
+  cohorts only. It is the benchmark's roaming/dwelling model:
+  - a two-state Gaussian HMM on each 10-s window's log speed and angular speed, read from 1-s
+    positions at 5 s;
+  - fitted against Scheer & Bargmann's own labels on two thirds of the OD 2 wild type's band dates
+    (seed 2029), and gated at Cohen's κ ≥ 0.6 on the other third;
+  - the file holds the split, the gate's reading and the parameters.
+- **Licence:** CC0-1.0, as its source.
+- **Checksum:** SHA-256 `9c5d29e06cf42eae233219edc5cda3a3e0ee270252c44687de7d6718fef4d557` as written. Its inputs' deposits are checked by
+  MD5 above.
+
+## `lopezcruz2019_split.json`
+
+- **Derived by** `scripts/analysis/benchmark_bands.py` from `lopezcruz2019_reorientations.json`.
+  López-Cruz 2019's wild-type batches, one per distinct date string among the `wt` rows, are split
+  a third held out (seed 2031). pdfr-1's same-date control batch is kept in the bands.
+- **Licence:** CC BY 4.0, as its source (Mendeley 10.17632/prdtw5jgcd.1).
+- **Checksum:** SHA-256 `da2d4a6144ce2072f2a0d352c97a7e7eb1dd6b98a53c4e915ff0b1c3d9428315` as written.
+
+## `bands.json`
+
+- **Derived by** `scripts/analysis/benchmark_bands.py` from the files above, reading band cohorts and
+  band batches only. It holds every graded statistic's centre and scale at populations of 64 and
+  200, the families, the bars, the weights, and the rule for W's minimum.
+  - Scheer's arms use a cluster bootstrap over band dates (seed 2030). Each scale holds the centre's
+    own uncertainty and a calibration factor measured on band-date half-splits (seed 2033).
+  - López-Cruz's band uses a Student-t prediction interval over its band batches.
+  - The rule's own checks on band data (seed 2034) are recorded in
+    `docs/experiments/logbooks/supporting/109-benchmark-grading/bands_record.json`.
+- **Licence:** CC0-1.0 for the parts from Scheer & Bargmann, and CC BY 4.0 for the parts from
+  López-Cruz et al.
+- **Checksum:** SHA-256 `74ba6aaacdf588473d6c2f36f8c9ccb4fef3417646c0cfed6ba71a2850e74c74` as written.

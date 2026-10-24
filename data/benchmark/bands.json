@@ -1,0 +1,380 @@
+{
+  "description": "The benchmark's bands, from band cohorts and band batches only.",
+  "classifier": "data/benchmark/classifier.json",
+  "sizes": [
+    64,
+    200
+  ],
+  "families": {
+    "small_lawn": [
+      "roaming_fraction",
+      "roaming_bout_s",
+      "dwelling_bout_s",
+      "exits_per_on_lawn_hour",
+      "pre_exit_enrichment",
+      "time_on_lawn"
+    ],
+    "uniform_lawn": [
+      "roaming_fraction",
+      "roaming_bout_s",
+      "dwelling_bout_s"
+    ],
+    "local_search": [
+      "gamma_per_min",
+      "early_late_ratio"
+    ]
+  },
+  "fit_families": [
+    "small_lawn",
+    "uniform_lawn"
+  ],
+  "z_cap": 10.0,
+  "bars": {
+    "wild_type": 2.8375969129437877,
+    "tph-1": 2.2414027276049464,
+    "pdfr-1": 2.4977054744123737,
+    "tax-4": 2.2414027276049464
+  },
+  "weights": {
+    "small_lawn/roaming_fraction": 0.05555555555555555,
+    "small_lawn/roaming_bout_s": 0.05555555555555555,
+    "small_lawn/dwelling_bout_s": 0.05555555555555555,
+    "small_lawn/exits_per_on_lawn_hour": 0.05555555555555555,
+    "small_lawn/pre_exit_enrichment": 0.05555555555555555,
+    "small_lawn/time_on_lawn": 0.05555555555555555,
+    "uniform_lawn/roaming_fraction": 0.1111111111111111,
+    "uniform_lawn/roaming_bout_s": 0.1111111111111111,
+    "uniform_lawn/dwelling_bout_s": 0.1111111111111111,
+    "local_search/gamma_per_min": 0.16666666666666666,
+    "local_search/early_late_ratio": 0.16666666666666666
+  },
+  "fit_weights": {
+    "small_lawn/roaming_fraction": 0.08333333333333333,
+    "small_lawn/roaming_bout_s": 0.08333333333333333,
+    "small_lawn/dwelling_bout_s": 0.08333333333333333,
+    "small_lawn/exits_per_on_lawn_hour": 0.08333333333333333,
+    "small_lawn/pre_exit_enrichment": 0.08333333333333333,
+    "small_lawn/time_on_lawn": 0.08333333333333333,
+    "uniform_lawn/roaming_fraction": 0.16666666666666666,
+    "uniform_lawn/roaming_bout_s": 0.16666666666666666,
+    "uniform_lawn/dwelling_bout_s": 0.16666666666666666
+  },
+  "arms": {
+    "small_lawn": {
+      "arm": "PD1074_od2_Data",
+      "band_dates": 41,
+      "animals": 1013
+    },
+    "uniform_lawn": {
+      "arm": "PD1074_od2_uniformlawn_Data",
+      "band_dates": 2,
+      "animals": 69,
+      "inflated_to": "small_lawn"
+    },
+    "local_search": {
+      "source": "L\u00f3pez-Cruz et al. 2019 wild-type batches",
+      "band_batches": [
+        "012217_012517",
+        "022216_022516",
+        "022415_022715",
+        "030215_030515",
+        "040715_041015",
+        "042417_042617",
+        "042915_050815",
+        "070115_071015",
+        "070315_071015",
+        "072218_072518",
+        "081116_081416",
+        "121316_121616",
+        "_071018",
+        "_072018",
+        "_072718",
+        "_080517",
+        "_081518"
+      ]
+    },
+    "mutants": {
+      "tph-1": {
+        "arm": "MT15434_tph1mg280_od2_Data",
+        "control": "N2_od2_Data",
+        "paired_band_dates": [
+          20190315,
+          20190318,
+          20190319
+        ]
+      },
+      "pdfr-1": {
+        "arm": "CX14295_pdfr1ok3425_od2_Data",
+        "control": "PD1074_od2_Data",
+        "paired_band_dates": [
+          20210423,
+          20210424,
+          20210913,
+          20210914,
+          20220208,
+          20220211,
+          20220308,
+          20220309
+        ]
+      },
+      "tax-4": {
+        "arm": "CX13078_tax4p678_od2_Data",
+        "control": "PD1074_od2_Data",
+        "paired_band_dates": [
+          20210427,
+          20220216,
+          20220311,
+          20220321,
+          20220524,
+          20220525,
+          20220614,
+          20220620,
+          20220909,
+          20220912,
+          20220913
+        ]
+      }
+    }
+  },
+  "bands": {
+    "64": {
+      "small_lawn": {
+        "roaming_fraction": {
+          "centre": 0.1693625364393881,
+          "scale": 0.05979470518246039,
+          "inflated": false
+        },
+        "roaming_bout_s": {
+          "centre": 216.66666666666666,
+          "scale": 37.72255649331343,
+          "inflated": false
+        },
+        "dwelling_bout_s": {
+          "centre": 1067.927031509121,
+          "scale": 415.57509026431387,
+          "inflated": false
+        },
+        "exits_per_on_lawn_hour": {
+          "centre": 0.7104713257487811,
+          "scale": 0.32896636734060875,
+          "inflated": false
+        },
+        "pre_exit_enrichment": {
+          "centre": 0.29533931414320275,
+          "scale": 0.11695878810117913,
+          "inflated": false
+        },
+        "time_on_lawn": {
+          "centre": 0.9781185208237833,
+          "scale": 0.010350371601715244,
+          "inflated": false
+        }
+      },
+      "uniform_lawn": {
+        "roaming_fraction": {
+          "centre": 0.21302061713020617,
+          "scale": 0.11118604306430097,
+          "inflated": false
+        },
+        "roaming_bout_s": {
+          "centre": 327.5531914893617,
+          "scale": 37.72255649331343,
+          "inflated": true
+        },
+        "dwelling_bout_s": {
+          "centre": 1263.888888888889,
+          "scale": 677.0669979938374,
+          "inflated": false
+        }
+      },
+      "local_search": {
+        "gamma_per_min": {
+          "centre": 0.10842435606485114,
+          "scale": 0.040354698428154416,
+          "inflated": false
+        },
+        "early_late_ratio": {
+          "centre": 4.21212558753302,
+          "scale": 1.6209027270629235,
+          "inflated": false
+        }
+      },
+      "mutants": {
+        "tph-1": {
+          "roaming_fraction": {
+            "centre": 0.2704930014985987,
+            "scale": 0.08456248302713629,
+            "inflated": true,
+            "direction": 1
+          },
+          "exits_per_on_lawn_hour": {
+            "centre": 0.0720489574793502,
+            "scale": 0.4652286982576985,
+            "inflated": true,
+            "direction": 0
+          }
+        },
+        "pdfr-1": {
+          "roaming_fraction": {
+            "centre": -0.05290278858834917,
+            "scale": 0.06860410244071123,
+            "inflated": false,
+            "direction": 0
+          },
+          "exits_per_on_lawn_hour": {
+            "centre": 0.040559126252865285,
+            "scale": 0.38884283551865584,
+            "inflated": false,
+            "direction": 0
+          },
+          "gamma_per_min": {
+            "centre": -0.040250581742478864,
+            "scale": 0.0570701618225722,
+            "inflated": true,
+            "direction": 0
+          },
+          "early_late_ratio": {
+            "centre": -0.288926066969843,
+            "scale": 2.292302619899922,
+            "inflated": true,
+            "direction": 0
+          }
+        },
+        "tax-4": {
+          "roaming_fraction": {
+            "centre": -0.11605880685237357,
+            "scale": 0.06269447253920747,
+            "inflated": false,
+            "direction": 0
+          },
+          "exits_per_on_lawn_hour": {
+            "centre": 0.30577071242499354,
+            "scale": 0.5519106152875146,
+            "inflated": false,
+            "direction": 0
+          }
+        }
+      }
+    },
+    "200": {
+      "small_lawn": {
+        "roaming_fraction": {
+          "centre": 0.1693625364393881,
+          "scale": 0.036587324605229954,
+          "inflated": false
+        },
+        "roaming_bout_s": {
+          "centre": 216.66666666666666,
+          "scale": 22.14982969266455,
+          "inflated": false
+        },
+        "dwelling_bout_s": {
+          "centre": 1067.927031509121,
+          "scale": 228.6330776313089,
+          "inflated": false
+        },
+        "exits_per_on_lawn_hour": {
+          "centre": 0.7104713257487811,
+          "scale": 0.19956169356999795,
+          "inflated": false
+        },
+        "pre_exit_enrichment": {
+          "centre": 0.29533931414320275,
+          "scale": 0.07021595632656717,
+          "inflated": false
+        },
+        "time_on_lawn": {
+          "centre": 0.9781185208237833,
+          "scale": 0.006059164841756288,
+          "inflated": false
+        }
+      },
+      "uniform_lawn": {
+        "roaming_fraction": {
+          "centre": 0.21302061713020617,
+          "scale": 0.08881138688685568,
+          "inflated": false
+        },
+        "roaming_bout_s": {
+          "centre": 327.5531914893617,
+          "scale": 28.240308269174697,
+          "inflated": false
+        },
+        "dwelling_bout_s": {
+          "centre": 1263.888888888889,
+          "scale": 544.034136494702,
+          "inflated": false
+        }
+      },
+      "local_search": {
+        "gamma_per_min": {
+          "centre": 0.10842435606485114,
+          "scale": 0.040354698428154416,
+          "inflated": false
+        },
+        "early_late_ratio": {
+          "centre": 4.21212558753302,
+          "scale": 1.6209027270629235,
+          "inflated": false
+        }
+      },
+      "mutants": {
+        "tph-1": {
+          "roaming_fraction": {
+            "centre": 0.2704930014985987,
+            "scale": 0.05174229066766305,
+            "inflated": true,
+            "direction": 1
+          },
+          "exits_per_on_lawn_hour": {
+            "centre": 0.0720489574793502,
+            "scale": 0.2822228535768348,
+            "inflated": true,
+            "direction": 0
+          }
+        },
+        "pdfr-1": {
+          "roaming_fraction": {
+            "centre": -0.05290278858834917,
+            "scale": 0.046204759371247475,
+            "inflated": false,
+            "direction": 0
+          },
+          "exits_per_on_lawn_hour": {
+            "centre": 0.040559126252865285,
+            "scale": 0.26785803741679093,
+            "inflated": false,
+            "direction": 0
+          },
+          "gamma_per_min": {
+            "centre": -0.040250581742478864,
+            "scale": 0.0570701618225722,
+            "inflated": true,
+            "direction": 0
+          },
+          "early_late_ratio": {
+            "centre": -0.288926066969843,
+            "scale": 2.292302619899922,
+            "inflated": true,
+            "direction": 0
+          }
+        },
+        "tax-4": {
+          "roaming_fraction": {
+            "centre": -0.11605880685237357,
+            "scale": 0.04535652504694205,
+            "inflated": false,
+            "direction": -1
+          },
+          "exits_per_on_lawn_hour": {
+            "centre": 0.30577071242499354,
+            "scale": 0.36867943654905666,
+            "inflated": false,
+            "direction": 0
+          }
+        }
+      }
+    }
+  },
+  "w_minimum_rule": "Read in B.4: split the held-out OD 2 wild-type dates into halves by date 1,000 times; for each split take z = (s_A - s_B) / scale, the band's scale at a half's size, and form D over the wild-type statistics; W's minimum is that distribution's 95th percentile."
+}

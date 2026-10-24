@@ -53,6 +53,7 @@ import torch
 import quantumnematode.brain  # noqa: F401
 from quantumnematode.env.continuous_2d import Continuous2DEnvironment
 from quantumnematode.env.env import DEFAULT_AGENT_ID
+from quantumnematode.env.lawns import RIM_TOLERANCE_MM
 from quantumnematode.env.primitives import (
     BOUT_KINDS,
     PRIMITIVE_KINDS,
@@ -476,7 +477,8 @@ class BatchedEvaluator:
         if self.grid is None:
             return cells
         grid = self.grid
-        inside = self.lawn_on & (np.hypot(*(grid.centre[None, :] - points).T) <= grid.radius)
+        distance = np.hypot(*(grid.centre[None, :] - points).T)
+        inside = self.lawn_on & (distance <= grid.radius + RIM_TOLERANCE_MM)
         rows = np.flatnonzero(inside)
         if not len(rows):
             return cells

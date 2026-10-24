@@ -61,7 +61,8 @@ both lengths. A window longer than the reference's SHALL be read for the referen
 #### Scenario: The small lawn reads its last 40 minutes
 
 - **WHEN** a `scheer_lawn` capture is graded
-- **THEN** exactly its minutes 20–60 SHALL be read: 240 windows
+- **THEN** exactly its minutes 20–60 SHALL be read: 2,400 samples, giving the same 239 complete windows
+  a real 40-min track gives
 
 ### Requirement: Censoring-aware bout means
 
@@ -121,7 +122,7 @@ The registered retry of 2026-10-24 SHALL also apply:
   full size);
 - κ_s SHALL be the SD of that statistic's z over 200 half-splits of the OD 2 band dates by a fixed
   seed, under the centre-corrected scale, floored at 1;
-- local search's scale SHALL be the band batches' SD × √(1 + 1/k) × t_{k−1}(1 − 0.05/22) / z\*(11),
+- local search's scale SHALL be the band batches' SD × √(1 + 1/k) × t\_{k−1}(1 − 0.05/22) / z\*(11),
   for k band batches.
 
 No held-out date or batch SHALL be read.

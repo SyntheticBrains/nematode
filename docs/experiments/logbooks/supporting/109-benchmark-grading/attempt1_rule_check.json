@@ -28,7 +28,7 @@
     }
   },
   "diagnosis": {
-    "note": "band data only; scripts beside this file",
+    "note": "band data only; reproduced by scripts/analysis/benchmark_check_diagnosis.py",
     "small_lawn": {
       "z_sd_per_statistic": {
         "roaming_fraction": 1.4,
