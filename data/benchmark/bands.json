@@ -32,7 +32,7 @@
   "bars": {
     "wild_type": 2.8375969129437877,
     "tph-1": 2.2414027276049464,
-    "pdfr-1": 2.4977054744123737,
+    "pdfr-1": 2.2414027276049464,
     "tax-4": 2.2414027276049464
   },
   "weights": {
@@ -141,49 +141,49 @@
       "small_lawn": {
         "roaming_fraction": {
           "centre": 0.1693625364393881,
-          "scale": 0.05979470518246039,
+          "scale": 0.0585398269611133,
           "inflated": false
         },
         "roaming_bout_s": {
           "centre": 216.66666666666666,
-          "scale": 37.72255649331343,
+          "scale": 37.35054741090556,
           "inflated": false
         },
         "dwelling_bout_s": {
           "centre": 1067.927031509121,
-          "scale": 415.57509026431387,
+          "scale": 409.8851155205773,
           "inflated": false
         },
         "exits_per_on_lawn_hour": {
           "centre": 0.7104713257487811,
-          "scale": 0.32896636734060875,
+          "scale": 0.3371004507597174,
           "inflated": false
         },
         "pre_exit_enrichment": {
           "centre": 0.29533931414320275,
-          "scale": 0.11695878810117913,
+          "scale": 0.11642572512979012,
           "inflated": false
         },
         "time_on_lawn": {
           "centre": 0.9781185208237833,
-          "scale": 0.010350371601715244,
+          "scale": 0.010137784607767375,
           "inflated": false
         }
       },
       "uniform_lawn": {
         "roaming_fraction": {
           "centre": 0.21302061713020617,
-          "scale": 0.11118604306430097,
+          "scale": 0.11078053269475101,
           "inflated": false
         },
         "roaming_bout_s": {
           "centre": 327.5531914893617,
-          "scale": 37.72255649331343,
+          "scale": 37.35054741090556,
           "inflated": true
         },
         "dwelling_bout_s": {
           "centre": 1263.888888888889,
-          "scale": 677.0669979938374,
+          "scale": 677.2686597571583,
           "inflated": false
         }
       },
@@ -203,13 +203,13 @@
         "tph-1": {
           "roaming_fraction": {
             "centre": 0.2704930014985987,
-            "scale": 0.08456248302713629,
+            "scale": 0.0827878172273806,
             "inflated": true,
             "direction": 1
           },
           "exits_per_on_lawn_hour": {
             "centre": 0.0720489574793502,
-            "scale": 0.4652286982576985,
+            "scale": 0.47673202934647607,
             "inflated": true,
             "direction": 0
           }
@@ -217,39 +217,27 @@
         "pdfr-1": {
           "roaming_fraction": {
             "centre": -0.05290278858834917,
-            "scale": 0.06860410244071123,
+            "scale": 0.06780190633757616,
             "inflated": false,
             "direction": 0
           },
           "exits_per_on_lawn_hour": {
             "centre": 0.040559126252865285,
-            "scale": 0.38884283551865584,
+            "scale": 0.3889268834352243,
             "inflated": false,
-            "direction": 0
-          },
-          "gamma_per_min": {
-            "centre": -0.040250581742478864,
-            "scale": 0.0570701618225722,
-            "inflated": true,
-            "direction": 0
-          },
-          "early_late_ratio": {
-            "centre": -0.288926066969843,
-            "scale": 2.292302619899922,
-            "inflated": true,
             "direction": 0
           }
         },
         "tax-4": {
           "roaming_fraction": {
             "centre": -0.11605880685237357,
-            "scale": 0.06269447253920747,
+            "scale": 0.06206768098298995,
             "inflated": false,
-            "direction": 0
+            "direction": -1
           },
           "exits_per_on_lawn_hour": {
             "centre": 0.30577071242499354,
-            "scale": 0.5519106152875146,
+            "scale": 0.5648443724952001,
             "inflated": false,
             "direction": 0
           }
@@ -260,49 +248,49 @@
       "small_lawn": {
         "roaming_fraction": {
           "centre": 0.1693625364393881,
-          "scale": 0.036587324605229954,
+          "scale": 0.03621544558427779,
           "inflated": false
         },
         "roaming_bout_s": {
           "centre": 216.66666666666666,
-          "scale": 22.14982969266455,
+          "scale": 22.719935517026574,
           "inflated": false
         },
         "dwelling_bout_s": {
           "centre": 1067.927031509121,
-          "scale": 228.6330776313089,
+          "scale": 225.08408032997258,
           "inflated": false
         },
         "exits_per_on_lawn_hour": {
           "centre": 0.7104713257487811,
-          "scale": 0.19956169356999795,
+          "scale": 0.1978007287058108,
           "inflated": false
         },
         "pre_exit_enrichment": {
           "centre": 0.29533931414320275,
-          "scale": 0.07021595632656717,
+          "scale": 0.06971759615385928,
           "inflated": false
         },
         "time_on_lawn": {
           "centre": 0.9781185208237833,
-          "scale": 0.006059164841756288,
+          "scale": 0.006171651403606852,
           "inflated": false
         }
       },
       "uniform_lawn": {
         "roaming_fraction": {
           "centre": 0.21302061713020617,
-          "scale": 0.08881138688685568,
+          "scale": 0.09037249443814918,
           "inflated": false
         },
         "roaming_bout_s": {
           "centre": 327.5531914893617,
-          "scale": 28.240308269174697,
+          "scale": 29.358746108364645,
           "inflated": false
         },
         "dwelling_bout_s": {
           "centre": 1263.888888888889,
-          "scale": 544.034136494702,
+          "scale": 552.3361993873876,
           "inflated": false
         }
       },
@@ -322,13 +310,13 @@
         "tph-1": {
           "roaming_fraction": {
             "centre": 0.2704930014985987,
-            "scale": 0.05174229066766305,
+            "scale": 0.051216374312670475,
             "inflated": true,
             "direction": 1
           },
           "exits_per_on_lawn_hour": {
             "centre": 0.0720489574793502,
-            "scale": 0.2822228535768348,
+            "scale": 0.27973247318303884,
             "inflated": true,
             "direction": 0
           }
@@ -336,39 +324,27 @@
         "pdfr-1": {
           "roaming_fraction": {
             "centre": -0.05290278858834917,
-            "scale": 0.046204759371247475,
+            "scale": 0.04488581024848594,
             "inflated": false,
             "direction": 0
           },
           "exits_per_on_lawn_hour": {
             "centre": 0.040559126252865285,
-            "scale": 0.26785803741679093,
+            "scale": 0.2621862945677769,
             "inflated": false,
-            "direction": 0
-          },
-          "gamma_per_min": {
-            "centre": -0.040250581742478864,
-            "scale": 0.0570701618225722,
-            "inflated": true,
-            "direction": 0
-          },
-          "early_late_ratio": {
-            "centre": -0.288926066969843,
-            "scale": 2.292302619899922,
-            "inflated": true,
             "direction": 0
           }
         },
         "tax-4": {
           "roaming_fraction": {
             "centre": -0.11605880685237357,
-            "scale": 0.04535652504694205,
+            "scale": 0.044582397092487396,
             "inflated": false,
             "direction": -1
           },
           "exits_per_on_lawn_hour": {
             "centre": 0.30577071242499354,
-            "scale": 0.36867943654905666,
+            "scale": 0.3580865566071098,
             "inflated": false,
             "direction": 0
           }

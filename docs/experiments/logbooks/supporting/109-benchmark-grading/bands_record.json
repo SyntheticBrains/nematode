@@ -123,6 +123,76 @@
       "early_late_ratio": 2.5441919191919196
     }
   },
+  "lopezcruz_band_batch_presence": {
+    "012217_012517": {
+      "lower_bound": 3.2318828252317946,
+      "present": true
+    },
+    "022216_022516": {
+      "lower_bound": 3.62306256856585,
+      "present": true
+    },
+    "022415_022715": {
+      "lower_bound": 3.4442625840872174,
+      "present": true
+    },
+    "030215_030515": {
+      "lower_bound": 3.9190206522539714,
+      "present": true
+    },
+    "040715_041015": {
+      "lower_bound": 5.26985736260376,
+      "present": true
+    },
+    "042417_042617": {
+      "lower_bound": 2.9129583779920214,
+      "present": true
+    },
+    "042915_050815": {
+      "lower_bound": 3.024319560496583,
+      "present": true
+    },
+    "070115_071015": {
+      "lower_bound": 2.867006552291157,
+      "present": true
+    },
+    "070315_071015": {
+      "lower_bound": 3.263496497747344,
+      "present": true
+    },
+    "072218_072518": {
+      "lower_bound": 3.94107913737025,
+      "present": true
+    },
+    "081116_081416": {
+      "lower_bound": 2.8357241597127207,
+      "present": true
+    },
+    "121316_121616": {
+      "lower_bound": 6.155563002190351,
+      "present": true
+    },
+    "_071018": {
+      "lower_bound": 2.4064234574442396,
+      "present": true
+    },
+    "_072018": {
+      "lower_bound": 3.9898676764735304,
+      "present": true
+    },
+    "_072718": {
+      "lower_bound": 3.7201534555267077,
+      "present": true
+    },
+    "_080517": {
+      "lower_bound": 1.8390834388870125,
+      "present": true
+    },
+    "_081518": {
+      "lower_bound": 2.1518819557670503,
+      "present": true
+    }
+  },
   "reported": {
     "geometric_rule": {
       "windows_agreeing_with_in_lawn_runs": 0.9840020859530408,
@@ -181,60 +251,112 @@
         2.577
       ]
     },
-    "expected_directions": {
+    "mutant_directions": {
       "tph-1": {
         "roaming_fraction": {
           "expected": "more",
           "reference_centre": 0.2704930014985987,
-          "reference_scale": 0.05174229066766305,
-          "resolved_direction": 1
+          "paired_t": {
+            "dates": 3,
+            "mean": 0.2699948870359963,
+            "t": 8.901051959153591,
+            "critical": 4.302652729749462,
+            "direction": 1
+          }
         },
         "exits_per_on_lawn_hour": {
           "expected": "more",
           "reference_centre": 0.0720489574793502,
-          "reference_scale": 0.2822228535768348,
-          "resolved_direction": 0
+          "paired_t": {
+            "dates": 3,
+            "mean": 0.05646474123597029,
+            "t": 0.5349763986200206,
+            "critical": 4.302652729749462,
+            "direction": 0
+          }
         }
       },
       "pdfr-1": {
         "roaming_fraction": {
           "expected": "less",
           "reference_centre": -0.05290278858834917,
-          "reference_scale": 0.046204759371247475,
-          "resolved_direction": 0
+          "paired_t": {
+            "dates": 8,
+            "mean": -0.06182803935795714,
+            "t": -2.139648693720599,
+            "critical": 2.364624251592784,
+            "direction": 0
+          }
         },
         "exits_per_on_lawn_hour": {
           "expected": "normal",
           "reference_centre": 0.040559126252865285,
-          "reference_scale": 0.26785803741679093,
-          "resolved_direction": 0
-        },
-        "gamma_per_min": {
-          "expected": "more search",
-          "reference_centre": -0.040250581742478864,
-          "reference_scale": 0.0570701618225722,
-          "resolved_direction": 0
-        },
-        "early_late_ratio": {
-          "expected": "more search",
-          "reference_centre": -0.288926066969843,
-          "reference_scale": 2.292302619899922,
-          "resolved_direction": 0
+          "paired_t": {
+            "dates": 8,
+            "mean": 0.020946648319462108,
+            "t": 0.13675092342565187,
+            "critical": 2.364624251592784,
+            "direction": 0
+          }
         }
       },
       "tax-4": {
         "roaming_fraction": {
           "expected": "less",
           "reference_centre": -0.11605880685237357,
-          "reference_scale": 0.04535652504694205,
-          "resolved_direction": -1
+          "paired_t": {
+            "dates": 11,
+            "mean": -0.11177001143118721,
+            "t": -4.779900067032293,
+            "critical": 2.228138851986274,
+            "direction": -1
+          }
         },
         "exits_per_on_lawn_hour": {
           "expected": "normal",
           "reference_centre": 0.30577071242499354,
-          "reference_scale": 0.36867943654905666,
-          "resolved_direction": 0
+          "paired_t": {
+            "dates": 11,
+            "mean": 0.34472159717772954,
+            "t": 1.7033166341286974,
+            "critical": 2.228138851986274,
+            "direction": 0
+          }
         }
+      }
+    },
+    "direction_rule": "a two-sided paired t-test of the per-date differences over the paired band dates, at 0.05 with dates - 1 degrees of freedom; one paired date resolves none",
+    "pdfr1_local_search": {
+      "gamma_per_min": {
+        "delta": -0.040250581742478864,
+        "scale_if_graded": 0.0570701618225722,
+        "rows": [
+          91,
+          90
+        ]
+      },
+      "early_late_ratio": {
+        "delta": -0.288926066969843,
+        "scale_if_graded": 2.292302619899922,
+        "rows": [
+          91,
+          90
+        ]
+      },
+      "expected": "more search",
+      "note": "reported, not graded: its only paired batch is in the bands, so no held-out cohort can positive-control it"
+    },
+    "ji_2021_patch_assay": {
+      "source": "Ji et al. 2021, eLife 10:e62889, Fig. 7B (data/roaming_dwelling/ji2021_readings.json)",
+      "assay": "patch foraging on sparse food, unlike Scheer's small lawn; directions only",
+      "wild_type_roaming": 0.3654,
+      "pdfr-1": {
+        "roaming": 0.2171,
+        "direction": -1
+      },
+      "tax-4": {
+        "roaming": 0.0671,
+        "direction": -1
       }
     },
     "limits": [

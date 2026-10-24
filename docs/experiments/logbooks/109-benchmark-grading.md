@@ -220,6 +220,61 @@ The claim stands as first-in-field.
 3. **Two non-learning worms fail by a wide margin.** Four single statistics do not tell them from the animal, so the family rule and the distance carry the discrimination.
 4. **Only two mutant directions are resolved by the data:** tph-1 roams more, and tax-4 roams less.
 
+## Addendum, 2026-10-24: hardening before B.4
+
+Change `harden-benchmark-grading`. Its review, and checks on band data afterwards, found four weaknesses that would have reached B.4 and the long fits. The maintainer's decisions fixed them, and a fifth was registered before it was built. No held-out data were read.
+
+**1. Directions are resolved from the dates, not the band's scale.** A mutant's reference direction was resolved from μ ± 1.96σ, with σ the spread of a new 200-animal population. That is about twice the uncertainty of the reference's own Δ. It is now a two-sided paired t-test of the per-date differences at 0.05, with dates − 1 degrees of freedom.
+
+| Mutant Δ | Paired t | Direction (was, at n = 200) |
+|---|---|---|
+| tph-1 roaming | +8.90 (2 df, critical 4.30) | more (more) |
+| tph-1 exits | +0.53 | unresolved (unresolved) |
+| pdfr-1 roaming | −2.14 (7 df, critical 2.36) | unresolved (unresolved) |
+| pdfr-1 exits | +0.14 | unresolved (unresolved) |
+| tax-4 roaming | −4.78 (10 df, critical 2.23) | less (less; at n = 64 it was unresolved) |
+| tax-4 exits | +1.70 | unresolved (unresolved) |
+
+Directions no longer depend on n.
+
+**2. Bands at any size, per family.**
+
+- Each band at each size now draws from its own generator, `default_rng([2030, band, n])`. So a band built alone at n equals the vendored one. The reference build had drawn every band from one generator in sequence.
+- The rebuild left every centre, κ, the rule's checks (0.925 and 0.962) and the López-Cruz split unchanged.
+- The scales moved by −2.9% to +4.0%. At n = 200 that is roaming fraction 0.0366 → 0.0362, exits 0.1996 → 0.1978, time on the lawn 0.0061 → 0.0062 and the uniform well's roaming bout 28.2 → 29.4 s. The rest are in the record.
+- The grader builds bands at each family's own size, so B.4 can grade its real controls as they come.
+
+**3. γ is undefined without a decay.**
+
+- A fitted γ within 1% of the search range's bound, or an amplitude no larger than 1e-9 of the curve's level, is no decay. A flat curve's least-squares amplitude is zero only to rounding (about 4e-15).
+- No band batch is affected: all 17 fit γ in 0.06–0.18 per minute.
+- In the preflight both controllers' γ (3.0, at the ceiling) is now undefined. It still fails at the cap.
+
+**4. pdfr-1's local search is reported, not graded.** Its only paired batch is in the bands, so no held-out cohort can positive-control it.
+
+- pdfr-1's family is now two statistics, with its bar at 2.24 (was 2.50).
+- Δγ = −0.040 and Δ early/late = −0.29 are in the record.
+- Ji 2021's patch assay is reported beside: pdfr-1 roams 0.217 and tax-4 0.067, against its wild type's 0.365.
+
+**5. Local search must be present** (registered before it was built, `347160d8`).
+
+- **The finding.** A synthetic check found that a population with no local search passes the local-search family 12–13% of the time. Its early/late of about 1.0 sits within the wide prediction-interval band (z ≈ −2.0 against 2.84).
+- **The test.** A population's local search is present when early/late exceeds 1 at its own one-sided 97.5% lower bound. Simulated worms are bootstrapped over animals; real batches are drawn at their bins' means and SEMs (seed 2035). The local-search family passes only when search is present. Presence does not enter D.
+- **The readings.**
+  - All 17 band batches are present, with lower bounds from 1.84.
+  - Both preflight controllers are absent, at 0.95 and 0.93.
+
+**The preflight, re-run** on the rebuilt bands: both controllers still fail every family. D is 6.629 (was 6.626) and 7.223 (was 7.218). D_fit is 6.321 (6.317) and 7.232 (7.224).
+
+**The claims, narrowed.** The roadmap's validation targets and novelty map now say what the references resolve: tph-1 roams more and tax-4 roams less. pdfr-1 and every leaving difference are graded by magnitude.
+
+**Carried to the tracker:**
+
+- B.4's multiplicity across its controls;
+- its thin controls;
+- each statistic's discrimination;
+- C.2's weighting of `time_on_lawn`, whose scale of 0.006 would dominate an unweighted fit.
+
 ## Next steps
 
 - [ ] B.4: the controls. Cohort-held-out real tracks and real mutant cohorts must pass. The matched negatives (the open-loop Scheer HMM, and Poisson-timed primitives at wild-type rates) and the trivial ones (a random walk, a correlated random walk, the untrained policy) must fail. W's minimum is read by the registered rule.

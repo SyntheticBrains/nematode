@@ -33,6 +33,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from quantumnematode.benchmark.readouts import (
+    GAMMA_GRID_MAX_PER_MIN,
+    GAMMA_GRID_MIN_PER_MIN,
     OFF_FOOD_DETECTOR,
     fit_local_search,
     local_search_curve,
@@ -53,8 +55,6 @@ SAMPLES_PER_WINDOW = round(WINDOW_S / SAMPLE_S)
 LAWN_SAMPLES = 2400
 Z_CAP = 10.0
 FAMILY_ALPHA = 0.05
-# The direction a reference resolves: its centre's sign, where centre +/- 1.96 scale excludes zero.
-DIRECTION_Z = NormalDist().inv_cdf(0.975)
 
 TALLY_FIELDS = (
     "animals",
@@ -102,6 +102,17 @@ SEARCH_LAST_BIN_MIN = 42.0
 SEARCH_T0_MIN = 9.0
 EARLY_BINS_MIN = (8.0, 10.0, 12.0)
 LATE_BINS_MIN = (34.0, 36.0, 38.0, 40.0, 42.0)
+# A fitted decay this close to the search range's bound, as a fraction of it, found no decay.
+GAMMA_BOUND_TOLERANCE = 0.01
+# A fitted amplitude no larger than this fraction of the curve's level is no decay: a flat curve's
+# least-squares amplitude is zero to rounding, whatever decay rate it lands on.
+ALPHA_FLOOR = 1e-9
+# Local search is present when early/late exceeds 1 at its own one-sided 97.5% lower bound.
+PRESENCE_RESAMPLES = 2000
+PRESENCE_SEED = 2035
+PRESENCE_QUANTILE = 0.025
+SEARCH_BIN_S = 120
+SEARCH_MIN_VALID = 0.9
 
 
 def z_star(statistics: int, alpha: float = FAMILY_ALPHA) -> float:
@@ -304,7 +315,9 @@ def local_search_statistics(bin_starts_min: np.ndarray, means: np.ndarray) -> di
     """Return the decay and early/late ratio of mean onsets per 2-min bin after removal.
 
     ``bin_starts_min`` are each bin's start in minutes after removal. Every bin from 8 to 42 min
-    must be present and finite; otherwise both statistics are NaN.
+    must be present and finite; otherwise both statistics are NaN. The decay rate is NaN too when
+    the fit finds no decay: the rate within ``GAMMA_BOUND_TOLERANCE`` of the search range's bound,
+    or an amplitude no larger than ``ALPHA_FLOOR`` of the curve's level.
     """
     starts = np.asarray(bin_starts_min, dtype=float)
     values = np.asarray(means, dtype=float)
@@ -318,9 +331,28 @@ def local_search_statistics(bin_starts_min: np.ndarray, means: np.ndarray) -> di
     if not np.all(np.isfinite(picked)):
         return {"gamma_per_min": math.nan, "early_late_ratio": math.nan}
     fit = fit_local_search(wanted + SEARCH_BIN_MIN / 2, picked, SEARCH_T0_MIN)
+    no_decay = (
+        fit.alpha <= ALPHA_FLOOR * max(1.0, abs(fit.beta))
+        or fit.gamma >= GAMMA_GRID_MAX_PER_MIN * (1.0 - GAMMA_BOUND_TOLERANCE)
+        or fit.gamma <= GAMMA_GRID_MIN_PER_MIN * (1.0 + GAMMA_BOUND_TOLERANCE)
+    )
+    gamma = math.nan if no_decay else float(fit.gamma)
     early = np.mean([by_start[round(s, 6)] for s in EARLY_BINS_MIN])
     late = np.mean([by_start[round(s, 6)] for s in LATE_BINS_MIN])
-    return {"gamma_per_min": float(fit.gamma), "early_late_ratio": _ratio(early, late)}
+    return {"gamma_per_min": gamma, "early_late_ratio": _ratio(early, late)}
+
+
+def _onsets(
+    populations: Sequence[Sequence[BehaviourStep]],
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Return each worm's off-food reversal onsets and its valid seconds, from positions alone."""
+    onsets, valid = [], []
+    for steps in populations:
+        x = np.array([s.x for s in steps], dtype=float)
+        y = np.array([s.y for s in steps], dtype=float)
+        onsets.append(reversal_onsets(x, y, OFF_FOOD_DETECTOR))
+        valid.append(np.isfinite(np.diff(x)) & np.isfinite(np.diff(y)))
+    return onsets, valid
 
 
 def simulated_search(populations: Sequence[Sequence[BehaviourStep]]) -> dict[str, float]:
@@ -329,14 +361,80 @@ def simulated_search(populations: Sequence[Sequence[BehaviourStep]]) -> dict[str
     Each worm's steps start at removal from food. Reversal-initiated reorientations are found by
     the off-food detector, counted per 2-min bin over animals, and fitted as the real curve is.
     """
-    onsets, valid = [], []
-    for steps in populations:
-        x = np.array([s.x for s in steps], dtype=float)
-        y = np.array([s.y for s in steps], dtype=float)
-        onsets.append(reversal_onsets(x, y, OFF_FOOD_DETECTOR))
-        valid.append(np.isfinite(np.diff(x)) & np.isfinite(np.diff(y)))
-    curve = local_search_curve(onsets, valid, bin_s=120, start_s=0)
+    onsets, valid = _onsets(populations)
+    curve = local_search_curve(onsets, valid, bin_s=SEARCH_BIN_S, start_s=0)
     return local_search_statistics(curve.starts_s / 60.0, curve.mean)
+
+
+def _early_late(starts_min: np.ndarray, means: np.ndarray) -> np.ndarray:
+    """Return early/late for each row of ``means`` (resamples by bins) on bins at ``starts_min``."""
+    early = np.isin(np.round(starts_min, 6), np.round(EARLY_BINS_MIN, 6))
+    late = np.isin(np.round(starts_min, 6), np.round(LATE_BINS_MIN, 6))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return means[:, early].mean(axis=1) / means[:, late].mean(axis=1)
+
+
+def _presence(ratios: np.ndarray) -> dict[str, float | bool]:
+    """Return the early/late ratios' lower bound and whether it exceeds 1.
+
+    A resample with early onsets and no late ones gives +inf, the strongest decline, and stays in
+    the upper tail. An indeterminate 0/0 resample shows no decline, so it is placed below every
+    other value. A bound that cannot be read is no evidence of search.
+    """
+    values = np.where(np.isnan(ratios), -np.inf, np.asarray(ratios, dtype=float))
+    if np.all(np.isfinite(values)):
+        lower = float(np.quantile(values, PRESENCE_QUANTILE))
+    else:
+        # Linear interpolation between order statistics, which stays defined at infinities.
+        ordered = np.sort(values)
+        position = PRESENCE_QUANTILE * (len(ordered) - 1)
+        below, above = ordered[math.floor(position)], ordered[math.ceil(position)]
+        fraction = position - math.floor(position)
+        lower = float(
+            below if below == above or fraction == 0.0 else below + fraction * (above - below),
+        )
+    return {"lower_bound": lower, "present": bool(lower > 1.0)}
+
+
+def simulated_search_presence(
+    populations: Sequence[Sequence[BehaviourStep]],
+) -> dict[str, float | bool]:
+    """Return whether a simulated population's local search is present: early/late above 1.
+
+    Animals are resampled with replacement; each resample's mean onsets per bin, over the animals
+    present for enough of the bin, gives one early/late ratio. Search is present when the ratios'
+    2.5% quantile exceeds 1.
+    """
+    onsets, valid = _onsets(populations)
+    stop = min(len(v) for v in valid)
+    starts = np.arange(0, stop - SEARCH_BIN_S + 1, SEARCH_BIN_S)
+    counts = np.zeros((len(onsets), len(starts)))
+    usable = np.zeros((len(onsets), len(starts)), dtype=bool)
+    for a, (animal, present) in enumerate(zip(onsets, valid, strict=True)):
+        for b, s in enumerate(starts):
+            window = present[s : s + SEARCH_BIN_S]
+            usable[a, b] = len(window) == SEARCH_BIN_S and window.mean() >= SEARCH_MIN_VALID
+            counts[a, b] = np.sum((animal >= s) & (animal < s + SEARCH_BIN_S))
+    rng = np.random.default_rng(PRESENCE_SEED)
+    draws = rng.integers(0, len(onsets), size=(PRESENCE_RESAMPLES, len(onsets)))
+    totals = (counts * usable)[draws].sum(axis=1)
+    animals = usable[draws].sum(axis=1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        means = totals / animals
+    return _presence(_early_late(starts / 60.0, means))
+
+
+def batch_search_presence(
+    starts_min: np.ndarray,
+    means: np.ndarray,
+    sems: np.ndarray,
+) -> dict[str, float | bool]:
+    """Return whether a real batch's local search is present, each bin drawn at its mean and SEM."""
+    rng = np.random.default_rng(PRESENCE_SEED)
+    m = np.asarray(means, dtype=float)
+    s = np.asarray(sems, dtype=float)
+    draws = rng.normal(m, s, size=(PRESENCE_RESAMPLES, len(m)))
+    return _presence(_early_late(np.asarray(starts_min, dtype=float), draws))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -346,19 +444,16 @@ def simulated_search(populations: Sequence[Sequence[BehaviourStep]]) -> dict[str
 
 @dataclass(frozen=True)
 class Band:
-    """A statistic's band: centre, scale, and whether the scale was inflated for a thin arm."""
+    """A statistic's band: centre, scale, and whether the scale was inflated for a thin arm.
+
+    ``direction`` is the sign a mutant's reference difference resolves across its paired dates, or
+    0 where it resolves none; it is read when a grade asks for directions.
+    """
 
     centre: float
     scale: float
     inflated: bool = False
-
-    def direction(self) -> int:
-        """Return the sign the reference resolves, or 0 where centre +/- 1.96 scale holds zero."""
-        if not (math.isfinite(self.centre) and math.isfinite(self.scale)):
-            return 0
-        if abs(self.centre) > DIRECTION_Z * self.scale:
-            return 1 if self.centre > 0 else -1
-        return 0
+    direction: int = 0
 
 
 def _draw(
@@ -481,7 +576,7 @@ def grade(
         value = float(values.get(name, math.nan))
         z = z_score(value, band)
         passes = math.isfinite(value) and abs(z) <= bar
-        sign = band.direction()
+        sign = band.direction
         if directions and sign != 0 and math.isfinite(value):
             passes = passes and np.sign(value) == sign
         out[name] = Reading(value=value, band=band, z=z, passes=bool(passes))

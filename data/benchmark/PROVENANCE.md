@@ -219,9 +219,12 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
   200, the families, the bars, the weights, and the rule for W's minimum.
   - Scheer's arms use a cluster bootstrap over band dates (seed 2030). Each scale holds the centre's
     own uncertainty and a calibration factor measured on band-date half-splits (seed 2033).
+  - Each band at each size draws from its own generator, `default_rng([2030, band, n])`, so a band
+    built on demand at n equals the vendored one.
+  - Mutant directions come from a paired t-test across paired band dates.
   - López-Cruz's band uses a Student-t prediction interval over its band batches.
   - The rule's own checks on band data (seed 2034) are recorded in
     `docs/experiments/logbooks/supporting/109-benchmark-grading/bands_record.json`.
 - **Licence:** CC0-1.0 for the parts from Scheer & Bargmann, and CC BY 4.0 for the parts from
   López-Cruz et al.
-- **Checksum:** SHA-256 `74ba6aaacdf588473d6c2f36f8c9ccb4fef3417646c0cfed6ba71a2850e74c74` as written.
+- **Checksum:** SHA-256 `44122f9077b5911e1c5519ded43b558ffad2433e7b1315334aa41e02c3cb64a0` as written.

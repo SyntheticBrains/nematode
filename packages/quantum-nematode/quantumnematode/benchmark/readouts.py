@@ -34,6 +34,10 @@ FLOOR_MM = 0.01
 RETRACE_DEG = 45.0
 # A reversal bout longer than this is cut, so a worm that never resumes cannot silence the detector.
 MAX_BOUT_S = 30
+# The decay rate's search range, per minute: a fit on either bound found no decay in the range.
+GAMMA_GRID_MIN_PER_MIN = 1e-3
+GAMMA_GRID_MAX_PER_MIN = 3.0
+_GAMMA_GRID_POINTS = 400
 # A reversal bout: the reverse label's runs after gaps of at most a third of a second are merged,
 # kept if they last at least two thirds of a second (two frames at 3 frames/s).
 MERGE_GAP_S = 1.0 / 3.0
@@ -221,14 +225,15 @@ def _linear(t: np.ndarray, values: np.ndarray, gamma: float) -> tuple[float, flo
 def fit_local_search(t_min: np.ndarray, values: np.ndarray, t0: float) -> DecayFit:
     """Fit ``alpha * exp(-gamma * (t - t0)) + beta`` by least squares over bin centres (minutes).
 
-    For each gamma the best alpha and beta are linear; gamma is found on a log grid from 1e-3 to 3
-    per minute, then refined by golden-section search between the grid's neighbours.
+    For each gamma the best alpha and beta are linear; gamma is found on a log grid from
+    ``GAMMA_GRID_MIN_PER_MIN`` to ``GAMMA_GRID_MAX_PER_MIN``, then refined by golden-section search
+    between the grid's neighbours.
     """
     t = np.asarray(t_min, dtype=float) - t0
     v = np.asarray(values, dtype=float)
     keep = np.isfinite(v)
     t, v = t[keep], v[keep]
-    grid = np.geomspace(1e-3, 3.0, 400)
+    grid = np.geomspace(GAMMA_GRID_MIN_PER_MIN, GAMMA_GRID_MAX_PER_MIN, _GAMMA_GRID_POINTS)
     errors = [_linear(t, v, g)[2] for g in grid]
     best = int(np.argmin(errors))
     low, high = grid[max(best - 1, 0)], grid[min(best + 1, len(grid) - 1)]

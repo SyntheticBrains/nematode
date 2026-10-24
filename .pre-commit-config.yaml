@@ -12,7 +12,11 @@ repos:
       - id: mdformat
         args: [--number]
         additional_dependencies:
-          - mdformat-frontmatter
+          # Pinned: mdformat's list spacing comes from markdown-it-py's parser, so unpinned
+          # resolutions format differently on CI and locally.
+          - mdformat-frontmatter==2.1.2
+          - markdown-it-py==4.2.0
+          - mdit-py-plugins==0.6.1
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.2
     hooks:
