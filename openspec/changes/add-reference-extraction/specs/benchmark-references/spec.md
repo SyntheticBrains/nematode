@@ -12,7 +12,8 @@ The repository SHALL vendor, under `data/benchmark/`, derived reference sets fro
 Each set SHALL be described in `data/benchmark/PROVENANCE.md`:
 
 - its citation, deposit and licence;
-- the source file's name, size and published MD5, or the SHA-256 of the downloaded file;
+- the source file's name, size and published MD5, or the SHA-256 of the downloaded file (for a
+  whole-dataset zip, the zip's SHA-256 and each inner file's size);
 - the download date and method;
 - its frame rate, units and coordinate origin;
 - the script and command that derived it.
@@ -29,47 +30,59 @@ Only CC0 or CC BY sources SHALL be vendored, and never the original deposit file
 `data/benchmark/scheer2023_tracks.npz` SHALL hold, for every animal of the wild type at OD 2, OD 1, OD 4
 and on a uniform lawn, and of tph-1, pdfr-1 and tax-4:
 
-- the midbody position at 1 s, in µm from the lawn centre, as int16, with −32768 where missing;
+- the midbody position at 1 s, in µm, as int16 (int32 for an arm whose range exceeds int16), with
+  −32768 where missing;
+- its origin: the lawn centre where the recording has a lawn boundary, otherwise the animal's first
+  valid position;
 - the authors' per-frame reversal, omega, pause, head-poke, midbody-in-lawn and missing flags at 3
   frames/s;
 - the authors' per-bin in- and out-of-lawn run masks and roaming/dwelling labels;
-- the lawn boundary as 64 radii;
+- the lawn boundary as 64 radii, or a sentinel where the arm has no boundary;
 - its genotype, recording date, video and source row.
 
 The extraction SHALL read the deposit only through an unpickler that admits numpy, pandas,
-`builtins.slice` and `datetime.date`, and replaces the `ssm` classes with inert stand-ins. It SHALL
-refuse a coordinate outside the int16 range rather than clip it.
+`builtins.slice` and `datetime.date`, and replaces the `ssm` classes with inert stand-ins.
 
 #### Scenario: The unpickler refuses other classes
 
 - **WHEN** the extraction reads a pickle that references a class outside the admitted modules
 - **THEN** it SHALL raise before constructing that class
 
-#### Scenario: A position outside the store's range is refused
+#### Scenario: An arm without a lawn boundary
 
-- **WHEN** an animal's position lies more than 32.767 mm from its lawn centre
-- **THEN** the extraction SHALL raise, naming the animal
+- **WHEN** an arm's recordings carry no `Center_Point` or `Lawn_Boundary_Pts`
+- **THEN** its positions SHALL be stored relative to each animal's first valid position, with its
+  origin and the boundary sentinel recorded
 
 ### Requirement: The extraction reproduces the vendored windows
 
-The 5-s windows re-derived from the 1-s store, for the OD 2 wild type, SHALL reproduce
-`data/roaming_dwelling/scheer2023_windows.npz`:
+The 5-s windows re-derived from the 1-s store, for the OD 2 wild-type animals matched to the Fig. 1
+file by video name, source file and row, SHALL reproduce `data/roaming_dwelling/scheer2023_windows.npz`:
 
+- at least 95% of the Fig. 1 animals matched;
 - `on_food`, `off_lawn` and `labels` identical;
-- `speed` and `angular` within the bound implied by the store's 0.5 µm rounding;
+- `speed` within √2 µm / 5 s;
+- the classifier's roaming observation identical on at least 99.5% of on-food windows;
 - the calibrated classifier's decoded states agreeing on at least 99% of on-food windows.
 
 #### Scenario: The re-derived windows match
 
-- **WHEN** the default test tier runs
-- **THEN** a test SHALL re-derive the windows from the vendored store and check all three conditions
+- **WHEN** the test suite runs
+- **THEN** a test SHALL re-derive the windows from the vendored store and check every condition
+
+#### Scenario: Too few animals match
+
+- **WHEN** fewer than 95% of the Fig. 1 animals match `PD1074_od2_Data`
+- **THEN** the extraction SHALL stop and report the matched count
 
 ### Requirement: A cohort split fixed from counts
 
 Cohorts SHALL be recording dates. The split SHALL be drawn from the dates' arm membership and animal
-counts alone, by the rule of design Decision C (`SPLIT_SEED = 2027`). It SHALL be written to
-`data/benchmark/scheer2023_split.json` before any behavioural statistic of the store is computed.
-Every date SHALL be on one side, `bands` or `held_out`, with all its animals.
+counts alone, by the rule of design Decision C (`SPLIT_SEED = 2027`, at most 10,000 draws, with each
+arm's share constraint checked for feasibility first). It SHALL be written to
+`data/benchmark/scheer2023_split.json` before any behavioural statistic of the store is computed. Every
+date SHALL be on one side, `bands` or `held_out`, with all its animals. The record SHALL state that the
+classifier was calibrated on animals from both sides.
 
 #### Scenario: The split re-draws identically
 
@@ -82,23 +95,32 @@ Every date SHALL be on one side, `bands` or `held_out`, with all its animals.
 - **THEN** that date SHALL be on the `bands` side, and the split record SHALL say the arm has no
   held-out cohort
 
+#### Scenario: An arm whose dates cannot meet the share
+
+- **WHEN** no subset of an arm's dates holds 20–45% of its animals
+- **THEN** the arm SHALL be recorded as share-infeasible, and it SHALL need only one date on each side
+
+#### Scenario: No draw passes
+
+- **WHEN** none of the 10,000 draws meets the constraints
+- **THEN** the extraction SHALL stop and report the closest draw, without loosening the rule
+
 ### Requirement: The primitives' kinematics checked on food
 
 On the held-out OD 2 wild-type cohorts, the kinematics check SHALL measure reversal duration, reversal
 speed, omega duration, forward speed, turning rate and pause fraction from the authors' flags and the
-1-s positions. Each is stratified by distance to the lawn boundary, with intervals bootstrapped over
-cohorts.
+1-s positions. Bouts are built by merging one-frame gaps and dropping runs shorter than two frames.
+Each quantity is stratified by distance to the lawn boundary, with intervals bootstrapped over cohorts.
 
-For reversal duration, reversal speed and omega duration, a disagreement SHALL be the inside-lawn
-stratum's 95% interval lying wholly outside the span of the sources' reported mean ± SD. Each
-disagreement SHALL be recorded as a dated D36 amendment, with `data/locomotion/primitives.json` updated
-to the on-food value, before B.1 closes.
+A quantity whose source states a mean, SD and n SHALL be acted on. Its reference span runs from the
+lowest source mean − 2 SEM to the highest + 2 SEM. A disagreement SHALL be the inside-lawn stratum's 95%
+interval lying wholly outside that span. A disagreement SHALL be recorded and brought to the maintainer
+before B.3 registers. This change SHALL NOT edit `data/locomotion/primitives.json`.
 
-#### Scenario: A disagreement amends the primitives
+#### Scenario: A disagreement is brought back, not applied
 
-- **WHEN** the inside-lawn reversal duration's interval lies wholly outside the published span
-- **THEN** `primitives.json` SHALL take the on-food value with Scheer as its source, and the amendment
-  SHALL be dated in the roadmap and the tracker
+- **WHEN** the inside-lawn reversal duration's interval lies wholly outside 2.10–3.71 s
+- **THEN** `kinematics.json` and Logbook 105 SHALL record it, and `primitives.json` SHALL be unchanged
 
 #### Scenario: The check reads no graded statistic
 
@@ -108,19 +130,27 @@ to the on-food value, before B.1 closes.
 
 ### Requirement: Search tracks and search targets
 
-Calhoun 2014's and Roberts 2016's tracks SHALL be vendored at 1 s in µm, with their turn flags where the
-deposit provides them. López-Cruz 2019's reorientations per 2-min bin SHALL be vendored for the wild
-type, pdfr-1, tax-4 and tph-1 where present, with each bin's mean, SEM and n.
+Calhoun 2014's tracks SHALL be vendored at 1 s, with the per-frame pirouette, omega and non-omega flags,
+in µm if the paper states the scale and in pixels, marked as such, otherwise. Roberts 2016's wild-type
+cohorts SHALL be vendored at 1 s in µm with their worm numbers, by-eye states, Viterbi states and cohort
+IDs, and the dead-worm tracks beside them. The whole of López-Cruz 2019's `data_2min_bins` sheet SHALL
+be vendored, with each bin's mean, SEM and n, and each mutant row linked to its same-dates wild type.
 
-#### Scenario: A deposit without turn flags
+#### Scenario: Calhoun's scale is unstated
 
-- **WHEN** a search deposit holds positions but no turn flags
-- **THEN** positions SHALL be vendored alone, and PROVENANCE.md SHALL record the absence
+- **WHEN** the paper gives no pixel scale
+- **THEN** the store SHALL mark its units as pixels, and the loader SHALL carry that unit
+
+#### Scenario: López-Cruz lacks a D37 mutant
+
+- **WHEN** a D37 mutant has no row in the sheet
+- **THEN** PROVENANCE.md SHALL record its absence
 
 ### Requirement: A loader for the reference sets
 
-`quantumnematode.benchmark.references` SHALL read every vendored set into per-animal tracks in mm and
-seconds, with their cohort fields and split side, and depend on numpy alone.
+`quantumnematode.benchmark.references` SHALL read every vendored set into per-animal tracks in its
+stated units and seconds, with cohort fields and split side where the set has them, and depend on
+numpy alone.
 
 #### Scenario: Tracks load with their cohorts
 
