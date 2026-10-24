@@ -137,11 +137,14 @@ class BatchedTrajectories:
     assay: dict[str, object] | None
     final_satiety: np.ndarray = field(default_factory=lambda: np.zeros(0))
     total_intake: np.ndarray = field(default_factory=lambda: np.zeros(0))
+    # The live food-gradient direction and tanh'd strength at each step, when recorded.
+    grad_dir: np.ndarray | None = None
+    grad_strength: np.ndarray | None = None
 
     def to_behaviour_steps(self, animal: int) -> list[BehaviourStep]:
         """Return one animal's record as the per-step runner's ``BehaviourStep`` series.
 
-        The live food-gradient fields are not recorded by the evaluator and are 0.
+        The live food-gradient fields are the recorded ones, or 0 when the run did not record them.
         """
         steps: list[BehaviourStep] = []
         previous: tuple[float, float] | None = None
@@ -166,8 +169,10 @@ class BatchedTrajectories:
                     heading_rad=heading,
                     concentration=float(self.concentration[animal, t]),
                     dc_dt=float(self.derivative[animal, t]),
-                    grad_dir=0.0,
-                    grad_strength=0.0,
+                    grad_dir=0.0 if self.grad_dir is None else float(self.grad_dir[animal, t]),
+                    grad_strength=(
+                        0.0 if self.grad_strength is None else float(self.grad_strength[animal, t])
+                    ),
                     speed_signed=signed,
                     satiety=float(self.satiety[animal, t]),
                     intake=float(self.intake[animal, t]),
@@ -290,6 +295,10 @@ class BatchedEvaluator:
         One seed per animal: the run seed the per-step runner would give its episode.
     mean_action : bool
         Act on the controller's noiseless mean instead of sampling its noise.
+    record_gradient : bool
+        Also record each step's live food-gradient direction and strength, as the per-step runner's
+        capture does. It is a sum over every lawn cell per animal, so it is off by default, and
+        fitting has no need of it.
     """
 
     def __init__(
@@ -299,6 +308,7 @@ class BatchedEvaluator:
         seeds: Sequence[int],
         *,
         mean_action: bool = False,
+        record_gradient: bool = False,
     ) -> None:
         check_surface(config)
         if not seeds:
@@ -308,6 +318,7 @@ class BatchedEvaluator:
         self.controller = controller
         self.seeds = [int(s) for s in seeds]
         self.mean_action = mean_action
+        self.record_gradient = record_gradient
         self.environment_config = configure_environment(config)
         self.satiety_config = configure_satiety(config)
         sensing = self.environment_config.get_sensing_config()
@@ -434,6 +445,30 @@ class BatchedEvaluator:
         raw = grid.weights[0] * np.sum(gx * along_y, axis=1)
         out[rows] = self.field_strength * raw
         return np.tanh(out)
+
+    def _gradient(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Return the lawn odour's direction and tanh'd strength at each animal's point.
+
+        As the environment computes it: each cell pulls toward itself with its density, its share of
+        the lawn and the kernel at its distance. The direction is 0 where the pull is zero.
+        """
+        n = len(points)
+        vx, vy = np.zeros(n), np.zeros(n)
+        if self.grid is not None and self.lawn_on.any():
+            grid = self.grid
+            rows = np.flatnonzero(self.lawn_on)
+            dx = grid.cells[None, :, 0] - points[rows, 0:1]
+            dy = grid.cells[None, :, 1] - points[rows, 1:2]
+            distance = np.hypot(dx, dy)
+            away = distance > 0
+            kernel = self.field_strength * np.exp(-((distance / self.fick_length) ** 2))
+            pull = np.where(away, self.density[rows] * grid.weights[None, :] * kernel, 0.0)
+            safe = np.where(away, distance, 1.0)
+            vx[rows] = np.sum(pull * dx / safe, axis=1)
+            vy[rows] = np.sum(pull * dy / safe, axis=1)
+        magnitude = np.hypot(vx, vy)
+        direction = np.where(magnitude > 0, np.arctan2(vy, vx), 0.0)
+        return direction, np.tanh(magnitude)
 
     def _cells_under(self, points: np.ndarray) -> np.ndarray:
         """Return each animal's cell index under its point, or -1 off the lawn or with none out."""
@@ -698,6 +733,8 @@ class BatchedEvaluator:
             name: np.zeros((n, steps), dtype=np.float64 if name in wide else np.float32)
             for name in ("x", "y", "heading", "concentration", "derivative", "satiety", "intake")
         }
+        grad_dir = np.zeros((n, steps)) if self.record_gradient else None
+        grad_strength = np.zeros((n, steps)) if self.record_gradient else None
         on_lawn = np.zeros((n, steps), dtype=bool)
         primitive = np.zeros((n, steps), dtype=np.int8)
         phase = np.zeros((n, steps), dtype=np.int8)
@@ -713,6 +750,8 @@ class BatchedEvaluator:
             record["satiety"][:, t] = self.satiety
             record["intake"][:, t] = self.step_intake
             on_lawn[:, t] = self._sensed_on_lawn
+            if grad_dir is not None and grad_strength is not None:
+                grad_dir[:, t], grad_strength[:, t] = self._gradient(self.pos)
             primitive[:, t] = previous_kind
             phase[:, t] = 0 if self.phase_index is None else self.phase_index
             if observer is not None:
@@ -731,5 +770,7 @@ class BatchedEvaluator:
             assay=None if self.assay is None else self.assay.record(self.step_seconds),
             final_satiety=self.satiety.copy(),
             total_intake=self.total_intake.copy(),
+            grad_dir=grad_dir,
+            grad_strength=grad_strength,
             **record,
         )

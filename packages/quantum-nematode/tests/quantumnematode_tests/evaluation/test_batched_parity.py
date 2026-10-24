@@ -129,3 +129,24 @@ def test_the_classifier_reads_a_batched_animal() -> None:
     )
     assert len(episode.states) == (len(steps) - 1) // 10
     assert steps[0].phase == "assay"
+
+
+def test_recorded_gradients_match_the_per_step_capture() -> None:
+    """With the gradient recorded, a batched capture's gradient fields are the per-step runner's."""
+    config, single, batched = p.build("pirouette", "food_removal_calhoun")
+    refs = p.references(config, single, 50)
+    evaluator = BatchedEvaluator(
+        config.model_copy(update={"max_steps": 50}),
+        batched,
+        list(p.PARITY_SEEDS),
+        record_gradient=True,
+    )
+    trajectories = evaluator.run()
+    for i, ref in enumerate(refs):
+        steps = trajectories.to_behaviour_steps(i)
+        for t, step in enumerate(ref.behaviour):
+            assert steps[t].grad_strength == pytest.approx(step.grad_strength, abs=1e-6)
+            # A pull of rounding size, as at the lawn's exact centre, has no meaningful direction.
+            if step.grad_strength > 1e-9:
+                assert steps[t].grad_dir == pytest.approx(step.grad_dir, abs=1e-6)
+    assert max(abs(s.grad_strength) for s in refs[0].behaviour) > 0

@@ -2,7 +2,7 @@
 r"""Time the batched evaluator against the per-step runner, and project the fitting budget.
 
 For each controller on each assay, the evaluator is timed on seeds 5001-5032, repeated to reach N, at
-N = 32, 128 and 256. The per-step runner is timed on seeds 5001-5008. All timings are per core: before
+N = 32, 128, 200 and 256. The per-step runner is timed on seeds 5001-5008. All timings are per core: before
 torch or numpy load, every thread pool is pinned to one thread, as the campaign runner pins them.
 ``--default-threads`` re-times N = 256 in a child process with the machine's own thread settings, for
 comparison.
@@ -11,7 +11,7 @@ The record gives:
 
 - microseconds per animal-step at each N, and the speedup per core over the per-step runner;
 - whether the target was met: at most 25 us per animal-step at N = 256;
-- the wall time of one 200-animal evaluation per assay;
+- the wall time of one 200-animal evaluation per assay, measured at N = 200;
 - the projected fitting budget, as a formula with an illustration.
 
 The budget formula is::
@@ -32,6 +32,8 @@ import os
 import sys
 
 _PINNED = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS")
+# The thread settings as the shell set them, before pinning, for the default-thread child.
+_ORIGINAL = {name: os.environ.get(name) for name in _PINNED}
 if "--child-default-threads" not in sys.argv:
     for _name in _PINNED:
         os.environ[_name] = "1"
@@ -76,7 +78,7 @@ PROTOCOLS = (
 CONTROLLERS = ("mlp", "connectome", "constant", "pirouette")
 BAND = list(range(5001, 5033))
 REFERENCE_SEEDS = list(range(5001, 5009))
-SIZES = (32, 128, 256)
+SIZES = (32, 128, 200, 256)
 TARGET_US = 25.0
 EVALUATION_ANIMALS = 200
 HAZARDS = (0.02, 0.01, 0.01)
@@ -127,7 +129,7 @@ def measure(controller: str, protocol: str, sizes: tuple[int, ...]) -> dict[str,
         "batched_us_per_animal_step": {str(n): v for n, v in batched_us.items()},
         "speedup_per_core": reference_us / at_largest,
         "target_met": at_largest <= TARGET_US,
-        "evaluation_200_s": at_largest * EVALUATION_ANIMALS * steps / 1e6,
+        "evaluation_200_s": batched_us[EVALUATION_ANIMALS] * EVALUATION_ANIMALS * steps / 1e6,
     }
 
 
@@ -178,6 +180,7 @@ def main() -> int:
         "commit": _commit(),
         "machine": {"platform": platform.platform(), "processor": platform.processor()},
         "threads": {name: os.environ.get(name) for name in _PINNED} | {"torch": 1},
+        "default_threads": {name: value or "unset" for name, value in _ORIGINAL.items()},
         "seeds": {"batched": "5001-5032, repeated to N", "reference": "5001-5008"},
         "target_us_per_animal_step": TARGET_US,
         "results": results,
@@ -192,9 +195,12 @@ def main() -> int:
     args.out.write_text(json.dumps(record, indent=2) + "\n")
     if args.default_threads:
         child = args.out.with_name(args.out.stem + "_default_threads.json")
+        environment = {k: v for k, v in os.environ.items() if k not in _PINNED}
+        environment |= {k: v for k, v in _ORIGINAL.items() if v is not None}
         subprocess.run(  # noqa: S603 — fixed argv
             [sys.executable, __file__, "--out", str(child), "--child-default-threads"],
             check=True,
+            env=environment,
         )
         record["default_threads_us_per_animal_step_n256"] = json.loads(child.read_text())
         child.unlink()
