@@ -1,0 +1,74 @@
+{
+  "description": "Measure the matched negatives' parameters on the benchmark's band cohorts.",
+  "source": "Scheer & Bargmann 2023, OD 2 wild type (PD1074), band dates only",
+  "animals": 1013,
+  "dates": 41,
+  "heading_floor_mm": 0.01,
+  "states": {
+    "dwelling": {
+      "speed_mm_per_s": 0.02203173888569903,
+      "curvature_sd_deg_per_s": 60.843253070843076,
+      "heading_persistence": -0.059099040549031326,
+      "reversal_hazard_per_s": 0.08778242500209302,
+      "omega_hazard_per_s": 0.00010553535906194985,
+      "run_seconds": 1545595,
+      "curvature_seconds": 647421,
+      "run_seconds_below_floor": 546711,
+      "seconds_outside_bouts": 1696114,
+      "onsets": {
+        "reversal": 148889,
+        "omega": 179
+      }
+    },
+    "roaming": {
+      "speed_mm_per_s": 0.06705722121285222,
+      "curvature_sd_deg_per_s": 35.07656649189835,
+      "heading_persistence": -0.0051570252055452865,
+      "reversal_hazard_per_s": 0.07976615291169994,
+      "omega_hazard_per_s": 0.0009667704299850682,
+      "run_seconds": 180693,
+      "curvature_seconds": 148918,
+      "run_seconds_below_floor": 9065,
+      "seconds_outside_bouts": 197565,
+      "onsets": {
+        "reversal": 15759,
+        "omega": 191
+      }
+    }
+  },
+  "pooled": {
+    "speed_mm_per_s": 0.026744619632214264,
+    "curvature_sd_deg_per_s": 56.91848680223981,
+    "heading_persistence": -0.0539062597975781,
+    "reversal_hazard_per_s": 0.08694609804512803,
+    "omega_hazard_per_s": 0.00019538686334906813,
+    "run_seconds": 1726288,
+    "curvature_seconds": 796339,
+    "run_seconds_below_floor": 555776,
+    "seconds_outside_bouts": 1893679,
+    "onsets": {
+      "reversal": 164648,
+      "omega": 370
+    }
+  },
+  "hmm": {
+    "source": "data/roaming_dwelling/reference_hmm.json (the authors' HMM)",
+    "states": [
+      "dwelling",
+      "roaming"
+    ],
+    "transitions_per_10_s": [
+      [
+        0.9788349773186767,
+        0.02116502268132328
+      ],
+      [
+        0.10192615336205577,
+        0.8980738466379442
+      ]
+    ],
+    "window_seconds": 10,
+    "stationary_roaming": 0.1719458970305429
+  },
+  "delta_hazard": "the primitives' minimum: Scheer has no delta flag"
+}

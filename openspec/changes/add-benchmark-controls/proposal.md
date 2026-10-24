@@ -7,6 +7,7 @@ D34: the benchmark is **valid only if** its positive controls pass and every neg
 The maintainer's decisions of 2026-10-25 are marked (decided).
 
 - **Positive controls**, held-out real data, each graded at its own size on bands built on demand:
+
   - **the wild type,** as three kinds of unit:
     - Scheer's small lawn: 24 held-out dates, 573 animals, six statistics;
     - the uniform well: one held-out date, 31 animals, three statistics;
@@ -15,21 +16,30 @@ The maintainer's decisions of 2026-10-25 are marked (decided).
     - tph-1 against N2 (2 paired dates);
     - pdfr-1 and tax-4 against PD1074 (3 and 6 paired dates);
     - each on Δ roaming and Δ exits, with resolved directions.
+
 - **The allowance across controls** (decided). Fifteen control units are graded, each at its normal bar. Their failure probabilities under real data are taken from the rule's own checks, or from the nominal 5% where no check exists:
+
   - the small lawn, 0.075;
   - a López-Cruz batch, 0.038;
   - the uniform well and each mutant, 0.05.
 
   The largest number of failures real data exceed with at most 5% chance is **2**: P(more than 2) = 0.025. **The positive controls pass when at most 2 units fail.** Requiring every unit to pass would void the benchmark by chance 49% of the time.
+
 - **Matched negatives**, matched to band data (decided):
+
   - **the open-loop HMM worm:** roaming and dwelling switch by the authors' HMM transitions every 10 s, ignoring food. In each state the speed, curvature noise and reversal and omega hazards are the band wild type's in that state, from Scheer's band cohorts.
   - **the Poisson worm:** constant hazards, speed and curvature noise at the band wild type's time-averaged on-lawn values.
+
 - **Trivial negatives**, matched to wild-type speed (decided):
+
   - **a random walk:** runs at the band wild type's mean on-lawn speed, with each second's curvature drawn uniformly over the full range;
   - **a correlated random walk:** the same speed, with curvature noise set to the wild type's heading persistence;
   - **the untrained policy:** the MLP and connectome arms, each 8 independently initialised networks × 25 animals (decided).
+
 - **Every negative must fail the wild type**, at n = 200 per assay, on animal seeds 5101–5300.
+
 - **W's minimum is read**, by B.3's registered rule, on the held-out wild-type dates.
+
 - **The verdict:** **VALID** when the positive controls pass by the allowance and every negative fails. **VOID** otherwise. On VOID, the statistics and bands are revised in a new change before anything is graded (the roadmap's pivot).
 
 ## Capabilities

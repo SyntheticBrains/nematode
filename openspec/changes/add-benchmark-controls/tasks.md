@@ -10,12 +10,14 @@ Phase 10, block B, tracker item B.4. The maintainer's decisions of 2026-10-25:
 ## 1. Matched parameters (band data only)
 
 - [ ] 1.1 `scripts/analysis/benchmark_negatives_params.py`:
+
   - per-state and pooled speed, curvature SD, reversal and omega hazards, and heading persistence,
     from the OD 2 band cohorts;
   - curvature and persistence read only on seconds above `FLOOR_MM`, with the count left out;
   - hazards as onsets per second outside every bout.
 
   A test that it reads no held-out row.
+
 - [ ] 1.2 Run it. Write the parameters to `supporting/110-benchmark-controls/negatives_params.json`.
 
 ## 2. The negatives' controllers
@@ -36,7 +38,9 @@ Phase 10, block B, tracker item B.4. The maintainer's decisions of 2026-10-25:
   and the cost is recorded. Each negative's pilot pass or fail is written into the launch record as
   description before it is committed. A negative passing here is brought to the maintainer before the
   launch.
+
 - [ ] 3.2 `supporting/110-benchmark-controls/launch.md`, after the pilot (3.1):
+
   - the units, their failure rates and the allowance;
   - the negatives and their parameters;
   - the seeds;
