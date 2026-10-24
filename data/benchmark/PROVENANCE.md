@@ -22,7 +22,8 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
     published, read only to match its animals.
 
 - **How it was read:** through the restricted unpickler in `scripts/analysis/_scheer_pickle.py`
-  (numpy, pandas, `slice` and `datetime.date` admitted; the `ssm` classes replaced by stand-ins). The
+  (only the 18 numpy, pandas, `slice` and `datetime.date` classes the deposit references are
+  admitted, each by exact name; the `ssm` classes are replaced by stand-ins). The
   genotype file was written with pandas 1.x: its numeric index classes are read as `pandas.Index`, as
   pandas' own `read_pickle` reads them.
 

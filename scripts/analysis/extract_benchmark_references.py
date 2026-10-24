@@ -85,6 +85,8 @@ SCHEER_ARMS = (
     "CX13078_tax4p678_od2_Data",
 )
 WILD_TYPE_OD2 = "PD1074_od2_Data"
+# The share of Fig. 1 animals that must match the stored wild type for D.1's windows to be checked.
+FIG1_MATCH_FLOOR = 0.95
 # Bit order of ``frame_flags``: each the authors' per-frame field.
 FRAME_FLAGS = (
     ("reversal", "MovingReverse"),
@@ -365,6 +367,13 @@ def extract_scheer(genotypes: Path, fig1: Path | None, out: Path) -> dict[str, A
         p["fig1_row"] = np.full(len(p["date"]), -1, dtype=np.int32)
     if fig1 is not None:
         record["fig1"] = _match_fig1(fig1, wt)
+        if record["fig1"]["matched_fraction"] < FIG1_MATCH_FLOOR:
+            msg = (
+                f"only {record['fig1']['matched']} of {record['fig1']['fig1_animals']} Fig. 1 "
+                f"animals match {WILD_TYPE_OD2}, below the {FIG1_MATCH_FLOOR:.0%} floor; "
+                "the windows check could not stand on them"
+            )
+            raise ValueError(msg)
         wt["fig1_row"][record["fig1"]["store_rows"]] = record["fig1"]["fig1_rows"]
     _write_scheer_store(parts, out)
     record["store_bytes"] = out.stat().st_size

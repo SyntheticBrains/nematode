@@ -315,6 +315,17 @@ def verdicts(filtered: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def finite_or_null(value: Any) -> Any:  # noqa: ANN401 - any JSON-shaped value
+    """Return ``value`` with every non-finite float replaced by ``None``, for strict JSON."""
+    if isinstance(value, dict):
+        return {k: finite_or_null(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [finite_or_null(v) for v in value]
+    if isinstance(value, (float, np.floating)):
+        return float(value) if math.isfinite(value) else None
+    return value
+
+
 def main() -> int:
     """CLI: run the check on the held-out cohorts and write its record."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -329,7 +340,12 @@ def main() -> int:
         "cohorts": "held-out OD 2 wild-type dates (data/benchmark/scheer2023_split.json)",
         "bout_rule": {"merge_gap_frames": MERGE_GAP_FRAMES, "min_bout_frames": MIN_BOUT_FRAMES},
         "strata_mm": BOUNDARY_BAND_MM,
-        "bootstrap": {"unit": "recording date", "resamples": RESAMPLES, "seed": BOOTSTRAP_SEED},
+        "bootstrap": {
+            "unit": "recording date",
+            "resamples": RESAMPLES,
+            "resamples_for_percentiles": RESAMPLES_PERCENTILE,
+            "seed": BOOTSTRAP_SEED,
+        },
         "verdicts": verdicts(filtered),
         "filtered": filtered,
         "unfiltered": unfiltered,
@@ -346,8 +362,8 @@ def main() -> int:
     }
     record["disagreements"] = [q for q, v in record["verdicts"].items() if v.get("disagreement")]
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(record, indent=2) + "\n")
-    print(json.dumps(record["verdicts"], indent=2))
+    args.out.write_text(json.dumps(finite_or_null(record), indent=2, allow_nan=False) + "\n")
+    print(json.dumps(finite_or_null(record["verdicts"]), indent=2))
     return 0
 
 

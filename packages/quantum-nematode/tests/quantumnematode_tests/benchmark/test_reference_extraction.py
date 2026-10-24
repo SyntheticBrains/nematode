@@ -39,6 +39,26 @@ def test_the_unpickler_refuses_other_classes(tmp_path: Path) -> None:
         _scheer_pickle.SafeUnpickler(f).load()
 
 
+@pytest.mark.parametrize(
+    ("module", "name"),
+    [
+        ("numpy.testing._private.utils", "runstring"),
+        ("numpy", "testing._private.utils.runstring"),
+        ("numpy", "core.multiarray._reconstruct"),
+        ("numpy", "load"),
+        ("pandas", "read_pickle"),
+        ("ssm.hmm", "HMM.__init__.__globals__"),
+    ],
+)
+def test_unlisted_and_dotted_references_are_refused(module: str, name: str) -> None:
+    """Only listed (module, name) pairs resolve: no other callable, and no dotted name."""
+    import io
+
+    unpickler = _scheer_pickle.SafeUnpickler(io.BytesIO(b""))
+    with pytest.raises(pickle.UnpicklingError, match="refused"):
+        unpickler.find_class(module, name)
+
+
 def test_pandas_1_numeric_indexes_read_as_index() -> None:
     """A pandas 1.x ``Int64Index`` resolves to ``pandas.Index``; other classes stay refused."""
     import io
@@ -141,6 +161,28 @@ def test_an_arm_without_a_lawn_boundary() -> None:
     assert np.all(arrays["origin"] == refs.ORIGIN_FIRST_POSITION)
     assert not notes["has_boundary"]
     assert set(notes["absent_flags"]) == {"HeadPokesAll", "MidbodyInLawn"}
+
+
+def test_too_few_fig1_matches_stop_the_extraction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fewer than 95% of the Fig. 1 animals matching stops extraction, naming both counts."""
+    import pandas as pd
+
+    genotypes = {arm: _arm(4, boundary=True) for arm in ex.SCHEER_ARMS}
+    fig1 = _arm(4, boundary=True)
+    renamed = [f"v{i}" if i == 0 else f"other{i}" for i in range(4)]
+    fig1["videoname"] = pd.DataFrame(renamed)
+
+    def load(path: Path) -> tuple[object, int, object]:
+        return None, 30, genotypes if path.name == "genotypes.pkl" else fig1
+
+    monkeypatch.setattr(ex, "_load_pickle", load)
+    out = tmp_path / "store.npz"
+    with pytest.raises(ValueError, match=r"only 1 of 4 Fig\. 1 animals match"):
+        ex.extract_scheer(tmp_path / "genotypes.pkl", tmp_path / "fig1.pkl", out)
+    assert not out.exists()
 
 
 def test_animals_match_by_video_and_file_in_order() -> None:

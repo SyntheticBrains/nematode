@@ -91,3 +91,12 @@ def test_a_disagreement_is_reported_and_edits_nothing() -> None:
     verdict = kc.verdicts(filtered)["reversal_duration_s"]
     assert verdict["disagreement"]
     assert path.read_bytes() == before
+
+
+def test_the_record_is_strict_json() -> None:
+    """Non-finite values become null, so the record parses under strict JSON."""
+    import json
+
+    record = {"a": float("nan"), "b": [1.0, float("inf"), np.float64(2.5)], "c": {"d": -np.inf}}
+    text = json.dumps(kc.finite_or_null(record), allow_nan=False)
+    assert json.loads(text) == {"a": None, "b": [1.0, None, 2.5], "c": {"d": None}}

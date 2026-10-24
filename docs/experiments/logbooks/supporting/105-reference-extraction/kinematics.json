@@ -9,6 +9,7 @@
   "bootstrap": {
     "unit": "recording date",
     "resamples": 2000,
+    "resamples_for_percentiles": 200,
     "seed": 105
   },
   "verdicts": {
@@ -453,10 +454,10 @@
         "published": 7.0,
         "inside": {
           "n": 0,
-          "value": NaN,
+          "value": null,
           "interval_95": [
-            NaN,
-            NaN
+            null,
+            null
           ]
         }
       },
@@ -557,26 +558,26 @@
       "omega_duration_s": {
         "inside": {
           "n": 0,
-          "value": NaN,
+          "value": null,
           "interval_95": [
-            NaN,
-            NaN
+            null,
+            null
           ]
         },
         "edge": {
           "n": 0,
-          "value": NaN,
+          "value": null,
           "interval_95": [
-            NaN,
-            NaN
+            null,
+            null
           ]
         },
         "outside": {
           "n": 0,
-          "value": NaN,
+          "value": null,
           "interval_95": [
-            NaN,
-            NaN
+            null,
+            null
           ]
         }
       },
