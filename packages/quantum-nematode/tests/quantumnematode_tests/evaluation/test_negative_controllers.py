@@ -132,6 +132,34 @@ def test_the_reading_refuses_without_a_committed_launch_record(
     assert not (tmp_path / "out.json").exists()
 
 
+def test_the_reading_refuses_parameters_changed_since_the_launch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The launch check passes only when the parameters equal their version at the launch commit."""
+    import subprocess
+
+    import benchmark_controls as bc  # pyright: ignore[reportMissingImports]
+
+    current = bc.PARAMS_PATH.read_bytes()
+
+    def git(registered: bytes, *, dirty: bool = False) -> object:
+        def run(*args: str) -> subprocess.CompletedProcess[bytes]:
+            if args[0] == "log":
+                return subprocess.CompletedProcess(args, 0, b"abc123\n", b"")
+            if args[0] == "diff":
+                return subprocess.CompletedProcess(args, 1 if dirty else 0, b"", b"")
+            return subprocess.CompletedProcess(args, 0, registered, b"")
+
+        return run
+
+    monkeypatch.setattr(bc, "_git", git(current))
+    assert bc.launch_committed()
+    monkeypatch.setattr(bc, "_git", git(current + b" "))
+    assert not bc.launch_committed()
+    monkeypatch.setattr(bc, "_git", git(current, dirty=True))
+    assert not bc.launch_committed()
+
+
 def test_one_untrained_seed_is_one_network_across_assays() -> None:
     """The arm's brain config is the same on every assay, so one seed gives the same weights."""
     import benchmark_controls as bc  # pyright: ignore[reportMissingImports]

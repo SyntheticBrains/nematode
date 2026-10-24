@@ -392,25 +392,32 @@ def w_minimum(builder: bb.BandBuilder) -> dict[str, Any]:
 # ---------------------------------------------------------------------------------------------
 
 
-def launch_committed() -> bool:
-    """Return whether the launch record is in the committed history and unchanged since."""
-    path = str(LAUNCH_PATH.relative_to(_REPO))
-    logged = subprocess.run(  # noqa: S603 - fixed git arguments, no user input
-        ["git", "log", "--oneline", "-1", "--", path],  # noqa: S607 - git on the PATH, fixed args
+def _git(*args: str) -> subprocess.CompletedProcess[bytes]:
+    """Run git in the repository with fixed arguments."""
+    return subprocess.run(  # noqa: S603 - fixed git arguments, no user input
+        ["git", *args],  # noqa: S607 - git on the PATH
         cwd=_REPO,
         capture_output=True,
-        text=True,
         check=False,
-    ).stdout.strip()
-    clean = (
-        subprocess.run(  # noqa: S603 - fixed git arguments, no user input
-            ["git", "diff", "--quiet", "HEAD", "--", path],  # noqa: S607
-            cwd=_REPO,
-            check=False,
-        ).returncode
-        == 0
     )
-    return bool(logged) and clean
+
+
+def launch_committed() -> bool:
+    """Return whether the launch record is committed and unchanged, and its parameters with it.
+
+    The matched negatives' parameters must be byte-identical to their version in the commit that
+    last touched the launch record, and unchanged in the working tree, so the negatives read are
+    the ones registered.
+    """
+    launch = str(LAUNCH_PATH.relative_to(_REPO))
+    params = str(PARAMS_PATH.relative_to(_REPO))
+    commit = _git("log", "-1", "--format=%H", "--", launch).stdout.decode().strip()
+    if not commit:
+        return False
+    if _git("diff", "--quiet", "HEAD", "--", launch, params).returncode != 0:
+        return False
+    registered = _git("show", f"{commit}:{params}")
+    return registered.returncode == 0 and registered.stdout == PARAMS_PATH.read_bytes()
 
 
 def _finite(value: Any) -> Any:  # noqa: ANN401 - any JSON-shaped value
