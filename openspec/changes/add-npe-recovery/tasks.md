@@ -56,7 +56,9 @@ Phase 10, block F, tracker item F.0 (first half). The maintainer's decisions of 
 
 - [ ] 5.1 Logbook 111: the gate, coverage and contraction per parameter, the posterior-predictive
   check, the cost.
+
 - [ ] 5.2 The tracker:
+
   - F.0's NPE half;
   - the seed scheme in the seed table;
   - C.1's note: simulate at the observation's size, or add between-date noise.

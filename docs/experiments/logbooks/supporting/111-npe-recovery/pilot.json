@@ -1,0 +1,9 @@
+{
+  "simulations": 64,
+  "workers": 16,
+  "seconds_per_simulation_median": 19.964976666495204,
+  "seconds_per_simulation_wall": 1.2910523658902093,
+  "projected_hours": 4.0524699262664905,
+  "simulations_registered": 11300,
+  "share_with_an_undefined_statistic": 0.8125
+}

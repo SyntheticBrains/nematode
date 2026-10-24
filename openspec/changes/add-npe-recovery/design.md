@@ -39,6 +39,7 @@
    - I is 0 where `max_intake` is undefined.
    - **One generator call per animal per second** draws every random number that second needs: `torch.rand(3, generator=…)` for the switch, the curvature (by inverse normal) and a spare. The loop over animals is the cost; one call keeps it to about 2.5 million calls per simulation.
    - The first state is drawn from the chain's stationary share at the first second's inputs.
+
 2. **Priors**, fixed before any simulation, none from search data:
 
    | Parameters | Range |
@@ -55,34 +56,50 @@
    | search time τ | log-uniform [10, 3,000] s |
 
    The ranges span the band data's on-lawn magnitudes with margin, and published off-food values. The search terms' priors are wide and uninformed by López-Cruz.
+
 3. **The simulator and its summary.**
+
    - θ → `BatchedMechanistic(θ)` → the batched evaluator at 200 animals on `scheer_lawn`, `uniform_lawn_scheer` and `food_removal_lopezcruz` → the grader.
    - The summary x is the 11 wild-type statistics and presence's lower bound: 12 numbers.
    - Each is z-scored over the training simulations where it is defined. An undefined entry is then set to −5, with a 0/1 flag appended per statistic, since `sbi` needs finite inputs. Choosing the sentinel after z-scoring keeps it from distorting the scale.
    - C.1 is fitted on these 12 numbers later. Its priors carry no search data (D37).
+
 4. **Simulation seeds.** Simulation k uses animals `1_000_000 + 200·k + i`. Every simulation draws fresh noise, so the noise model is the real sampling noise of 200 animals, and the seeds overlap no band.
+
 5. **NPE.**
+
    - `sbi`'s NPE with a neural-spline flow (its defaults), trained on 10,000 simulations, with a z-scored summary.
    - Two flows, trained with seeds 5402 and 5403.
    - Each posterior is sampled 1,000 times per truth.
+
 6. **The gates (registered).**
+
    - **Truths:** 100 θ drawn from the prior (seed 5401), simulated afresh (simulations 10,000–10,099).
+
    - **Calibrated:** for each flow, the pooled coverage of the central 90% posterior intervals over the 100 × 20 (truth, parameter) pairs lies in **[0.80, 0.97]**.
+
    - **Informative:**
+
      - for each flow, take the first 20 truths;
      - simulate each at 20 posterior draws (simulations 10,100 onward, 400 per flow);
      - for each truth, compute D on the 11 statistics between its own simulation and each draw's, with z on the bands' scales at n = 200, and take the median over its draws;
      - the median of those 20 medians must be at most **1.42**, W's minimum.
 
      A posterior equal to the prior passes calibration by construction, so this gate is what makes the control a test.
+
    - Either gate failing, for either flow, fails F.0a.
+
    - **Reported, not gated:**
+
      - the same D at 20 prior draws per truth (400 more simulations), for the gain over the prior;
      - each parameter's coverage;
      - contraction, 1 − posterior SD / prior SD;
      - coverage on the 25 truths whose own simulation has the lowest D to the bands, since C.1 is fitted near the wild type.
+
 7. **The constraint carried to C.1.** Each simulation summarises 200 animals with no date-to-date variation. The real wild type pools about 1,000 band animals over 41 dates. F.0a is unaffected, since its truths are simulated the same way as training. C.1's real fit must either simulate at the observation's size, or add an explicit between-date noise term matched to the bands. It is noted in the tracker.
+
 8. **The gate preflight.** `gate_preflight.py` does not apply: there are no panel levels, and the informativeness gate cannot be read before a flow is trained. The pilot measures cost, and the launch record says so.
+
 9. **Parallelism.** Simulations run in a process pool (16 workers, one thread each). Each simulation's result is written as it completes, so an interrupted run resumes.
 
 ## Risks / Trade-offs

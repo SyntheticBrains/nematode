@@ -12,25 +12,33 @@ The maintainer's decisions of 2026-10-25:
 ## What Changes
 
 - **C.1's mechanistic baseline**, `BatchedMechanistic`, a closed-loop controller with 20 parameters on the primitives:
+
   - **a roaming/dwelling state.** Its switching hazards depend log-linearly on intake and satiety, after Roberts 2016 and Flavell 2013.
   - **per-state runs,** with weathervane steering: curvature biased by the head-sweep difference.
   - **reversals and omega turns.** Klinokinesis scales their hazards down as dC/dt rises (Pierce-Shimomura 1999). A falling food-contact reading raises the reversal hazard: the edge response behind Scheer's head-poke reversals. After food is lost, the hazards are raised and decay with time off food (a search term).
 
   It is the model C.1 fits. Mutant encodings are C's, registered before C.1 fits.
+
 - **Priors without search data** (D37): box or log-uniform ranges from published magnitudes and the band data's lawn statistics. No López-Cruz value enters a prior.
+
 - **NPE recovery** (`scripts/analysis/npe_recovery.py`):
+
   - the simulator is the batched evaluator at 200 animals on the three wild-type assays, summarised by the benchmark's 11 wild-type statistics plus presence;
   - 10,000 training simulations drawn from the prior;
   - two NPE flows trained with different seeds;
   - simulation-based calibration on 100 held-out truths from the prior.
+
 - **The registered gates**, both required for each flow:
+
   1. **calibrated:** the pooled 90% posterior-interval coverage over 100 truths × 20 parameters lies in **[0.80, 0.97]**;
   2. **informative:** over 20 truths, simulations at 20 posterior draws reproduce each truth's statistics with a **median D of at most 1.42**, W's minimum.
 
   Calibration alone would pass a posterior equal to the prior, the failure A6 named. Reported beside the gates, not gated:
+
   - the same D at 20 prior draws, so the gain over the prior is visible;
   - each parameter's coverage and contraction (posterior SD over prior SD), naming which parameters the benchmark constrains;
   - coverage on the quarter of truths nearest the wild type.
+
 - **`sbi`** pinned in the `analysis` extra.
 
 ## Capabilities

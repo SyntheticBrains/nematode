@@ -416,3 +416,146 @@ class BatchedCurvatureWalk:
             self.curvature = self.rho * self.curvature + math.sqrt(1.0 - self.rho**2) * shock
         raw[:, 1] = _raw_curvature(self.curvature)
         return raw
+
+
+MECHANISTIC_PARAMETERS = (
+    "a0",
+    "a_intake",
+    "a_satiety",
+    "b0",
+    "b_intake",
+    "b_satiety",
+    "v_dwell",
+    "v_roam",
+    "sigma_dwell",
+    "sigma_roam",
+    "kappa_weathervane",
+    "r_dwell",
+    "r_roam",
+    "beta_reversal",
+    "edge",
+    "o_dwell",
+    "o_roam",
+    "beta_omega",
+    "search_amplitude",
+    "search_tau_s",
+)
+"""C.1's parameters, in the order a parameter vector holds them."""
+
+_NEVER_ON_FOOD_S = 1e9
+
+
+class BatchedMechanistic:
+    """A closed-loop roaming/dwelling worm with klinokinesis, weathervane, an edge and search terms.
+
+    Each second, for an animal in state ``s`` (0 dwelling, 1 roaming):
+
+    - **switching:** dwelling to roaming at ``exp(a0 + a_intake I + a_satiety S)`` per second, and
+      roaming to dwelling at ``exp(b0 + b_intake I + b_satiety S)``, with ``I`` this second's intake
+      over the largest possible (0 where that is undefined) and ``S`` the satiety fraction. The
+      first state is drawn from the chain's stationary share at the first second's inputs;
+    - **runs:** the state's speed, and curvature ``kappa_weathervane tanh(lateral) + sigma_s z``
+      degrees per second, ``z`` a standard normal;
+    - **reversals:** ``r_s exp(-beta_reversal tanh(dC/dt)) exp(edge loss) search`` per second, where
+      ``loss`` is how far food contact fell since the previous second. The rise lasts the second
+      contact falls, and moves nothing if a bout is already running;
+    - **omega turns:** ``o_s exp(-beta_omega tanh(dC/dt)) search`` per second; delta turns at the
+      primitives' minimum;
+    - **search:** off food, ``search = 1 + search_amplitude exp(-t_off / search_tau_s)``, with
+      ``t_off`` the seconds since food contact; on food it is 1.
+
+    The rates are per second at a 1-second step. One call to each animal's own generator per second
+    draws every random number that second needs.
+    """
+
+    def __init__(self, params: dict[str, float]) -> None:
+        missing = [p for p in MECHANISTIC_PARAMETERS if p not in params]
+        if missing:
+            msg = f"missing mechanistic parameters {missing}"
+            raise ValueError(msg)
+        self.p = {name: float(params[name]) for name in MECHANISTIC_PARAMETERS}
+        self.state: np.ndarray | None = None
+        self.previous_contact: np.ndarray | None = None
+        self.t_off: np.ndarray | None = None
+
+    @classmethod
+    def from_vector(cls, theta: np.ndarray) -> BatchedMechanistic:
+        """Build from a vector in ``MECHANISTIC_PARAMETERS`` order."""
+        return cls(dict(zip(MECHANISTIC_PARAMETERS, (float(v) for v in theta), strict=True)))
+
+    def reset(self, n: int) -> None:
+        """Forget every animal's state; it is drawn on the first step."""
+        del n
+        self.state = None
+        self.previous_contact = None
+        self.t_off = None
+
+    def _switch_rates(self, senses: BatchedSenses) -> tuple[np.ndarray, np.ndarray]:
+        p = self.p
+        intake = (
+            np.asarray(senses.intake, dtype=np.float64) / senses.max_intake
+            if senses.max_intake
+            else np.zeros(len(senses.concentration))
+        )
+        satiety = np.asarray(senses.satiety_fraction, dtype=np.float64)
+        up = np.exp(p["a0"] + p["a_intake"] * intake + p["a_satiety"] * satiety)
+        down = np.exp(p["b0"] + p["b_intake"] * intake + p["b_satiety"] * satiety)
+        return up, down
+
+    def act(self, senses: BatchedSenses, noise: list[torch.Generator] | None) -> np.ndarray:
+        """Step every animal's state and terms, then return its primitives action."""
+        gens = _require_noise(noise)
+        p = self.p
+        n = len(senses.concentration)
+        u = _uniforms(gens, 3)
+        contact = np.asarray(senses.food_contact, dtype=np.float64)
+        up, down = self._switch_rates(senses)
+        if self.state is None:
+            self.state = (u[:, 0] < up / (up + down)).astype(np.int64)
+            self.previous_contact = contact.copy()
+            self.t_off = np.where(contact > 0, 0.0, _NEVER_ON_FOOD_S)
+        else:
+            rate = np.where(self.state == 0, up, down)
+            flip = u[:, 0] < 1.0 - np.exp(-rate)
+            self.state = np.where(flip, 1 - self.state, self.state)
+        assert self.previous_contact is not None  # noqa: S101
+        assert self.t_off is not None  # noqa: S101
+        loss = np.maximum(0.0, self.previous_contact - contact)
+        self.previous_contact = contact.copy()
+        self.t_off = np.where(contact > 0, 0.0, self.t_off + 1.0)
+        search = np.where(
+            contact > 0,
+            1.0,
+            1.0 + p["search_amplitude"] * np.exp(-self.t_off / p["search_tau_s"]),
+        )
+        roaming = self.state == 1
+        klino = np.tanh(np.asarray(senses.derivative, dtype=np.float64) * senses.derivative_scale)
+        reversal = (
+            np.where(roaming, p["r_roam"], p["r_dwell"])
+            * np.exp(-p["beta_reversal"] * klino)
+            * np.exp(p["edge"] * loss)
+            * search
+        )
+        omega = (
+            np.where(roaming, p["o_roam"], p["o_dwell"]) * np.exp(-p["beta_omega"] * klino) * search
+        )
+        minimum = load_kinematics().hazard_min_per_s
+        # A standard normal from two uniforms (Box-Muller), so one generator call covers the second.
+        z = np.sqrt(-2.0 * np.log(np.maximum(u[:, 1], 1e-300))) * np.cos(2.0 * np.pi * u[:, 2])
+        lateral = np.tanh(np.asarray(senses.lateral, dtype=np.float64) * senses.lateral_scale)
+        curvature = (
+            p["kappa_weathervane"] * lateral
+            + np.where(
+                roaming,
+                p["sigma_roam"],
+                p["sigma_dwell"],
+            )
+            * z
+        )
+        speed = np.where(roaming, p["v_roam"], p["v_dwell"])
+        v_max = load_kinematics().v_max_mm_per_s
+        raw = np.zeros((n, 5))
+        raw[:, 0] = np.clip(2.0 * speed / v_max - 1.0, -1.0, 1.0)
+        raw[:, 1] = _raw_curvature(curvature)
+        raw[:, 2:] = _raw_hazards(np.column_stack([reversal, omega, np.full(n, minimum)]))
+        return raw
