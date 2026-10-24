@@ -452,7 +452,7 @@ def test_a_flat_population_fails_local_search(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_no_late_onsets_is_the_strongest_decline() -> None:
-    """+inf draws (early onsets, no late ones) stay in the upper tail; 0/0 draws count as no decline."""
+    """+inf draws (early onsets, no late ones) stay in the upper tail; 0/0 counts as no decline."""
     finite = np.linspace(1.5, 3.0, 1900)
     with_inf = g._presence(np.concatenate([finite, np.full(100, np.inf)]))
     assert with_inf["present"]
@@ -479,7 +479,10 @@ def test_absent_search_fails_local_search_in_a_grading(monkeypatch: pytest.Monke
     monkeypatch.setattr(bg, "family_values", lambda _f, _a, _c: {})
 
     def passing(_values: object, family_bands: dict[str, g.Band], _bar: float) -> object:
-        return {name: g.Reading(0.0, band, 0.0, True) for name, band in family_bands.items()}
+        return {
+            name: g.Reading(value=0.0, band=band, z=0.0, passes=True)
+            for name, band in family_bands.items()
+        }
 
     monkeypatch.setattr(bg.g, "grade", passing)
     for present, expected in ((True, True), (False, False)):
