@@ -84,6 +84,15 @@ from quantumnematode.connectome.loader import (
     load_emmons_2024_neuromuscular,
 )
 from quantumnematode.connectome.measured_weights import coverage, measured_weights
+from quantumnematode.connectome.neuromodulator_layer import (
+    DEFAULT_TIMESCALE_S,
+    LayerSensitivity,
+    LayerSource,
+    LayerSpec,
+    knocked_out,
+    load_data_layer,
+    receptor_placement_null,
+)
 from quantumnematode.connectome.neuromodulators import ModulatorCircuit, load_circuit
 from quantumnematode.connectome.neuromuscular import neuromuscular_drive_map
 from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
@@ -176,7 +185,6 @@ _N_THERMOTAXIS_FEATURES: int = 3
 # its ingestion drive; the current map has one row per pathway: MOD-1, PDFR-1, PDF onto NSM, and
 # ingestion onto NSM.
 _N_CONCENTRATIONS: int = 2
-_N_MODULATOR_FEATURES: int = _N_CONCENTRATIONS + 1
 N_MODULATOR_PATHWAYS: int = 4
 ModulatorKnockout = Literal["none", "tph1", "pdfr1"]
 # The pathway rows each knockout zeroes: without serotonin nothing flows through MOD-1; without
@@ -523,6 +531,24 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
     modulator_satiety_link: bool = False
     # Worm-seconds per environment step, which sets the concentrations' per-step decay.
     modulator_step_seconds: float = Field(default=5.0, gt=0.0)
+    # Which layer the field is: "hand_placed", the serotonin and PDF circuit above, or "data", the
+    # layer placed from Bentley 2016 and Ripoll-Sanchez 2023 (data/neuromodulators/layer.json): one
+    # pool per ligand, read by every cell carrying one of its receptors. Requires modulators.
+    modulator_layer: Literal["hand_placed", "data"] = "hand_placed"
+    # The data layer only. Each ligand's timescale in worm-seconds, by ligand name; unnamed ligands
+    # take 60 s.
+    modulator_timescales_s: dict[str, float] | None = None
+    # The data layer only. Genes knocked out: a producer gene holds its ligand at zero, a receptor
+    # gene removes every couple through it.
+    modulator_knockout_genes: list[str] = Field(default_factory=list)
+    # The data layer only. "ec50_500nM" keeps only the couples within Ripoll-Sanchez's potency
+    # rule; sources keeps only the cells those sources place.
+    modulator_layer_sensitivity: LayerSensitivity = "none"
+    modulator_layer_sources: list[LayerSource] | None = None
+    # The data layer only. "receptor_placement" moves each receptor gene's cells, class by class, to
+    # classes of the same size, drawn with modulator_layer_null_seed.
+    modulator_layer_null: Literal["none", "receptor_placement"] = "none"
+    modulator_layer_null_seed: int | None = None
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
@@ -1042,7 +1068,45 @@ def _per_connection_edge_signs(
     }
 
 
-def _modulators_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+def _data_layer_keys_set(config: ConnectomePPOBrainConfig) -> list[str]:
+    """Return the data-layer keys a config sets away from their defaults."""
+    return [
+        key
+        for key, unset in (
+            ("modulator_timescales_s", config.modulator_timescales_s is None),
+            ("modulator_knockout_genes", not config.modulator_knockout_genes),
+            ("modulator_layer_sensitivity", config.modulator_layer_sensitivity == "none"),
+            ("modulator_layer_sources", config.modulator_layer_sources is None),
+            ("modulator_layer_null", config.modulator_layer_null == "none"),
+            ("modulator_layer_null_seed", config.modulator_layer_null_seed is None),
+        )
+        if not unset
+    ]
+
+
+def _modulator_layer_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why the layer settings cannot run, or ``None`` when they can."""
+    data_keys = _data_layer_keys_set(config)
+    if config.modulator_layer == "hand_placed":
+        if data_keys:
+            return f"{', '.join(data_keys)} require modulator_layer='data'."
+        return None
+    if config.modulator_knockout != "none":
+        return (
+            "modulator_knockout names the hand-placed field's knockouts; with "
+            "modulator_layer='data' "
+            "name genes in modulator_knockout_genes."
+        )
+    if (config.modulator_layer_null == "none") != (config.modulator_layer_null_seed is None):
+        return "modulator_layer_null and modulator_layer_null_seed are set together."
+    if config.modulator_timescales_s and any(
+        t <= 0 for t in config.modulator_timescales_s.values()
+    ):
+        return "every modulator_timescales_s value must be positive."
+    return None
+
+
+def _modulators_refusal(config: ConnectomePPOBrainConfig) -> str | None:  # noqa: PLR0911 - one refusal per rule
     """Return why the modulator settings cannot run here, or ``None`` when they can."""
     if not config.modulators:
         if config.modulator_knockout != "none" or config.modulator_satiety_link:
@@ -1050,7 +1114,11 @@ def _modulators_refusal(config: ConnectomePPOBrainConfig) -> str | None:
                 "modulator_knockout and modulator_satiety_link require modulators: without the "
                 "field there is nothing to knock out or to link to satiety."
             )
+        if config.modulator_layer != "hand_placed" or _data_layer_keys_set(config):
+            return "modulator_layer and its settings require modulators."
         return None
+    if (refusal := _modulator_layer_refusal(config)) is not None:
+        return refusal
     if config.learning_rule != "ppo":
         return (
             f"modulators requires learning_rule='ppo', got {config.learning_rule!r}: the plastic "
@@ -1063,6 +1131,35 @@ def _modulators_refusal(config: ConnectomePPOBrainConfig) -> str | None:
             "carry the concentrations."
         )
     return None
+
+
+def _data_layer_spec(config: ConnectomePPOBrainConfig, names: list[str]) -> LayerSpec:
+    """Build the data layer a config names, with its sensitivity, sources and null."""
+    spec = load_data_layer(
+        names,
+        sensitivity=config.modulator_layer_sensitivity,
+        sources=config.modulator_layer_sources,
+    )
+    unknown = sorted(set(config.modulator_timescales_s or {}) - set(spec.ligands))
+    if unknown:
+        msg = f"modulator_timescales_s names ligands the layer does not carry: {unknown}"
+        raise ValueError(msg)
+    if config.modulator_layer_null == "receptor_placement":
+        assert config.modulator_layer_null_seed is not None  # noqa: S101 - checked by the refusal
+        spec = receptor_placement_null(spec, config.modulator_layer_null_seed, names)
+    return spec
+
+
+def _layer_decay(config: ConnectomePPOBrainConfig, spec: LayerSpec) -> np.ndarray:
+    """Return each ligand's per-step decay, ``exp(-step / timescale)``."""
+    timescales = config.modulator_timescales_s or {}
+    return np.array(
+        [
+            np.exp(-config.modulator_step_seconds / timescales.get(name, DEFAULT_TIMESCALE_S))
+            for name in spec.ligands
+        ],
+        dtype=np.float32,
+    )
 
 
 def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
@@ -1280,6 +1377,9 @@ class ConnectomeTopology(nn.Module):
     nmj_indices: torch.Tensor
     nmj_map: torch.Tensor
     modulator_map: torch.Tensor
+    modulator_producers: torch.Tensor
+    modulator_row_inputs: torch.Tensor
+    modulator_row_order: torch.Tensor
     _serotonin_release_indices: torch.Tensor
     _pdf_release_indices: torch.Tensor
 
@@ -1327,6 +1427,8 @@ class ConnectomeTopology(nn.Module):
         freeze_wiring: bool = False,
         modulator_circuit: ModulatorCircuit | None = None,
         modulator_knockout: ModulatorKnockout = "none",
+        modulator_spec: LayerSpec | None = None,
+        modulator_knockout_genes: tuple[str, ...] = (),
         chemical_weight_scale: float = 1.0,
         gap_weight_mode: GapWeightMode = "count",
         gap_weight_scale: float = 1.0,
@@ -1946,9 +2048,17 @@ class ConnectomeTopology(nn.Module):
 
         # ── Neuromodulator field (opt-in) ───────────────────────────────
         # Built last and drawing no random numbers, so turning it on moves no other tensor.
-        self.modulators = modulator_circuit is not None
+        if modulator_circuit is not None and modulator_spec is not None:
+            msg = "a topology takes the hand-placed circuit or a layer spec, not both"
+            raise ValueError(msg)
+        self.modulators = modulator_circuit is not None or modulator_spec is not None
+        self.modulator_layer: Literal["hand_placed", "data"] | None = None
         if modulator_circuit is not None:
+            self.modulator_layer = "hand_placed"
             self._build_modulators(modulator_circuit, modulator_knockout, device)
+        elif modulator_spec is not None:
+            self.modulator_layer = "data"
+            self._build_modulator_layer(modulator_spec, modulator_knockout_genes, device)
 
     def _build_modulators(
         self,
@@ -1998,13 +2108,20 @@ class ConnectomeTopology(nn.Module):
         return nn.functional.softplus(self.modulator_rho)
 
     def modulator_current(self, modulators: torch.Tensor) -> torch.Tensor:
-        """Map ``[serotonin, PDF, ingestion drive]`` ``(..., 3)`` to a held current ``(..., N)``."""
+        """Map ``[serotonin, PDF, ingestion drive]`` ``(..., 3)`` to a held current ``(..., N)``.
+
+        With a data layer the input is ``[concentrations..., drives...]``.
+        """
+        if self.modulator_layer == "data":
+            return self._layer_current(modulators)
         serotonin, pdf, drive = modulators.unbind(-1)
         pathway = torch.stack([serotonin, pdf, pdf, drive], dim=-1) * self.modulator_strengths()
         return pathway @ self.modulator_map
 
-    def modulator_release(self, h: torch.Tensor) -> tuple[float, float]:
+    def modulator_release(self, h: torch.Tensor) -> tuple[float, ...]:
         """Return each modulator's release from settled rates ``(N,)``: its cells' mean rate > 0."""
+        if self.modulator_layer == "data":
+            return tuple(float(v) for v in self._layer_release(h))
         return (
             float(h.index_select(-1, self._serotonin_release_indices).clamp_min(0.0).mean()),
             float(h.index_select(-1, self._pdf_release_indices).clamp_min(0.0).mean()),
@@ -2014,8 +2131,11 @@ class ConnectomeTopology(nn.Module):
         """Return each row's release ``(B, 2)`` from settled rates ``(B, N)``, row by row.
 
         Each row's serotonin and PDF release is the mean of its own release cells' positive rates,
-        as :meth:`modulator_release` computes it for one state.
+        as :meth:`modulator_release` computes it for one state. With a data layer the result is
+        ``(B, K)``, one column per ligand.
         """
+        if self.modulator_layer == "data":
+            return self._layer_release(h)
         return torch.stack(
             [
                 h.index_select(-1, self._serotonin_release_indices).clamp_min(0.0).mean(-1),
@@ -2023,6 +2143,75 @@ class ConnectomeTopology(nn.Module):
             ],
             dim=-1,
         )
+
+    def _build_modulator_layer(
+        self,
+        spec: LayerSpec,
+        knockout_genes: tuple[str, ...],
+        device: torch.device,
+    ) -> None:
+        """Register a data layer's current map, its producer weights and its learnable strengths.
+
+        The map has one row per couple, link or drive over every neuron, carrying a fixed row's sign
+        on its cells and 1 on a fitted row's. A row its knockouts remove is zero. A fixed row's
+        strength is the softplus of a learned value starting where the strength is 1; a fitted row's
+        is a free signed value starting at 0. The producer weights average each ligand's producer
+        cells, so a ligand's release is its producers' mean positive settled rate. Nothing here is
+        persisted except the strengths, so a trained network loads unchanged into a knockout brain.
+        """
+        knocked_ligands, knocked_rows = knocked_out(spec, knockout_genes)
+        n_rows = len(spec.rows)
+        rows = torch.zeros(n_rows, self.n_neurons)
+        fixed = [i for i, row in enumerate(spec.rows) if row.sign is not None]
+        fitted = [i for i, row in enumerate(spec.rows) if row.sign is None]
+        for i, row in enumerate(spec.rows):
+            if i in knocked_rows:
+                continue
+            value = float(row.sign) if row.sign is not None else 1.0
+            for name in row.cells:
+                rows[i, self._idx[name]] = value
+        producers = torch.zeros(len(spec.ligands), self.n_neurons)
+        for k, cells in enumerate(spec.producers):
+            for name in cells:
+                producers[k, self._idx[name]] = 1.0 / len(cells)
+        # Where each row's strength sits in [fixed strengths..., fitted strengths...].
+        order = torch.empty(n_rows, dtype=torch.long)
+        order[fixed] = torch.arange(len(fixed))
+        order[fitted] = torch.arange(len(fitted)) + len(fixed)
+        self.modulator_spec = spec
+        self.modulator_knocked_ligands = tuple(sorted(knocked_ligands))
+        self.register_buffer("modulator_map", rows.to(device), persistent=False)
+        self.register_buffer("modulator_producers", producers.to(device), persistent=False)
+        self.register_buffer(
+            "modulator_row_inputs",
+            torch.tensor(
+                [spec.input_index(row) for row in spec.rows],
+                dtype=torch.long,
+                device=device,
+            ),
+            persistent=False,
+        )
+        self.register_buffer("modulator_row_order", order.to(device), persistent=False)
+        self.modulator_layer_rho = nn.Parameter(
+            torch.full((len(fixed),), _SOFTPLUS_INVERSE_OF_ONE, device=device),
+        )
+        self.modulator_layer_w = nn.Parameter(torch.zeros(len(fitted), device=device))
+
+    def modulator_layer_strengths(self) -> torch.Tensor:
+        """Return each row's strength: softplus for fixed rows, the free value for fitted ones."""
+        joined = torch.cat(
+            [nn.functional.softplus(self.modulator_layer_rho), self.modulator_layer_w],
+        )
+        return joined.index_select(0, self.modulator_row_order)
+
+    def _layer_current(self, modulators: torch.Tensor) -> torch.Tensor:
+        """Map a data layer's ``[concentrations..., drives...]`` ``(..., K + D)`` to a current."""
+        inputs = modulators.index_select(-1, self.modulator_row_inputs)
+        return (inputs * self.modulator_layer_strengths()) @ self.modulator_map
+
+    def _layer_release(self, h: torch.Tensor) -> torch.Tensor:
+        """Return each ligand's release ``(..., K)``: its producers' mean positive settled rate."""
+        return h.clamp_min(0.0) @ self.modulator_producers.T
 
     def _build_ohmic(self, device: torch.device) -> None:
         """Precompute the ohmic operator ``(I + L)^-1`` from the fixed gap matrix.
@@ -3338,8 +3527,10 @@ class ConnectomeTopology(nn.Module):
         # Last, so the parameters before it keep their order with plastic gaps on or off.
         if self.plastic_gaps:
             params.append(self.gap_log_multiplier)
-        if self.modulators:
+        if self.modulator_layer == "hand_placed":
             params.append(self.modulator_rho)
+        elif self.modulator_layer == "data":
+            params.extend([self.modulator_layer_rho, self.modulator_layer_w])
         return params
 
 
@@ -3533,21 +3724,44 @@ class ConnectomePPOBrain(ClassicalBrain):
             action_dim=continuous_action_dim(config.action_space),
             freeze_wiring=config.freeze_wiring,
             modulator_circuit=(
-                load_circuit(sorted(connectome.neurons)) if config.modulators else None
+                load_circuit(sorted(connectome.neurons))
+                if config.modulators and config.modulator_layer == "hand_placed"
+                else None
             ),
             modulator_knockout=config.modulator_knockout,
+            modulator_spec=(
+                _data_layer_spec(config, sorted(connectome.neurons))
+                if config.modulators and config.modulator_layer == "data"
+                else None
+            ),
+            modulator_knockout_genes=tuple(config.modulator_knockout_genes),
             chemical_weight_scale=config.chemical_weight_scale,
             gap_weight_mode=config.gap_weight_mode,
             gap_weight_scale=config.gap_weight_scale,
             gap_coupling=config.gap_coupling,
             gap_normalisation=config.gap_normalisation,
         ).to(self.device)
-        # The two concentrations, serotonin then PDF, carried across an episode's steps.
-        self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)
-        self._modulator_decay = (
-            float(np.exp(-config.modulator_step_seconds / self.topology.modulator_timescale_s))
-            if config.modulators
-            else 1.0
+        # The concentrations carried across an episode's steps: serotonin then PDF, or one per
+        # ligand of a data layer.
+        self._n_concentrations = (
+            len(self.topology.modulator_spec.ligands)
+            if self.topology.modulator_layer == "data"
+            else _N_CONCENTRATIONS
+        )
+        self._concentrations = np.zeros(self._n_concentrations, dtype=np.float32)
+        self._knocked_ligands: tuple[int, ...] = (
+            self.topology.modulator_knocked_ligands
+            if self.topology.modulator_layer == "data"
+            else ((0,) if config.modulator_knockout == "tph1" else ())
+        )
+        self._modulator_decay: float | np.ndarray = (
+            _layer_decay(config, self.topology.modulator_spec)
+            if self.topology.modulator_layer == "data"
+            else (
+                float(np.exp(-config.modulator_step_seconds / self.topology.modulator_timescale_s))
+                if config.modulators
+                else 1.0
+            )
         )
 
         # Learning rule: owns the critic (constructed inside the rule at this
@@ -3785,25 +3999,29 @@ class ConnectomePPOBrain(ClassicalBrain):
         knockout serotonin is never made, so it stays at zero.
         """
         release = np.array(self.topology.modulator_release(hidden.detach()), dtype=np.float32)
-        if self.config.modulator_knockout == "tph1":
-            release[0] = 0.0
+        for k in self._knocked_ligands:
+            release[k] = 0.0
         decay = self._modulator_decay
         self._concentrations = (decay * self._concentrations + (1.0 - decay) * release).astype(
             np.float32,
         )
 
     @property
-    def modulator_concentrations(self) -> tuple[float, float] | None:
-        """Return the current ``(serotonin, PDF)`` concentrations, or None without the field."""
+    def modulator_concentrations(self) -> tuple[float, ...] | None:
+        """Return the current concentrations, or None without the field.
+
+        They are ``(serotonin, PDF)`` for the hand-placed field, or one per ligand of a data layer
+        in the layer's ligand order.
+        """
         if not self.config.modulators:
             return None
-        return float(self._concentrations[0]), float(self._concentrations[1])
+        return tuple(float(c) for c in self._concentrations)
 
     def _unpack_modulators(self, states: torch.Tensor) -> torch.Tensor | None:
         """Slice ``[serotonin, PDF, ingestion drive]`` off the end of one state or a batch."""
         if not self.config.modulators:
             return None
-        return states[..., -_N_MODULATOR_FEATURES:]
+        return states[..., -(self._n_concentrations + 1) :]
 
     def _extract_food_features(self, params: BrainParams) -> np.ndarray:
         if self.config.sensing_mode == "oracle":
@@ -4513,7 +4731,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         """
         self.topology.reset_traces()
         self.topology.reset_membrane()
-        self._concentrations = np.zeros(_N_CONCENTRATIONS, dtype=np.float32)
+        self._concentrations = np.zeros(self._n_concentrations, dtype=np.float32)
         # Separate from the trace reset: the rule's load-time reset also clears the traces,
         # and a load must restart the perturbation schedule rather than advance it.
         self.topology.advance_schedule()

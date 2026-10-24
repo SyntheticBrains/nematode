@@ -145,6 +145,38 @@ def short_reach(topology: ConnectomeTopology) -> dict[int, int]:
     return {d: sum(1 for h in hops if h != UNREACHED and h <= d) for d in (1, 2)}
 
 
+def modulator_shortcuts(topology: ConnectomeTopology, spec: Any = None) -> dict[str, int]:  # noqa: ANN401
+    """Count the two-hop routes a data neuromodulator layer opens from a sensor to a motor neuron.
+
+    A ligand's pool joins every producer to every cell carrying one of its receptors, so a couple
+    whose ligand an injected sensor produces, and whose receptor a motor neuron carries, is a route of
+    two hops (sensor to pool, pool to motor neuron) that no synapse provides. ``spec`` defaults to the
+    topology's own layer; pass another, such as a null draw, to count its routes on the same neurons.
+    Returns the number of such couples and of distinct motor neurons they reach, both zero without a
+    data layer.
+    """
+    layer = spec if spec is not None else getattr(topology, "modulator_spec", None)
+    if layer is None:
+        return {"couples": 0, "motor_cells": 0}
+    sensors = set(injected_sensors(topology))
+    motors = set(topology._motor_flat_indices.tolist())
+    sensor_ligands = {
+        k
+        for k, cells in enumerate(layer.producers)
+        if any(topology._idx[c] in sensors for c in cells)
+    }
+    couples = 0
+    reached: set[int] = set()
+    for row in layer.rows:
+        if row.kind == "drive" or row.ligand not in sensor_ligands:
+            continue
+        hit = {topology._idx[c] for c in row.cells} & motors
+        if hit:
+            couples += 1
+            reached |= hit
+    return {"couples": couples, "motor_cells": len(reached)}
+
+
 DEFAULT_NULL = "rewired_degree_preserving"
 NULLS = (
     DEFAULT_NULL,
