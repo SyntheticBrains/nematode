@@ -19,6 +19,7 @@ _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
 
 _TRANSITIONS = np.array([[0.979, 0.021], [0.102, 0.898]])
+_MIN_HAZARDS = (1e-4, 1e-4, 1e-4)
 
 
 def _senses(n: int, concentration: float = 0.0, contact: float = 0.0) -> BatchedSenses:
@@ -79,7 +80,7 @@ def test_the_hmm_worm_ignores_food() -> None:
 
 def test_an_animal_is_the_same_alone_and_in_a_batch() -> None:
     """Each animal draws only from its own generator."""
-    for make in (_hmm, lambda: BatchedCurvatureWalk(0.03, (1e-4,) * 3, "ar1", 50.0, 0.5)):
+    for make in (_hmm, lambda: BatchedCurvatureWalk(0.03, _MIN_HAZARDS, "ar1", 50.0, 0.5)):
         alone = _run(make(), [7], 100)
         crowd = _run(make(), [3, 7, 11], 100)
         assert np.array_equal(alone[:, 0], crowd[:, 1])
@@ -87,7 +88,7 @@ def test_an_animal_is_the_same_alone_and_in_a_batch() -> None:
 
 def test_the_random_walk_turns_uniformly() -> None:
     """Uniform mode draws each second's curvature uniformly over the whole raw range."""
-    raws = _run(BatchedCurvatureWalk(0.03, (1e-4,) * 3, "uniform"), list(range(200)), 100)
+    raws = _run(BatchedCurvatureWalk(0.03, _MIN_HAZARDS, "uniform"), list(range(200)), 100)
     curvature = raws[:, :, 1].ravel()
     assert curvature.min() >= -1.0
     assert curvature.max() <= 1.0
@@ -96,7 +97,7 @@ def test_the_random_walk_turns_uniformly() -> None:
 
 def test_the_correlated_walk_keeps_its_persistence() -> None:
     """AR(1) curvature has the lag-1 autocorrelation it was given (well inside the clip)."""
-    raws = _run(BatchedCurvatureWalk(0.03, (1e-4,) * 3, "ar1", 10.0, 0.6), list(range(100)), 400)
+    raws = _run(BatchedCurvatureWalk(0.03, _MIN_HAZARDS, "ar1", 10.0, 0.6), list(range(100)), 400)
     c = raws[:, :, 1]
     lag1 = np.corrcoef(c[1:].ravel(), c[:-1].ravel())[0, 1]
     assert lag1 == pytest.approx(0.6, abs=0.03)
