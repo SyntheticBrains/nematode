@@ -181,11 +181,12 @@ class BatchedConnectome:
         if config.enable_predator_projection or config.enable_thermotaxis_projection:
             _refuse(brain, "it projects predator or thermal senses")
         self.brain = brain
-        self.concentrations = np.zeros((0, 2), dtype=np.float32)
+        self.width = brain._n_concentrations  # noqa: SLF001
+        self.concentrations = np.zeros((0, self.width), dtype=np.float32)
 
     def reset(self, n: int) -> None:
         """Start every animal's modulator concentrations at zero."""
-        self.concentrations = np.zeros((n, 2), dtype=np.float32)
+        self.concentrations = np.zeros((n, self.width), dtype=np.float32)
 
     def state(self, senses: BatchedSenses) -> np.ndarray:
         """Return the brain's state vectors: food features, then the modulators if it has them."""
@@ -215,8 +216,8 @@ class BatchedConnectome:
             )
             if brain.config.modulators:
                 release = topology.modulator_release_batched(hidden).numpy().astype(np.float32)
-                if brain.config.modulator_knockout == "tph1":
-                    release[:, 0] = 0.0
+                for k in brain._knocked_ligands:  # noqa: SLF001
+                    release[:, k] = 0.0
                 decay = brain._modulator_decay  # noqa: SLF001
                 self.concentrations = (
                     decay * self.concentrations + (1.0 - decay) * release

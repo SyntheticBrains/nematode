@@ -1,0 +1,121 @@
+{
+ "description": "Each monoamine receptor's coupling and the layer's sign for it: Galpha-i/o-coupled and ligand-gated Cl- channels inhibitory, Galpha-q- or Galpha-s-coupled excitatory. This is the layer's rule for the receptor's effect on the cell that carries it, not a claim that cAMP or Gq signalling has one sign in every cell. A receptor whose coupling is not established by a cited assay has sign null and is fitted. Quotes are from the cited full texts or, where those are not open access, their abstracts; verified 2026-10-24.",
+ "rule": {
+  "Galpha-i/o": -1,
+  "Galpha-q": 1,
+  "Galpha-s": 1,
+  "Cl- channel": -1
+ },
+ "receptors": {
+  "ser-1": {
+   "sign": 1,
+   "coupling": "Galpha-q",
+   "citation": "Hapiak et al. 2009, Genetics 181:153 (PMC2621164)",
+   "quote": "three G-protein-coupled receptors, SER-1, SER-4, and SER-7, which appear to couple to Gαq, Gαo, and Gαs, respectively",
+   "note": "Hamdan et al. 1999 (PMID 10098838): Ca2+-mediated signalling in heterologous cells"
+  },
+  "ser-4": {
+   "sign": -1,
+   "coupling": "Galpha-i/o",
+   "citation": "Hapiak et al. 2009 (PMC2621164); Olde & McCombie 1997 (PMID 9061615)",
+   "quote": "SER-4 ... Gαo; 5HT-Ce ... mediates adenylate cyclase attenuation"
+  },
+  "ser-5": {
+   "sign": null,
+   "coupling": "Galpha-s, inferred from phylogeny only",
+   "citation": "Hapiak et al. 2009 (PMC2621164)",
+   "quote": "supporting the identification of SER-5 as a Gαs-coupled 5-HT receptor (from clustering with receptors of documented coupling)",
+   "note": "No functional coupling assay found; fitted."
+  },
+  "ser-7": {
+   "sign": 1,
+   "coupling": "Galpha-s",
+   "citation": "Hobson et al. 2006, Genetics 172:159 (PMC1456143)",
+   "quote": "couples to a stimulation of adenyl cyclase when expressed in COS-7 cells"
+  },
+  "mod-1": {
+   "sign": -1,
+   "coupling": "serotonin-gated Cl- channel",
+   "citation": "Ranganathan et al. 2000, Nature 408:470 (PMID 11100728)",
+   "quote": "encodes a new type of ionotropic 5-HT receptor, a 5-HT-gated chloride channel",
+   "note": "Inhibitory where E_Cl lies below the resting potential, the layer's assumption for every Cl- channel."
+  },
+  "dop-1": {
+   "sign": 1,
+   "coupling": "Galpha-q (in vivo genetics)",
+   "citation": "Chase, Pepper & Koelle 2004, Nat Neurosci 7:1096 (PMID 15378064)",
+   "quote": "D1- and D2-like receptors that activate the antagonistic Galpha(q) and Galpha(o) signaling pathways, respectively",
+   "note": "No heterologous coupling assay found; Bentley 2016 also calls it excitatory."
+  },
+  "dop-2": {
+   "sign": -1,
+   "coupling": "Galpha-i/o",
+   "citation": "Suo et al. 2003 (PMID 12887685); Suo et al. 2009 (PMC2735167)",
+   "quote": "DOP-2 and DOP-3 are D2-like receptors that couple to Gi/o"
+  },
+  "dop-3": {
+   "sign": -1,
+   "coupling": "Galpha-o/i",
+   "citation": "Chase, Pepper & Koelle 2004 (PMID 15378064); Sugiura et al. 2005 (PMID 16001968)",
+   "quote": "DOP-3 attenuates forskolin-stimulated cAMP formation"
+  },
+  "dop-4": {
+   "sign": 1,
+   "coupling": "Galpha-s",
+   "citation": "Sugiura et al. 2005, J Neurochem 94:1146 (PMID 16001968)",
+   "quote": "DOP-4 stimulates cAMP accumulation in response to dopamine stimulation"
+  },
+  "lgc-53": {
+   "sign": -1,
+   "coupling": "dopamine-gated Cl- channel",
+   "citation": "Ringstad, Abe & Horvitz 2009, Science 325:96 (PMC2963310)",
+   "quote": "LGC-53 is a high-affinity dopamine receptor ... LGC-40, LGC-53 and LGC-55 are chloride channels",
+   "note": "Inhibitory where E_Cl lies below the resting potential."
+  },
+  "ser-3": {
+   "sign": 1,
+   "coupling": "Galpha-q",
+   "citation": "Mills et al. 2012, EMBO J 31:667 (PMC3273394); Suo et al. 2006 (PMC6674634)",
+   "quote": "OCTR-1 and SER-3 are Gαo and Gαq coupled, respectively"
+  },
+  "ser-6": {
+   "sign": 1,
+   "coupling": "Galpha-s (in vivo); a Gq-like readout in oocytes",
+   "citation": "Mills et al. 2012 (PMC3273394); Fernandez et al. 2020 (PMC7511189)",
+   "quote": "OA/SER-6 stimulates the Gαs-dependent release of multiple peptides; SER-6 is coupled to the excitatory G protein Gαs",
+   "note": "The coupling conflicts between assays, but both readings are excitatory, so the sign is fixed."
+  },
+  "octr-1": {
+   "sign": -1,
+   "coupling": "Galpha-o",
+   "citation": "Mills et al. 2012, EMBO J 31:667 (PMC3273394)",
+   "quote": "OCTR-1 and SER-3 are Gαo and Gαq coupled, respectively"
+  },
+  "ser-2": {
+   "sign": -1,
+   "coupling": "Galpha-i/o",
+   "citation": "Rex & Komuniecki 2002 (PMID 12354282); Fernandez et al. 2020 (PMC7511189)",
+   "quote": "tyramine reduces forskolin-stimulated cAMP levels in HEK293 cells stably expressing SER-2; SER-2 is coupled to the inhibitory G protein Gαo",
+   "note": "Rex et al. 2004 (PMID 15569254) also report a small Ca2+ rise; every review calls it Gαo."
+  },
+  "tyra-2": {
+   "sign": -1,
+   "coupling": "Galpha-i/o",
+   "citation": "Rex et al. 2005, J Neurochem 94:181 (PMID 15953361)",
+   "quote": "TYRA-2 encodes a second Galpha(i/o)-coupled tyramine receptor"
+  },
+  "tyra-3": {
+   "sign": 1,
+   "coupling": "Galpha-q",
+   "citation": "Hapiak et al. 2013, J Neurosci 33:14402 (PMC3756756)",
+   "quote": "These data suggest that TA-dependent activation of TYRA-3 increased Gαq signaling"
+  },
+  "lgc-55": {
+   "sign": -1,
+   "coupling": "tyramine-gated Cl- channel",
+   "citation": "Ringstad, Abe & Horvitz 2009 (PMC2963310); Pirri et al. 2009, Neuron 62:526 (PMC2804440)",
+   "quote": "LGC-55 is a high-affinity tyramine receptor ... chloride channels",
+   "note": "Inhibitory where E_Cl lies below the resting potential."
+  }
+ }
+}
