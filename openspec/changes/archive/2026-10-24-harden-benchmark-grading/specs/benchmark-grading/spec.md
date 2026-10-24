@@ -25,7 +25,7 @@ this pipeline, never from the authors' labels or published values.
 - **THEN** its exits per on-lawn hour SHALL be 0 and graded
 - **AND** its pre-exit enrichment SHALL fail, entering the distance at the cap
 
-#### Scenario: A flat search curve has no γ
+#### Scenario: A flat search curve has no decay rate
 
 - **WHEN** a population's onsets per bin do not decay
 - **THEN** its γ SHALL be undefined and fail at the cap, and its early/late ratio SHALL still be graded

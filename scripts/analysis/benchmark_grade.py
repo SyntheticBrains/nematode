@@ -13,10 +13,11 @@ Two sources, one grading:
     family ``small_lawn``, ``uniform_lawn`` or ``local_search``. Each captured run is one animal.
 
 Every animal is read only over its assay's analysis window: the small lawn's and the uniform
-well's last 40 min, and López-Cruz's 45 min from removal. The population's size n picks the bands
-in ``data/benchmark/bands.json``; a size the bands were not built at is refused. The output gives
+well's last 40 min, and López-Cruz's 45 min from removal. The output gives
 every statistic's value, band, capped z and pass; the wild type's pass at its Bonferroni bar; and
-the distance D and the fitted distance D_fit.
+the distance D and the fitted distance D_fit. Each family is graded at its own size: on the vendored
+bands where they were built at it, and otherwise on bands built now by ``benchmark_bands.py``'s
+builder, each band on its own generator, which gives the vendored values at the vendored sizes.
 
 Usage::
 
@@ -29,6 +30,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import math
 import sys
@@ -74,18 +76,13 @@ def load_bands(path: Path = BANDS_PATH) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
-def bands_at(bands: dict[str, Any], n: int) -> dict[str, Any]:
-    """Return the bands built at population size n.
+@functools.cache
+def _builder() -> Any:  # noqa: ANN401 - the bands script's builder, imported on first use
+    """Return the process's band builder, created once so its classified tallies are reused."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import benchmark_bands
 
-    Raises
-    ------
-    ValueError
-        If the bands were not built at n.
-    """
-    if str(n) not in bands["bands"]:
-        msg = f"the bands were built at {bands['sizes']}, not at n = {n}; rebuild them at n"
-        raise ValueError(msg)
-    return bands["bands"][str(n)]
+    return benchmark_bands.BandBuilder()
 
 
 def _band(entry: dict[str, Any]) -> g.Band:
@@ -93,7 +90,30 @@ def _band(entry: dict[str, Any]) -> g.Band:
         centre=float("nan") if entry["centre"] is None else float(entry["centre"]),
         scale=float("nan") if entry["scale"] is None else float(entry["scale"]),
         inflated=bool(entry["inflated"]),
+        direction=int(entry.get("direction", 0)),
     )
+
+
+def family_bands(bands: dict[str, Any], family: str, n: int) -> dict[str, g.Band]:
+    """Return a family's bands at n: the vendored ones where built at n, else built now.
+
+    Local search's band does not depend on n.
+    """
+    if family == "local_search":
+        any_size = next(iter(bands["bands"].values()))
+        return {name: _band(entry) for name, entry in any_size[family].items()}
+    if str(n) in bands["bands"]:
+        return {name: _band(entry) for name, entry in bands["bands"][str(n)][family].items()}
+    builder = _builder()
+    return builder.small_lawn(n) if family == "small_lawn" else builder.uniform_lawn(n)
+
+
+def mutant_bands(bands: dict[str, Any], mutant: str, n: int) -> dict[str, g.Band]:
+    """Return a mutant's Δ bands at n, its directions resolved over its paired band dates."""
+    if str(n) in bands["bands"]:
+        entries = bands["bands"][str(n)]["mutants"][mutant]
+        return {name: _band(entry) for name, entry in entries.items()}
+    return _builder().mutant(mutant, n)[0]
 
 
 def classifier(bands: dict[str, Any]) -> rd.GaussianClassifier:
@@ -131,24 +151,22 @@ def grade_populations(
     populations: dict[str, list[list[BehaviourStep]]],
     bands: dict[str, Any],
 ) -> dict[str, Any]:
-    """Grade each family's population; return values, bands, z, passes and the distances."""
-    sizes = {len(p) for p in populations.values()}
-    if len(sizes) != 1:
-        msg = f"every family needs the same population size, got {sorted(sizes)}"
-        raise ValueError(msg)
-    n = sizes.pop()
-    at = bands_at(bands, n)
+    """Grade each family's population at its own size; return values, z, passes and distances."""
     clf = classifier(bands)
     bar = float(bands["bars"]["wild_type"])
     readings: dict[str, dict[str, g.Reading]] = {}
+    sizes: dict[str, int] = {}
+    presence: dict[str, Any] | None = None
     for family, animals in populations.items():
+        sizes[family] = len(animals)
         values = family_values(family, animals, clf)
-        family_bands = {name: _band(entry) for name, entry in at[family].items()}
-        readings[family] = g.grade(values, family_bands, bar)
+        readings[family] = g.grade(values, family_bands(bands, family, len(animals)), bar)
+        if family == "local_search":
+            presence = g.simulated_search_presence(animals)
     graded = list(readings)
     complete = set(graded) == set(g.FAMILIES)
     out: dict[str, Any] = {
-        "n": n,
+        "n": sizes,
         "bar": bar,
         "families": {
             family: {
@@ -165,6 +183,12 @@ def grade_populations(
         },
         "family_passes": {f: all(r.passes for r in rs.values()) for f, rs in readings.items()},
     }
+    if presence is not None:
+        # Local search passes only where it is present: early/late above 1 at its lower bound.
+        out["local_search_presence"] = presence
+        out["family_passes"]["local_search"] = bool(
+            out["family_passes"]["local_search"] and presence["present"],
+        )
     out["wild_type_passes"] = complete and all(out["family_passes"].values())
     out["D"] = g.distance(readings, list(g.FAMILIES)) if complete else None
     fit = [f for f in g.FIT_FAMILIES if f in readings]

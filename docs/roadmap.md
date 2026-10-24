@@ -1745,16 +1745,23 @@ authoritative plan; amendments are dated in both places.
 
 - **Roaming and dwelling** (Scheer & Bargmann 2023; Flavell 2013): on-lawn roaming fraction; dwelling
   τ ≈ 482 s; roaming double-exponential (75 s and 520 s); food-density dependence.
+
 - **Lawn leaving** (Scheer; Bendesky 2011): about 1 event per 95–100 min; 80% of events from roaming;
   leaving rising with depletion.
+
 - **Local search** (López-Cruz 2019; Gray 2005; Calhoun 2014): reorientation rate αe^(−γt)+β over 2–44 min
   after removal, with γ ≈ 0.11 per minute.
+
 - **Chemotaxis components** (Pierce-Shimomura 1999; Iino & Yoshida 2009): the pirouette rate against
   dC/dt, as the repaired unit-free quintile ratio; the weathervane regression.
+
 - **Mutants:**
+
   - pdfr-1: less roaming, normal leaving, more search;
   - tax-4: less roaming, normal leaving;
   - tph-1: more roaming and more leaving, graded on Scheer only.
+
+  *(Amended 2026-10-24, change `harden-benchmark-grading`, [Logbook 109](experiments/logbooks/109-benchmark-grading.md).)* The band data resolve two directions by a paired t-test across recording dates: tph-1 roams more and tax-4 roams less. pdfr-1's lower roaming (t −2.1, 7 df) and every leaving difference are unresolved, so they are graded by magnitude alone. pdfr-1's search is reported, not graded, because no held-out cohort can positive-control it. Ji 2021's patch assay is reported beside: pdfr-1 roams less.
 
 #### Phase 10 exit criteria
 
@@ -1790,7 +1797,7 @@ authoritative plan; amendments are dated in both places.
 |---|---|---|
 | **A graded benchmark of standard on-lawn assays for simulated worms**, with real-track positive controls and matched negatives | none found; Tierpsy/OWMD feature sets describe real worms, not simulated ones | a field resource, citable alone |
 | **A closed-loop connectome controller with neuromodulatory state, graded on held-out lawn assays and mutant phenotypes against equal-budget nulls**, including a neuromodulator-layer null | BAAIWorm (nulls, no behavioural grading); Roberts 2016 (graded, no loop, no null); WormWars (nulls, task fitness) | the first test of what the wiring, synaptic and neuromodulatory, contributes to behavioural fidelity |
-| **The pdfr-1 and tax-4 dissociation** reproduced by a simulated worm | none found | a mechanistic account of how roaming and leaving come apart |
+| **The pdfr-1 and tax-4 dissociation** reproduced by a simulated worm. *(Narrowed 2026-10-24: the benchmark grades tax-4's lower roaming with its leaving inside its band, and pdfr-1 by magnitude only; Logbook 109.)* | none found | a mechanistic account of how roaming and leaving come apart |
 
 #### Go/No-Go Decision
 

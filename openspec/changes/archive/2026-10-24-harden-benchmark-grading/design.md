@@ -24,26 +24,35 @@
 ## Decisions
 
 1. **The paired t-test.** It weights dates equally, where the bands pool animals. That is intended: the direction asks whether an effect replicates across recording dates, the unit the split and the bootstrap resample.
+
    - For each paired band date with both arms present, the Δ is the mutant's pooled statistic minus the wild type's.
-   - A direction is resolved when |t| exceeds t_{k−1}(0.975), with k paired dates and k ≥ 2. Otherwise it is unresolved. A single paired date cannot resolve a direction.
+   - A direction is resolved when |t| exceeds t\_{k−1}(0.975), with k paired dates and k ≥ 2. Otherwise it is unresolved. A single paired date cannot resolve a direction.
    - It is written to `bands.json` beside each mutant statistic, as `direction`, `paired_t` and `paired_dates`. The magnitude band is unchanged.
+
 2. **Bands on demand.**
+
    - `benchmark_bands.build_family_bands(family, n)` and `build_mutant_bands(mutant, n)` build one family's bands at n, from the vendored store, with 2,000 resamples and κ from `bands_record.json`.
    - **Each band has its own generator:** `default_rng([2030, index, n])`, the index fixed per family and per mutant. The reference build uses the same functions. Bands built on demand then equal the vendored ones exactly, whatever was built before.
    - **Dependencies.** The uniform well's floor and a thin mutant's inflation need the small lawn's scale at the same n. Building either at n builds the small lawn at n first, on its own generator.
    - **The per-date tallies** (classifying about 2,000 animals, most of a build's time) are computed once per process and cached.
    - The grader uses the vendored values when n is in `bands.json`, and builds otherwise. A test checks the two agree at n = 200.
    - López-Cruz's band has no n: it is the band batches' prediction interval at any n.
+
 3. **γ without a decay.**
+
    - The grid's bounds become named constants in `readouts` (`GAMMA_GRID_MIN_PER_MIN`, `GAMMA_GRID_MAX_PER_MIN`), read by `fit_local_search` and by the rule. `fit_local_search`'s behaviour does not change.
    - `local_search_statistics` returns NaN for γ when the fitted γ is within 1% of either bound, or α is no larger than 1e-9 of the curve's level. A flat curve's least-squares α is zero only to rounding (about 4e-15), so a strict α ≤ 0 would miss it. The early/late ratio is unchanged.
    - **Real band batches, checked before the change:** all 17 fit γ in 0.06–0.18 per minute with α > 0, so none becomes undefined and López-Cruz's band is unchanged.
+
 4. **pdfr-1's local search reported.**
+
    - Its Δγ and Δ early/late move to `bands_record.json` under `reported`.
    - pdfr-1's family is two statistics, and its bar is `z_star(2)` = 2.24.
+
 5. **Ji 2021 beside.** The record reports Ji 2021's pdfr-1 and tax-4 patch-assay roaming against its wild type's, from `data/roaming_dwelling/ji2021_readings.json`, as directions only. Its assay differs from Scheer's.
 
 6. **Local search must be present** (amendment, registered before implementation).
+
    - Early/late is the mean onsets per bin over 8–14 min divided by that over 34–44 min after removal, as graded.
    - **Simulated populations:** animals are resampled with replacement 2,000 times (`default_rng(2035)`), and the ratio is taken on each resample's mean curve. **Real batches** have no animals, so each bin is drawn from a normal at its mean and SEM, 2,000 times with the same seed.
    - Present when the 2.5% quantile exceeds 1. The local-search family passes only when every statistic passes and search is present.
@@ -53,9 +62,12 @@
 ## Risks / Trade-offs
 
 - **[The rebuild changes recorded numbers]** → these move:
+
   - the direction fields, pdfr-1's bar and pdfr-1's search;
   - the scales, at bootstrap-noise level, from the per-band generators.
 
   The centres, κ and the rule's checks are unchanged by construction. Logbook 109's addendum reports every changed value beside its original, and the preflight is re-run on the rebuilt bands.
+
 - **[On-demand bands are slower]** → a family at n takes the bootstrap's 2,000 resamples, seconds on the store. B.4 grades a handful of populations.
+
 - **[The t-test is conservative with few dates]** → it is stated. It is the test that matches the unit the bands resample.

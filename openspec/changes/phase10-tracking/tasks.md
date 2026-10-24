@@ -281,6 +281,17 @@ nothing in W registers before C.2 has read.
   - **Exits read 0.71 per on-lawn hour** under the geometric window rule (D.1's 0.21 came from the
     authors' out-of-lawn runs).
 
+  *(Amended 2026-10-24, change `harden-benchmark-grading`.)* Before B.4:
+
+  - mutant directions by a paired t-test across dates;
+  - bands at any size, one generator per band, graded per family (scales moved −2.9% to +4.0%);
+  - γ undefined without a decay;
+  - pdfr-1's local search reported, not graded (pdfr-1's bar 2.24);
+  - a registered decay-presence test for local search: a flat population passed the family 12–13%
+    of the time; every band batch is present.
+
+  Logbook 109's addendum has every changed value.
+
 - [ ] **B.4 The controls**:
 
   - positive: cohort-held-out real tracks pass, and held-out real mutant cohorts pass the mutant
@@ -289,6 +300,24 @@ nothing in W registers before C.2 has read.
   - trivial negatives (a random walk, a correlated random walk, the untrained policy) fail.
 
   **The benchmark is void unless all of these behave.**
+
+  *(Added 2026-10-24 by B.3's hardening, change `harden-benchmark-grading`.)* B.4's registration
+  must fix:
+
+  - **A rule for multiplicity across its controls.** About six positive controls, each graded at a
+    95% family-wise rate, would void the benchmark by chance about a quarter of the time
+    (1 − 0.95⁶). For example, Bonferroni across the controls, or a registered count of allowed
+    failures.
+  - **The thin controls, stated:**
+    - the uniform well has one held-out date (31 animals);
+    - tph-1 has two held-out paired dates;
+    - local search has ten held-out batches, graded one by one (the rule's check passed 0.962 per
+      batch);
+    - pdfr-1's local search has no held-out cohort and is reported only.
+  - **Grading at the controls' own sizes,** now built (`benchmark_grade.py`, bands on demand).
+  - **Each statistic's discrimination, as description.** Four single statistics passed for the
+    preflight's Poisson worm, so the family rule and D carry the discrimination. Local search must
+    also be present: early/late above 1 at its own lower bound.
 
 - [ ] **B.5 Track import** (WCON or CSV), independent of the simulator, positioned against Tierpsy and
   OWMD feature sets. NeuroSparkSNT and a wider novelty search checked at registration.
@@ -342,15 +371,26 @@ nothing in W registers before C.2 has read.
 - [ ] **C.1 The mechanistic baseline**: a stochastic run/reversal switch, a roaming/dwelling state with
   intake and satiety dependence, pirouettes and weathervane, ≤ 30 parameters. Fitted by NPE, with
   priors set without search data; posterior-predictive checks.
+
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
   and a plateau criterion.
+
+  *(Added 2026-10-24 by B.3's hardening.)* `time_on_lawn`'s band scale is 0.006 at n = 200, so a
+  controller that leaves the lawn a little reaches the z cap of 10 there, and an unweighted D_fit is
+  dominated by it. C.2's registration states its weights and cap with that in view.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
+
 - [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(Added 2026-10-24 by B.3's hardening.)* Only tph-1's (more) and tax-4's (less) roaming directions
+  are resolved by the references; every other mutant difference is graded by magnitude. The
+  dissociation claim is narrowed accordingly in the roadmap.
 
 ## W — the wiring question on fidelity (MUST, after C.2 reads)
 

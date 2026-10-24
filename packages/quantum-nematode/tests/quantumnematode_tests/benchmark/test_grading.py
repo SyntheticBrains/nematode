@@ -3,8 +3,11 @@
 Covers the benchmark-grading spec's scenarios "A worm on the boundary", "The uniform well has no
 boundary", "The small lawn reads its last 40 minutes", "A bout cut by leaving is censored", "A worm
 that never leaves", "A band grows as the population shrinks", "Normal leaving is an equivalence
-band", "A wrong direction fails inside the band", "A worm at every centre" and "The gate is read on
-dates the fit never saw"; and the assay-protocols scenario "The uniform well stays on food".
+band", "A wrong direction fails inside the band", "The direction reads the dates, not the band's
+scale", "A flat search curve has no decay rate", "Bands built on demand match the vendored ones", "A
+real control at its own size", "pdfr-1's search is not graded", "A flat population fails local
+search", "The band batches are present", "A worm at every centre" and "The gate is
+read on dates the fit never saw"; and the assay-protocols scenario "The uniform well stays on food".
 """
 
 from __future__ import annotations
@@ -144,27 +147,50 @@ def test_a_band_grows_as_the_population_shrinks() -> None:
 
 
 def test_normal_leaving_is_an_equivalence_band() -> None:
-    """A reference Δ whose interval holds zero is graded by magnitude alone, either sign."""
-    band = g.Band(centre=0.04, scale=0.27)
-    assert band.direction() == 0
+    """A reference Δ with no resolved direction is graded by magnitude alone, either sign."""
+    band = g.Band(centre=0.04, scale=0.27, direction=0)
     for value in (-0.3, 0.3):
         assert g.grade({"d": value}, {"d": band}, 2.24, directions=True)["d"].passes
 
 
 def test_a_wrong_direction_fails_inside_the_band() -> None:
     """A positive Δ fails against a reference resolved below zero, though |z| is within the bar."""
-    band = g.Band(centre=-0.116, scale=0.045)
-    assert band.direction() == -1
-    reading = g.grade({"d": 0.01}, {"d": band}, 2.84, directions=True)["d"]
-    assert abs(reading.z) <= 2.84
+    band = g.Band(centre=-0.116, scale=0.06, direction=-1)
+    reading = g.grade({"d": 0.01}, {"d": band}, 2.24, directions=True)["d"]
+    assert abs(reading.z) <= 2.24
     assert not reading.passes
-    assert g.grade({"d": -0.05}, {"d": band}, 2.84, directions=True)["d"].passes
+    assert g.grade({"d": -0.05}, {"d": band}, 2.24, directions=True)["d"].passes
 
 
-def test_a_thin_arms_direction_reads_the_inflated_scale() -> None:
-    """A direction is read from centre +/- 1.96 scale, so widening the scale can unresolve it."""
-    assert g.Band(centre=0.1, scale=0.04).direction() == 1
-    assert g.Band(centre=0.1, scale=0.06, inflated=True).direction() == 0
+def _paired(diffs: list[float]) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Synthetic paired dates whose roaming fractions differ by ``diffs``, wild type at 0.2."""
+    pairs = []
+    for d in diffs:
+        mutant = np.zeros((1, len(g.TALLY_FIELDS)))
+        wild = np.zeros((1, len(g.TALLY_FIELDS)))
+        for tally, fraction in ((mutant, 0.2 + d), (wild, 0.2)):
+            tally[0, g._F["animals"]] = 1
+            tally[0, g._F["classified"]] = 1000
+            tally[0, g._F["roaming"]] = round(1000 * fraction)
+        pairs.append((mutant, wild))
+    return pairs
+
+
+def test_the_direction_reads_the_dates_not_the_bands_scale() -> None:
+    """Consistent per-date differences resolve a direction the band's scale would not."""
+    pairs = _paired([-0.05, -0.06, -0.04, -0.05, -0.055, -0.045])
+    result = bb.paired_direction(pairs, "roaming_fraction")
+    assert result["direction"] == -1
+    centre = float(np.mean([-0.05, -0.06, -0.04, -0.05, -0.055, -0.045]))
+    assert abs(centre) < 1.96 * 0.046  # unresolved on a band scale like pdfr-1's
+
+
+def test_one_paired_date_resolves_no_direction() -> None:
+    """A single paired date, however large its difference, resolves nothing."""
+    assert bb.paired_direction(_paired([-0.3]), "roaming_fraction")["direction"] == 0
+    assert (
+        bb.paired_direction(_paired([0.1, -0.1, 0.12, -0.09]), "roaming_fraction")["direction"] == 0
+    )
 
 
 def test_a_worm_at_every_centre() -> None:
@@ -186,6 +212,19 @@ def test_the_bars_and_weights() -> None:
     w = g.weights(list(g.FIT_FAMILIES))
     assert w[("small_lawn", "roaming_fraction")] == pytest.approx(1 / 12)
     assert w[("uniform_lawn", "roaming_fraction")] == pytest.approx(1 / 6)
+
+
+def test_a_flat_search_curve_has_no_gamma() -> None:
+    """A curve that does not decay has no decay rate; its early/late ratio is still read."""
+    starts = np.arange(0, 46, 2.0)
+    flat = g.local_search_statistics(starts, np.full(len(starts), 1.2))
+    assert math.isnan(flat["gamma_per_min"])
+    assert flat["early_late_ratio"] == pytest.approx(1.0)
+    rising = g.local_search_statistics(starts, 0.5 + 0.02 * starts)
+    assert math.isnan(rising["gamma_per_min"])
+    reading = g.grade(flat, {"gamma_per_min": g.Band(0.108, 0.04)}, 2.84)["gamma_per_min"]
+    assert not reading.passes
+    assert reading.z == g.Z_CAP
 
 
 def test_the_local_search_statistics_need_every_bin() -> None:
@@ -323,14 +362,102 @@ def test_both_lawn_tests_hold_the_rim_tolerance() -> None:
 
 
 @pytest.mark.slow
-def test_a_batched_population_is_graded_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Nine smoke animals run every assay and come back graded on all 11 statistics."""
+def test_a_batched_population_is_graded_end_to_end() -> None:
+    """Nine smoke animals run every assay and come back graded on all 11, on bands built at 9."""
     bands = bg.load_bands()
-    monkeypatch.setattr(bg, "bands_at", lambda b, _n: b["bands"]["64"])
     populations = bg.batched_populations("mlp", "constant", list(range(5991, 6000)))
     result = bg.grade_populations(populations, bands)
-    assert result["n"] == 9
+    assert result["n"] == dict.fromkeys(g.FAMILIES, 9)
     assert set(result["families"]) == set(g.FAMILIES)
     assert sum(len(v) for v in result["families"].values()) == 11
     assert result["D"] is not None
     assert result["D_fit"] is not None
+
+
+# ---------------------------------------------------------------------------------------------
+# Bands at each family's own size
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.slow
+def test_bands_built_on_demand_match_the_vendored_ones() -> None:
+    """Built after another band, the small lawn and a mutant at 200 equal bands.json's exactly."""
+    bands = bg.load_bands()
+    builder = bb.BandBuilder()
+    builder.small_lawn(64)
+    builder.uniform_lawn(37)
+    for name, band in builder.small_lawn(200).items():
+        vendored = bands["bands"]["200"]["small_lawn"][name]
+        assert (band.centre, band.scale) == (vendored["centre"], vendored["scale"])
+    for name, band in builder.mutant("tax-4", 200)[0].items():
+        vendored = bands["bands"]["200"]["mutants"]["tax-4"][name]
+        assert (band.centre, band.scale, band.direction) == (
+            vendored["centre"],
+            vendored["scale"],
+            vendored["direction"],
+        )
+
+
+@pytest.mark.slow
+def test_a_real_control_is_graded_at_its_own_size() -> None:
+    """Families graded together may differ in size, each on bands at its own n."""
+    bands = bg.load_bands()
+    small = bg.family_bands(bands, "small_lawn", 573)
+    uniform = bg.family_bands(bands, "uniform_lawn", 31)
+    vendored = bands["bands"]["200"]
+    assert small["roaming_fraction"].scale < vendored["small_lawn"]["roaming_fraction"]["scale"]
+    assert uniform["roaming_fraction"].scale > vendored["uniform_lawn"]["roaming_fraction"]["scale"]
+    assert bg.family_bands(bands, "local_search", 7) == bg.family_bands(bands, "local_search", 200)
+
+
+def test_pdfr1s_search_is_not_graded() -> None:
+    """pdfr-1's family is two Scheer statistics at 2.24; its López-Cruz Δs are reported."""
+    bands = bg.load_bands()
+    for n in bands["sizes"]:
+        assert set(bands["bands"][str(n)]["mutants"]["pdfr-1"]) == set(g.MUTANT_LAWN_STATISTICS)
+    assert round(bands["bars"]["pdfr-1"], 2) == 2.24
+    record = json.loads(bb.RECORD_PATH.read_text())
+    assert set(record["reported"]["pdfr1_local_search"]) >= set(g.LOCAL_SEARCH_STATISTICS)
+    assert record["reported"]["ji_2021_patch_assay"]["pdfr-1"]["direction"] == -1
+
+
+# ---------------------------------------------------------------------------------------------
+# Local search must be present
+# ---------------------------------------------------------------------------------------------
+
+
+def _synthetic_onsets(
+    rate_at: object,
+    animals: int = 64,
+    seconds: int = g.SEARCH_SAMPLES - 1,
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Poisson onsets per second at ``rate_at(minute)``; every second valid."""
+    rng = np.random.default_rng(3)
+    t = np.arange(seconds)
+    rate = np.array([rate_at(s / 60.0) for s in t])  # type: ignore[operator]
+    onsets = [t[rng.random(seconds) < rate] for _ in range(animals)]
+    return onsets, [np.ones(seconds, dtype=bool) for _ in range(animals)]
+
+
+def test_a_flat_population_fails_local_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Onsets that do not decline make local search absent; a decaying population is present."""
+    flat = _synthetic_onsets(lambda _m: 0.01)
+    monkeypatch.setattr(g, "_onsets", lambda _p: flat)
+    assert not g.simulated_search_presence([[]] * 64)["present"]
+    decaying = _synthetic_onsets(lambda m: 0.004 + 0.02 * math.exp(-0.11 * max(m - 9.0, 0.0)))
+    monkeypatch.setattr(g, "_onsets", lambda _p: decaying)
+    result = g.simulated_search_presence([[]] * 64)
+    assert result["present"]
+    assert result["lower_bound"] > 1.0
+
+
+def test_the_band_batches_are_present() -> None:
+    """Every López-Cruz band batch's presence bound exceeds 1."""
+    record = json.loads(bb.RECORD_PATH.read_text())
+    presence = record["lopezcruz_band_batch_presence"]
+    assert set(presence) == set(json.loads(bb.LOPEZCRUZ_SPLIT_PATH.read_text())["sides"]) - {
+        b
+        for b, side in json.loads(bb.LOPEZCRUZ_SPLIT_PATH.read_text())["sides"].items()
+        if side != "bands"
+    }
+    assert all(p["present"] and p["lower_bound"] > 1.0 for p in presence.values())

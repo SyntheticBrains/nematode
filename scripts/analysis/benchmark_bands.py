@@ -11,9 +11,14 @@ on band dates and band batches only; no held-out date or batch is read.
   statistics, inflated to the small-lawn wild type's scale at the same n (two band dates);
 - mutants against their same-date wild type, on paired band dates: tph-1 against N2, pdfr-1 and
   tax-4 against PD1074; Δ roaming fraction and Δ exits per on-lawn hour, inflated to √2 times the
-  OD 2 wild type's scale where fewer than five paired band dates exist.
+  OD 2 wild type's scale where fewer than five paired band dates exist. A Δ's direction is resolved
+  by a two-sided paired t-test of its per-date differences at 0.05 (dates - 1 degrees of freedom).
 
-**Bands** are a cluster bootstrap over dates at each graded size (``default_rng(2030)``, 2,000
+Each band, at each size, draws from its own generator (``default_rng([2030, band, n])``), so a band
+built alone at n equals the same band built here. :class:`BandBuilder` builds any band at any size
+for the grader.
+
+**Bands** are a cluster bootstrap over dates at each graded size (one generator per band and size, 2,000
 resamples). The centre is the statistic pooled over every band animal. The scale is
 ``kappa * sqrt(sd_n^2 + sd_centre^2)``: the SD of a population of n, and of the pooled centre over
 the band dates at their full size. ``kappa`` is a per-statistic calibration factor: the SD of that
@@ -26,7 +31,8 @@ one, the larger n is kept. pdfr-1's same-date control batch stays in the bands; 
 split a third held out by date (``default_rng(2031 + k)``, the first draw whose held-out share of
 animals lies in 0.28-0.38, the Scheer split's wild-type rule). The band's centre is the band
 batches' mean; its scale their SD widened to a Student-t prediction interval for one new batch.
-pdfr-1's Δ against its control has √2 times that scale.
+pdfr-1's Δ against its control is reported, not graded: its only paired batch is in the bands, so no
+held-out cohort can positive-control it.
 
 **The rule's own checks** (``default_rng(2034)``, 200 half-splits, kappa fixed), gated before
 anything is written:
@@ -88,6 +94,40 @@ EXPECTED = {
 }
 PDFR1_ROWS = (91, 90)  # pdfr-1(ok3425) and its same-date wild type, López-Cruz 2019 Fig. 2A
 THIN_DATES = 5
+# Each band draws from its own generator, seeded by the band and its size, so a band at n does not
+# depend on which bands were built before it.
+BAND_INDEX = {"small_lawn": 0, "uniform_lawn": 1, "tph-1": 2, "pdfr-1": 3, "tax-4": 4}
+DIRECTION_ALPHA = 0.05
+JI_2021_PATH = _REPO / "data" / "roaming_dwelling" / "ji2021_readings.json"
+RECORD_PATH = (
+    _REPO
+    / "docs"
+    / "experiments"
+    / "logbooks"
+    / "supporting"
+    / "109-benchmark-grading"
+    / "bands_record.json"
+)
+
+
+def ji_2021_directions() -> dict[str, Any]:
+    """Return Ji 2021's patch-assay roaming for pdfr-1 and tax-4 against its wild type's."""
+    patch = json.loads(JI_2021_PATH.read_text())["patch_foraging_assay"]
+    wild = patch["wild_type_patch"]["mean"]
+    return {
+        "source": "Ji et al. 2021, eLife 10:e62889, Fig. 7B (data/roaming_dwelling/ji2021_readings.json)",
+        "assay": "patch foraging on sparse food, unlike Scheer's small lawn; directions only",
+        "wild_type_roaming": wild,
+        **{
+            mutant: {
+                "roaming": patch[key]["mean"],
+                "direction": int(np.sign(patch[key]["mean"] - wild)),
+            }
+            for mutant, key in (("pdfr-1", "pdfr1_patch"), ("tax-4", "tax4_patch"))
+        },
+    }
+
+
 SIZES = (64, 200)
 RESAMPLES = 2000
 BAND_SEED = 2030
@@ -210,8 +250,147 @@ def mutant_bands(  # noqa: PLR0913 - both arms, the size, the stream and two wid
         inflated = False
         if len(dates) < THIN_DATES and not scale >= math.sqrt(2) * wild_type_scale[name]:
             scale, inflated = math.sqrt(2) * wild_type_scale[name], True
-        out[name] = g.Band(centre=m[name] - w[name], scale=scale, inflated=inflated)
+        out[name] = g.Band(
+            centre=m[name] - w[name],
+            scale=scale,
+            inflated=inflated,
+            direction=paired_direction(pairs, name)["direction"],
+        )
     return out, dates
+
+
+def paired_direction(
+    pairs: list[tuple[np.ndarray, np.ndarray]],
+    statistic: str,
+) -> dict[str, Any]:
+    """Return a two-sided paired t-test of a mutant's per-date difference from its wild type.
+
+    Each paired date gives one difference, the mutant's pooled statistic minus the wild type's; a
+    date where either is undefined is left out. The direction is the mean difference's sign where
+    |t| exceeds ``t_{k-1}(1 - alpha/2)`` over k dates, and 0 otherwise or with fewer than two.
+    """
+    diffs = []
+    for mutant, wild in pairs:
+        d = (
+            g.lawn_statistics(mutant.sum(axis=0))[statistic]
+            - g.lawn_statistics(
+                wild.sum(axis=0),
+            )[statistic]
+        )
+        if math.isfinite(d):
+            diffs.append(d)
+    k = len(diffs)
+    if k < 2:
+        return {"dates": k, "mean": math.nan, "t": math.nan, "critical": math.nan, "direction": 0}
+    values = np.asarray(diffs)
+    se = float(values.std(ddof=1)) / math.sqrt(k)
+    t_value = float(values.mean()) / se if se > 0 else math.inf * np.sign(values.mean())
+    critical = float(scipy_stats.t.ppf(1.0 - DIRECTION_ALPHA / 2, k - 1))
+    resolved = abs(t_value) > critical
+    return {
+        "dates": k,
+        "mean": float(values.mean()),
+        "t": t_value,
+        "critical": critical,
+        "direction": int(np.sign(values.mean())) if resolved else 0,
+    }
+
+
+def band_rng(band: str, n: int) -> np.random.Generator:
+    """Return the generator one band at size n draws from."""
+    return np.random.default_rng([BAND_SEED, BAND_INDEX[band], n])
+
+
+class BandBuilder:
+    """Build any family's or mutant's bands at any size, each on its own generator.
+
+    The store's per-date tallies are classified once and cached. The uniform well's floor and a
+    thin mutant's inflation read the small lawn's scale at the same size, so the small lawn is built
+    first; it is cached per size too.
+    """
+
+    def __init__(
+        self,
+        tracks: refs.ScheerTracks | None = None,
+        kappa: dict[str, float] | None = None,
+    ) -> None:
+        self._tracks = tracks
+        self._kappa = kappa
+        self._classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(CLASSIFIER_PATH))
+        self._tallies: dict[tuple[str, bool], dict[int, np.ndarray]] = {}
+        self._small: dict[int, dict[str, g.Band]] = {}
+
+    @property
+    def tracks(self) -> refs.ScheerTracks:
+        """The Scheer store, loaded on first use."""
+        if self._tracks is None:
+            self._tracks = refs.load_scheer_tracks()
+        return self._tracks
+
+    @property
+    def kappa(self) -> dict[str, float]:
+        """The calibration factors, from the bands' record unless given."""
+        if self._kappa is None:
+            self._kappa = json.loads(RECORD_PATH.read_text())["calibration"]["kappa"]
+        return self._kappa
+
+    def tallies(self, arm: str, *, uniform: bool = False) -> dict[int, np.ndarray]:
+        """Return an arm's per-band-date tallies, classified once."""
+        key = (arm, uniform)
+        if key not in self._tallies:
+            self._tallies[key] = per_date_tallies(
+                self.tracks,
+                arm,
+                self._classifier,
+                uniform=uniform,
+            )
+        return self._tallies[key]
+
+    def small_lawn(self, n: int) -> dict[str, g.Band]:
+        """Return the small lawn's bands at n."""
+        if n not in self._small:
+            self._small[n] = lawn_bands(
+                self.tallies(WILD_TYPE),
+                g.LAWN_STATISTICS,
+                n,
+                band_rng("small_lawn", n),
+                kappa=self.kappa,
+            )
+        return self._small[n]
+
+    def uniform_lawn(self, n: int) -> dict[str, g.Band]:
+        """Return the uniform well's bands at n, floored at the small lawn's where it is thin."""
+        uniform = self.tallies(UNIFORM, uniform=True)
+        small = self.small_lawn(n)
+        floor = {name: small[name].scale for name in g.UNIFORM_STATISTICS}
+        return lawn_bands(
+            uniform,
+            g.UNIFORM_STATISTICS,
+            n,
+            band_rng("uniform_lawn", n),
+            floor=floor if len(uniform) < THIN_DATES else None,
+            kappa=self.kappa,
+        )
+
+    def mutant(self, name: str, n: int) -> tuple[dict[str, g.Band], list[int]]:
+        """Return a mutant's Δ bands at n and its paired band dates."""
+        arm, control = MUTANTS[name]
+        small = self.small_lawn(n)
+        return mutant_bands(
+            self.tallies(arm),
+            self.tallies(control),
+            n,
+            band_rng(name, n),
+            {s: small[s].scale for s in g.MUTANT_LAWN_STATISTICS},
+            self.kappa,
+        )
+
+    def directions(self, name: str) -> dict[str, dict[str, Any]]:
+        """Return each mutant statistic's paired t-test over its paired band dates."""
+        arm, control = MUTANTS[name]
+        mutant, wild = self.tallies(arm), self.tallies(control)
+        pairs = [(mutant[d], wild[d]) for d in sorted(set(mutant) & set(wild))]
+        return {s: paired_direction(pairs, s) for s in g.MUTANT_LAWN_STATISTICS}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -282,6 +461,14 @@ def prediction_factor(k: int) -> float:
             WILD_TYPE_STATISTICS,
         )
     )
+
+
+def batch_presence(row: dict[str, Any]) -> dict[str, Any]:
+    """Return a López-Cruz row's local-search presence bound, from its bins' means and SEMs."""
+    means = np.array([math.nan if v is None else float(v) for v in row["mean"]])
+    sems = np.array([math.nan if v is None else float(v) for v in row["sem"]])
+    starts = np.arange(len(means)) * g.SEARCH_BIN_MIN + 4.0
+    return g.batch_search_presence(starts, means, sems)
 
 
 def search_band(stats: list[dict[str, float]]) -> dict[str, g.Band]:
@@ -471,20 +658,9 @@ def build(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Return the bands file and the record beside it, or raise if a check fails."""
     classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(CLASSIFIER_PATH))
-    rng = np.random.default_rng(BAND_SEED)
     wt_bar = g.z_star(WILD_TYPE_STATISTICS)
 
     wild = per_date_tallies(tracks, WILD_TYPE, classifier)
-    uniform = per_date_tallies(tracks, UNIFORM, classifier, uniform=True)
-    controls = {
-        arm: per_date_tallies(tracks, arm, classifier)
-        for arm in {c for _, c in MUTANTS.values()} - {WILD_TYPE}
-    }
-    controls[WILD_TYPE] = wild
-    mutant_tallies = {
-        name: per_date_tallies(tracks, arm, classifier) for name, (arm, _) in MUTANTS.items()
-    }
-
     batches = lopezcruz_batches(lopezcruz)
     rows = {r["row"]: r for r in lopezcruz["rows"]}
     kept = rows[PDFR1_ROWS[1]]["dates"]
@@ -500,43 +676,34 @@ def build(
         "local_search": check_local_search(list(batch_stats.values()), wt_bar),
     }
 
+    builder = BandBuilder(tracks, kappa)
+    builder._tallies[(WILD_TYPE, False)] = wild
+    uniform = builder.tallies(UNIFORM, uniform=True)
+    directions = {name: builder.directions(name) for name in MUTANTS}
     sizes: dict[str, Any] = {}
     mutant_dates: dict[str, list[int]] = {}
     for n in SIZES:
-        small = lawn_bands(wild, g.LAWN_STATISTICS, n, rng, kappa=kappa)
-        floor = {name: small[name].scale for name in g.UNIFORM_STATISTICS}
-        thin = len(uniform) < THIN_DATES
-        uni = lawn_bands(
-            uniform,
-            g.UNIFORM_STATISTICS,
-            n,
-            rng,
-            floor=floor if thin else None,
-            kappa=kappa,
-        )
-        mutants: dict[str, Any] = {}
-        for name, (_, control) in MUTANTS.items():
-            mutant = mutant_tallies[name]
-            wt_scale = {s: small[s].scale for s in g.MUTANT_LAWN_STATISTICS}
-            bands, dates = mutant_bands(mutant, controls[control], n, rng, wt_scale, kappa)
-            mutant_dates[name] = dates
-            mutants[name] = bands
-        pdfr1, control = (search_statistics(rows[r]) for r in PDFR1_ROWS)
-        for s in g.LOCAL_SEARCH_STATISTICS:
-            mutants["pdfr-1"][s] = g.Band(
-                centre=pdfr1[s] - control[s],
-                scale=math.sqrt(2) * search[s].scale,
-                inflated=True,
-            )
+        mutants: dict[str, dict[str, g.Band]] = {}
+        for name in MUTANTS:
+            mutants[name], mutant_dates[name] = builder.mutant(name, n)
         sizes[str(n)] = {
-            "small_lawn": {k: _band_dict(v) for k, v in small.items()},
-            "uniform_lawn": {k: _band_dict(v) for k, v in uni.items()},
+            "small_lawn": {k: _band_dict(v) for k, v in builder.small_lawn(n).items()},
+            "uniform_lawn": {k: _band_dict(v) for k, v in builder.uniform_lawn(n).items()},
             "local_search": {k: _band_dict(v) for k, v in search.items()},
             "mutants": {
-                m: {k: {**_band_dict(v), "direction": v.direction()} for k, v in bands.items()}
+                m: {k: {**_band_dict(v), "direction": v.direction} for k, v in bands.items()}
                 for m, bands in mutants.items()
             },
         }
+    pdfr1, control = (search_statistics(rows[r]) for r in PDFR1_ROWS)
+    pdfr1_search = {
+        s: {
+            "delta": pdfr1[s] - control[s],
+            "scale_if_graded": math.sqrt(2) * search[s].scale,
+            "rows": list(PDFR1_ROWS),
+        }
+        for s in g.LOCAL_SEARCH_STATISTICS
+    }
 
     bars = {
         "wild_type": wt_bar,
@@ -590,6 +757,7 @@ def build(
         "checks": checks,
         "lopezcruz_split": str(LOPEZCRUZ_SPLIT_PATH.relative_to(_REPO)),
         "lopezcruz_band_batches": batch_stats,
+        "lopezcruz_band_batch_presence": {b: batch_presence(batches[b]) for b in band_batches},
         "reported": {
             "geometric_rule": window_agreement(tracks),
             "authors_labels_roaming_fraction": {
@@ -609,18 +777,29 @@ def build(
                 "band_centre": search["gamma_per_min"].centre,
             },
             "quintile_ratio_reference": pirouettes["reference_ratio"],
-            "expected_directions": {
+            "mutant_directions": {
                 m: {
                     s: {
                         "expected": EXPECTED[m].get(s),
                         "reference_centre": sizes[str(SIZES[-1])]["mutants"][m][s]["centre"],
-                        "reference_scale": sizes[str(SIZES[-1])]["mutants"][m][s]["scale"],
-                        "resolved_direction": sizes[str(SIZES[-1])]["mutants"][m][s]["direction"],
+                        "paired_t": directions[m][s],
                     }
-                    for s in sizes[str(SIZES[-1])]["mutants"][m]
+                    for s in g.MUTANT_LAWN_STATISTICS
                 }
                 for m in MUTANTS
             },
+            "direction_rule": (
+                "a two-sided paired t-test of the per-date differences over the paired band dates, "
+                f"at {DIRECTION_ALPHA} with dates - 1 degrees of freedom; one paired date resolves "
+                "none"
+            ),
+            "pdfr1_local_search": {
+                **pdfr1_search,
+                "expected": "more search",
+                "note": "reported, not graded: its only paired batch is in the bands, so no held-out "
+                "cohort can positive-control it",
+            },
+            "ji_2021_patch_assay": ji_2021_directions(),
             "limits": [
                 (
                     "Real dwelling speeds carry tracking noise of a few µm per sample; simulated "
