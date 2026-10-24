@@ -1,0 +1,153 @@
+{
+  "description": "How on-lawn reversal kinematics move the classifier's roaming fraction, as description.",
+  "seeds": [
+    9001,
+    9064
+  ],
+  "settings": [
+    "off_food",
+    "food_dependent"
+  ],
+  "results": {
+    "uniform_lawn_flavell/constant_0.01mm_rev0.03/off_food": {
+      "animals_on_lawn": 64,
+      "roaming": 0.006058673469387755,
+      "roaming_sem": 0.0008409944585505919,
+      "on_lawn": 1.0,
+      "exits_per_animal": 0.0
+    },
+    "uniform_lawn_flavell/constant_0.01mm_rev0.03/food_dependent": {
+      "animals_on_lawn": 64,
+      "roaming": 0.0,
+      "roaming_sem": 0.0,
+      "on_lawn": 1.0,
+      "exits_per_animal": 0.0
+    },
+    "uniform_lawn_flavell/constant_0.02mm_rev0.05/off_food": {
+      "animals_on_lawn": 64,
+      "roaming": 0.2332129889702079,
+      "roaming_sem": 0.010680888126845112,
+      "on_lawn": 0.997416087962963,
+      "exits_per_animal": 0.109375
+    },
+    "uniform_lawn_flavell/constant_0.02mm_rev0.05/food_dependent": {
+      "animals_on_lawn": 64,
+      "roaming": 0.0,
+      "roaming_sem": 0.0,
+      "on_lawn": 0.9871267361111111,
+      "exits_per_animal": 0.265625
+    },
+    "uniform_lawn_flavell/constant_0.04mm_rev0.03/off_food": {
+      "animals_on_lawn": 64,
+      "roaming": 0.9835706324596531,
+      "roaming_sem": 0.0020900669816833303,
+      "on_lawn": 0.8216840277777778,
+      "exits_per_animal": 2.515625
+    },
+    "uniform_lawn_flavell/constant_0.04mm_rev0.03/food_dependent": {
+      "animals_on_lawn": 64,
+      "roaming": 0.967229176914226,
+      "roaming_sem": 0.0023240371502462934,
+      "on_lawn": 0.7554658564814816,
+      "exits_per_animal": 3.53125
+    },
+    "uniform_lawn_flavell/constant_0.15mm_parity/off_food": {
+      "animals_on_lawn": 64,
+      "roaming": 0.9880365608466795,
+      "roaming_sem": 0.000829146397427329,
+      "on_lawn": 0.5920052083333334,
+      "exits_per_animal": 13.65625
+    },
+    "uniform_lawn_flavell/constant_0.15mm_parity/food_dependent": {
+      "animals_on_lawn": 64,
+      "roaming": 0.9892733151313056,
+      "roaming_sem": 0.0008455594961382173,
+      "on_lawn": 0.5798668981481481,
+      "exits_per_animal": 14.140625
+    },
+    "uniform_lawn_flavell/pirouette_0.15mm_parity/off_food": {
+      "animals_on_lawn": 64,
+      "roaming": 0.9811013224676807,
+      "roaming_sem": 0.0009780399922727848,
+      "on_lawn": 0.9629890046296297,
+      "exits_per_animal": 1.96875
+    },
+    "uniform_lawn_flavell/pirouette_0.15mm_parity/food_dependent": {
+      "animals_on_lawn": 64,
+      "roaming": 0.9804844468590579,
+      "roaming_sem": 0.001124565841711023,
+      "on_lawn": 0.9475636574074074,
+      "exits_per_animal": 2.640625
+    },
+    "scheer_lawn/constant_0.01mm_rev0.03/off_food": {
+      "animals_on_lawn": 24,
+      "roaming": 0.0006361323155216284,
+      "roaming_sem": 0.0006361323155216284,
+      "on_lawn": 0.12670572916666667,
+      "exits_per_animal": 0.890625
+    },
+    "scheer_lawn/constant_0.01mm_rev0.03/food_dependent": {
+      "animals_on_lawn": 26,
+      "roaming": 0.0,
+      "roaming_sem": 0.0,
+      "on_lawn": 0.15957682291666667,
+      "exits_per_animal": 0.875
+    },
+    "scheer_lawn/constant_0.02mm_rev0.05/off_food": {
+      "animals_on_lawn": 28,
+      "roaming": 0.0838366773328835,
+      "roaming_sem": 0.04018450617164009,
+      "on_lawn": 0.07602213541666666,
+      "exits_per_animal": 1.03125
+    },
+    "scheer_lawn/constant_0.02mm_rev0.05/food_dependent": {
+      "animals_on_lawn": 33,
+      "roaming": 0.0,
+      "roaming_sem": 0.0,
+      "on_lawn": 0.10669270833333334,
+      "exits_per_animal": 1.390625
+    },
+    "scheer_lawn/constant_0.04mm_rev0.03/off_food": {
+      "animals_on_lawn": 47,
+      "roaming": 0.9083951426413209,
+      "roaming_sem": 0.02734245773279916,
+      "on_lawn": 0.0501953125,
+      "exits_per_animal": 1.234375
+    },
+    "scheer_lawn/constant_0.04mm_rev0.03/food_dependent": {
+      "animals_on_lawn": 48,
+      "roaming": 0.871051517013688,
+      "roaming_sem": 0.037388536947219275,
+      "on_lawn": 0.04484375,
+      "exits_per_animal": 1.28125
+    },
+    "scheer_lawn/constant_0.15mm_parity/off_food": {
+      "animals_on_lawn": 57,
+      "roaming": 0.9408242829295461,
+      "roaming_sem": 0.017056910777730454,
+      "on_lawn": 0.035807291666666664,
+      "exits_per_animal": 2.640625
+    },
+    "scheer_lawn/constant_0.15mm_parity/food_dependent": {
+      "animals_on_lawn": 58,
+      "roaming": 0.9553913519430762,
+      "roaming_sem": 0.014378103599455263,
+      "on_lawn": 0.0346484375,
+      "exits_per_animal": 2.578125
+    },
+    "scheer_lawn/pirouette_0.15mm_parity/off_food": {
+      "animals_on_lawn": 61,
+      "roaming": 0.9910746812386156,
+      "roaming_sem": 0.004467303631486601,
+      "on_lawn": 0.04110026041666667,
+      "exits_per_animal": 3.53125
+    },
+    "scheer_lawn/pirouette_0.15mm_parity/food_dependent": {
+      "animals_on_lawn": 61,
+      "roaming": 0.9927140255009108,
+      "roaming_sem": 0.004203271679130901,
+      "on_lawn": 0.03985026041666667,
+      "exits_per_animal": 3.421875
+    }
+  }
+}

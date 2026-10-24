@@ -2,7 +2,8 @@
 
 Covers the batched-evaluation spec's scenarios "One call runs many animals", "Batch size does not
 change an animal", "A deliberately broken evaluator fails", "Random lawn placement is refused" and
-"The classifier reads a batched animal". The statistic-level layer is in
+"The classifier reads a batched animal", and the locomotor-primitives scenario "Both runners draw
+the same", with a lawn-blind evaluator failing. The statistic-level layer is in
 ``test_batched_statistics.py``.
 """
 
@@ -61,6 +62,24 @@ def _derivative_scale_written(evaluator: BatchedEvaluator) -> None:
 
 def _sides_swapped(evaluator: BatchedEvaluator) -> None:
     evaluator.sweep = -evaluator.sweep
+
+
+def _lawn_ignored(evaluator: BatchedEvaluator) -> None:
+    evaluator.food_dependent_reversals = False
+
+
+def test_ignoring_the_lawn_fails_trajectory_parity() -> None:
+    """An evaluator that gives on-lawn reversals the off-food kinematics drifts off the runner."""
+    config, single, batched = p.build("constant", "uniform_lawn_flavell")
+    refs = p.references(config, single, _STEPS)
+    trajectories, log = p.run_batched(
+        config,
+        batched,
+        list(p.PARITY_SEEDS),
+        _STEPS,
+        tamper=_lawn_ignored,
+    )
+    assert p.trajectory_mismatches(refs, trajectories, log)
 
 
 def test_a_wrong_derivative_scale_fails_state_parity() -> None:

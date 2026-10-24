@@ -186,20 +186,32 @@ nothing in W registers before C.2 has read.
   [Logbook 105](../../../docs/experiments/logbooks/105-reference-extraction.md).)*
 
   - `data/benchmark/`, read by `quantumnematode.benchmark.references`:
+
     - Scheer: 2,847 animals in eight arms at 1 s. N2 was added as tph-1's batch-matched control, since
       tph-1 was recorded only beside N2;
     - Calhoun (pixels: no scale is published) and Roberts search tracks;
     - López-Cruz's reorientation bins. pdfr-1 is present; tax-4 and tph-1 are not.
+
   - The store reproduces D.1's windows: decoded states agree on 99.96% of windows.
+
   - **The split** (`scheer2023_split.json`): recording dates, a third held out, from counts alone. The
     OD 2 wild type has 24 of 65 dates held out, tph-1 2 of 5; OD 1 has one date and none. Held out of
     the bands, not unseen by the classifier, which D.1 calibrated across every date.
+
   - **Kinematics check, a disagreement:** on-lawn reversal bouts last 2.05 s [2.01, 2.08], below the
     published off-food span 2.10–3.71 s; off the lawn, 3.30 s, inside it. `primitives.json` is
     unchanged.
+
   - **Owed before B.3 registers:** the maintainer's choice of the D36 amendment's form, either
     food-dependent kinematics keyed on food contact, or the off-food values kept with the on-food gap
     stated.
+
+    *(Closed 2026-10-24: the maintainer chose food-dependent kinematics, as change
+    `amend-food-dependent-kinematics`, archived as `2026-10-24-amend-food-dependent-kinematics`;
+    [Logbook 108](../../../docs/experiments/logbooks/108-food-dependent-kinematics.md).)* A reversal
+    that starts on a lawn draws 2.047 ± 0.899 s at 0.069 mm/s, measured on the held-out cohorts; one off
+    every lawn keeps the published values. `continuous.reversal_kinematics: off_food` reproduces every
+    earlier record. The pilot (seeds 9001–9064) is description.
 
 - [x] **B.2 Readouts**: a trajectory-based reorientation detector, validated against Calhoun's and
   Roberts's omega flags; the classifier run on tracks downsampled to 5 s; the local-search curve; the

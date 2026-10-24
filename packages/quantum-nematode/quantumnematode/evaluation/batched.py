@@ -337,7 +337,7 @@ class BatchedEvaluator:
 
     # ----- construction -----
 
-    def _build_animals(self) -> None:
+    def _build_animals(self) -> None:  # noqa: PLR0915 - one pass sets every per-animal array
         n = len(self.seeds)
         self.envs: list[Continuous2DEnvironment] = []
         for seed in self.seeds:
@@ -345,6 +345,8 @@ class BatchedEvaluator:
             assert isinstance(env, Continuous2DEnvironment)  # noqa: S101
             self.envs.append(env)
         first = self.envs[0]
+        # A reversal that starts on a lawn takes the on-food kinematics unless the config says not.
+        self.food_dependent_reversals = first.continuous.reversal_kinematics == "food_dependent"
         self.world = float(first.continuous.world_size_mm)
         self.grid_upper = float(first.grid_size - 1)
         self.circle = first.continuous.arena_shape == "circle"
@@ -618,8 +620,14 @@ class BatchedEvaluator:
         displacement = np.zeros(len(raw))
         turn = np.zeros(len(raw))
         kinds = np.full(len(raw), RUN, dtype=np.int64)
+        on_food = (
+            self._cells_under(self.pos) >= 0
+            if self.food_dependent_reversals
+            else np.zeros(len(raw), dtype=bool)
+        )
         self._start_bouts(
             np.flatnonzero(idle),
+            on_food,
             start_p,
             hazards,
             total,
@@ -649,6 +657,7 @@ class BatchedEvaluator:
     def _start_bouts(  # noqa: PLR0913 - the step's arrays, filled in place
         self,
         idle: np.ndarray,
+        on_food: np.ndarray,
         start_p: np.ndarray,
         hazards: np.ndarray,
         total: np.ndarray,
@@ -657,7 +666,11 @@ class BatchedEvaluator:
         displacement: np.ndarray,
         turn: np.ndarray,
     ) -> None:
-        """Draw each idle animal's start test; start its bout, or move it as a run."""
+        """Draw each idle animal's start test; start its bout, or move it as a run.
+
+        ``on_food`` marks the animals on a lawn as the step starts, whose reversals take the on-food
+        kinematics.
+        """
         k = self.kinematics
         dt = self.step_seconds
         for i in idle:
@@ -676,6 +689,7 @@ class BatchedEvaluator:
                     PrimitiveState(ventral_side=int(self.ventral[i])),
                     k,
                     rng,
+                    on_food=bool(on_food[i]),
                 )
                 self.bout_kind[i] = KIND_CODE[chosen]
                 self.remaining[i] = bout.remaining_s

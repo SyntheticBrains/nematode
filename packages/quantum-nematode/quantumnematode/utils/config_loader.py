@@ -1150,9 +1150,24 @@ class Continuous2DConfig(BaseModel):
     # kinematics, started by the controller's hazards. It needs a brain with action_space:
     # primitives, the point body, reversal off, and a step of at most one second.
     locomotion: Literal["free", "primitives"] = "free"
+    # Under primitives, how a reversal's speed and duration are drawn: "food_dependent" (what unset
+    # means) gives a reversal that starts on a lawn the on-food values measured on real worms on a
+    # lawn, and one off every lawn the published off-food values; "off_food" gives every reversal
+    # the off-food values, as before the option. Refused with free locomotion.
+    reversal_kinematics: Literal["food_dependent", "off_food"] | None = None
     # The arena's shape: "square" (default) or "circle", a circle of diameter world_size_mm
     # centred in the square, whose wall the worm slides along as it does a square one's.
     arena_shape: Literal["square", "circle"] = "square"
+
+    @model_validator(mode="after")
+    def _validate_reversal_kinematics_needs_primitives(self) -> "Continuous2DConfig":
+        if self.reversal_kinematics is not None and self.locomotion != "primitives":
+            msg = (
+                f"reversal_kinematics: {self.reversal_kinematics} sets the primitives' reversals; "
+                f"it needs locomotion: primitives, not locomotion: {self.locomotion}."
+            )
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _validate_kinematic_needs_reversal(self) -> "Continuous2DConfig":
@@ -3837,6 +3852,7 @@ def create_env_from_config(
                 body_steering_gain=continuous_config.body_steering_gain,
                 step_seconds=continuous_config.step_seconds,
                 locomotion=continuous_config.locomotion,
+                reversal_kinematics=continuous_config.reversal_kinematics or "food_dependent",
                 arena_shape=continuous_config.arena_shape,
                 assay=env_config.assay.to_params() if env_config.assay is not None else None,
             ),

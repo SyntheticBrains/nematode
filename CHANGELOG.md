@@ -6,6 +6,10 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Changed
+
+- **Primitives' reversals on a lawn are short and slow, as real worms' are** (Phase 10, the D36 amendment; [Logbook 108](docs/experiments/logbooks/108-food-dependent-kinematics.md)). Under `continuous.locomotion: primitives`, a reversal that starts on a lawn now lasts gamma(2.047 s, SD 0.899 s) and backs at 0.069 mm/s, measured on Scheer & Bargmann 2023's held-out wild-type cohorts. Off every lawn it keeps the published 2.69 ± 1.75 s at 0.14 mm/s. New option `continuous.reversal_kinematics: food_dependent | off_food` (unset is food-dependent); `off_food` reproduces earlier primitives runs exactly. Free locomotion is unchanged. `primitives.json` entries can now be `measured`, naming the script and record they came from.
+
 ### Added
 
 - **The benchmark's grading rule** (Phase 10, B.3; [Logbook 109](docs/experiments/logbooks/109-benchmark-grading.md)). `quantumnematode.benchmark.grading` and `scripts/analysis/benchmark_grade.py` grade simulated worms on 11 wild-type statistics: Scheer & Bargmann 2023's small lawn and uniform well, and López-Cruz 2019's local search. Mutants (tph-1, pdfr-1, tax-4) are graded against their own wild type. The bands are between-date, built from band cohorts only, and give a per-statistic pass and a z distance (`data/benchmark/bands.json`). A roaming/dwelling classifier is refitted on the band cohorts (`data/benchmark/classifier.json`). New assay protocol `uniform_lawn_scheer`, Scheer's uniform well. A point within a nanometre of a lawn's rim now counts as on the lawn.

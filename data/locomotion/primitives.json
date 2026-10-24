@@ -1,5 +1,5 @@
 {
-  "description": "Fixed kinematics of the point worm's locomotor primitives. Every value is from published off-food data; 'verified' means read in the text, 'figure' means read from a figure by eye (about +/-10%).",
+  "description": "Fixed kinematics of the point worm's locomotor primitives. Values are from published off-food data, except the two on_food entries, measured on real worms on a lawn; 'verified' means read in the text, 'figure' means read from a figure by eye (about +/-10%), 'measured' means computed from deposited tracks by the named script, its output in the named record.",
   "v_max_mm_per_s": {
     "value": 0.2,
     "source": "Zhao et al. 2003 J Neurosci 10.1523/JNEUROSCI.23-12-05319.2003, Fig 3A: 184 um/s at the start of off-food locomotion; Ben Arous et al. 2009 PLoS One 10.1371/journal.pone.0007584, Fig 2E: about 0.17 mm/s without food. Equal to the crawl speed the step duration derives from.",
@@ -25,6 +25,24 @@
     "source": "Zhao et al. 2003, Fig 5B: 2.3 +/- 1.6 s for reversals without a following omega (n = 249) and 3.4 +/- 1.8 s with one (n = 135), pooled by count (mean and SD of the mixture).",
     "condition": "off food",
     "status": "verified"
+  },
+  "on_food_reversal_speed_mm_per_s": {
+    "value": 0.069,
+    "source": "Scheer & Bargmann 2023 eLife 10.7554/eLife.88657 (Zenodo 8310289, CC0): the OD 2 wild type's recording dates held out of the benchmark's bands (data/benchmark/scheer2023_split.json), bouts starting more than 0.5 mm inside the lawn, read from the authors' per-frame reversal flag at 3 frames/s and 1-s midbody positions; speed is path length over a bout's whole seconds (n = 17,632 bouts).",
+    "script": "scripts/analysis/primitive_kinematics_check.py",
+    "record": "docs/experiments/logbooks/supporting/105-reference-extraction/kinematics.json",
+    "condition": "on food",
+    "status": "measured"
+  },
+  "on_food_reversal_duration_s": {
+    "distribution": "gamma",
+    "mean": 2.047,
+    "sd": 0.899,
+    "source": "Scheer & Bargmann 2023 eLife 10.7554/eLife.88657 (Zenodo 8310289, CC0): the OD 2 wild type's recording dates held out of the benchmark's bands (data/benchmark/scheer2023_split.json), bouts starting more than 0.5 mm inside the lawn, read from the authors' per-frame reversal flag at 3 frames/s and 1-s midbody positions; mean and SD of bout durations (n = 24,890 bouts).",
+    "script": "scripts/analysis/primitive_kinematics_check.py",
+    "record": "docs/experiments/logbooks/supporting/105-reference-extraction/kinematics.json",
+    "condition": "on food",
+    "status": "measured"
   },
   "omega_angle_deg": {
     "distribution": "truncated_normal",

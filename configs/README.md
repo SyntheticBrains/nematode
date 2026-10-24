@@ -32,7 +32,11 @@ configs/
 
 Phase 10 grades the point worm on standard on-lawn assays (roadmap v5.0, D41). Its work lives in
 `foraging/`, on the lawn food model: the 1-s point worm (`*_lawns_*_s1.yml`), its locomotor
-primitives (`*_s1_primitives.yml`) and the assay protocols (`*_s1_primitives_assay_*.yml`). The benchmark grades three of them: `scheer_lawn`, `uniform_lawn_scheer` (Scheer's uniform well) and `food_removal_lopezcruz`.
+primitives (`*_s1_primitives.yml`) and the assay protocols (`*_s1_primitives_assay_*.yml`). Under
+primitives a reversal that starts on a lawn takes the on-food kinematics. No config sets
+`continuous.reversal_kinematics`; set it to `off_food` only to reproduce a run from before
+2026-10-24. The benchmark grades three of
+them: `scheer_lawn`, `uniform_lawn_scheer` (Scheer's uniform well) and `food_removal_lopezcruz`.
 
 - **Frozen:** the thermal, predator, multi-agent and oxygen scenarios (`pursuit/`, `stationary/`, the
   `thermal_*`, `oxygen_*` and `multi_agent_*` directories, and `foraging_predator_thermal/`). They are
