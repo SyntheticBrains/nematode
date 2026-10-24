@@ -198,3 +198,32 @@ def test_the_draw_is_reproducible() -> None:
     assert first == receptor_placement_null(spec, 7503, _NAMES)
     assert first != receptor_placement_null(spec, 7504, _NAMES)
     assert np.mean([a.cells != b.cells for a, b in zip(spec.rows, first.rows, strict=True)]) > 0.5
+
+
+def test_the_shortcut_term_counts_couples_only() -> None:
+    """A link from a sensor-made ligand onto a motor neuron is not a couple, so is not counted."""
+    from dataclasses import replace
+    from types import SimpleNamespace
+
+    import sensory_motor_hops as hops  # pyright: ignore[reportMissingImports]
+    import torch
+    from quantumnematode.connectome.neuromodulator_layer import LayerSpec, Row
+
+    topology = SimpleNamespace(
+        _idx={name: i for i, name in enumerate(_NAMES)},
+        _motor_flat_indices=torch.tensor([_NAMES.index("VA1")]),
+    )
+    spec = LayerSpec(
+        ligands=("x",),
+        producers=(("ASEL",),),
+        rows=(Row("link", ("VA1",), -1, ligand=0, receptor="r-1", name="x:VA1"),),
+        drives=(),
+    )
+    original = hops.injected_sensors
+    hops.injected_sensors = lambda _t: [_NAMES.index("ASEL")]
+    try:
+        assert hops.modulator_shortcuts(topology, spec) == {"couples": 0, "motor_cells": 0}
+        couple = replace(spec, rows=(replace(spec.rows[0], kind="couple"),))
+        assert hops.modulator_shortcuts(topology, couple) == {"couples": 1, "motor_cells": 1}
+    finally:
+        hops.injected_sensors = original

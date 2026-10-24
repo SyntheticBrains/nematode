@@ -168,7 +168,7 @@ def modulator_shortcuts(topology: ConnectomeTopology, spec: Any = None) -> dict[
     couples = 0
     reached: set[int] = set()
     for row in layer.rows:
-        if row.kind == "drive" or row.ligand not in sensor_ligands:
+        if row.kind != "couple" or row.ligand not in sensor_ligands:
             continue
         hit = {topology._idx[c] for c in row.cells} & motors
         if hit:
