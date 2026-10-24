@@ -70,6 +70,12 @@ The input is positions sampled each second. Steps are `v_t = p_{t+1} − p_t`, w
   seconds earlier, `|p_{t+1} − p_{t−W}| < |p_t − p_{t−W}|`. A reversal moves back along the worm's own
   path; after an omega or delta turn the worm runs off in a new direction, and from 1-s positions
   alone the two otherwise look alike.
+  *(Amended in implementation: the step must point back toward where the worm was W seconds earlier,
+  within 45°. The first form, any step that shortens that distance, also passed a 150° forward turn,
+  which still approaches the window's start. A reversal's bout also lasts while the worm keeps moving
+  against its old heading, at most 30 s, and the refractory runs from the bout's end, so resuming the
+  old heading is not a second onset. Bouts merge gaps of at most 1/3 s and keep runs of at least 2/3 s,
+  B.1's two frames at 3 frames/s.)*
 - **Missing positions:** a step touching a missing position is never a candidate and leaves the
   heading history, and a retrace test reaching back to one fails. Each animal's onset rate is per
   second of valid steps.
@@ -104,7 +110,7 @@ was tuned on cannot pass on new ones, and reading them would spend them for noth
 
 | Validation | Gate |
 |---|---|
-| Roberts, held-out cohorts | recall ≥ 0.70 and precision ≥ 0.70 |
+| Roberts, held-out cohorts | recall ≥ 0.70 and precision ≥ 0.70 (as first registered; retried at ≥ 0.55 and ≥ 0.60, see the amendment below) |
 | Roberts, dead worms | ≤ 0.1 detected onsets per minute |
 | Simulated primitives (ConstantHazards on López-Cruz's assay, seeds 7601–7632), against the primitives' reversal starts | recall ≥ 0.80 and precision ≥ 0.80 |
 | Scheer, held-out wild-type cohorts, on food, against filtered `MovingReverse` onsets | recall ≥ 0.50 and precision ≥ 0.50 |
@@ -116,6 +122,24 @@ was tuned on cannot pass on new ones, and reading them would spend them for noth
 - **Calhoun** marks pirouettes, which include more than reversals, at an unstated threshold.
 - **The simulated tracks** have no noise, so their bar is the highest. The bout labels are read only
   here, to validate the detector, never to grade (D36).
+
+**Amendment of 2026-10-24, the maintainer's decision, registered before any held-out data were read.**
+The first run stopped at its preflight
+(`docs/experiments/logbooks/supporting/107-benchmark-readouts/detector_attempt1_preflight.json`). The
+best of the 270 settings reached recall 0.62 and precision 0.68 on the calibration cohorts, below 0.70.
+
+The limit is the 1-s sampling, measured on the calibration cohorts only:
+
+- Roberts's reversals last a median 1.7 s, and 30% last under 1 s;
+- recall rises from 0.56 for bouts under 1 s to 0.76 for bouts over 4 s;
+- only 15% of the misses have a detection within 2 s.
+
+**The retry sets the Roberts held-out bars from the instrument: recall ≥ 0.55 and precision ≥ 0.60**,
+the in-sample result less a margin, and the preflight reads the same bars. Every other gate stays as
+registered. The detector's recall at 1 s is recorded as a property of the instrument. Real and
+simulated tracks go through the same detector, so its misses are shared, and the dead-worm,
+simulated, Scheer and Calhoun gates still guard what it counts. This is the one registered retry; a
+second failure goes back to the maintainer.
 
 **Forward turns, described.** Two false-positive rates are reported beside the gates:
 

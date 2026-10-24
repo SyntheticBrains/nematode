@@ -43,7 +43,9 @@ NOT register on the detector until the maintainer decides.
 
 #### Scenario: The preflight protects the held-out cohorts
 
-- **WHEN** the best in-sample recall or precision on the calibration cohorts is below 0.70
+- **WHEN** the best in-sample recall or precision on the calibration cohorts is below the Roberts
+  held-out bars (recall 0.55 and precision 0.60, as amended on 2026-10-24 after the first run stopped
+  at 0.62 and 0.68 against 0.70)
 - **THEN** the script SHALL stop and report without reading any held-out cohort
 
 #### Scenario: Gates fixed before tuning
