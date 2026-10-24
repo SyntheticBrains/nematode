@@ -246,9 +246,40 @@ nothing in W registers before C.2 has read.
     Lee 2026's 9.5 is cited beside it, unverified.
   - **The classifier** reads 1-s captures through its 5-s path unchanged.
 
-- [ ] **B.3 Bands and the grading rule** (D34): from batch-matched cohorts with the project's
+- [x] **B.3 Bands and the grading rule** (D34): from batch-matched cohorts with the project's
   classifier; mutant effects relative to the controller's own wild type; composite rules that depend
   on closed-loop contingencies.
+
+  *(Closed 2026-10-24, change `add-benchmark-grading`, archived as
+  `2026-10-24-add-benchmark-grading`;
+  [Logbook 109](../../../docs/experiments/logbooks/109-benchmark-grading.md).)*
+
+  - **The rule.** 11 wild-type statistics:
+
+    - Scheer's small lawn: roaming, both bout means, exits per on-lawn hour, pre-exit enrichment,
+      time on the lawn;
+    - Scheer's uniform well (new protocol `uniform_lawn_scheer`): roaming and both bout means;
+    - López-Cruz: γ and early/late.
+
+    Mutant Δs against their own wild type (tph-1/N2, pdfr-1 and tax-4/PD1074). A statistic passes
+    at |z| ≤ 2.84 (Bonferroni over 11). D and D_fit are weighted RMS z's
+    (`quantumnematode.benchmark.grading`, `data/benchmark/bands.json`).
+
+  - **The classifier**, refitted on band dates, passes its gate at κ = 0.625.
+
+  - **The rule's own check failed its first attempt** (0.80/0.86 against 0.90): the bands were too
+    narrow. The maintainer chose a registered retry (centre uncertainty, a calibration factor
+    κ = 1.19–1.30, a t prediction interval), committed before it ran. It passes at 0.925 and 0.962.
+
+  - **Preflight** (seeds 9101–9164): ConstantHazards and PirouetteHazards fail every family (D 6.6
+    and 7.2). Four single statistics pass for the Poisson worm, so the family rule and the distance
+    carry the discrimination.
+
+  - **Only two mutant directions are resolved:** tph-1 roams more, and tax-4 roams less. Leaving and
+    search differences are graded by magnitude alone.
+
+  - **Exits read 0.71 per on-lawn hour** under the geometric window rule (D.1's 0.21 came from the
+    authors' out-of-lawn runs).
 
 - [ ] **B.4 The controls**:
 
@@ -261,6 +292,9 @@ nothing in W registers before C.2 has read.
 
 - [ ] **B.5 Track import** (WCON or CSV), independent of the simulator, positioned against Tierpsy and
   OWMD feature sets. NeuroSparkSNT and a wider novelty search checked at registration.
+
+  *(2026-10-24: the novelty check is done, in B.3's registration ([Logbook 109](../../../docs/experiments/logbooks/109-benchmark-grading.md)):
+  NeuroSparkSNT, PGOB and Morrison & Young 2025 do not occupy the claim. Track import remains.)*
 
 ## N — the neuromodulator layer from data (MUST)
 

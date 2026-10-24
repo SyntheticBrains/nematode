@@ -52,6 +52,17 @@ class DetectorParams:
     retrace: bool = True
 
 
+# The parameters the detector was tuned to on real off-food tracks and validated with; the
+# benchmark's off-food readouts use these.
+OFF_FOOD_DETECTOR = DetectorParams(
+    theta_deg=135.0,
+    window_s=3,
+    kappa=0.25,
+    refractory_s=5,
+    retrace=False,
+)
+
+
 def reversal_onsets(
     x: np.ndarray,
     y: np.ndarray,

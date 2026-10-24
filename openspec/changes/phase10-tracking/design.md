@@ -85,6 +85,7 @@ here are cited by each registration.
 | C.3 reward-trained comparator | 5901–5916 | 16 training seeds |
 | N.3 receptor-placement null audit | 7501–7564 | 64 null draws for the matched-statistics table (Logbook 106) |
 | B.2 detector's simulated validation | 7601–7632 | constant hazards on López-Cruz's assay (Logbook 107) |
+| B.3 preflight | 9101–9164 | ConstantHazards and PirouetteHazards graded at n = 64 on the three wild-type assays, as description (Logbook 109) |
 | D36 amendment's pilot | 9001–9064 | constant-hazard and pirouette controllers on Flavell's and Scheer's lawns under each reversal setting, as description (Logbook 108) |
 | W rewiring draws and fits | 7201–7456 | one fresh draw per null fit, 8–16 per arm, sized after the cost pilot. *(Moved from 6001–6256 on 2026-10-24; see the amendment below.)* |
 | Smokes | 5991–5999 | execution checks only, discarded; E.2's positive-control fixtures use 5994–5999 as fixed test seeds, not a registration |

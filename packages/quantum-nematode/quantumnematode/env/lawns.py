@@ -30,6 +30,9 @@ import numpy as np
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+# A point this close outside a lawn's rim is on it: a worm held at a circular arena's wall by
+# rescaling can land a rounding error outside a lawn that fills the arena.
+RIM_TOLERANCE_MM = 1e-9
 MAX_PLACEMENT_ATTEMPTS = 2_000
 # A greedy placement can strand itself with room left for none; it then starts afresh.
 MAX_PLACEMENT_RESTARTS = 50
@@ -249,7 +252,8 @@ class LawnField:
         """Return the index of the lawn whose disc contains ``position``, or None."""
         if not len(self.centres):
             return None
-        inside = np.hypot(*(self.centres - np.asarray(position, dtype=float)).T) <= self.radius_mm
+        distance = np.hypot(*(self.centres - np.asarray(position, dtype=float)).T)
+        inside = distance <= self.radius_mm + RIM_TOLERANCE_MM
         hits = np.flatnonzero(inside)
         return int(hits[0]) if len(hits) else None
 

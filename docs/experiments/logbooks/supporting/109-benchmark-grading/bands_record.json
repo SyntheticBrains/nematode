@@ -1,0 +1,247 @@
+{
+  "description": "Build the benchmark's bands from the band cohorts, and check the rule on them.",
+  "attempt": 2,
+  "attempt1": "attempt1_rule_check.json, beside this record",
+  "calibration": {
+    "seed": 2033,
+    "splits": 200,
+    "size": 200,
+    "z_sd": {
+      "roaming_fraction": 1.2485000899254048,
+      "roaming_bout_s": 1.193883750697487,
+      "dwelling_bout_s": 1.2325813032779147,
+      "exits_per_on_lawn_hour": 1.3016404540553168,
+      "pre_exit_enrichment": 1.2358472497488944,
+      "time_on_lawn": 1.2893233134390023
+    },
+    "kappa": {
+      "roaming_fraction": 1.2485000899254048,
+      "roaming_bout_s": 1.193883750697487,
+      "dwelling_bout_s": 1.2325813032779147,
+      "exits_per_on_lawn_hour": 1.3016404540553168,
+      "pre_exit_enrichment": 1.2358472497488944,
+      "time_on_lawn": 1.2893233134390023
+    }
+  },
+  "local_search_prediction_factor": 1.1956784646248289,
+  "checks": {
+    "small_lawn": {
+      "seed": 2034,
+      "splits": 200,
+      "size": 200,
+      "bar": 2.8375969129437877,
+      "joint_pass_rate": 0.925,
+      "failures_by_statistic": {
+        "roaming_fraction": 3,
+        "roaming_bout_s": 3,
+        "dwelling_bout_s": 7,
+        "exits_per_on_lawn_hour": 3,
+        "pre_exit_enrichment": 2,
+        "time_on_lawn": 1
+      },
+      "gate": 0.9,
+      "passes": true
+    },
+    "local_search": {
+      "seed": 2034,
+      "splits": 200,
+      "bar": 2.8375969129437877,
+      "graded_batches": 1800,
+      "joint_pass_rate": 0.9616666666666667,
+      "gate": 0.9,
+      "passes": true
+    }
+  },
+  "lopezcruz_split": "data/benchmark/lopezcruz2019_split.json",
+  "lopezcruz_band_batches": {
+    "012217_012517": {
+      "gamma_per_min": 0.08622834309006158,
+      "early_late_ratio": 3.8550135501355016
+    },
+    "022216_022516": {
+      "gamma_per_min": 0.11712486984268908,
+      "early_late_ratio": 4.230324074074074
+    },
+    "022415_022715": {
+      "gamma_per_min": 0.12175087333245632,
+      "early_late_ratio": 4.322709163346613
+    },
+    "030215_030515": {
+      "gamma_per_min": 0.08113037237433357,
+      "early_late_ratio": 4.942307692307692
+    },
+    "040715_041015": {
+      "gamma_per_min": 0.14789671206378652,
+      "early_late_ratio": 6.772875816993463
+    },
+    "042417_042617": {
+      "gamma_per_min": 0.09611800459496234,
+      "early_late_ratio": 3.514492753623189
+    },
+    "042915_050815": {
+      "gamma_per_min": 0.11308814678625084,
+      "early_late_ratio": 3.6742424242424248
+    },
+    "070115_071015": {
+      "gamma_per_min": 0.1835570776061357,
+      "early_late_ratio": 3.56981981981982
+    },
+    "070315_071015": {
+      "gamma_per_min": 0.11589289896256588,
+      "early_late_ratio": 3.977777777777778
+    },
+    "072218_072518": {
+      "gamma_per_min": 0.08612429471233934,
+      "early_late_ratio": 4.645776566757493
+    },
+    "081116_081416": {
+      "gamma_per_min": 0.17341331238441776,
+      "early_late_ratio": 3.568075117370892
+    },
+    "121316_121616": {
+      "gamma_per_min": 0.09603270789367827,
+      "early_late_ratio": 7.607142857142858
+    },
+    "_071018": {
+      "gamma_per_min": 0.06002934825920189,
+      "early_late_ratio": 2.9354838709677415
+    },
+    "_072018": {
+      "gamma_per_min": 0.07532653333538969,
+      "early_late_ratio": 4.821222606689734
+    },
+    "_072718": {
+      "gamma_per_min": 0.07893365980688963,
+      "early_late_ratio": 4.407484407484406
+    },
+    "_080517": {
+      "gamma_per_min": 0.11239765466899104,
+      "early_late_ratio": 2.2171945701357467
+    },
+    "_081518": {
+      "gamma_per_min": 0.09816924338831984,
+      "early_late_ratio": 2.5441919191919196
+    }
+  },
+  "reported": {
+    "geometric_rule": {
+      "windows_agreeing_with_in_lawn_runs": 0.9840020859530408,
+      "seconds_agreeing_with_midbody_in_lawn": 0.9946591840937677
+    },
+    "authors_labels_roaming_fraction": {
+      "small_lawn": 0.1076261125097884,
+      "uniform_lawn": 0.1484032138275606
+    },
+    "ours_roaming_fraction": {
+      "small_lawn": 0.1693625364393881,
+      "uniform_lawn": 0.21302061713020617
+    },
+    "density": {
+      "OD 1": {
+        "band_dates": 1,
+        "animals": 45,
+        "roaming_fraction": 0.33307094361901013,
+        "roaming_fraction_on_shared_dates": 0.33307094361901013
+      },
+      "OD 2": {
+        "band_dates": 41,
+        "animals": 1013,
+        "roaming_fraction": 0.1693625364393881,
+        "roaming_fraction_on_shared_dates": 0.20891070053887606
+      },
+      "OD 4": {
+        "band_dates": 2,
+        "animals": 65,
+        "roaming_fraction": 0.16815218837302115,
+        "roaming_fraction_on_shared_dates": 0.1923041261010663
+      },
+      "shared_band_dates": [
+        20201204
+      ]
+    },
+    "flavell_2013": {
+      "dwelling_tau_s": 482.0,
+      "roaming_taus_s": [
+        75.0,
+        520.0
+      ],
+      "source": "Flavell et al. 2013, Cell 10.1016/j.cell.2013.08.001; published values, not simulated and not graded"
+    },
+    "pooled_curve_gamma": {
+      "value": 0.11404024106013527,
+      "note": "B.2's fit of the pooled Fig. 1C curve; the band's centre is the mean of the band batches' fits",
+      "band_centre": 0.10842435606485114
+    },
+    "quintile_ratio_reference": {
+      "rule": "the curve's rate at its most negative digitised dC/dt over its rate at its most positive, the figure's extreme bins standing for the worm's extreme dC/dt quintiles (ranks only; the figure's dC/dt axis is not mapped onto a simulated worm's)",
+      "biotin": 2.577,
+      "NH4Cl": 2.263,
+      "span": [
+        2.263,
+        2.577
+      ]
+    },
+    "expected_directions": {
+      "tph-1": {
+        "roaming_fraction": {
+          "expected": "more",
+          "reference_centre": 0.2704930014985987,
+          "reference_scale": 0.05174229066766305,
+          "resolved_direction": 1
+        },
+        "exits_per_on_lawn_hour": {
+          "expected": "more",
+          "reference_centre": 0.0720489574793502,
+          "reference_scale": 0.2822228535768348,
+          "resolved_direction": 0
+        }
+      },
+      "pdfr-1": {
+        "roaming_fraction": {
+          "expected": "less",
+          "reference_centre": -0.05290278858834917,
+          "reference_scale": 0.046204759371247475,
+          "resolved_direction": 0
+        },
+        "exits_per_on_lawn_hour": {
+          "expected": "normal",
+          "reference_centre": 0.040559126252865285,
+          "reference_scale": 0.26785803741679093,
+          "resolved_direction": 0
+        },
+        "gamma_per_min": {
+          "expected": "more search",
+          "reference_centre": -0.040250581742478864,
+          "reference_scale": 0.0570701618225722,
+          "resolved_direction": 0
+        },
+        "early_late_ratio": {
+          "expected": "more search",
+          "reference_centre": -0.288926066969843,
+          "reference_scale": 2.292302619899922,
+          "resolved_direction": 0
+        }
+      },
+      "tax-4": {
+        "roaming_fraction": {
+          "expected": "less",
+          "reference_centre": -0.11605880685237357,
+          "reference_scale": 0.04535652504694205,
+          "resolved_direction": -1
+        },
+        "exits_per_on_lawn_hour": {
+          "expected": "normal",
+          "reference_centre": 0.30577071242499354,
+          "reference_scale": 0.36867943654905666,
+          "resolved_direction": 0
+        }
+      }
+    },
+    "limits": [
+      "Real dwelling speeds carry tracking noise of a few \u00b5m per sample; simulated ones carry none.",
+      "The bout means are total time over completed bouts, the exponential estimator; roaming bouts are double-exponential.",
+      "L\u00f3pez-Cruz's band is the spread of single batches (n about 55), conservative for simulated populations of 200.",
+      "The uniform lawn has two band dates and cannot be halved, so the rule's check leaves it out."
+    ]
+  }
+}
