@@ -137,7 +137,9 @@ def measure(tracks: refs.ScheerTracks) -> dict[str, Any]:
     """Return per-state and pooled parameters over the band animals."""
     rows = band_rows(tracks)
     names = ("reversal", "omega")
-    unpacked = {n: refs.unpack_flag(tracks.frame_flags[rows], tracks.flag_names.index(n)) for n in names}
+    unpacked = {
+        n: refs.unpack_flag(tracks.frame_flags[rows], tracks.flag_names.index(n)) for n in names
+    }
     per_state: dict[str, list[dict[str, Any]]] = {name: [] for name in STATES}
     for j, i in enumerate(rows):
         sums = animal_sums(tracks, i, {n: unpacked[n][j] for n in names})
@@ -158,7 +160,9 @@ def measure(tracks: refs.ScheerTracks) -> dict[str, Any]:
             "states": hmm["states"],
             "transitions_per_10_s": transitions.tolist(),
             "window_seconds": hmm["window_seconds"],
-            "stationary_roaming": float(transitions[0, 1] / (transitions[0, 1] + transitions[1, 0])),
+            "stationary_roaming": float(
+                transitions[0, 1] / (transitions[0, 1] + transitions[1, 0]),
+            ),
         },
         "delta_hazard": "the primitives' minimum: Scheer has no delta flag",
     }

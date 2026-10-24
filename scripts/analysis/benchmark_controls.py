@@ -25,7 +25,7 @@ r"""The benchmark's controls: held-out real worms must pass, and negatives must 
 - the Poisson worm (``BatchedCurvatureWalk``, AR(1) curvature, pooled hazards);
 - the random walk (uniform curvature, minimum hazards) and the correlated walk (AR(1) curvature,
   minimum hazards), both at the pooled speed;
-- the untrained MLP and connectome, 8 networks × 25 animals each (8 × 8 in the pilot).
+- the untrained MLP and connectome, 8 networks x 25 animals each (8 x 8 in the pilot).
 
 Usage::
 
@@ -70,12 +70,30 @@ LAUNCH_PATH = SUPPORT / "launch.md"
 PARAMS_PATH = SUPPORT / "negatives_params.json"
 
 ALLOWANCE = 2
-UNIT_FAILURE_RATES = {"small_lawn": 0.075, "uniform_lawn": 0.05, "local_search": 0.038, "mutant": 0.05}
-NEGATIVES = ("hmm", "poisson", "random_walk", "correlated_walk", "untrained_mlp", "untrained_connectome")
+UNIT_FAILURE_RATES = {
+    "small_lawn": 0.075,
+    "uniform_lawn": 0.05,
+    "local_search": 0.038,
+    "mutant": 0.05,
+}
+NEGATIVES = (
+    "hmm",
+    "poisson",
+    "random_walk",
+    "correlated_walk",
+    "untrained_mlp",
+    "untrained_connectome",
+)
 READ_ANIMALS = list(range(5101, 5301))
-READ_NETWORKS = {"untrained_mlp": list(range(5301, 5309)), "untrained_connectome": list(range(5309, 5317))}
+READ_NETWORKS = {
+    "untrained_mlp": list(range(5301, 5309)),
+    "untrained_connectome": list(range(5309, 5317)),
+}
 PILOT_ANIMALS = list(range(9201, 9265))
-PILOT_NETWORKS = {"untrained_mlp": list(range(9265, 9273)), "untrained_connectome": list(range(9273, 9281))}
+PILOT_NETWORKS = {
+    "untrained_mlp": list(range(9265, 9273)),
+    "untrained_connectome": list(range(9273, 9281)),
+}
 W_SPLITS = 1000
 W_SEED = 2037
 W_SIZE_STEP = 25
@@ -110,11 +128,15 @@ def hazard_controller(name: str, params: dict[str, Any]) -> Any:  # noqa: ANN401
             pooled["heading_persistence"],
         )
     if name == "random_walk":
-        return BatchedCurvatureWalk(pooled["speed_mm_per_s"], (minimum,) * 3, "uniform")
+        return BatchedCurvatureWalk(
+            pooled["speed_mm_per_s"],
+            (minimum, minimum, minimum),
+            "uniform",
+        )
     if name == "correlated_walk":
         return BatchedCurvatureWalk(
             pooled["speed_mm_per_s"],
-            (minimum,) * 3,
+            (minimum, minimum, minimum),
             "ar1",
             pooled["curvature_sd_deg_per_s"],
             pooled["heading_persistence"],
@@ -150,9 +172,17 @@ def negative_populations(
             population: list[Any] = []
             for j, seed in enumerate(seeds):
                 brain, _, _ = harness.build_brain(path, seed)
-                controller = BatchedMLP(brain) if arm == "mlp" else BatchedConnectome(brain)
+                controller = (
+                    BatchedMLP(brain)  # type: ignore[arg-type]
+                    if arm == "mlp"
+                    else BatchedConnectome(brain)  # type: ignore[arg-type]
+                )
                 block = animals[j * per : (j + 1) * per]
-                population += _window(family, BatchedEvaluator(config, controller, block).run(), len(block))
+                population += _window(
+                    family,
+                    BatchedEvaluator(config, controller, block).run(),
+                    len(block),
+                )
             populations[family] = population
         else:
             config = load_simulation_config(str(_assay_path("mlp", family)))
@@ -209,7 +239,13 @@ def held_out_tallies(
 
 def _reading_dict(readings: dict[str, g.Reading]) -> dict[str, Any]:
     return {
-        name: {"value": r.value, "centre": r.band.centre, "scale": r.band.scale, "z": r.z, "passes": r.passes}
+        name: {
+            "value": r.value,
+            "centre": r.band.centre,
+            "scale": r.band.scale,
+            "z": r.z,
+            "passes": r.passes,
+        }
         for name, r in readings.items()
     }
 
@@ -217,7 +253,7 @@ def _reading_dict(readings: dict[str, g.Reading]) -> dict[str, Any]:
 def positive_controls(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[str, Any]:
     """Grade the 15 held-out units."""
     tracks = builder.tracks
-    clf = builder._classifier  # noqa: SLF001 - the bands' own classifier
+    clf = builder._classifier
     bar = float(bands["bars"]["wild_type"])
     units: dict[str, Any] = {}
 
@@ -232,7 +268,11 @@ def positive_controls(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[st
     n_uniform = int(sum(len(v) for v in uniform.values()))
     values = g.lawn_statistics(np.vstack(list(uniform.values())).sum(axis=0))
     readings = g.grade(values, builder.uniform_lawn(n_uniform), bar)
-    units["uniform_lawn"] = {"n": n_uniform, "dates": len(uniform), "statistics": _reading_dict(readings)}
+    units["uniform_lawn"] = {
+        "n": n_uniform,
+        "dates": len(uniform),
+        "statistics": _reading_dict(readings),
+    }
     units["uniform_lawn"]["passes"] = all(r.passes for r in readings.values())
 
     lopezcruz = refs.load_lopezcruz()
@@ -266,7 +306,10 @@ def positive_controls(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[st
             "unpaired_held_out_dates": sorted(set(mutant) - set(dates)),
             "statistics": {
                 **_reading_dict(readings),
-                **{s: {**_reading_dict(readings)[s], "direction": mutant_bands[s].direction} for s in readings},
+                **{
+                    s: {**_reading_dict(readings)[s], "direction": mutant_bands[s].direction}
+                    for s in readings
+                },
             },
             "passes": all(r.passes for r in readings.values()),
         }
@@ -289,9 +332,9 @@ def allowance_tail(rates: list[float], allowance: int) -> float:
 # ---------------------------------------------------------------------------------------------
 
 
-def w_minimum(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[str, Any]:
+def w_minimum(builder: bb.BandBuilder) -> dict[str, Any]:
     """Read the distance two halves of the held-out wild type show by chance; its 95th percentile."""
-    clf = builder._classifier  # noqa: SLF001 - the bands' own classifier
+    clf = builder._classifier
     wild = held_out_tallies(builder.tracks, bb.WILD_TYPE, clf)
     dates = list(wild)
     record = json.loads(bb.RECORD_PATH.read_text())
@@ -303,7 +346,11 @@ def w_minimum(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[str, Any]:
     lopezcruz = refs.load_lopezcruz()
     batches = bb.lopezcruz_batches(lopezcruz)
     sides = json.loads(bb.LOPEZCRUZ_SPLIT_PATH.read_text())["sides"]
-    held = [bb.search_statistics(batches[b]) for b, side in sorted(sides.items()) if side == refs.HELD_OUT]
+    held = [
+        bb.search_statistics(batches[b])
+        for b, side in sorted(sides.items())
+        if side == refs.HELD_OUT
+    ]
     families = ["small_lawn", "local_search"]
     rng = np.random.default_rng(W_SEED)
     distances = []
@@ -318,7 +365,7 @@ def w_minimum(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[str, Any]:
         readings: dict[str, dict[str, g.Reading]] = {"small_lawn": {}, "local_search": {}}
         for s in g.LAWN_STATISTICS:
             z = g.z_score(sa[s] - sb[s], g.Band(0.0, scales[s].scale))
-            readings["small_lawn"][s] = g.Reading(sa[s] - sb[s], scales[s], z, True)
+            readings["small_lawn"][s] = g.Reading(sa[s] - sb[s], scales[s], z, passes=True)
         order_lc = rng.permutation(len(held))
         k = len(held) // 2
         for s in g.LOCAL_SEARCH_STATISTICS:
@@ -326,7 +373,7 @@ def w_minimum(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[str, Any]:
             mb = float(np.nanmean([held[j][s] for j in order_lc[k:]]))
             scale = batch_sd[s] / math.sqrt(k)
             z = g.z_score(ma - mb, g.Band(0.0, scale))
-            readings["local_search"][s] = g.Reading(ma - mb, g.Band(0.0, scale), z, True)
+            readings["local_search"][s] = g.Reading(ma - mb, g.Band(0.0, scale), z, passes=True)
         distances.append(g.distance(readings, families))
     values = np.asarray(distances)
     return {
@@ -348,18 +395,21 @@ def w_minimum(builder: bb.BandBuilder, bands: dict[str, Any]) -> dict[str, Any]:
 def launch_committed() -> bool:
     """Return whether the launch record is in the committed history and unchanged since."""
     path = str(LAUNCH_PATH.relative_to(_REPO))
-    logged = subprocess.run(
-        ["git", "log", "--oneline", "-1", "--", path],  # noqa: S607 - git on the PATH
+    logged = subprocess.run(  # noqa: S603 - fixed git arguments, no user input
+        ["git", "log", "--oneline", "-1", "--", path],  # noqa: S607 - git on the PATH, fixed args
         cwd=_REPO,
         capture_output=True,
         text=True,
         check=False,
     ).stdout.strip()
-    clean = subprocess.run(
-        ["git", "diff", "--quiet", "HEAD", "--", path],  # noqa: S607
-        cwd=_REPO,
-        check=False,
-    ).returncode == 0
+    clean = (
+        subprocess.run(  # noqa: S603 - fixed git arguments, no user input
+            ["git", "diff", "--quiet", "HEAD", "--", path],  # noqa: S607
+            cwd=_REPO,
+            check=False,
+        ).returncode
+        == 0
+    )
     return bool(logged) and clean
 
 
@@ -391,14 +441,18 @@ def main(argv: list[str] | None = None) -> int:
         }
     else:
         if not launch_committed():
-            print(f"{LAUNCH_PATH} is not committed and clean; nothing held-out is read.", file=sys.stderr)
+            print(
+                f"{LAUNCH_PATH} is not committed and clean; nothing held-out is read.",
+                file=sys.stderr,
+            )
             return 1
         bands = bg.load_bands()
         builder = bb.BandBuilder()
         units = positive_controls(builder, bands)
         failed = [name for name, unit in units.items() if not unit["passes"]]
         rates = [
-            UNIT_FAILURE_RATES["mutant" if u.startswith("mutant/") else u.split("/")[0]] for u in units
+            UNIT_FAILURE_RATES["mutant" if u.startswith("mutant/") else u.split("/")[0]]
+            for u in units
         ]
         negatives = grade_negatives(READ_ANIMALS, READ_NETWORKS)
         passing_negatives = [n for n, r in negatives.items() if not r["fails_wild_type"]]
@@ -415,13 +469,18 @@ def main(argv: list[str] | None = None) -> int:
             },
             "negatives": negatives,
             "negatives_passing": passing_negatives,
-            "w_minimum": w_minimum(builder, bands),
+            "w_minimum": w_minimum(builder),
             "verdict": "VALID" if controls_pass and not passing_negatives else "VOID",
         }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(_finite(record), indent=2, allow_nan=False) + "\n")
     if args.mode == "read":
-        print("verdict:", record["verdict"], "| failed units:", record["positive_controls"]["failed"])
+        print(
+            "verdict:",
+            record["verdict"],
+            "| failed units:",
+            record["positive_controls"]["failed"],
+        )
     return 0
 
 

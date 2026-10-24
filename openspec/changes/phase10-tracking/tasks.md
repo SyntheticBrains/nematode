@@ -292,7 +292,7 @@ nothing in W registers before C.2 has read.
 
   Logbook 109's addendum has every changed value.
 
-- [ ] **B.4 The controls**:
+- [x] **B.4 The controls**:
 
   - positive: cohort-held-out real tracks pass, and held-out real mutant cohorts pass the mutant
     grading;
@@ -318,6 +318,26 @@ nothing in W registers before C.2 has read.
   - **Each statistic's discrimination, as description.** Four single statistics passed for the
     preflight's Poisson worm, so the family rule and D carry the discrimination. Local search must
     also be present: early/late above 1 at its own lower bound.
+
+  *(Closed 2026-10-25, change `add-benchmark-controls`, archived as `2026-10-25-add-benchmark-controls`;
+  [Logbook 110](../../../docs/experiments/logbooks/110-benchmark-controls.md).)* **The benchmark is
+  VALID.**
+
+  - **Positive controls:** 14 of 15 held-out units pass, against an allowance of 2. The wild type
+    passes on the small lawn (573 animals, largest |z| 1.29), on the uniform well (31) and in all 10
+    López-Cruz batches. tph-1 fails on leaving: held-out Δ exits +4.0/h, against its three band
+    dates' +0.07.
+  - **Negatives:** all six fail the wild type, with D 4.49–8.02 (open-loop HMM, Poisson, random and
+    correlated walks, untrained MLP and connectome). Staying on the small lawn separates every one.
+  - **W's minimum: 1.42 on D** (95th percentile of real half-splits; median 0.89).
+  - **Carried forward:**
+    - C's mutant table: tph-1's leaving reference is unreliable;
+    - local search alone is weak: the untrained connectome passes that family, and D_fit leaves it
+      out;
+    - C.2's weights: `time_on_lawn` and exits carry the discrimination.
+  - **Seeds used:**
+    - 5101–5300 (animals) and 5301–5316 (untrained networks);
+    - pilot 9201–9280.
 
 - [ ] **B.5 Track import** (WCON or CSV), independent of the simulator, positioned against Tierpsy and
   OWMD feature sets. NeuroSparkSNT and a wider novelty search checked at registration.
