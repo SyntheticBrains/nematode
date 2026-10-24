@@ -43,7 +43,9 @@ and each mutant). Which units fail SHALL be reported.
 The open-loop HMM worm SHALL switch roaming and dwelling every 10 s by the authors' HMM transitions,
 regardless of food. In each state it SHALL use that state's speed, curvature noise, and reversal and
 omega hazards, measured on the OD 2 band cohorts. The Poisson worm SHALL use the same quantities
-pooled over both states, held constant. No held-out date SHALL enter their parameters.
+pooled over both states, held constant. Curvature noise and heading persistence SHALL be read only on
+seconds whose displacement is at least the readouts' heading floor. Hazards SHALL be onsets per second
+outside every bout. No held-out date SHALL enter their parameters.
 
 #### Scenario: The HMM worm ignores food
 
@@ -62,12 +64,15 @@ connectome arms, graded pooled.
 
 - **WHEN** a negative is graded
 - **THEN** each assay SHALL hold 200 animals, on animal seeds 5101–5300
+- **AND** each animal's randomness SHALL come from the evaluator's per-animal generator, so it is the
+  same alone or in a batch
 
 ### Requirement: The verdict
 
 The benchmark SHALL be VALID when the positive controls pass by the allowance and every negative fails
-the wild type, and VOID otherwise. Each negative's D and D_fit SHALL be reported beside its verdict,
-and W's minimum SHALL be read by B.3's registered rule.
+the wild type, and VOID otherwise. Each negative's D and D_fit SHALL be reported beside its verdict.
+W's minimum SHALL be read by B.3's registered rule. For local search, the scale of a half is the band
+batches' SD divided by the square root of the half's batch count.
 
 #### Scenario: One negative passes
 
