@@ -437,6 +437,7 @@ def _not_step_coupled() -> dict[str, set[str]]:
             "allow_reversal",
             "step_seconds",
             "locomotion",
+            "reversal_kinematics",
             "arena_shape",
         },
         "ForagingConfig": set(ForagingConfig.model_fields) - {"food_model"},
@@ -474,7 +475,8 @@ _PINNED_FIELD_COUNTS = {
 # are plasticity (refused), PPO's training budget, or structure. Audited 2026-10-24: the data
 # neuromodulator layer's seven fields are structure (layer, sensitivity, sources, null, seed,
 # knockout genes) or already in worm-seconds (``modulator_timescales_s``; the per-step decay comes
-# from ``modulator_step_seconds``, which is converted).
+# from ``modulator_step_seconds``, which is converted). ``Continuous2DConfig.reversal_kinematics``,
+# added 2026-10-24, picks between kinematics already in seconds and mm/s, so it is not step-coupled.
 _EXPECTED_FIELD_COUNTS = {
     "ForagingConfig": 22,
     "LawnConfig": 14,

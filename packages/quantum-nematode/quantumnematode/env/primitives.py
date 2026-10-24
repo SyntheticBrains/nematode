@@ -4,7 +4,9 @@ Under ``continuous.locomotion: primitives`` the worm moves only by:
 
 - **runs**: one step at a controller-set speed in ``[0, v_max]`` and curvature in
   ``[-omega_max, omega_max]``; a pause is a run at zero speed;
-- **reversal bouts**: backing at a fixed speed along an unchanged heading for a drawn duration;
+- **reversal bouts**: backing at a fixed speed along an unchanged heading for a drawn duration; a
+  reversal the caller marks as starting on a lawn draws the on-food speed and duration, shorter and
+  slower than off food;
 - **omega and delta bouts**: a drawn heading change toward the worm's ventral side (omega) or dorsal
   side (delta), at a constant rate over a drawn duration, without translation; a worm crawls on one
   side, so which way is ventral is drawn once per episode.
@@ -17,8 +19,8 @@ make bout starts a Poisson process. A start is drawn only at the beginning of a 
 running; a bout's last step may be partial, and nothing starts within it. During a bout the
 controller's outputs move nothing.
 
-The fixed kinematics are read from ``data/locomotion/primitives.json``, every value with its
-published source.
+The fixed kinematics are read from ``data/locomotion/primitives.json``, every value with its source:
+a published one, or for a value measured from deposited tracks, the script and the record it wrote.
 """
 
 from __future__ import annotations
@@ -85,12 +87,18 @@ class TruncatedNormalAngle:
 
 @dataclass(frozen=True)
 class PrimitiveKinematics:
-    """The primitives' fixed kinematics, in mm, seconds and radians."""
+    """The primitives' fixed kinematics, in mm, seconds and radians.
+
+    The ``reversal_*`` values hold off food; the ``on_food_reversal_*`` values hold for a reversal
+    that starts on a lawn.
+    """
 
     v_max_mm_per_s: float
     omega_max_rad_per_s: float
     reversal_speed_mm_per_s: float
     reversal_duration: GammaDuration
+    on_food_reversal_speed_mm_per_s: float
+    on_food_reversal_duration: GammaDuration
     omega_angle: TruncatedNormalAngle
     omega_duration: GammaDuration
     delta_angle: TruncatedNormalAngle
@@ -127,6 +135,18 @@ def _angle(entry: dict[str, object], side: str) -> TruncatedNormalAngle:
     )
 
 
+_STATUSES = ("verified", "figure", "measured")
+
+
+def _check_measured(key: str, entry: dict[str, object]) -> None:
+    """Refuse a measured value unless it names its script and record, and both exist."""
+    for field in ("script", "record"):
+        value = entry.get(field)
+        if not isinstance(value, str) or not (_PROJECT_ROOT / value).is_file():
+            msg = f"measured kinematics entry {key!r} needs an existing {field}, got {value!r}"
+            raise ValueError(msg)
+
+
 @cache
 def load_kinematics(path: Path = KINEMATICS_PATH) -> PrimitiveKinematics:
     """Load and check the primitives' kinematics.
@@ -134,16 +154,19 @@ def load_kinematics(path: Path = KINEMATICS_PATH) -> PrimitiveKinematics:
     Raises
     ------
     ValueError
-        If an entry lacks its source, condition or status, or a value is out of range.
+        If an entry lacks its source, condition or status, a measured entry lacks the script or
+        record it came from, or a value is out of range.
     """
     data: dict[str, dict[str, object]] = json.loads(path.read_text())
     for key, entry in data.items():
         if key == "description":
             continue
         missing = [field for field in ("source", "condition", "status") if field not in entry]
-        if missing or entry["status"] not in ("verified", "figure"):
+        if missing or entry["status"] not in _STATUSES:
             msg = f"kinematics entry {key!r} lacks {missing or 'a valid status'}"
             raise ValueError(msg)
+        if entry["status"] == "measured":
+            _check_measured(key, entry)
     hazards = data["hazard_range_per_s"]
     low, high = float(hazards["low"]), float(hazards["high"])  # type: ignore[arg-type]
     if not 0.0 < low < high:
@@ -151,7 +174,12 @@ def load_kinematics(path: Path = KINEMATICS_PATH) -> PrimitiveKinematics:
         raise ValueError(msg)
     speeds = [
         float(data[key]["value"])  # type: ignore[arg-type]
-        for key in ("v_max_mm_per_s", "omega_max_deg_per_s", "reversal_speed_mm_per_s")
+        for key in (
+            "v_max_mm_per_s",
+            "omega_max_deg_per_s",
+            "reversal_speed_mm_per_s",
+            "on_food_reversal_speed_mm_per_s",
+        )
     ]
     if min(speeds) <= 0.0:
         msg = f"speeds and turn rates must be positive, got {speeds}"
@@ -161,6 +189,8 @@ def load_kinematics(path: Path = KINEMATICS_PATH) -> PrimitiveKinematics:
         omega_max_rad_per_s=math.radians(speeds[1]),
         reversal_speed_mm_per_s=speeds[2],
         reversal_duration=_gamma(data["reversal_duration_s"]),
+        on_food_reversal_speed_mm_per_s=speeds[3],
+        on_food_reversal_duration=_gamma(data["on_food_reversal_duration_s"]),
         omega_angle=_angle(data["omega_angle_deg"], "ventral"),
         omega_duration=_gamma(data["omega_duration_s"]),
         delta_angle=_angle(data["delta_angle_deg"], "dorsal"),
@@ -251,13 +281,17 @@ def _start_bout(
     state: PrimitiveState,
     kinematics: PrimitiveKinematics,
     rng: np.random.Generator,
+    *,
+    on_food: bool = False,
 ) -> Bout:
+    """Draw a new bout; a reversal takes its condition's kinematics, fixed for the whole bout."""
     if kind == "reversal":
-        return Bout(
-            kind=kind,
-            remaining_s=kinematics.reversal_duration.sample(rng),
-            speed_mm_per_s=-kinematics.reversal_speed_mm_per_s,
+        duration, speed = (
+            (kinematics.on_food_reversal_duration, kinematics.on_food_reversal_speed_mm_per_s)
+            if on_food
+            else (kinematics.reversal_duration, kinematics.reversal_speed_mm_per_s)
         )
+        return Bout(kind=kind, remaining_s=duration.sample(rng), speed_mm_per_s=-speed)
     if kind == "omega":
         duration = kinematics.omega_duration.sample(rng)
         angle = kinematics.omega_angle.sample(rng) * state.ventral_side
@@ -267,18 +301,21 @@ def _start_bout(
     return Bout(kind=kind, remaining_s=duration, turn_rad_per_s=angle / duration)
 
 
-def step_primitives(
+def step_primitives(  # noqa: PLR0913 - the worm, its action, the step, kinematics, RNG, food
     state: PrimitiveState,
     raw_action: Sequence[float],
     step_seconds: float,
     kinematics: PrimitiveKinematics,
     rng: np.random.Generator,
+    *,
+    on_food: bool = False,
 ) -> PrimitiveStep:
     """Advance one worm by one step under the primitives, updating its state in place.
 
     While no bout runs, one uniform draw decides whether a bout starts and, if one does, a second
     decides its kind; a new bout then draws its duration and, for a turn, its angle, and runs from
-    this step. Otherwise the step is a run at the controller's speed and curvature.
+    this step. Otherwise the step is a run at the controller's speed and curvature. ``on_food`` is
+    whether the worm is on a lawn as the step starts; it sets a new reversal's kinematics.
     """
     if state.bout is None:
         command = map_action(raw_action, kinematics)
@@ -292,7 +329,7 @@ def step_primitives(
                 if pick < cumulative:
                     kind = candidate
                     break
-            state.bout = _start_bout(kind, state, kinematics, rng)
+            state.bout = _start_bout(kind, state, kinematics, rng, on_food=on_food)
         else:
             return PrimitiveStep(
                 kind="run",

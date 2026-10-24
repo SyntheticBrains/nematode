@@ -100,6 +100,9 @@ class Continuous2DParams:
     # it only by runs, reversal bouts and omega/delta turns with fixed kinematics, started by the
     # controller's hazards (see ``quantumnematode.env.primitives``).
     locomotion: str = "free"
+    # Under primitives, "food_dependent" gives a reversal that starts on a lawn the on-food speed
+    # and duration; "off_food" gives every reversal the off-food ones.
+    reversal_kinematics: str = "food_dependent"
     # The arena: "square", or "circle" of diameter world_size_mm centred in the square.
     arena_shape: str = "square"
     # An assay protocol, or None: the episode as phases of food and placement.
@@ -546,10 +549,29 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
         if state is None:
             state = new_state(self.rng)
             self.primitive_states[agent_id] = state
-        step = step_primitives(state, action, self.step_seconds, load_kinematics(), self.rng)
+        step = step_primitives(
+            state,
+            action,
+            self.step_seconds,
+            load_kinematics(),
+            self.rng,
+            on_food=self._on_food_for_reversal(agent_id),
+        )
         self._turn_then_move(self.agents[agent_id], step.displacement_mm, step.heading_change_rad)
         self.last_primitive[agent_id] = step.kind
         return step.kind
+
+    def _on_food_for_reversal(self, agent_id: str) -> bool:
+        """Return whether a reversal starting now takes the on-food kinematics.
+
+        It does under ``reversal_kinematics: food_dependent`` when the agent lies on a lawn, by the
+        lawn's geometry whatever its density, in a phase that has lawns.
+        """
+        if self.continuous.reversal_kinematics != "food_dependent" or self.lawn_field is None:
+            return False
+        agent = self.agents[agent_id]
+        position = agent.pos_continuous or (float(agent.position[0]), float(agent.position[1]))
+        return self.lawn_field.lawn_at(position) is not None
 
     def running_primitive(self, agent_id: str = DEFAULT_AGENT_ID) -> PrimitiveKind:
         """Return the primitive an agent is in at the start of its next step: a bout's, else run."""

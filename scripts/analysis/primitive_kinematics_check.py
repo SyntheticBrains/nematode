@@ -17,6 +17,8 @@ the second's): more than 0.5 mm inside, within 0.5 mm, and more than 0.5 mm outs
 - forward speed and turning rate, 95th percentiles over seconds outside every bout;
 - pause fraction.
 
+Each mean quantity also records its pooled SD, so a vendored duration's spread traces to this record.
+
 Intervals are 95% bootstraps over recording dates, the cohorts.
 
 **The rule**, fixed before the data were read. A quantity is acted on if its source states a mean,
@@ -293,6 +295,18 @@ def measure(
                 with np.errstate(invalid="ignore"):
                     boots = sums[draws].sum(axis=1) / counts[draws].sum(axis=1)
                 n = int(counts.sum())
+                pooled = np.concatenate(
+                    [np.asarray(v, dtype=float) for v in samples[quantity][where]],
+                )
+                # The SD of the pooled samples: a duration's spread, which a gamma draw needs.
+                sd = float(np.std(pooled, ddof=1)) if len(pooled) > 1 else float("nan")
+                result[quantity][where] = {
+                    "n": n,
+                    "value": value,
+                    "sd": sd,
+                    "interval_95": _interval(boots),
+                }
+                continue
             result[quantity][where] = {"n": n, "value": value, "interval_95": _interval(boots)}
     return result
 
