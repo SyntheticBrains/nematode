@@ -117,7 +117,11 @@ def family_values(
     return g.lawn_statistics(total)
 
 
-def window(family: str, steps: list[BehaviourStep], analysis: tuple[int, int]) -> list[BehaviourStep]:
+def window(
+    family: str,
+    steps: list[BehaviourStep],
+    analysis: tuple[int, int],
+) -> list[BehaviourStep]:
     """Return one animal's steps over its family's registered window."""
     samples = g.SEARCH_SAMPLES if family == "local_search" else g.LAWN_SAMPLES
     return g.analysis_steps(steps, analysis, samples)

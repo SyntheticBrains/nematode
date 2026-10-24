@@ -24,6 +24,7 @@ Real and simulated tracks are read through the same functions:
 
 from __future__ import annotations
 
+import itertools
 import math
 from dataclasses import dataclass
 from statistics import NormalDist
@@ -166,7 +167,7 @@ def animal_windows(
     on_lawn: np.ndarray,
     classifier: rd.GaussianClassifier,
 ) -> AnimalWindows:
-    """Cut positions sampled each second into classified 10-s windows (see :func:`window_inputs`)."""
+    """Cut positions sampled each second into classified 10-s windows, as :func:`window_inputs`."""
     w = window_inputs(x, y, on_lawn)
     states = classifier.states(w.speed, w.angular, w.on)
     return AnimalWindows(states=states, on=w.on, off=w.off, valid=w.valid)
@@ -183,7 +184,7 @@ def _bouts(states: np.ndarray, state: int) -> tuple[float, int]:
         run = states[start:stop]
         edges = np.flatnonzero(np.diff(run)) + 1
         bounds = np.concatenate(([0], edges, [len(run)]))
-        for a, b in zip(bounds[:-1], bounds[1:], strict=True):
+        for a, b in itertools.pairwise(bounds):
             if run[a] != state:
                 continue
             time_s += (b - a) * WINDOW_S
@@ -288,7 +289,9 @@ def simulated_windows(
     """Classify a simulated worm's 1-s steps; on a uniform well every sample is on the lawn."""
     x = np.array([s.x for s in steps], dtype=float)
     y = np.array([s.y for s in steps], dtype=float)
-    lawn = np.ones(len(steps), dtype=bool) if uniform else np.array([bool(s.on_lawn) for s in steps])
+    lawn = (
+        np.ones(len(steps), dtype=bool) if uniform else np.array([bool(s.on_lawn) for s in steps])
+    )
     return animal_windows(x, y, lawn, classifier)
 
 
@@ -305,7 +308,11 @@ def local_search_statistics(bin_starts_min: np.ndarray, means: np.ndarray) -> di
     """
     starts = np.asarray(bin_starts_min, dtype=float)
     values = np.asarray(means, dtype=float)
-    wanted = np.arange(SEARCH_FIRST_BIN_MIN, SEARCH_LAST_BIN_MIN + SEARCH_BIN_MIN / 2, SEARCH_BIN_MIN)
+    wanted = np.arange(
+        SEARCH_FIRST_BIN_MIN,
+        SEARCH_LAST_BIN_MIN + SEARCH_BIN_MIN / 2,
+        SEARCH_BIN_MIN,
+    )
     by_start = {round(float(s), 6): float(v) for s, v in zip(starts, values, strict=True)}
     picked = np.array([by_start.get(round(float(s), 6), math.nan) for s in wanted])
     if not np.all(np.isfinite(picked)):

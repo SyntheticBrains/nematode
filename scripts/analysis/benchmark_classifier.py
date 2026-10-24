@@ -67,7 +67,10 @@ def animal_inputs(
     return inputs, np.asarray(tracks.labels[i][: len(inputs.speed)], dtype=int)
 
 
-def labelled_runs(inputs: g.WindowInputs, labels: np.ndarray) -> list[tuple[np.ndarray, np.ndarray]]:
+def labelled_runs(
+    inputs: g.WindowInputs,
+    labels: np.ndarray,
+) -> list[tuple[np.ndarray, np.ndarray]]:
     """Return runs of consecutive windows on the lawn and labelled roaming or dwelling."""
     keep = inputs.on & (labels >= 0)
     features = rd.window_features(inputs.speed, inputs.angular)

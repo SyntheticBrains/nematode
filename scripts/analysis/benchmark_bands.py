@@ -56,9 +56,9 @@ from typing import Any
 
 import numpy as np
 from quantumnematode.benchmark import grading as g
-from scipy import stats as scipy_stats
 from quantumnematode.benchmark import references as refs
 from quantumnematode.validation import roaming_dwelling as rd
+from scipy import stats as scipy_stats
 
 DESCRIPTION = "Build the benchmark's bands from the band cohorts, and check the rule on them."
 _REPO = Path(__file__).resolve().parents[2]
@@ -148,7 +148,7 @@ def _band_dict(band: g.Band) -> dict[str, Any]:
     return {"centre": band.centre, "scale": band.scale, "inflated": band.inflated}
 
 
-def lawn_bands(
+def lawn_bands(  # noqa: PLR0913 - the arm, its statistics, the size, the stream, two widenings
     per_date: dict[int, np.ndarray],
     statistics: tuple[str, ...],
     n: int,
@@ -184,7 +184,7 @@ def lawn_bands(
     return out
 
 
-def mutant_bands(
+def mutant_bands(  # noqa: PLR0913 - both arms, the size, the stream and two widenings
     mutant: dict[int, np.ndarray],
     control: dict[int, np.ndarray],
     n: int,
@@ -232,7 +232,10 @@ def lopezcruz_batches(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def search_statistics(row: dict[str, Any]) -> dict[str, float]:
-    """Return a López-Cruz row's γ and early/late ratio; recording bin j starts 2j + 4 min after removal."""
+    """Return a López-Cruz row's gamma and early/late ratio.
+
+    Recording bin j starts 2j + 4 min after removal.
+    """
     means = np.array([math.nan if v is None else float(v) for v in row["mean"]])
     starts = np.arange(len(means)) * g.SEARCH_BIN_MIN + 4.0
     return g.local_search_statistics(starts, means)
@@ -246,7 +249,9 @@ def split_batches(batches: dict[str, dict[str, Any]], kept: str) -> dict[str, An
         held = np.random.default_rng(LC_SPLIT_SEED + k).random(len(names)) < LC_HELD_OUT_PROBABILITY
         share = float(sizes[held].sum() / sizes.sum())
         if LC_HELD_OUT_SHARE[0] <= share <= LC_HELD_OUT_SHARE[1]:
-            sides = {b: (refs.HELD_OUT if h else refs.BANDS) for b, h in zip(names, held, strict=True)}
+            sides = {
+                b: (refs.HELD_OUT if h else refs.BANDS) for b, h in zip(names, held, strict=True)
+            }
             sides[kept] = refs.BANDS
             return {
                 "seed": LC_SPLIT_SEED,
@@ -270,8 +275,12 @@ def prediction_factor(k: int) -> float:
     statistics, so the common bar grades a batch at the prediction interval's level.
     """
     q = 1.0 - g.FAMILY_ALPHA / (2 * WILD_TYPE_STATISTICS)
-    return math.sqrt(1.0 + 1.0 / k) * float(scipy_stats.t.ppf(q, k - 1)) / g.z_star(
-        WILD_TYPE_STATISTICS,
+    return (
+        math.sqrt(1.0 + 1.0 / k)
+        * float(scipy_stats.t.ppf(q, k - 1))
+        / g.z_star(
+            WILD_TYPE_STATISTICS,
+        )
     )
 
 
@@ -332,7 +341,8 @@ def check_small_lawn(
 ) -> dict[str, Any]:
     """Grade a 200-animal population from one half of the dates against bands from the other."""
     rng = np.random.default_rng(CHECK_SEED)
-    passes, failures = 0, {name: 0 for name in g.LAWN_STATISTICS}
+    passes = 0
+    failures: dict[str, int] = dict.fromkeys(g.LAWN_STATISTICS, 0)
     for _ in range(CHECK_SPLITS):
         values, bands = _half_split(per_date, rng, kappa)
         readings = g.grade(values, bands, bar)
@@ -455,7 +465,10 @@ def _finite(value: Any) -> Any:  # noqa: ANN401 - any JSON-shaped value
 # ---------------------------------------------------------------------------------------------
 
 
-def build(tracks: refs.ScheerTracks, lopezcruz: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:  # noqa: PLR0915 - one pass, in the order the record reads
+def build(
+    tracks: refs.ScheerTracks,
+    lopezcruz: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Return the bands file and the record beside it, or raise if a check fails."""
     classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(CLASSIFIER_PATH))
     rng = np.random.default_rng(BAND_SEED)
@@ -463,9 +476,14 @@ def build(tracks: refs.ScheerTracks, lopezcruz: dict[str, Any]) -> tuple[dict[st
 
     wild = per_date_tallies(tracks, WILD_TYPE, classifier)
     uniform = per_date_tallies(tracks, UNIFORM, classifier, uniform=True)
-    controls = {arm: per_date_tallies(tracks, arm, classifier) for arm in {c for _, c in MUTANTS.values()} - {WILD_TYPE}}
+    controls = {
+        arm: per_date_tallies(tracks, arm, classifier)
+        for arm in {c for _, c in MUTANTS.values()} - {WILD_TYPE}
+    }
     controls[WILD_TYPE] = wild
-    mutant_tallies = {name: per_date_tallies(tracks, arm, classifier) for name, (arm, _) in MUTANTS.items()}
+    mutant_tallies = {
+        name: per_date_tallies(tracks, arm, classifier) for name, (arm, _) in MUTANTS.items()
+    }
 
     batches = lopezcruz_batches(lopezcruz)
     rows = {r["row"]: r for r in lopezcruz["rows"]}
@@ -497,7 +515,7 @@ def build(tracks: refs.ScheerTracks, lopezcruz: dict[str, Any]) -> tuple[dict[st
             kappa=kappa,
         )
         mutants: dict[str, Any] = {}
-        for name, (arm, control) in MUTANTS.items():
+        for name, (_, control) in MUTANTS.items():
             mutant = mutant_tallies[name]
             wt_scale = {s: small[s].scale for s in g.MUTANT_LAWN_STATISTICS}
             bands, dates = mutant_bands(mutant, controls[control], n, rng, wt_scale, kappa)
@@ -535,9 +553,21 @@ def build(tracks: refs.ScheerTracks, lopezcruz: dict[str, Any]) -> tuple[dict[st
         "weights": {f"{f}/{s}": w for (f, s), w in g.weights(list(g.FAMILIES)).items()},
         "fit_weights": {f"{f}/{s}": w for (f, s), w in g.weights(list(g.FIT_FAMILIES)).items()},
         "arms": {
-            "small_lawn": {"arm": WILD_TYPE, "band_dates": len(wild), "animals": int(sum(map(len, wild.values())))},
-            "uniform_lawn": {"arm": UNIFORM, "band_dates": len(uniform), "animals": int(sum(map(len, uniform.values()))), "inflated_to": "small_lawn"},
-            "local_search": {"source": "López-Cruz et al. 2019 wild-type batches", "band_batches": band_batches},
+            "small_lawn": {
+                "arm": WILD_TYPE,
+                "band_dates": len(wild),
+                "animals": int(sum(map(len, wild.values()))),
+            },
+            "uniform_lawn": {
+                "arm": UNIFORM,
+                "band_dates": len(uniform),
+                "animals": int(sum(map(len, uniform.values()))),
+                "inflated_to": "small_lawn",
+            },
+            "local_search": {
+                "source": "López-Cruz et al. 2019 wild-type batches",
+                "band_batches": band_batches,
+            },
             "mutants": {
                 m: {"arm": arm, "control": control, "paired_band_dates": mutant_dates[m]}
                 for m, (arm, control) in MUTANTS.items()
@@ -592,14 +622,22 @@ def build(tracks: refs.ScheerTracks, lopezcruz: dict[str, Any]) -> tuple[dict[st
                 for m in MUTANTS
             },
             "limits": [
-                "Real dwelling speeds carry tracking noise of a few µm per sample; simulated ones "
-                "carry none.",
-                "The bout means are total time over completed bouts, the exponential estimator; "
-                "roaming bouts are double-exponential.",
-                "López-Cruz's band is the spread of single batches (n about 55), conservative for "
-                "simulated populations of 200.",
-                "The uniform lawn has two band dates and cannot be halved, so the rule's check "
-                "leaves it out.",
+                (
+                    "Real dwelling speeds carry tracking noise of a few µm per sample; simulated "
+                    "ones carry none."
+                ),
+                (
+                    "The bout means are total time over completed bouts, the exponential "
+                    "estimator; roaming bouts are double-exponential."
+                ),
+                (
+                    "López-Cruz's band is the spread of single batches (n about 55), conservative "
+                    "for simulated populations of 200."
+                ),
+                (
+                    "The uniform lawn has two band dates and cannot be halved, so the rule's check "
+                    "leaves it out."
+                ),
             ],
         },
     }
@@ -618,7 +656,10 @@ def main() -> int:
     args.record.parent.mkdir(parents=True, exist_ok=True)
     if failed:
         args.record.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
-        print(f"The rule's own check failed for {failed}; the bands were not written.", file=sys.stderr)
+        print(
+            f"The rule's own check failed for {failed}; the bands were not written.",
+            file=sys.stderr,
+        )
         return 1
     split = record.pop("split")
     LOPEZCRUZ_SPLIT_PATH.write_text(json.dumps(split, indent=2, allow_nan=False) + "\n")

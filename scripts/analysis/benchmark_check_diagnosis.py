@@ -110,7 +110,7 @@ def local_search(bar: float) -> dict[str, object]:
             column = np.array([v[name] for v in built])
             plain[name] = g.Band(float(column.mean()), g.scale_of(column))
         k = len(built)
-        t_bar = scipy_stats.t.ppf(1 - g.FAMILY_ALPHA / 22, k - 1) * math.sqrt(1 + 1 / k)
+        t_bar = float(scipy_stats.t.ppf(1 - g.FAMILY_ALPHA / 22, k - 1)) * math.sqrt(1 + 1 / k)
         for j in order[half:]:
             first = g.grade(values[j], plain, bar)
             registered += all(r.passes for r in first.values())
@@ -132,7 +132,12 @@ def main() -> int:
     classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(bb.CLASSIFIER_PATH))
     wild = bb.per_date_tallies(tracks, bb.WILD_TYPE, classifier)
     bar = g.z_star(bb.WILD_TYPE_STATISTICS)
-    print(json.dumps({"small_lawn": small_lawn(wild, bar), "local_search": local_search(bar)}, indent=2))
+    print(
+        json.dumps(
+            {"small_lawn": small_lawn(wild, bar), "local_search": local_search(bar)},
+            indent=2,
+        ),
+    )
     return 0
 
 

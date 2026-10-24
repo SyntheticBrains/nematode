@@ -84,7 +84,7 @@ def _windows(states: list[int], on: list[bool], off: list[bool]) -> g.AnimalWind
 
 
 def test_a_worm_that_never_leaves() -> None:
-    """No exit: the exit rate is 0 and graded; the pre-exit enrichment cannot be computed and fails."""
+    """No exit: the exit rate is 0 and graded; the pre-exit enrichment is undefined and fails."""
     w = _windows([rd.DWELLING] * 20, [True] * 20, [False] * 20)
     stats = g.lawn_statistics(g.tally(w))
     assert stats["exits_per_on_lawn_hour"] == 0.0
@@ -162,7 +162,7 @@ def test_a_wrong_direction_fails_inside_the_band() -> None:
 
 
 def test_a_thin_arms_direction_reads_the_inflated_scale() -> None:
-    """A direction is resolved from centre +/- 1.96 scale, so widening the scale can unresolve it."""
+    """A direction is read from centre +/- 1.96 scale, so widening the scale can unresolve it."""
     assert g.Band(centre=0.1, scale=0.04).direction() == 1
     assert g.Band(centre=0.1, scale=0.06, inflated=True).direction() == 0
 
@@ -170,7 +170,9 @@ def test_a_thin_arms_direction_reads_the_inflated_scale() -> None:
 def test_a_worm_at_every_centre() -> None:
     """Every statistic at its centre gives D = D_fit = 0."""
     bands = {f: {s: g.Band(1.0, 0.5) for s in stats} for f, stats in g.FAMILIES.items()}
-    readings = {f: g.grade(dict.fromkeys(stats, 1.0), bands[f], 2.84) for f, stats in g.FAMILIES.items()}
+    readings = {
+        f: g.grade(dict.fromkeys(stats, 1.0), bands[f], 2.84) for f, stats in g.FAMILIES.items()
+    }
     assert g.distance(readings, list(g.FAMILIES)) == 0.0
     assert g.distance(readings, list(g.FIT_FAMILIES)) == 0.0
 
@@ -199,7 +201,9 @@ def test_the_local_search_statistics_need_every_bin() -> None:
 def test_the_registered_detector_is_the_calibrated_one() -> None:
     """The off-food detector's parameters are the ones its calibration chose."""
     record = json.loads(
-        (_REPO / "docs/experiments/logbooks/supporting/107-benchmark-readouts/detector.json").read_text(),
+        (
+            _REPO / "docs/experiments/logbooks/supporting/107-benchmark-readouts/detector.json"
+        ).read_text(),
     )
     chosen = record["chosen"]
     assert (
@@ -263,9 +267,7 @@ def test_the_lopezcruz_split_keeps_the_pdfr1_control() -> None:
     split = bb.split_batches(batches, kept)
     assert split["sides"][kept] == "bands"
     assert split == {
-        k: v
-        for k, v in json.loads(bb.LOPEZCRUZ_SPLIT_PATH.read_text()).items()
-        if k in split
+        k: v for k, v in json.loads(bb.LOPEZCRUZ_SPLIT_PATH.read_text()).items() if k in split
     }
 
 
