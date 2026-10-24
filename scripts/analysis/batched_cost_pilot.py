@@ -129,7 +129,11 @@ def measure(controller: str, protocol: str, sizes: tuple[int, ...]) -> dict[str,
         "batched_us_per_animal_step": {str(n): v for n, v in batched_us.items()},
         "speedup_per_core": reference_us / at_largest,
         "target_met": at_largest <= TARGET_US,
-        "evaluation_200_s": batched_us[EVALUATION_ANIMALS] * EVALUATION_ANIMALS * steps / 1e6,
+        "evaluation_200_s": (
+            batched_us[EVALUATION_ANIMALS] * EVALUATION_ANIMALS * steps / 1e6
+            if EVALUATION_ANIMALS in batched_us
+            else None
+        ),
     }
 
 
