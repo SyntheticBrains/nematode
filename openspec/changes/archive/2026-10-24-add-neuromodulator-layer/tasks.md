@@ -67,4 +67,4 @@ Phase 10, block N: N.1, N.2 and N.3. The maintainer's decisions of 2026-10-24:
 - [x] 5.1 Full suite and `pre-commit run -a`.
 - [x] 5.2 `openspec validate add-neuromodulator-layer --strict`.
 - [x] 5.3 Archive.
-- [ ] 5.4 PR.
+- [x] 5.4 PR.
