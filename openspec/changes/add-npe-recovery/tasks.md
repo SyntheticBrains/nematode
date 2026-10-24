@@ -9,8 +9,11 @@ Phase 10, block F, tracker item F.0 (first half). The maintainer's decisions of 
 
 ## 1. The model
 
-- [ ] 1.1 `BatchedMechanistic` in `evaluation/controllers.py`: 20 named parameters, per-animal state,
-  previous contact and time off food; per-animal generators.
+- [ ] 1.1 `BatchedMechanistic` in `evaluation/controllers.py`:
+  - 20 named parameters;
+  - per-animal state, previous contact and time off food;
+  - one generator call per animal per second;
+  - I = 0 where `max_intake` is undefined.
 - [ ] 1.2 Tests:
   - klinokinesis lowers hazards up-gradient;
   - a falling contact raises reversals by exp(e × fall);
@@ -28,19 +31,21 @@ Phase 10, block F, tracker item F.0 (first half). The maintainer's decisions of 
   - the sentinel-and-flag summary;
   - a resumable process pool writing each simulation as it completes;
   - training two flows;
-  - SBC coverage, contraction and the posterior-predictive check.
+  - SBC coverage, contraction, the informative gate (posterior- against prior-predictive D) and
+    coverage on the truths nearest the wild type.
 - [ ] 2.3 Tests:
   - the prior's ranges;
   - the summary's sentinels and flags;
   - coverage on a toy problem with a known posterior (a Gaussian), where the gate passes;
-  - an overconfident toy posterior fails.
+  - an overconfident toy posterior fails;
+  - a prior-returning posterior passes coverage but fails the informative gate.
 
 ## 3. Registration
 
 - [ ] 3.1 A pilot: 64 simulations from the prior, on its own seed scheme. Seconds per simulation and
   the projected wall time are written to the launch record.
-- [ ] 3.2 `supporting/111-npe-recovery/launch.md`: the model, priors, summary, seeds, NPE, gate and
-  pilot. Committed before 4.1.
+- [ ] 3.2 `supporting/111-npe-recovery/launch.md`: the model, priors, summary, seeds, NPE, both gates,
+  the pilot, and why `gate_preflight.py` does not apply. Committed before 4.1.
 
 ## 4. The run
 
@@ -51,8 +56,12 @@ Phase 10, block F, tracker item F.0 (first half). The maintainer's decisions of 
 
 - [ ] 5.1 Logbook 111: the gate, coverage and contraction per parameter, the posterior-predictive
   check, the cost.
-- [ ] 5.2 The tracker: F.0's NPE half; the seed scheme in the seed table. AGENTS.md and the
-  CHANGELOG.
+- [ ] 5.2 The tracker:
+  - F.0's NPE half;
+  - the seed scheme in the seed table;
+  - C.1's note: simulate at the observation's size, or add between-date noise.
+
+  AGENTS.md and the CHANGELOG.
 
 ## 6. Close-out
 

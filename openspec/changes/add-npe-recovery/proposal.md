@@ -23,9 +23,14 @@ The maintainer's decisions of 2026-10-25:
   - 10,000 training simulations drawn from the prior;
   - two NPE flows trained with different seeds;
   - simulation-based calibration on 100 held-out truths from the prior.
-- **The registered gate:** for each flow, the pooled 90% posterior-interval coverage over 100 truths × 20 parameters lies in **[0.80, 0.97]**. Reported beside it, not gated:
+- **The registered gates**, both required for each flow:
+  1. **calibrated:** the pooled 90% posterior-interval coverage over 100 truths × 20 parameters lies in **[0.80, 0.97]**;
+  2. **informative:** over 20 truths, simulations at 20 posterior draws reproduce each truth's statistics with a **median D of at most 1.42**, W's minimum.
+
+  Calibration alone would pass a posterior equal to the prior, the failure A6 named. Reported beside the gates, not gated:
+  - the same D at 20 prior draws, so the gain over the prior is visible;
   - each parameter's coverage and contraction (posterior SD over prior SD), naming which parameters the benchmark constrains;
-  - a posterior-predictive check in statistic space.
+  - coverage on the quarter of truths nearest the wild type.
 - **`sbi`** pinned in the `analysis` extra.
 
 ## Capabilities

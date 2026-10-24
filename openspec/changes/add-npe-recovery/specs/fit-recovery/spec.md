@@ -13,15 +13,26 @@ pilot's measured cost.
 
 ### Requirement: NPE recovers C.1's parameters with honest calibration
 
-NPE SHALL be trained on 10,000 simulations drawn from the prior, twice with different seeds. On 100
-held-out truths from the prior, each flow's pooled central-90% interval coverage over truths and
-parameters SHALL lie in [0.80, 0.97]. Each parameter's coverage and contraction, and a
-posterior-predictive check in statistic space, SHALL be reported beside the gate.
+NPE SHALL be trained on 10,000 simulations drawn from the prior, twice with different seeds. Each
+flow SHALL pass two gates:
+
+- **calibrated:** on 100 held-out truths from the prior, the pooled central-90% interval coverage over
+  truths and parameters SHALL lie in [0.80, 0.97];
+- **informative:** over 20 of those truths, the median over truths of the median D between a truth's
+  simulation and simulations at 20 posterior draws SHALL be at most 1.42.
+
+Each parameter's coverage and contraction, the same D at prior draws, and coverage on the quarter of
+truths nearest the wild type SHALL be reported beside the gates.
 
 #### Scenario: An overconfident posterior fails
 
 - **WHEN** a flow's pooled coverage is below 0.80
 - **THEN** F.0a SHALL fail, and NPE SHALL not be used for C.1 until a new change fixes it
+
+#### Scenario: A posterior equal to the prior fails
+
+- **WHEN** a flow returns the prior for every observation
+- **THEN** it SHALL pass calibration but fail the informative gate, and F.0a SHALL fail
 
 #### Scenario: An unconstrained parameter is named
 
@@ -30,8 +41,9 @@ posterior-predictive check in statistic space, SHALL be reported beside the gate
 
 ### Requirement: Undefined statistics enter the summary explicitly
 
-An undefined statistic SHALL be replaced by a fixed out-of-range sentinel, with a 0/1 flag beside it,
-so the summary is finite and an undefined value carries information.
+Each statistic SHALL be z-scored over the training simulations where it is defined. An undefined
+entry SHALL then be set to −5, with a 0/1 flag beside it, so the summary is finite and an undefined
+value carries information.
 
 #### Scenario: A worm that never leaves
 
