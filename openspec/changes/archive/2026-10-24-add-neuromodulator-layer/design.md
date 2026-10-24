@@ -86,15 +86,13 @@ checksums, and writes `data/neuromodulators/layer.json`. Only the derived file i
   sources. Each couple also records its sign class (`fixed`, with a sign and citation, or `fitted`) and
   its EC50 where a source gives one.
   - Peptide couples are the union of Ripoll-Sánchez's 92 and Bentley's 22, keyed by **canonical gene
-    names**. `data/neuromodulators/gene_synonyms.json` maps every source name to its WormBase public
-    name, each entry checked against its WormBase gene page at implementation. Bentley's pdf-2 and
+    names**. `data/neuromodulators/gene_synonyms.json` maps every source name to its WormBase public name. Each entry is checked through UniProt's *C. elegans* entries, whose gene names WormBase supplies; WormBase's own site refuses scripted queries. *(Noted in implementation.)* Bentley's pdf-2 and
     Ripoll-Sánchez's NLP-37 are one gene, so they become one ligand. After canonicalisation, a couple
     that still matches under two names is refused.
   - **The union applies no common potency cut.** Ripoll-Sánchez admits couples at EC50 ≤ 500 nM.
     Bentley's 13 further couples include micromolar ones: flp-1 → npr-4 at 0.4–9 µM, nlp-1 → npr-11 at
     1–100 µM, and pdf-1 → pdfr-1 at 0.4–5 µM, against 114 nM for pdf-2 → pdfr-1. Each couple records
-    its EC50 range and its source. **A named sensitivity, `ec50_500nM`, applies Ripoll-Sánchez's rule
-    to every couple.** It removes PDF-1, which matters behaviourally (Flavell 2013) but is a weak agonist
+    its EC50 range and its source. **A named sensitivity, `ec50_500nM`, applies Ripoll-Sánchez's rule to every couple:** a couple stays if Ripoll-Sánchez lists it, or if the upper end of Bentley's reported EC50 range is at most 500 nM. It removes PDF-1, which matters behaviourally (Flavell 2013) but is a weak agonist
     in heterologous assays.
   - Monoamine couples come from Bentley's receptor rows, excluded rows dropped. Each couple's ligand is
     the row's `monoamine` column: for example, ser-2 is a tyramine receptor and ser-3 an octopamine
@@ -176,6 +174,11 @@ the data layer with a fixed draw of nonzero fitted strengths. The evaluator's de
    - one link: PDF onto NSM, tagged to pdfr-1;
    - one drive: ingestion onto NSM.
 
+   *(Noted in implementation: currents match bitwise; next concentrations match within 1e-6, since a
+   data layer's release is a product with producer weights rather than a mean, which only rounds
+   differently. Under a producer knockout the hand-placed field also zeroes the receptor's row, the
+   data layer only the ligand; no current flows through either.)*
+
 2. **The slow variable.** With one ligand's τ set to 540 s at a 1-s step, a stopped release leaves its
    concentration at 1/e of its start within one step of 540, and a fixed couple's receptor current
    follows it. This is the layer's job for C.2: holding state for minutes.
@@ -252,3 +255,7 @@ layer:
   without re-extraction.
 - **Fitted couples starting at zero leave the peptides inert until fitted.** That is the neutral
   start. Under PPO they learn from zero, which the batched parity test covers.
+- **Read at implementation (Logbook 106):** under one pool per ligand, the 16 sensory-produced couples
+  reach all 39 motor neurons in the data and in every null draw, so the null cannot change
+  sensor-to-motor reach. Receptors on the four ventral-cord classes of unique size (DA, DB, VA, VD)
+  are pinned: npr-34 keeps 59% of its cells, seb-3 and gnrr-1 53%. W reads both beside its result.

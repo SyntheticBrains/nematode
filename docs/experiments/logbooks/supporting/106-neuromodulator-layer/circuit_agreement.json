@@ -1,0 +1,79 @@
+{
+ "description": "Each link the hand-placed circuit verified (data/neuromodulators/roaming_dwelling_circuit.json), and the sources that place it in the data layer. An empty list means neither source does. Disagreements are reported, not patched.",
+ "links": [
+  {
+   "link": "serotonin released by NSM",
+   "sources": [
+    "bentley2016"
+   ]
+  },
+  {
+   "link": "MOD-1 on AIY",
+   "sources": [
+    "bentley2016"
+   ]
+  },
+  {
+   "link": "MOD-1 on ASI",
+   "sources": []
+  },
+  {
+   "link": "MOD-1 on RIF",
+   "sources": []
+  },
+  {
+   "link": "PDF-1 released by AVB",
+   "sources": [
+    "bentley2016"
+   ]
+  },
+  {
+   "link": "PDF-2 released by AVB",
+   "sources": []
+  },
+  {
+   "link": "PDF-1 released by PVP",
+   "sources": [
+    "bentley2016"
+   ]
+  },
+  {
+   "link": "PDF-2 released by PVP",
+   "sources": []
+  },
+  {
+   "link": "PDF-1 released by SIAV",
+   "sources": [
+    "bentley2016"
+   ]
+  },
+  {
+   "link": "PDF-2 released by SIAV",
+   "sources": []
+  },
+  {
+   "link": "PDFR-1 on AIY",
+   "sources": [
+    "ripollsanchez2023"
+   ]
+  },
+  {
+   "link": "PDFR-1 on RIM",
+   "sources": [
+    "ripollsanchez2023"
+   ]
+  },
+  {
+   "link": "PDFR-1 on RIA",
+   "sources": [
+    "ripollsanchez2023"
+   ]
+  },
+  {
+   "link": "PDFR-1 on (PDF's link to) NSM",
+   "sources": [
+    "ripollsanchez2023"
+   ]
+  }
+ ]
+}

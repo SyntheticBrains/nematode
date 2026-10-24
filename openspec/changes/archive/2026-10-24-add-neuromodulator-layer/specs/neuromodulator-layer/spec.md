@@ -29,8 +29,8 @@ potency cut, and each couple SHALL record its EC50 range and source. The provena
 #### Scenario: The potency sensitivity
 
 - **WHEN** the layer is built with the `ec50_500nM` sensitivity
-- **THEN** every couple whose recorded EC50 range lies above 500 nM SHALL be dropped, including
-  pdf-1 → pdfr-1
+- **THEN** every couple Ripoll-Sánchez does not list, and whose recorded EC50 range extends above
+  500 nM, SHALL be dropped, including pdf-1 → pdfr-1
 
 #### Scenario: Ripoll-Sánchez's couples come from the CC BY networks
 
