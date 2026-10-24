@@ -90,6 +90,8 @@ The OD 2 wild type's 41 band dates were split by date (seed 2029):
 
 On the gate dates, κ = 0.625 and accuracy 0.915, over 76,991 windows, against the registered 0.6. D.1's model reached 0.63 on an animal-level split, so a date-level split costs it almost nothing. No held-out date was read.
 
+The gate first decoded every on-lawn window rather than only the labelled runs the fit used, against the spec's text. A review caught it. Re-read on the fit's runs, κ moves from 0.62483 to 0.62491 over the same 76,991 scored windows, and the model is unchanged, so the bands are too.
+
 ## The bands, and a failed check
 
 The bands come from a cluster bootstrap over band dates at the graded population's size. López-Cruz's band comes from 17 band batches; its 27 wild-type batches were split a third held out, with pdfr-1's control kept in the bands.

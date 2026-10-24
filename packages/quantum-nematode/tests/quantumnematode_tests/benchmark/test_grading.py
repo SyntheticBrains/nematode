@@ -294,6 +294,34 @@ def test_the_uniform_well_stays_on_food() -> None:
     assert all(s.on_lawn for s in episode.behaviour)
 
 
+def test_both_lawn_tests_hold_the_rim_tolerance() -> None:
+    """Within RIM_TOLERANCE_MM past the rim a point is on the lawn; beyond it, it is not."""
+    from quantumnematode.env.lawns import RIM_TOLERANCE_MM
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedConstantHazards
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    path = bg.FORAGING / f"{bg.ARMS['mlp']}_assay_uniform_lawn_scheer.yml"
+    config = load_simulation_config(str(path))
+    evaluator = BatchedEvaluator(config, BatchedConstantHazards(0.2, (0.02, 0.01, 0.01)), [1, 2, 3])
+    evaluator._build_animals()
+    evaluator._sync_lawns()
+    grid = evaluator.grid
+    assert grid is not None
+    assert evaluator.lawn_on.all()
+    outward = (
+        grid.radius - 1e-3,
+        grid.radius + RIM_TOLERANCE_MM / 2,
+        grid.radius + 10 * RIM_TOLERANCE_MM,
+    )
+    points = np.array([[grid.centre[0] + d, grid.centre[1]] for d in outward])
+    on = evaluator._cells_under(points) >= 0
+    assert on.tolist() == [True, True, False]
+    field = evaluator.envs[0].lawn_field
+    assert field is not None
+    assert [field.lawn_at(tuple(p)) is not None for p in points] == [True, True, False]
+
+
 @pytest.mark.slow
 def test_a_batched_population_is_graded_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
     """Nine smoke animals run every assay and come back graded on all 11 statistics."""

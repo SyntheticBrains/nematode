@@ -57,8 +57,8 @@
   "gate": {
     "kappa_min": 0.6,
     "n": 76991.0,
-    "accuracy": 0.9149381096491798,
-    "kappa": 0.6248333530290331,
+    "accuracy": 0.9149640867114338,
+    "kappa": 0.62491330660739,
     "passes": true
   },
   "fallback": "data/roaming_dwelling/calibration_retry.json",

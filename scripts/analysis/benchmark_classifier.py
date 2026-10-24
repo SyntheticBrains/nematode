@@ -14,7 +14,8 @@ boundary (:func:`quantumnematode.benchmark.grading.window_inputs`). Only windows
 labelled roaming or dwelling enter the fit, as runs of consecutive such windows.
 
 **The gate**, fixed before the fit: Cohen's kappa >= 0.6 between the decoded states and the labels
-on the gate dates, decoded within each run of on-lawn windows. On failure the script writes nothing
+on the gate dates, decoded within the same runs the fit uses: windows on the lawn and labelled. On
+failure the script writes nothing
 and exits 1; the registered fallback is D.1's model (``data/roaming_dwelling/calibration_retry.json``),
 with its overlap with the held-out dates stated.
 
@@ -93,10 +94,11 @@ def calibrate(tracks: refs.ScheerTracks) -> dict[str, Any]:
     predicted, labels = [], []
     for i in gate_rows:
         inputs, lab = animal_inputs(tracks, i)
-        states = classifier.states(inputs.speed, inputs.angular, inputs.on)
-        lab = np.where(inputs.on, lab, rd.OFF_FOOD)
+        # The gate decodes the runs the fit used: windows on the lawn and labelled.
+        eligible = inputs.on & (lab >= 0)
+        states = classifier.states(inputs.speed, inputs.angular, eligible)
         predicted.append(states)
-        labels.append(np.where(lab < 0, rd.OFF_FOOD, lab))
+        labels.append(np.where(eligible, lab, rd.OFF_FOOD))
     gate = rd.agreement(np.concatenate(predicted), np.concatenate(labels))
     return {
         "model": "two-state Gaussian-emission HMM on (log(speed + 0.001), angular speed)",

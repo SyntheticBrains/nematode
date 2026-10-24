@@ -201,7 +201,7 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
     (seed 2029), and gated at Cohen's κ ≥ 0.6 on the other third;
   - the file holds the split, the gate's reading and the parameters.
 - **Licence:** CC0-1.0, as its source.
-- **Checksum:** SHA-256 `9c5d29e06cf42eae233219edc5cda3a3e0ee270252c44687de7d6718fef4d557` as written. Its inputs' deposits are checked by
+- **Checksum:** SHA-256 `e4a059de3d5b826d4fa2a99e61b3ed0f0cdefb3790ccfc4c8e38eefbb23b8239` as written. Its inputs' deposits are checked by
   MD5 above.
 
 ## `lopezcruz2019_split.json`

@@ -254,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
             "source": "batched",
             "controller": args.controller,
             "arm": args.arm,
-            "seeds": [seeds[0], seeds[-1]],
+            "seeds": seeds,
             "run_speed_mm_per_s": RUN_SPEED,
             "hazards_per_s": list(HAZARDS),
             **({"beta": PIROUETTE_BETA} if args.controller == "pirouette" else {}),

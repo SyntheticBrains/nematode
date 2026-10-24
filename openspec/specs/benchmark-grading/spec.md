@@ -19,8 +19,8 @@ the remaining third.
 
 Only windows on the lawn by the window rule and labelled roaming or dwelling SHALL enter the fit, as
 runs of consecutive such windows. The gate SHALL decode the same runs. The fitted model SHALL be
-vendored with its split, its gate's reading and its provenance. No held-out
-date SHALL be read. D.1's model and its records SHALL be unchanged.
+vendored with its split, its gate's reading and its provenance. No held-out date SHALL be read. D.1's
+model and its records SHALL be unchanged.
 
 #### Scenario: The gate is read on dates the fit never saw
 
@@ -43,8 +43,8 @@ Real and simulated tracks SHALL be read through the same functions:
 
 On the small lawns, a real worm's sample SHALL be on the lawn when its midbody lies inside Scheer's
 boundary for its background slot. On the uniform well, whose bacteria cover it, every real and
-simulated sample SHALL be on the lawn. A simulated worm's SHALL be on the lawn when the capture marks it so: inside the lawn's
-footprint, in a phase with lawns.
+simulated sample SHALL be on the lawn. A simulated worm's SHALL be on the lawn when the capture marks
+it so: inside the lawn's footprint, in a phase with lawns.
 
 #### Scenario: A worm on the boundary
 
