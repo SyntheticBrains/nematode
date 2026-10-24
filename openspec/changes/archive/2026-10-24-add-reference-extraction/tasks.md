@@ -62,4 +62,4 @@ Phase 10, block B, tracker item B.1. The maintainer's decisions of 2026-10-24:
 - [x] 7.1 Full suite and `pre-commit run -a`.
 - [x] 7.2 `openspec validate add-reference-extraction --strict`.
 - [x] 7.3 Archive.
-- [ ] 7.4 PR.
+- [x] 7.4 PR.
