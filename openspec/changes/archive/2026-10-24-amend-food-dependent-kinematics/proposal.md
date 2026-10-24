@@ -2,7 +2,7 @@
 
 D36 fixes the primitives' kinematics from data, and E.2 took them from published off-food sources.
 B.1 checked them against Scheer & Bargmann 2023's on-food flags on the held-out OD 2 wild-type cohorts
-([Logbook 105](../../../docs/experiments/logbooks/105-reference-extraction.md)) and found **a
+([Logbook 105](../../../../docs/experiments/logbooks/105-reference-extraction.md)) and found **a
 disagreement**:
 
 | Stratum | Reversal duration (s) | Reversal speed (mm/s) |

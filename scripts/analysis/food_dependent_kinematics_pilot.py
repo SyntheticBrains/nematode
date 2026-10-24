@@ -40,15 +40,15 @@ from typing import Any
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import lawn_states  # noqa: E402
-import quantumnematode.brain  # noqa: E402, F401  - registers the brains the configs name
-from quantumnematode.evaluation.batched import BatchedEvaluator  # noqa: E402
-from quantumnematode.evaluation.controllers import (  # noqa: E402
+import lawn_states
+import quantumnematode.brain  # noqa: F401  - registers the brains the configs name
+from quantumnematode.evaluation.batched import BatchedEvaluator
+from quantumnematode.evaluation.controllers import (
     BatchedConstantHazards,
     BatchedPirouetteHazards,
 )
-from quantumnematode.utils.config_loader import load_simulation_config  # noqa: E402
-from quantumnematode.validation import roaming_dwelling as rd  # noqa: E402
+from quantumnematode.utils.config_loader import load_simulation_config
+from quantumnematode.validation import roaming_dwelling as rd
 
 _REPO = Path(__file__).resolve().parents[2]
 _STEM = "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_"
@@ -56,7 +56,9 @@ ASSAYS = ("uniform_lawn_flavell", "scheer_lawn")
 SEEDS = list(range(9001, 9065))
 SETTINGS = ("off_food", "food_dependent")
 TURNS = 0.005
-DESCRIPTION = "How on-lawn reversal kinematics move the classifier's roaming fraction, as description."
+DESCRIPTION = (
+    "How on-lawn reversal kinematics move the classifier's roaming fraction, as description."
+)
 
 
 def controllers() -> dict[str, Any]:

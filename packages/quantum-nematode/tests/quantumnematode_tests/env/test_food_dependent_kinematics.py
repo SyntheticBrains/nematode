@@ -2,10 +2,10 @@
 
 Covers the locomotor-primitives spec's scenarios "A reversal on a lawn is short and slow", "A
 reversal off the lawn keeps the published values", "A depleted cell is still a lawn", "A bout that
-crosses the edge keeps its kinematics", "The off-food setting reproduces earlier records", "The option without
-primitives is refused" and "A measured value without its record is refused". "Executed bouts match
-their source" on a lawn is in ``test_primitives_positive_control.py``, and "Both runners draw the
-same" in ``evaluation/test_batched_parity.py``.
+crosses the edge keeps its kinematics", "The off-food setting reproduces earlier records", "The
+option without primitives is refused" and "A measured value without its record is refused".
+"Executed bouts match their source" on a lawn is in ``test_primitives_positive_control.py``, and
+"Both runners draw the same" in ``evaluation/test_batched_parity.py``.
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def test_a_measured_value_without_its_record_is_refused(tmp_path: Path, field: s
 
 
 def test_a_reversal_on_a_lawn_is_short_and_slow() -> None:
-    """On food a reversal backs at 0.069 mm/s for a gamma(2.047, 0.899) draw; off food, published."""
+    """On food a reversal backs at 0.069 mm/s a gamma(2.047, 0.899) draw; off, as published."""
     for on_food, speed, draw in (
         (True, _K.on_food_reversal_speed_mm_per_s, _K.on_food_reversal_duration),
         (False, _K.reversal_speed_mm_per_s, _K.reversal_duration),
