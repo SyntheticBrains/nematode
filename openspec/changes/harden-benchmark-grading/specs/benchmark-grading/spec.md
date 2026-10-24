@@ -58,19 +58,38 @@ Each statistic's z SHALL be `(s − μ)/σ`, with |z| capped at 10.
   scale of zero
 - **THEN** its direction SHALL be resolved
 
+### Requirement: Reported beside the grading
+
+The bands record SHALL report, without grading:
+
+- the roaming fraction at OD 1, OD 2 and OD 4;
+- the authors' labels' readings beside ours;
+- Flavell 2013's published bout timescales, without a simulated reading;
+- B.2's pooled-curve γ (0.114) beside the band's centre;
+- the quintile ratio's reference.
+
+The mutant rows are reported under "Reported beside the mutant grading".
+
+#### Scenario: The density arms are not graded
+
+- **WHEN** a worm is graded
+- **THEN** no OD 1 or OD 4 statistic SHALL enter its pass or its distance
+
 ## ADDED Requirements
 
 ### Requirement: Grading at each family's own size
 
 A population SHALL be graded at its own size, family by family. Where `bands.json` holds bands at a
 family's n, they SHALL be used. Otherwise the family's bands SHALL be built at n by the same procedure,
-seeds and resamples, with κ from the bands' record. Families in one grading MAY differ in n. López-Cruz's
-band SHALL not depend on n.
+resamples, with κ from the bands' record. Each (family, n) and (mutant, n) SHALL draw from its own
+generator seeded by the family and n, so that a band does not depend on what was built before it.
+Building the uniform well or a mutant at n SHALL build the small lawn at n first. Families in one
+grading MAY differ in n. López-Cruz's band SHALL not depend on n.
 
 #### Scenario: Bands built on demand match the vendored ones
 
-- **WHEN** the small lawn's bands are built on demand at n = 200
-- **THEN** they SHALL equal `bands.json`'s at n = 200
+- **WHEN** the small lawn's bands are built on demand at n = 200, after other bands were built
+- **THEN** they SHALL equal `bands.json`'s at n = 200 exactly
 
 #### Scenario: A real control at its own size
 
@@ -83,7 +102,8 @@ The bands record SHALL report, without grading:
 
 - pdfr-1's López-Cruz Δγ and Δ early/late against its paired control;
 - Ji 2021's patch-assay roaming for pdfr-1 and tax-4 against its wild type's, as directions only;
-- each mutant statistic's paired t, its dates, and the direction it resolves.
+- each mutant statistic's paired t, its dates, and the direction it resolves;
+- the roadmap's expected mutant directions, beside the paired t's resolution.
 
 #### Scenario: pdfr-1's search is not graded
 

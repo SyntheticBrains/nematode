@@ -9,11 +9,14 @@ The maintainer's decisions of 2026-10-24, after B.3's review:
 
 ## 1. The rule
 
-- [ ] 1.1 `grading.local_search_statistics`: γ undefined at a grid bound (within 1%) or α ≤ 0.
+- [ ] 1.1 `readouts`: name the γ grid's bounds as constants, read by `fit_local_search` with no change
+  of behaviour. `grading.local_search_statistics`: γ undefined within 1% of a bound, or at α ≤ 0.
 - [ ] 1.2 `grading`: a paired-t direction helper, and `Band` carrying a resolved direction instead of
   deriving one from its scale.
 - [ ] 1.3 `benchmark_bands.py`:
-  - the family and mutant builders as functions at any n;
+  - the family and mutant builders as functions at any n, each on its own generator
+    `default_rng([2030, index, n])`, with the small lawn built first where a floor needs it;
+  - per-date tallies cached in the process;
   - mutant directions by paired t;
   - pdfr-1's search and Ji 2021 in `reported`;
   - pdfr-1's bar at 2.24.
@@ -25,23 +28,25 @@ The maintainer's decisions of 2026-10-24, after B.3's review:
 
 ## 3. Rebuild and re-check
 
-- [ ] 3.1 Rebuild `bands.json` and the record. Check that every centre, scale, κ and check is
-  unchanged, and list what changed.
+- [ ] 3.1 Rebuild `bands.json` and the record. Check that every centre, κ and check is unchanged.
+  List every changed value, scales included, beside its original.
 - [ ] 3.2 Re-check the real López-Cruz band batches' γ under the new rule.
 - [ ] 3.3 Re-run the preflight (9101–9164), and report beside B.3's.
 
 ## 4. Tests
 
 - [ ] 4.1 A flat curve's γ is undefined and fails at the cap. A decaying one is unchanged.
-- [ ] 4.2 The paired t resolves a direction the band scale did not; a single paired date resolves
-  none; a wrong sign fails.
-- [ ] 4.3 On-demand bands at 200 equal the vendored ones; per-family n grades.
+- [ ] 4.2 On synthetic paired dates: the paired t resolves a direction the band scale did not; a single
+  paired date resolves none; a wrong sign fails.
+- [ ] 4.3 On-demand bands at 200 equal the vendored ones exactly, built after another band; per-family
+  n grades.
 - [ ] 4.4 pdfr-1's family has two statistics, and no López-Cruz statistic enters it.
 
 ## 5. Docs and tracker
 
 - [ ] 5.1 Logbook 109 addendum: every changed value beside its original.
-- [ ] 5.2 The roadmap's novelty map: the dissociation claim narrowed.
+- [ ] 5.2 The roadmap, dated: the novelty map's dissociation claim narrowed, and the biological
+  validation targets' mutant line (pdfr-1's search reported; only resolved directions graded).
 - [ ] 5.3 The tracker:
   - B.3 amended;
   - B.4's notes (multiplicity across controls, thin controls, per-statistic discrimination as
@@ -49,7 +54,8 @@ The maintainer's decisions of 2026-10-24, after B.3's review:
   - C.2's note (`time_on_lawn`'s scale);
   - C's mutant table (directions resolved: tph-1 and tax-4 roaming only).
 - [ ] 5.4 `data/benchmark/PROVENANCE.md`, the CHANGELOG, and AGENTS.md's grading entry.
-- [ ] 5.5 Pin `mdformat-frontmatter` in `.pre-commit-config.yaml`.
+- [ ] 5.5 Pin the mdformat hook's `mdformat-frontmatter` 2.1.2, `markdown-it-py` 4.2.0 and
+  `mdit-py-plugins` 0.6.1 in `.pre-commit-config.yaml`; confirm on the PR's CI that no file changes.
 
 ## 6. Close-out
 
