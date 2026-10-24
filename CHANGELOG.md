@@ -6,6 +6,10 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+### Changed
+
+- **Primitives' reversals on a lawn are short and slow, as real worms' are** (Phase 10, the D36 amendment; [Logbook 108](docs/experiments/logbooks/108-food-dependent-kinematics.md)). Under `continuous.locomotion: primitives`, a reversal that starts on a lawn now lasts gamma(2.047 s, SD 0.899 s) and backs at 0.069 mm/s, measured on Scheer & Bargmann 2023's held-out wild-type cohorts. Off every lawn it keeps the published 2.69 ± 1.75 s at 0.14 mm/s. New option `continuous.reversal_kinematics: food_dependent | off_food` (unset is food-dependent); `off_food` reproduces earlier primitives runs exactly. Free locomotion is unchanged. `primitives.json` entries can now be `measured`, naming the script and record they came from.
+
 ### Added
 
 - **The benchmark's trajectory readouts** (Phase 10, B.2; [Logbook 107](docs/experiments/logbooks/107-benchmark-readouts.md)). `quantumnematode.benchmark.readouts`: a reversal-onset detector reading 1-s positions alone, tuned on Roberts 2016 and validated on held-out cohorts, dead worms, simulated primitives and Calhoun 2014, and registered for off-food tracks (it misses most on-lawn reversals); the local-search curve and its decay fit, with López-Cruz 2019's reference (γ = 0.114/min, 8–44 min after removal); and the dC/dt quintile ratio.

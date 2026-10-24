@@ -1,6 +1,7 @@
 """The primitive layer's positive control: executed kinematics, and klinokinesis is expressible.
 
-Covers the locomotor-primitives spec's scenarios "Executed bouts match their source" and
+Covers the locomotor-primitives spec's scenarios "Executed bouts match their source" (reversals off
+and on a lawn) and
 "Klinokinesis is expressible and timing alone is not". No learner is involved. Bouts are measured
 from the trajectory alone, never from their labels; and three non-learning controllers on one lawn
 show that hazards keyed to dC/dt find food where hazards at the same mean rate do not, while the
@@ -46,14 +47,16 @@ _RUN_SPEED = 0.1
 _FIXTURE_SEEDS = range(5994, 5996)
 
 
-def _forced_bouts(kind: str, seed: int) -> list[dict[str, float]]:
+def _forced_bouts(kind: str, seed: int, *, on_food: bool = False) -> list[dict[str, float]]:
     """Force ``_BOUTS`` bouts of ``kind``, a run between each, and measure each from the path.
 
     The driver raises ``kind``'s hazard to the maximum only after a run step, so consecutive bouts
     are separated by a run. Each bout is then read from positions and headings alone: a reversal
     is a stretch of backward steps, a turn a stretch of steps that turn without moving. The other
     kinds keep the minimum hazard, so now and then one of them starts instead; the trajectory says
-    which, and only stretches of the forced kind's shape are kept.
+    which, and only stretches of the forced kind's shape are kept. The arena has no lawn; with
+    ``on_food`` the environment's lawn test answers yes throughout, as under a lawn too large to
+    leave, so every reversal takes the on-food kinematics.
     """
     env = Continuous2DEnvironment(
         continuous=Continuous2DParams(
@@ -64,6 +67,8 @@ def _forced_bouts(kind: str, seed: int) -> list[dict[str, float]]:
         ),
         seed=seed,
     )
+    if on_food:
+        env._on_food_for_reversal = lambda _agent_id: True  # type: ignore[method-assign]
     index = {"reversal": 2, "omega": 3, "delta": 4}[kind]
     low = raw_for_hazard(_K.hazard_min_per_s, _K)
     state = env.agents[DEFAULT_AGENT_ID]
@@ -125,6 +130,20 @@ def test_reversals_match_their_source() -> None:
     expected = np.array(durations) * _K.reversal_speed_mm_per_s
     assert _ks_p(distances, expected) > 0.01
     assert all(abs(b["angle"]) < 1e-12 for b in bouts)
+
+
+@pytest.mark.slow
+def test_reversals_on_a_lawn_match_their_source() -> None:
+    """On a lawn, whole-step durations and distances match the on-food entries."""
+    bouts = _forced_bouts("reversal", 5995, on_food=True)
+    rng = np.random.default_rng(2)
+    durations = np.array([_K.on_food_reversal_duration.sample(rng) for _ in range(_BOUTS)])
+    steps = np.array([b["steps"] for b in bouts])
+    distances = np.array([b["distance"] for b in bouts])
+    assert _ks_p(steps, np.ceil(durations - 1e-9)) > 0.01
+    assert _ks_p(distances, durations * _K.on_food_reversal_speed_mm_per_s) > 0.01
+    off = np.array([b["distance"] for b in _forced_bouts("reversal", 5995)])
+    assert np.median(distances) < 0.5 * np.median(off)
 
 
 @pytest.mark.slow

@@ -2,18 +2,23 @@
 
 - **The primitives** (`env/primitives.py`): `_start_bout` draws a reversal's duration from
   `kinematics.reversal_duration` and sets its speed to `-kinematics.reversal_speed_mm_per_s`.
+
   - The per-step environment calls it through `step_primitives`, from `move_agent_primitives`.
   - The batched evaluator calls `_start_bout` directly, from `_start_bouts`.
   - `GammaDuration.sample` makes one `rng.gamma` call, whatever its parameters. That call's
     Marsaglia–Tsang rejection loop uses a shape-dependent share of the stream. Checked: 200 draws at
     the off-food shape (2.36) and the on-food shape (5.18) leave `default_rng(1)` in different states.
+
 - **"On a lawn" already has one meaning:**
+
   - Per step: `lawn_field.cell_at(position) is not None`. `lawn_field` is `None` in a phase without
     lawns. It is the same test as `Agent._food_contact`'s, and as the capture's `on_lawn`.
   - In the batched evaluator: `_cells_under(pos) >= 0`, which respects each animal's `lawn_on`.
+
 - **B.1's record** (`supporting/105-reference-extraction/kinematics.json`) has each stratum's mean,
   interval and n, but no SD. The SD (0.899 s, CV 0.44) was computed from the same bouts, by the same
   rule, on 2026-10-24.
+
 - **The on-food distribution.** It is right-skewed, with most mass at 1.3–2.3 s. Against a gamma of the
   same mean and SD, discretised to thirds of a second like the flag:
 
