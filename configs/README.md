@@ -28,6 +28,22 @@ configs/
 | `bit_memory/` | None (non-spatial) | Delayed-match-to-cue working-memory positive control ([Logbook 030](../docs/experiments/logbooks/030-bit-memory-positive-control.md)); its own task family, not a variant of a spatial scenario |
 | `associative_memory/` | None (non-spatial) | Chemosensory delayed-associative-match with within-trial reversal — a working-memory *update* probe ([Logbook 033](../docs/experiments/logbooks/033-associative-memory-probe.md)) |
 
+### Scope in Phase 10
+
+Phase 10 grades the point worm on standard on-lawn assays (roadmap v5.0, D41). Its work lives in
+`foraging/`, on the lawn food model: the 1-s point worm (`*_lawns_*_s1.yml`), its locomotor
+primitives (`*_s1_primitives.yml`) and the assay protocols (`*_s1_primitives_assay_*.yml`).
+
+- **Frozen:** the thermal, predator, multi-agent and oxygen scenarios (`pursuit/`, `stationary/`, the
+  `thermal_*`, `oxygen_*` and `multi_agent_*` directories, and `foraging_predator_thermal/`). They are
+  kept and tested, but not extended by Phase 10's required work.
+- **The second tier:** thermotaxis. It is deferred, not dropped.
+- **Still allowed, as optional second-tier comparisons:** thermotaxis on the new primitives, and
+  bordering against an O₂ field with npr-1 (the phase's MAY items).
+- **Kept and tested, not extended:** the two non-spatial memory families, `bit_memory/` and
+  `associative_memory/`. They are positive controls from earlier phases and lie outside D41's
+  point-worm assays.
+
 ## Naming convention
 
 ```text

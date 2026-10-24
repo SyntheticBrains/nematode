@@ -83,8 +83,24 @@ here are cited by each registration.
 | C.1 posterior-predictive checks | 5501–5756 | |
 | C.2 fit restarts and grading | 5801–5864 | fit seeds; grading animals drawn from 5101–5356 |
 | C.3 reward-trained comparator | 5901–5916 | 16 training seeds |
-| W rewiring draws and fits | 6001–6256 | one fresh draw per null fit, 8–16 per arm, sized after the cost pilot |
+| W rewiring draws and fits | 7201–7456 | one fresh draw per null fit, 8–16 per arm, sized after the cost pilot. *(Moved from 6001–6256 on 2026-10-24; see the amendment below.)* |
 | Smokes | 5991–5999 | execution checks only, discarded; E.2's positive-control fixtures use 5994–5999 as fixed test seeds, not a registration |
+| *Used, not a band* | 6001–7132, in twelve blocks of 32 (6001–6032, 6101–6132, … 7101–7132) | Logbook 104's calibration of the batched evaluator's statistic-level parity: simulated MLP and pirouette-rule animals on full Scheer and Flavell assays. No registration may draw from these blocks |
+
+Unit tests of the assay protocols also draw environment seeds 5991–6190 to check where the worm
+starts and where lawns are placed. No animal is simulated on them, so, like E.2's fixtures, they are
+not registrations; W's new band lies clear of them too.
+
+Seeds that belong to a record rather than to simulated animals are not bands: a cohort split's seed
+(B.1's `SPLIT_SEED = 2027`) and a bootstrap's seed are fixed in the record that uses them.
+
+### Amendment of 2026-10-24: W's seed band
+
+The maintainer's decision, dated with H.4. Logbook 104's layer-3 calibration ran simulated animals on
+seeds 6001–7132, in twelve blocks of 32, overlapping W's reserved band 6001–6256. No W result
+existed, and the calibration simulated animals of frozen controllers, not rewiring draws or fits. But
+registered bands stay unused by any pilot or calibration, so W moves to 7201–7456, which nothing has
+used, and the calibration blocks are recorded as used.
 
 ### Amendment of 2026-10-24: D36
 

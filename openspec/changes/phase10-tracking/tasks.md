@@ -28,12 +28,33 @@ nothing in W registers before C.2 has read.
 
 - [ ] **H.1 The literature watch re-aimed** at Phase 10's questions (`context.md`, `seeds.toml`; lands with
   this tracker's PR). The item closes when the first digest has run against the new brief.
+
+  *(2026-10-24: the brief and seeds were re-aimed in PR #470. The last digest, on 2026-10-19, ran
+  before it, so this waits for the scheduled run of Monday 2026-10-26. Two topics were added to the
+  brief with H.3 and H.4: locomotor kinematics on food against off food, raised by B.1's kinematics
+  check, and differences between the N2 and PD1074 wild-type strains, since tph-1's batch-matched
+  control is N2.)*
+
 - [x] **H.2 The research question re-framed** (D33) in AGENTS.md, the README and the roadmap (lands with
   this tracker's PR; closes on merge). *(Closed 2026-10-23: PR #470 merged.)*
-- [ ] **H.3 Scenario scope recorded**: thermal, predator, multi-agent and oxygen configs frozen for the
+
+- [x] **H.3 Scenario scope recorded**: thermal, predator, multi-agent and oxygen configs frozen for the
   required blocks, kept and tested; thermotaxis named as the second tier; the MAY items below stay
   allowed. It closes when the docs say so in the scenario index.
-- [ ] **H.4 The seed-band table** (design.md), cited by every registration.
+
+  *(Closed 2026-10-24: `configs/README.md` § Scope in Phase 10. Where Phase 10's configs live, what is
+  frozen, the second tier and the MAY items. The two non-spatial memory families, which D41 does not
+  name, are recorded as kept and tested, not extended.)*
+
+- [x] **H.4 The seed-band table** (design.md), cited by every registration.
+
+  *(Closed 2026-10-24. The table has been in design.md since PR #470. One amendment, the maintainer's
+  decision: W's band moves from 6001–6256 to 7201–7456. Logbook 104's calibration ran simulated
+  animals on 6001–7132, in twelve blocks of 32, which are now recorded as used. Seeds that belong to a
+  record, such as a split's or a bootstrap's, are stated not to be bands.)*
+
+  *H ran after E + T and B.1, not first.* No registration was harmed: E + T's parity and pilot used their own band, E's smokes used the smoke band, its unit tests drew environment seeds for placement checks only, and B.1 drew no simulated seed (its split seed
+  belongs to its record). B.3 is the first registration to cite a band, and H closes before it.
 
 ## E + T — the worm, its assays and the batched evaluator (MUST)
 

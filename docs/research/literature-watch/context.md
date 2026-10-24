@@ -36,7 +36,11 @@ is a 3.
   reorientation rate), and the navigation components of chemotaxis (the pirouette rate against
   dC/dt, weathervane steering). A 3: a new dataset or deposit of tracks for any of these, especially
   with mutants or batch-matched controls; between-cohort or between-lab variability in them; a
-  standard pipeline that scores them from tracks.
+  standard pipeline that scores them from tracks. *(Added 2026-10-24.)* Also a 3: **locomotor
+  kinematics on food against off food**, especially reversal and omega durations, speeds and rates.
+  The simulator's movement primitives use published off-food values, and real worms reverse more
+  briefly and more slowly on a lawn. And **differences between wild-type strains**, N2 against the
+  PD1074 reference strain, in any of these behaviours: one mutant's batch-matched control is N2.
 - **Models of these behaviours graded against data.** Mechanistic, circuit or connectome models of
   roaming/dwelling, lawn leaving, local search or pirouettes, in closed loop with food, that are
   graded quantitatively against real worms; above all any that hold out an assay or a mutant, or that
