@@ -272,6 +272,8 @@ The mechanics that scenario configs tune. Defaults are the grid-substrate values
 
 **Batched evaluation.** To evaluate a frozen controller on many animals, use `quantumnematode.evaluation.batched.BatchedEvaluator(config, controller, seeds).run()`. It runs every seed's animal in lockstep at about 2–7 µs per animal-step on one core, against 250–350 µs for the per-step runner, and returns compact per-step arrays; `to_behaviour_steps(i)` gives one animal's capture. Each animal draws the per-step runner's random streams for its seed. Pass `record_gradient=True` to record the live food-gradient fields of the capture as well, at extra cost. Parity tests hold it to the per-step runner (Logbook 104).
 
+**Real-worm reference data.** `quantumnematode.benchmark.references` reads the benchmark's vendored real-worm sets from `data/benchmark/`. `load_scheer_tracks()` returns Scheer & Bargmann 2023's animals with positions in mm at 1 s, the authors' per-frame flags (`tracks.flag("reversal")`), their 10-second labels and run masks, and each animal's genotype, date and split side (`bands` or `held_out`; `tracks.arm(key)` gives one arm's rows). `load_search_tracks("calhoun2014" | "roberts2016")` returns off-food search tracks with their units (Calhoun's are pixels: the paper states no scale). `load_lopezcruz()` returns reorientations per 2-min bin after food removal. Provenance, licences and units are in `data/benchmark/PROVENANCE.md` (Logbook 105).
+
 **Sensing modes** (the config's `_sensing` suffix; [Logbook 009](experiments/logbooks/009-temporal-sensing-evaluation.md)):
 
 - `oracle` — directional gradient vectors for food (attraction) and predators (repulsion); the least biological, the easiest to learn.

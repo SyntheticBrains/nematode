@@ -39,36 +39,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import pickle
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+from _scheer_pickle import SafeUnpickler as _SafeUnpickler
 from quantumnematode.validation import roaming_dwelling as rd
 
 FRAMES_PER_STEP = 15  # 5 s at 3 frames/s
 KAPPA_GATE = 0.6
 SPLIT_SEED = 2026
 SLOPES = np.round(np.geomspace(5.0, 5000.0, 121), 3)
-_ALLOWED_PREFIXES = ("numpy", "pandas")
-_ALLOWED = {("builtins", "slice"), ("datetime", "date")}
-
-
-class _Stub:
-    def __setstate__(self, state: object) -> None:
-        self.__dict__.update(state if isinstance(state, dict) else {"state": state})
-
-
-class _SafeUnpickler(pickle.Unpickler):
-    """Allow numpy and pandas, ``slice`` and ``datetime.date``; stand in for ``ssm``; refuse all else."""
-
-    def find_class(self, module: str, name: str) -> Any:  # noqa: ANN401 - a class of any type
-        if module.startswith("ssm."):
-            return type(name, (_Stub,), {})
-        if module.split(".", maxsplit=1)[0] in _ALLOWED_PREFIXES or (module, name) in _ALLOWED:
-            return super().find_class(module, name)
-        msg = f"refused {module}.{name}"
-        raise pickle.UnpicklingError(msg)
 
 
 def derive(pickle_path: Path, out: Path) -> dict[str, Any]:
