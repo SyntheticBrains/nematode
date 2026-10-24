@@ -66,9 +66,16 @@ The input is positions sampled each second. Steps are `v_t = p_{t+1} − p_t`, w
   seconds.
 - **An onset at t:** `ℓ_t ≥ d_min`, `h_t` defined, and the angle between `v_t` and `h_t` greater than θ.
   After an onset, none is counted for R seconds.
-- **The tuned parameters** are θ ∈ {90°, 105°, 120°, 135°, 150°}, W ∈ {2, 3, 5} s, κ ∈ {0.1, 0.25, 0.5}
-  and R ∈ {2, 3, 5} s. 135 combinations are searched exhaustively on the calibration cohorts,
-  maximising the F1 of matched onsets.
+- **Retrace**, tuned on or off: the onset's step must also bring the worm closer to where it was W
+  seconds earlier, `|p_{t+1} − p_{t−W}| < |p_t − p_{t−W}|`. A reversal moves back along the worm's own
+  path; after an omega or delta turn the worm runs off in a new direction, and from 1-s positions
+  alone the two otherwise look alike.
+- **Missing positions:** a step touching a missing position is never a candidate and leaves the
+  heading history, and a retrace test reaching back to one fails. Each animal's onset rate is per
+  second of valid steps.
+- **The tuned parameters** are θ ∈ {90°, 105°, 120°, 135°, 150°}, W ∈ {2, 3, 5} s, κ ∈ {0.1, 0.25, 0.5},
+  R ∈ {2, 3, 5} s and retrace ∈ {off, on}. 270 combinations are searched exhaustively on the
+  calibration cohorts, maximising the F1 of matched onsets.
 
 **Reference onsets**, the same rule in seconds for every source:
 
@@ -88,6 +95,11 @@ over all detections.
 (C15, C21, C57, C162, C186). The first three calibrate and the last two validate. The split is
 recorded, and no other data touch the tuning.
 
+**The preflight.** Before any held-out data are read, the best in-sample F1 on the calibration cohorts
+is compared with the held-out bar. If its recall or precision is below 0.70, the script stops and
+reports, and the held-out cohorts stay unread. A detector that cannot reach the bar on the cohorts it
+was tuned on cannot pass on new ones, and reading them would spend them for nothing.
+
 **Validation, without retuning**, each with its gate:
 
 | Validation | Gate |
@@ -104,6 +116,15 @@ recorded, and no other data touch the tuning.
 - **Calhoun** marks pirouettes, which include more than reversals, at an unstated threshold.
 - **The simulated tracks** have no noise, so their bar is the highest. The bout labels are read only
   here, to validate the detector, never to grade (D36).
+
+**Forward turns, described.** Two false-positive rates are reported beside the gates:
+
+- on Roberts's held-out cohorts, detections while the tracker reads forward with no reverse state
+  within ±2 s;
+- on the simulated tracks, detections within 2 s of the end of an omega or delta bout that no reversal
+  started.
+
+They measure how often a forward turn is taken for a reversal.
 
 **Every gate is read once, after calibration.** A failed gate is reported with the detector's numbers.
 The benchmark does not register on a failed detector: the maintainer decides between a registered
@@ -150,7 +171,7 @@ same path.
   - **The units mapping, registered:** the figure's dC/dt axis is in its own units. The simulated
     worm's is not mapped onto it; only the ranks are, the extreme bins against the extreme quintiles.
     That limit is stated.
-  - Lee 2026's 0.533 → 0.056 s⁻¹ (a ratio of 9.5) is cited beside it.
+  - Lee 2026's 0.533 → 0.056 s⁻¹ (a ratio of 9.5) is cited beside it. Its units are checked against Lee 2026 at implementation; only the ratio is used.
   - If the figure cannot be obtained, the reference is Lee 2026's ratio alone, and that is recorded.
 - **Where it applies:** it is computed on any capture carrying dC/dt. Which assays grade it is B.3's
   choice.

@@ -13,14 +13,19 @@ Phase 10, block B, tracker item B.2. The maintainer's decisions of 2026-10-24:
   matching, `local_search_curve`, `fit_local_search` and `quintile_ratio`.
 - [ ] 1.2 Unit tests on synthetic tracks:
   - a straight run with one reversal;
+  - a forward turn rejected by retrace;
+  - missing positions;
   - pixels and mm reading alike;
   - unit cancellation in the quintile ratio;
   - the fit recovering known parameters.
 
 ## 2. The detector's calibration and gates
 
-- [ ] 2.1 `scripts/analysis/reorientation_detector_calibration.py`: the gates as constants, the cohort
-  split, the grid search on the calibration cohorts, then every gate once.
+- [ ] 2.1 `scripts/analysis/reorientation_detector_calibration.py`:
+  - the gates as constants, and the cohort split;
+  - the grid search on the calibration cohorts, then the preflight;
+  - every gate once;
+  - the two forward-turn false-positive rates, described.
 - [ ] 2.2 The simulated validation: ConstantHazards on López-Cruz's assay, seeds 7601–7632, with the
   bout labels read only here.
 - [ ] 2.3 Run it, and commit the record under

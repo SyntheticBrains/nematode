@@ -5,12 +5,27 @@
 `quantumnematode.benchmark.readouts.reversal_onsets` SHALL detect reversal-initiated reorientations
 from positions sampled each second, by design Decision A, without reading any primitive label,
 posture or source flag. Its minimum step SHALL be relative to the track's own median step, with a
-0.01 mm floor where the units are mm, so the same parameters read pixels and millimetres.
+0.01 mm floor where the units are mm, so the same parameters read pixels and millimetres. A retrace
+test, tuned on or off, SHALL be available to require that an onset's step moves the worm back toward
+where it was W seconds earlier. A step touching a missing position SHALL never be a candidate.
 
 #### Scenario: A simulated track is read without its labels
 
 - **WHEN** the detector reads a simulated capture
 - **THEN** it SHALL use the capture's positions only
+
+#### Scenario: A forward turn is not a reversal
+
+- **WHEN** a synthetic track turns 150° and runs off in a new direction without moving back along its
+  path
+- **THEN** the detector with retrace on SHALL report no onset, and SHALL report one for a track that
+  moves back along its path
+
+#### Scenario: Missing positions
+
+- **WHEN** a track has a missing position
+- **THEN** no onset SHALL be placed on a step touching it, and the onset rate SHALL be per second of
+  valid steps
 
 #### Scenario: A track in pixels
 
@@ -25,6 +40,11 @@ three Roberts cohorts that `default_rng(2028)` assigns to calibration, maximisin
 tracker's reversal onsets. Without retuning, it SHALL be read once against every gate of design
 Decision B. The gates are fixed before tuning. A failed gate SHALL be reported, and the benchmark SHALL
 NOT register on the detector until the maintainer decides.
+
+#### Scenario: The preflight protects the held-out cohorts
+
+- **WHEN** the best in-sample recall or precision on the calibration cohorts is below 0.70
+- **THEN** the script SHALL stop and report without reading any held-out cohort
 
 #### Scenario: Gates fixed before tuning
 
