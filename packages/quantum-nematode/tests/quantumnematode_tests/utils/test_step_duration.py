@@ -471,13 +471,16 @@ _PINNED_FIELD_COUNTS = {
 # the Fick kernel is static; SensingConfig's modes are structure, ``lateral_scale`` spatial and the
 # adaptive epsilon a concentration; RewardConfig's predator, health and temperature terms are
 # frozen-only and ``penalty_starvation`` and ``reward_goal`` events; the brains' remaining fields
-# are plasticity (refused), PPO's training budget, or structure.
+# are plasticity (refused), PPO's training budget, or structure. Audited 2026-10-24: the data
+# neuromodulator layer's seven fields are structure (layer, sensitivity, sources, null, seed,
+# knockout genes) or already in worm-seconds (``modulator_timescales_s``; the per-step decay comes
+# from ``modulator_step_seconds``, which is converted).
 _EXPECTED_FIELD_COUNTS = {
     "ForagingConfig": 22,
     "LawnConfig": 14,
     "SensingConfig": 20,
     "RewardConfig": 15,
-    "ConnectomePPOBrainConfig": 86,
+    "ConnectomePPOBrainConfig": 93,
     "MLPPPOBrainConfig": 68,
 }
 

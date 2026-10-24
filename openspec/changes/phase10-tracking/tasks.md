@@ -252,12 +252,39 @@ nothing in W registers before C.2 has read.
 
 ## N — the neuromodulator layer from data (MUST)
 
-- [ ] **N.1 Licences confirmed**: Bentley 2016 (CC BY, S1 Dataset) and Ripoll-Sánchez 2023 (unstated on
+- [x] **N.1 Licences confirmed**: Bentley 2016 (CC BY, S1 Dataset) and Ripoll-Sánchez 2023 (unstated on
   the toolbox and repository pages). Vendored only if confirmed; otherwise what stands in is stated.
-- [ ] **N.2 The layer built**: receptor expression and producers per neuron, replacing the hand-placed
+
+  *(Closed 2026-10-24, change `add-neuromodulator-layer`;
+  [Logbook 106](../../../docs/experiments/logbooks/106-neuromodulator-layer.md).)* Bentley's S1 Dataset
+  and Ripoll-Sánchez's figshare items are CC BY 4.0. The 2024 corrections (dmsr-5, npr-34) and the
+  per-neuron expression table are MIT, on GitHub only, and are not used. They are not needed: every
+  long-range network is exactly its producer set times its receptor set.
+
+- [x] **N.2 The layer built**: receptor expression and producers per neuron, replacing the hand-placed
   four-pathway circuit behind a byte-identical default, with the diffusion-range model chosen in its
   spec.
-- [ ] **N.3 Its null family**: receptor-placement nulls, with a D24-style matched-statistics table.
+
+  *(Closed 2026-10-24.)* `modulator_layer: data`, under the long-range model (one pool per ligand):
+
+  - 55 pools and 121 couples, the union of both sources under WormBase names, every cell tagged;
+  - 16 fixed monoamine signs and 105 fitted strengths;
+  - gene knockouts, a potency sensitivity and one-source sensitivities, and batched support;
+  - the restricted layer reproduces the hand-placed field, and τ = 540 s holds for nine minutes.
+
+  **The two sources each support half of the hand-placed circuit:** PDF-1's producers from Bentley,
+  PDFR-1's sites (and NSM) from Ripoll-Sánchez. MOD-1 on ASI and RIF is in neither.
+
+- [x] **N.3 Its null family**: receptor-placement nulls, with a D24-style matched-statistics table.
+
+  *(Closed 2026-10-24.)* Receptor cells move by class to same-size classes on the same member positions,
+  keeping every gene's cell and class counts. Audit over 7501–7564:
+
+  - **Reach is saturated:** sensory-produced couples reach all 39 motor neurons in the data and in every
+    draw, so the null cannot change sensor-to-motor reach.
+  - **Ventral-cord classes of unique size pin their receptors:** npr-34 59%, seb-3 and gnrr-1 53%.
+
+  W reads both beside its result.
 
 ## F.0 — the fitting methods' positive control (MUST)
 

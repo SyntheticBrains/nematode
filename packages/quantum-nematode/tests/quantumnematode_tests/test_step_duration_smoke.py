@@ -24,6 +24,7 @@ CONFIGS = [
     "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1",
     "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_s1_primitives",
     "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives",
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_datalayer_s1_primitives",
 ]
 # A short episode keeps the smoke quick: 60 reference steps, 300 one-second steps.
 _REFERENCE_STEPS = 60

@@ -1,0 +1,856 @@
+{
+ "description": "Every gene name Bentley 2016 and Ripoll-Sánchez 2023 use, mapped to its WormBase public name through UniProt's C. elegans entries (organism 6239), whose gene names WormBase supplies. A name that is a gene's public name keeps it; a name that is only a synonym must be listed by exactly one gene.",
+ "source": "https://rest.uniprot.org (queried by gene_exact)",
+ "names": {
+  "AEX-2": {
+   "canonical": "aex-2",
+   "renamed": false,
+   "verified": true
+  },
+  "cat-2": {
+   "canonical": "cat-2",
+   "renamed": false,
+   "verified": true
+  },
+  "CKR-1": {
+   "canonical": "ckr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "ckr-2": {
+   "canonical": "ckr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "CKR-2": {
+   "canonical": "ckr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "dat-1": {
+   "canonical": "dat-1",
+   "renamed": false,
+   "verified": true
+  },
+  "DMSR-1": {
+   "canonical": "dmsr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "DMSR-2": {
+   "canonical": "dmsr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "DMSR-3": {
+   "canonical": "dmsr-3",
+   "renamed": false,
+   "verified": true
+  },
+  "DMSR-5": {
+   "canonical": "dmsr-5",
+   "renamed": false,
+   "verified": true
+  },
+  "DMSR-6": {
+   "canonical": "dmsr-6",
+   "renamed": false,
+   "verified": true
+  },
+  "DMSR-7": {
+   "canonical": "dmsr-7",
+   "renamed": false,
+   "verified": true
+  },
+  "DMSR-8": {
+   "canonical": "dmsr-8",
+   "renamed": false,
+   "verified": true
+  },
+  "dop-1": {
+   "canonical": "dop-1",
+   "renamed": false,
+   "verified": true
+  },
+  "dop-2": {
+   "canonical": "dop-2",
+   "renamed": false,
+   "verified": true
+  },
+  "dop-3": {
+   "canonical": "dop-3",
+   "renamed": false,
+   "verified": true
+  },
+  "dop-4": {
+   "canonical": "dop-4",
+   "renamed": false,
+   "verified": true
+  },
+  "dop-5": {
+   "canonical": "dop-5",
+   "renamed": false,
+   "verified": true
+  },
+  "dop-6": {
+   "canonical": "dop-6",
+   "renamed": false,
+   "verified": true
+  },
+  "egl-6": {
+   "canonical": "egl-6",
+   "renamed": false,
+   "verified": true
+  },
+  "EGL-6": {
+   "canonical": "egl-6",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-1": {
+   "canonical": "flp-1",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-1": {
+   "canonical": "flp-1",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-10": {
+   "canonical": "flp-10",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-10": {
+   "canonical": "flp-10",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-11": {
+   "canonical": "flp-11",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-11": {
+   "canonical": "flp-11",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-12": {
+   "canonical": "flp-12",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-13": {
+   "canonical": "flp-13",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-13": {
+   "canonical": "flp-13",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-14": {
+   "canonical": "flp-14",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-15": {
+   "canonical": "flp-15",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-15": {
+   "canonical": "flp-15",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-16": {
+   "canonical": "flp-16",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-17": {
+   "canonical": "flp-17",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-17": {
+   "canonical": "flp-17",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-18": {
+   "canonical": "flp-18",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-18": {
+   "canonical": "flp-18",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-19": {
+   "canonical": "flp-19",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-2": {
+   "canonical": "flp-2",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-2": {
+   "canonical": "flp-2",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-20": {
+   "canonical": "flp-20",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-21": {
+   "canonical": "flp-21",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-21": {
+   "canonical": "flp-21",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-22": {
+   "canonical": "flp-22",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-23": {
+   "canonical": "flp-23",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-24": {
+   "canonical": "flp-24",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-25": {
+   "canonical": "flp-25",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-27": {
+   "canonical": "flp-27",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-28": {
+   "canonical": "flp-28",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-3": {
+   "canonical": "flp-3",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-32": {
+   "canonical": "flp-32",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-33": {
+   "canonical": "flp-33",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-34": {
+   "canonical": "flp-34",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-4": {
+   "canonical": "flp-4",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-4": {
+   "canonical": "flp-4",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-5": {
+   "canonical": "flp-5",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-5": {
+   "canonical": "flp-5",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-6": {
+   "canonical": "flp-6",
+   "renamed": false,
+   "verified": true
+  },
+  "flp-7": {
+   "canonical": "flp-7",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-7": {
+   "canonical": "flp-7",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-8": {
+   "canonical": "flp-8",
+   "renamed": false,
+   "verified": true
+  },
+  "FLP-9": {
+   "canonical": "flp-9",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-15": {
+   "canonical": "frpr-15",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-16": {
+   "canonical": "frpr-16",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-18": {
+   "canonical": "frpr-18",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-19": {
+   "canonical": "frpr-19",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-3": {
+   "canonical": "frpr-3",
+   "renamed": false,
+   "verified": true
+  },
+  "frpr-4": {
+   "canonical": "frpr-4",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-6": {
+   "canonical": "frpr-6",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-7": {
+   "canonical": "frpr-7",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-8": {
+   "canonical": "frpr-8",
+   "renamed": false,
+   "verified": true
+  },
+  "FRPR-9": {
+   "canonical": "frpr-9",
+   "renamed": false,
+   "verified": true
+  },
+  "GNRR-1": {
+   "canonical": "gnrr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "GNRR-3": {
+   "canonical": "gnrr-3",
+   "renamed": false,
+   "verified": true
+  },
+  "GNRR-6": {
+   "canonical": "gnrr-6",
+   "renamed": false,
+   "verified": true
+  },
+  "lgc-53": {
+   "canonical": "lgc-53",
+   "renamed": false,
+   "verified": true
+  },
+  "lgc-55": {
+   "canonical": "lgc-55",
+   "renamed": false,
+   "verified": true
+  },
+  "mod-1": {
+   "canonical": "mod-1",
+   "renamed": false,
+   "verified": true
+  },
+  "mod-5": {
+   "canonical": "mod-5",
+   "renamed": false,
+   "verified": true
+  },
+  "nlp-1": {
+   "canonical": "nlp-1",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-10": {
+   "canonical": "nlp-10",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-12": {
+   "canonical": "nlp-12",
+   "renamed": false,
+   "verified": true
+  },
+  "nlp-12": {
+   "canonical": "nlp-12",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-13": {
+   "canonical": "nlp-13",
+   "renamed": false,
+   "verified": true
+  },
+  "nlp-13": {
+   "canonical": "nlp-13",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-17": {
+   "canonical": "nlp-17",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-2": {
+   "canonical": "nlp-2",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-22": {
+   "canonical": "nlp-22",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-23": {
+   "canonical": "nlp-23",
+   "renamed": false,
+   "verified": true
+  },
+  "nlp-24": {
+   "canonical": "nlp-24",
+   "renamed": false,
+   "verified": true
+  },
+  "nlp-3": {
+   "canonical": "nlp-3",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-3": {
+   "canonical": "nlp-3",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-37": {
+   "canonical": "pdf-2",
+   "renamed": true,
+   "verified": true
+  },
+  "NLP-38": {
+   "canonical": "mihp-1",
+   "renamed": true,
+   "verified": true
+  },
+  "NLP-40": {
+   "canonical": "nlp-40",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-42": {
+   "canonical": "nlp-42",
+   "renamed": false,
+   "verified": false
+  },
+  "NLP-44": {
+   "canonical": "capa-1",
+   "renamed": true,
+   "verified": true
+  },
+  "NLP-47": {
+   "canonical": "nlp-47",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-49": {
+   "canonical": "nlp-49",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-54": {
+   "canonical": "nlp-54",
+   "renamed": false,
+   "verified": false
+  },
+  "NLP-58": {
+   "canonical": "nlp-58",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-64": {
+   "canonical": "nlp-64",
+   "renamed": false,
+   "verified": true
+  },
+  "NLP-72": {
+   "canonical": "nlp-72",
+   "renamed": false,
+   "verified": false
+  },
+  "NMUR-1": {
+   "canonical": "nmur-1",
+   "renamed": false,
+   "verified": true
+  },
+  "NMUR-2": {
+   "canonical": "nmur-2",
+   "renamed": false,
+   "verified": true
+  },
+  "npr-1": {
+   "canonical": "npr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-1": {
+   "canonical": "npr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-10": {
+   "canonical": "npr-10",
+   "renamed": false,
+   "verified": true
+  },
+  "npr-11": {
+   "canonical": "npr-11",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-11": {
+   "canonical": "npr-11",
+   "renamed": false,
+   "verified": true
+  },
+  "npr-17": {
+   "canonical": "npr-17",
+   "renamed": false,
+   "verified": false
+  },
+  "npr-2": {
+   "canonical": "npr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-2": {
+   "canonical": "npr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-22": {
+   "canonical": "npr-22",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-3": {
+   "canonical": "npr-3",
+   "renamed": false,
+   "verified": true
+  },
+  "npr-3": {
+   "canonical": "npr-3",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-32": {
+   "canonical": "npr-32",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-34": {
+   "canonical": "npr-34",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-35": {
+   "canonical": "npr-35",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-37": {
+   "canonical": "npr-37",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-39": {
+   "canonical": "npr-39",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-4": {
+   "canonical": "npr-4",
+   "renamed": false,
+   "verified": true
+  },
+  "npr-4": {
+   "canonical": "npr-4",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-40": {
+   "canonical": "npr-40",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-41": {
+   "canonical": "npr-41",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-42": {
+   "canonical": "npr-42",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-43": {
+   "canonical": "npr-43",
+   "renamed": false,
+   "verified": true
+  },
+  "npr-5": {
+   "canonical": "npr-5",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-5": {
+   "canonical": "npr-5",
+   "renamed": false,
+   "verified": true
+  },
+  "NPR-8": {
+   "canonical": "npr-8",
+   "renamed": false,
+   "verified": true
+  },
+  "ntc-1": {
+   "canonical": "ntc-1",
+   "renamed": false,
+   "verified": true
+  },
+  "NTC-1": {
+   "canonical": "ntc-1",
+   "renamed": false,
+   "verified": true
+  },
+  "ntr-1": {
+   "canonical": "ntr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "NTR-1": {
+   "canonical": "ntr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "ntr-2": {
+   "canonical": "ntr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "octr-1": {
+   "canonical": "octr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "pdf-1": {
+   "canonical": "pdf-1",
+   "renamed": false,
+   "verified": true
+  },
+  "pdf-10": {
+   "canonical": "pdf-10",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-11": {
+   "canonical": "pdf-11",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-12": {
+   "canonical": "pdf-12",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-2": {
+   "canonical": "pdf-2",
+   "renamed": false,
+   "verified": true
+  },
+  "pdf-3": {
+   "canonical": "pdf-3",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-4": {
+   "canonical": "pdf-4",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-5": {
+   "canonical": "pdf-5",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-6": {
+   "canonical": "pdf-6",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-7": {
+   "canonical": "pdf-7",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-8": {
+   "canonical": "pdf-8",
+   "renamed": false,
+   "verified": false
+  },
+  "pdf-9": {
+   "canonical": "pdf-9",
+   "renamed": false,
+   "verified": false
+  },
+  "PDFR-1": {
+   "canonical": "pdfr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "pdfr-1": {
+   "canonical": "pdfr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "SEB-3": {
+   "canonical": "seb-3",
+   "renamed": false,
+   "verified": true
+  },
+  "ser-1": {
+   "canonical": "ser-1",
+   "renamed": false,
+   "verified": true
+  },
+  "ser-2": {
+   "canonical": "ser-2",
+   "renamed": false,
+   "verified": true
+  },
+  "ser-3": {
+   "canonical": "ser-3",
+   "renamed": false,
+   "verified": true
+  },
+  "ser-4": {
+   "canonical": "ser-4",
+   "renamed": false,
+   "verified": true
+  },
+  "ser-5": {
+   "canonical": "ser-5",
+   "renamed": false,
+   "verified": true
+  },
+  "ser-6": {
+   "canonical": "ser-6",
+   "renamed": false,
+   "verified": true
+  },
+  "ser-7": {
+   "canonical": "ser-7",
+   "renamed": false,
+   "verified": true
+  },
+  "SNET-1": {
+   "canonical": "snet-1",
+   "renamed": false,
+   "verified": true
+  },
+  "SPRR-1": {
+   "canonical": "sprr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "SPRR-2": {
+   "canonical": "sprr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "tbh-1": {
+   "canonical": "tbh-1",
+   "renamed": false,
+   "verified": true
+  },
+  "tdc-1": {
+   "canonical": "tdc-1",
+   "renamed": false,
+   "verified": true
+  },
+  "TKR-1": {
+   "canonical": "tkr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "TKR-2": {
+   "canonical": "tkr-2",
+   "renamed": false,
+   "verified": true
+  },
+  "tph-1": {
+   "canonical": "tph-1",
+   "renamed": false,
+   "verified": true
+  },
+  "TRHR-1": {
+   "canonical": "trhr-1",
+   "renamed": false,
+   "verified": true
+  },
+  "tyra-2": {
+   "canonical": "tyra-2",
+   "renamed": false,
+   "verified": true
+  },
+  "tyra-3": {
+   "canonical": "tyra-3",
+   "renamed": false,
+   "verified": true
+  }
+ }
+}

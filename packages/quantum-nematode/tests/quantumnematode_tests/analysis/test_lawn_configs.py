@@ -184,3 +184,22 @@ def test_the_committed_primitives_configs_are_the_generators(arm: str) -> None:
     modules = [str(m) for m in getattr(brain, "sensory_modules", None) or []]
     for module in gen.PRIMITIVE_MODULES[arm]:
         assert module in modules
+
+
+def test_the_committed_data_layer_config_is_the_generators() -> None:
+    """The data-layer arm is the modulated primitives arm with modulator_layer: data, and loads."""
+    path, text = gen.derive_data_layer()
+    assert path.read_text() == text
+    config = load_simulation_config(str(path))
+    assert config.brain is not None
+    brain = config.brain.config
+    assert getattr(brain, "modulators", False)
+    assert getattr(brain, "modulator_layer", None) == "data"
+    parent = load_simulation_config(str(gen.derive_primitives("modulated")[0]))
+    assert parent.brain is not None
+    changed = {
+        key
+        for key, value in brain.model_dump().items()
+        if parent.brain.config.model_dump().get(key) != value
+    }
+    assert changed == {"modulator_layer"}

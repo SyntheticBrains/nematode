@@ -150,3 +150,24 @@ def test_recorded_gradients_match_the_per_step_capture() -> None:
             if step.grad_strength > 1e-9:
                 assert steps[t].grad_dir == pytest.approx(step.grad_dir, abs=1e-6)
     assert max(abs(s.grad_strength) for s in refs[0].behaviour) > 0
+
+
+def test_the_data_layer_matches_the_per_step_brain() -> None:
+    """Covers the neuromodulator-layer scenario "Parity with fitted strengths set".
+
+    A data-layer connectome with nonzero fitted strengths: features (which carry every ligand's
+    concentration), action means and derivatives match the per-step brain within 1e-5 over 50 steps.
+    """
+    import torch
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    path = p.config_path("connectome", "food_removal_calhoun")
+    brain, config, _ = p.harness.build_brain(path, p.PARITY_SEEDS[0], {"modulator_layer": "data"})
+    generator = torch.Generator().manual_seed(7)
+    with torch.no_grad():
+        weights = brain.topology.modulator_layer_w
+        weights.copy_(0.5 * torch.randn(weights.shape, generator=generator))
+    refs = p.references(config, brain, _STATE_STEPS)
+    _, log = p.run_batched(config, BatchedConnectome(brain), list(p.PARITY_SEEDS), _STATE_STEPS)
+    assert p.state_mismatches(refs, log, _STATE_STEPS) == []
+    assert np.max(np.abs(np.asarray(refs[0].modulators))) > 0
