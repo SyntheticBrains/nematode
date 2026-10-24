@@ -63,3 +63,13 @@ The maintainer's decisions of 2026-10-24, after B.3's review:
 - [ ] 6.2 `openspec validate harden-benchmark-grading --strict`.
 - [ ] 6.3 Archive.
 - [ ] 6.4 PR.
+
+## 7. The decay-presence test (amendment, registered before implementation)
+
+- [ ] 7.1 `grading`: presence from a population's per-animal curves (bootstrap over animals, seed 2035)
+  and from a real batch's bin means and SEMs; the local-search family's pass requires it; D unchanged.
+- [ ] 7.2 `benchmark_bands.py`: every band batch's presence bound in the record.
+- [ ] 7.3 `benchmark_grade.py`: presence in the output and in the family's pass.
+- [ ] 7.4 Tests: a flat population fails; a decaying one is present; real band batches are present.
+- [ ] 7.5 The preflight's record shows presence. Logbook 109's addendum reports the 12–13% flat-pass
+  rate that motivated the test.

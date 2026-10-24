@@ -36,12 +36,19 @@
    - López-Cruz's band has no n: it is the band batches' prediction interval at any n.
 3. **γ without a decay.**
    - The grid's bounds become named constants in `readouts` (`GAMMA_GRID_MIN_PER_MIN`, `GAMMA_GRID_MAX_PER_MIN`), read by `fit_local_search` and by the rule. `fit_local_search`'s behaviour does not change.
-   - `local_search_statistics` returns NaN for γ when the fitted γ is within 1% of either bound, or α ≤ 0. The early/late ratio is unchanged.
+   - `local_search_statistics` returns NaN for γ when the fitted γ is within 1% of either bound, or α is no larger than 1e-9 of the curve's level. A flat curve's least-squares α is zero only to rounding (about 4e-15), so a strict α ≤ 0 would miss it. The early/late ratio is unchanged.
    - **Real band batches, checked before the change:** all 17 fit γ in 0.06–0.18 per minute with α > 0, so none becomes undefined and López-Cruz's band is unchanged.
 4. **pdfr-1's local search reported.**
    - Its Δγ and Δ early/late move to `bands_record.json` under `reported`.
    - pdfr-1's family is two statistics, and its bar is `z_star(2)` = 2.24.
 5. **Ji 2021 beside.** The record reports Ji 2021's pdfr-1 and tax-4 patch-assay roaming against its wild type's, from `data/roaming_dwelling/ji2021_readings.json`, as directions only. Its assay differs from Scheer's.
+
+6. **Local search must be present** (amendment, registered before implementation).
+   - Early/late is the mean onsets per bin over 8–14 min divided by that over 34–44 min after removal, as graded.
+   - **Simulated populations:** animals are resampled with replacement 2,000 times (`default_rng(2035)`), and the ratio is taken on each resample's mean curve. **Real batches** have no animals, so each bin is drawn from a normal at its mean and SEM, 2,000 times with the same seed.
+   - Present when the 2.5% quantile exceeds 1. The local-search family passes only when every statistic passes and search is present.
+   - The test does not enter D, which stays a function of the 11 z's.
+   - On band data, before registration, all 17 band batches pass, with lower bounds of 1.85 and above. A flat population fails at about 97.5%.
 
 ## Risks / Trade-offs
 

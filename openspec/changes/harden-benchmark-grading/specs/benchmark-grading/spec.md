@@ -9,7 +9,7 @@ The wild type SHALL be graded on 11 statistics:
 - the uniform lawn: roaming fraction, roaming bout mean and dwelling bout mean;
 - López-Cruz's local search: γ over 8–44 min after removal with t₀ = 9 min, and the early/late ratio
   (8–14 min over 34–44 min). γ SHALL be undefined when the fit finds no decay: the fitted γ within 1%
-  of the search grid's bound, or a fitted α ≤ 0.
+  of the search grid's bound, or a fitted α no larger than 1e-9 of the curve's level.
 
 Each mutant SHALL be graded on differences from its same-date wild type: tph-1 (against N2), pdfr-1
 and tax-4 (against PD1074), on Δ roaming fraction and Δ exits per on-lawn hour. pdfr-1's López-Cruz
@@ -109,3 +109,21 @@ The bands record SHALL report, without grading:
 
 - **WHEN** a simulated pdfr-1 is graded
 - **THEN** no López-Cruz statistic SHALL enter its pass
+
+### Requirement: Local search must be present
+
+A population's local search SHALL be present when its early/late ratio exceeds 1 at its own one-sided
+97.5% lower bound. The bound comes from a bootstrap over animals for a simulated population, and from
+normal draws at each bin's mean and SEM for a real batch: 2,000 resamples with a fixed seed. The
+local-search family SHALL pass only when every one of its statistics passes and search is present.
+Presence SHALL not enter the distance.
+
+#### Scenario: A flat population fails local search
+
+- **WHEN** a population's onsets per bin do not decline from early to late
+- **THEN** its local search SHALL be absent, and the local-search family SHALL fail, whatever its z's
+
+#### Scenario: The band batches are present
+
+- **WHEN** the bands are built
+- **THEN** the record SHALL report each band batch's presence bound, and every one SHALL exceed 1

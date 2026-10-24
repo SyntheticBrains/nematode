@@ -69,3 +69,21 @@ The maintainer's decisions of 2026-10-24 are marked (decided).
   - `data/benchmark/PROVENANCE.md`.
 - **Cost**: about a day. No campaign.
 - **Seeds**: none new. The preflight re-runs on 9101–9164.
+
+## Amendment of 2026-10-24: a decay-presence test (registered before it is implemented)
+
+**What implementation found.** While implementing, a synthetic check on the local-search band showed that a population with no local search passes the local-search family 12–13% of the time, over levels 0.6–1.2 and per-bin noise 0.03–0.08.
+
+- A flat curve's early/late ratio of about 1.0 lies inside the band: the band's scale is 1.62, so z ≈ −2.0 against the bar of 2.84.
+- A noisy flat curve sometimes fits a plausible γ.
+
+The band is a prediction interval over 17 batches of about 55 worms, so it is wide.
+
+**The maintainer's decision: a decay-presence test.**
+
+- **The test.** A population's local search is present when its early/late ratio exceeds 1 at its own one-sided 97.5% lower bound. The local-search family passes only when it is present.
+- **Its uncertainty.**
+  - For simulated worms: a bootstrap over animals (2,000 resamples, seed 2035).
+  - For a real batch: a parametric draw from its bins' means and SEMs (the same).
+- **It does not enter D.** It is a gate on the family, not a statistic.
+- **Feasibility, on band data before registration:** all 17 band batches pass, with lower bounds from 1.85. B.4 reads the held-out batches.
