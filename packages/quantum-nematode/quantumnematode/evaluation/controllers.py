@@ -10,6 +10,9 @@ hazard for each of reversal, omega and delta.
   normal sample under a seeded global generator is that draw scaled and shifted, so an animal draws
   what the per-step runner draws.
 - The hazard rules are the non-learning controllers' arithmetic on arrays.
+- The open-loop negatives (a two-state worm switching by a fixed chain, and curvature walks) draw
+  their randomness from the same per-animal generators, so an animal acts the same alone or in any
+  batch.
 """
 
 from __future__ import annotations
@@ -284,4 +287,132 @@ class BatchedPirouetteHazards:
         raw = np.zeros((n, 5))
         raw[:, 0] = _raw_speed(self.speed)
         raw[:, 2:] = _raw_hazards(self.hazards[None, :] * scale[:, None])
+        return raw
+
+
+def _raw_curvature(deg_per_s: np.ndarray) -> np.ndarray:
+    """Map curvature in degrees per second onto the primitives' raw range, clipped."""
+    omega_max = math.degrees(load_kinematics().omega_max_rad_per_s)
+    return np.clip(np.asarray(deg_per_s, dtype=np.float64) / omega_max, -1.0, 1.0)
+
+
+def _uniforms(noise: list[torch.Generator], k: int = 1) -> np.ndarray:
+    """Draw ``k`` uniforms per animal, each from that animal's own generator: ``(n, k)``."""
+    return np.array([torch.rand(k, generator=gen, dtype=torch.float64).numpy() for gen in noise])
+
+
+def _normals(noise: list[torch.Generator]) -> np.ndarray:
+    """Draw one standard normal per animal, each from that animal's own generator."""
+    return np.array(
+        [float(torch.randn(1, generator=gen, dtype=torch.float64)[0]) for gen in noise],
+    )
+
+
+def _require_noise(noise: list[torch.Generator] | None) -> list[torch.Generator]:
+    if noise is None:
+        msg = "this controller draws its randomness from each animal's generator; noise is None"
+        raise ValueError(msg)
+    return noise
+
+
+class BatchedStateHazards:
+    """An open-loop two-state worm: states switch by a fixed chain, each with its own kinematics.
+
+    Every ``window_steps`` steps each animal's state moves by ``transitions[state]``, whatever it
+    senses; the first state is drawn from the chain's stationary distribution. In each state the
+    animal runs at that state's speed, with curvature drawn each second from a normal of that
+    state's SD, and starts bouts at that state's hazards. Every draw comes from the animal's own
+    generator.
+    """
+
+    def __init__(
+        self,
+        transitions: np.ndarray,
+        speeds_mm_per_s: tuple[float, float],
+        curvature_sd_deg_per_s: tuple[float, float],
+        hazards_per_s: np.ndarray,
+        window_steps: int,
+    ) -> None:
+        self.transitions = np.asarray(transitions, dtype=np.float64)
+        self.speeds = np.asarray(speeds_mm_per_s, dtype=np.float64)
+        self.curvature_sd = np.asarray(curvature_sd_deg_per_s, dtype=np.float64)
+        self.hazards = np.asarray(hazards_per_s, dtype=np.float64)
+        self.window_steps = window_steps
+        up, down = self.transitions[0, 1], self.transitions[1, 0]
+        self.stationary_second = up / (up + down)
+        self.state: np.ndarray | None = None
+        self.steps = 0
+
+    def reset(self, n: int) -> None:
+        """Forget every animal's state; it is drawn on the first step."""
+        del n
+        self.state = None
+        self.steps = 0
+
+    def act(self, senses: BatchedSenses, noise: list[torch.Generator] | None) -> np.ndarray:
+        """Step each animal's chain on its window's boundary, then act in its state."""
+        gens = _require_noise(noise)
+        n = len(senses.concentration)
+        if self.state is None:
+            self.state = (_uniforms(gens)[:, 0] < self.stationary_second).astype(np.int64)
+        elif self.steps % self.window_steps == 0:
+            stay = self.transitions[self.state, self.state]
+            self.state = np.where(_uniforms(gens)[:, 0] < stay, self.state, 1 - self.state)
+        self.steps += 1
+        curvature = _normals(gens) * self.curvature_sd[self.state]
+        raw = np.zeros((n, 5))
+        raw[:, 0] = [_raw_speed(float(s)) for s in self.speeds[self.state]]
+        raw[:, 1] = _raw_curvature(curvature)
+        raw[:, 2:] = _raw_hazards(self.hazards[self.state])
+        return raw
+
+
+class BatchedCurvatureWalk:
+    """Runs at a fixed speed and fixed hazards, turning by random curvature each second.
+
+    ``mode="uniform"`` draws each second's curvature uniformly over the primitives' whole range: the
+    random walk. ``mode="ar1"`` draws it as ``c_t = rho c_{t-1} + sqrt(1 - rho^2) sd e_t``: the
+    correlated walk, and with ``rho = 0`` independent turns of SD ``sd``. Every draw comes from the
+    animal's own generator.
+    """
+
+    def __init__(
+        self,
+        speed_mm_per_s: float,
+        hazards_per_s: tuple[float, float, float],
+        mode: str,
+        curvature_sd_deg_per_s: float = 0.0,
+        persistence: float = 0.0,
+    ) -> None:
+        if mode not in ("uniform", "ar1"):
+            msg = f"mode must be 'uniform' or 'ar1', got {mode!r}"
+            raise ValueError(msg)
+        self.speed = speed_mm_per_s
+        self.hazards = np.asarray(hazards_per_s, dtype=np.float64)
+        self.mode = mode
+        self.sd = curvature_sd_deg_per_s
+        self.rho = persistence
+        self.curvature: np.ndarray | None = None
+
+    def reset(self, n: int) -> None:
+        """Forget every animal's curvature."""
+        del n
+        self.curvature = None
+
+    def act(self, senses: BatchedSenses, noise: list[torch.Generator] | None) -> np.ndarray:
+        """Return each animal's run at the fixed speed with this second's curvature."""
+        gens = _require_noise(noise)
+        n = len(senses.concentration)
+        raw = np.zeros((n, 5))
+        raw[:, 0] = _raw_speed(self.speed)
+        raw[:, 2:] = _raw_hazards(np.broadcast_to(self.hazards, (n, 3)))
+        if self.mode == "uniform":
+            raw[:, 1] = 2.0 * _uniforms(gens)[:, 0] - 1.0
+            return raw
+        shock = _normals(gens) * self.sd
+        if self.curvature is None:
+            self.curvature = shock
+        else:
+            self.curvature = self.rho * self.curvature + math.sqrt(1.0 - self.rho**2) * shock
+        raw[:, 1] = _raw_curvature(self.curvature)
         return raw
