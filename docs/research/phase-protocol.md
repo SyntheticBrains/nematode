@@ -4,6 +4,11 @@
 failure. It is the pattern Phases 5 and 6 used, the one place Phase 7 departed from it, and why —
 kept so that the departure is recognisable the next time it is about to happen.*
 
+*(Added 2026-10-25.) The principles were written around learning rules, but Phase 10 fits
+controllers to real-worm data and grades them against it, and the principles carry over. The
+additions dated 2026-10-25 come from that work: a benchmark built from data, its controls, and the
+fitting methods' positive controls.*
+
 ## The pattern that worked
 
 Phase 6 ran a positive control ([Logbook 030](../experiments/logbooks/030-bit-memory-positive-control.md))
@@ -82,6 +87,34 @@ down.
    optimum names the arm that must fail as well as the one that must pass** — either expectation
    being violated voids the control rather than producing a result
    ([Logbook 048](../experiments/logbooks/048-l4-rule-positive-control.md)).
+   *(Added 2026-10-25.)* Three more corollaries.
+
+   - **A positive control's success bar is met by its oracle before launch.** Score the known
+     answer against the bar: the generating parameters re-simulated with fresh noise, or the exact
+     solution. If the oracle cannot pass, the control tests nothing, whatever the method does.
+     *F.0a's informative gate asked simulations at NPE's posterior draws to reach a median D of at
+     most 1.42 from the truths' statistics. Two simulations of the same parameters already differed by a median
+     D of 4.08, so no posterior could pass. A five-hour run was spent on a check two minutes of
+     re-simulation would have shown was out of reach. The gate had been added in the change's own
+     review, and the launch record noted that the preflight tool "does not apply", which was true
+     of the tool and not of the principle,
+     [Logbook 111](../experiments/logbooks/111-npe-recovery.md).*
+   - **An instrument is shown to fail what it must fail, part by part.** A graded family or
+     statistic that a trivial negative passes cannot carry a verdict alone, even when the whole
+     instrument rejects that negative. Check each part against a negative built to lack the thing
+     it measures, before registering what rests on it. *A population with no local search at all
+     passed the local-search family 12–13% of the time, which the benchmark's hardening found
+     before the controls ran and narrowed with a registered presence test
+     ([Logbook 109](../experiments/logbooks/109-benchmark-grading.md), addendum). The untrained
+     connectome passed both the family and the presence test (bound 1.006), so the distance used for
+     fitting leaves local search out ([Logbook 110](../experiments/logbooks/110-benchmark-controls.md)).*
+   - **Where validity needs several controls to pass, register the joint rule.** Fifteen control
+     units each passing at its own 95% would void an instrument by chance about half the time.
+     Register an allowance from the units' failure rates, measured where possible, before any
+     held-out value is read, and report which units failed. *B.4's allowance of two failures
+     carried a 2.5% chance of a spurious void, against 49% for requiring every unit
+     ([Logbook 110](../experiments/logbooks/110-benchmark-controls.md); the 49% is in the change's
+     [proposal](../../openspec/changes/archive/2026-10-25-add-benchmark-controls/proposal.md)).*
 
 5. **A task ladder from the control to the real task**, the method cleared at each rung before the
    next. Easy to hard: foraging, then foraging with predators, then with thermotaxis. Never jump
@@ -129,6 +162,12 @@ down.
    bar to the thermal cell and ran 1,024 runs, about 16 hours, into an unreadable panel: every level
    plateaued at 94–96%. A.1's runs at the same point, already on disk, sat at 91–92%; one minute
    reading them would have shown it, [Logbook 077](../experiments/logbooks/077-thermal-null-strength.md).*
+   *(Added 2026-10-25.)* The preflight covers **every** gate, including one added during the
+   change's own review. Where `gate_preflight.py` does not fit the design, the principle still
+   applies: evaluate the bar by hand at the registered point, and for a positive control, score its
+   oracle (principle 4). A bar on a statistic compared between two simulations is set against the
+   simulator's own same-parameter noise, measured first
+   ([Logbook 111](../experiments/logbooks/111-npe-recovery.md)).
 
 ### Parameters
 
@@ -154,6 +193,17 @@ down.
 8. **Pilots on disjoint seeds.** Registered seeds stay untouched until the protocol is fixed. *Held
    throughout Phase 7, and it is why the pilots could inform registrations without contaminating
    them.* A smoke run that only checks configs execute is not a pilot: it cannot show a gate.
+   *(Added 2026-10-25.)* Two extensions.
+
+   - **Held-out data are read once, under a guard in the code.** The reading script refuses to run
+     until its launch record is committed and unchanged. Anything the reading depends on, such as
+     matched parameters, is bound to that commit, so it cannot drift between registration and
+     reading ([Logbook 110](../experiments/logbooks/110-benchmark-controls.md)).
+   - **Every seed drawn enters the phase's seed table:** pilots, diagnostics and derived seed
+     schemes as well as registered bands. A seed that is used but not recorded is one a later band
+     can silently overlap. *Logbook 104's calibration drew twelve blocks of 32 seeds across
+     6001–7132, three of them inside W's reserved band, and the band was moved when the table was
+     audited.*
 
 ### Running
 
@@ -161,6 +211,11 @@ down.
     a pilot configured the way the campaign will be, not a lighter one. *The yardstick-before-
     connectome rule worked every time it was applied and saved ten-hour runs twice. The one cost
     estimate scaled from a lighter pilot was off by a factor of ten.*
+    *(Added 2026-10-25.)* **And long enough to reach the machine's sustained rate.** A pilot of a
+    minute or two measures a laptop before it throttles. *F.0a's 80-second pilot timed a
+    simulation at 20 s and projected 4.05 h; the run sustained 29–31 s and took 4.9 h
+    ([Logbook 111](../experiments/logbooks/111-npe-recovery.md)). Run the pilot for several
+    minutes at full load, or scale its estimate by a measured sustained-load factor.*
 
 10. **Register a minimum effect beside significance**, name the outcome that means stop, and
     **match the statistic and the metric to the outcome's shape**. *A
@@ -184,6 +239,38 @@ down.
     [Logbook 042](../experiments/logbooks/042-l4-panel3.md)); a later family with one member per
     component re-read seventeen contrasts and promoted none, so the committed negatives survived a
     statistic matched to the shape, [Logbook 056](../experiments/logbooks/056-l4-ladder-reread.md).*
+    *(Added 2026-10-25.)* Three extensions from grading against real data.
+
+    - **Where the claim is fidelity to data, anchor the minimum to the data.** The smallest effect
+      worth registering is the distance two real cohorts show by chance. A difference smaller than
+      real batch-to-batch variation has no behavioural meaning
+      ([Logbook 110](../experiments/logbooks/110-benchmark-controls.md): W's minimum, 1.42 on D).
+      That anchor is for a simulation graded against real data. A bar between two simulations is
+      also bounded below by the simulator's own same-parameter noise, measured first (principle 6):
+      *F.0a set its bar at W's minimum, and its floor was a median D of 4.08
+      ([Logbook 111](../experiments/logbooks/111-npe-recovery.md)).*
+    - **Match the uncertainty to the question, and check it before grading with it.** How far a new
+      population may fall from a reference (a prediction) is not how well the reference itself is
+      known (an estimate). Either has to be validated on held-back reference data before it grades
+      anything. *The benchmark's first bands were too narrow: graded against bands from the other
+      half of the dates, real populations passed 0.80 of the time against a gate of 0.90. Mutant
+      directions were first read from the population scale, about twice the reference's own
+      uncertainty: a prediction's scale used for an estimate's question
+      ([Logbook 109](../experiments/logbooks/109-benchmark-grading.md), the first attempt and the
+      addendum).*
+    - **A failed registered gate is retried only under an amendment committed before the retry.**
+      The amendment names exactly what changes. A bar that changes is reset from what the
+      instrument can do, before any data it grades are read, never from those data, and it must
+      still serve what rests on it. Held-out data already read are never read again (principle 8);
+      band or calibration data the first attempt used are re-split or replaced with fresh seeds.
+      The first attempt and its bar stay in the record beside the retry. *The reorientation detector's preflight failed, and its bars were
+      reset from the instrument before any held-out cohort was read. The bands' rule check failed,
+      and its scale was corrected with the gates unchanged. Both retries were committed before they
+      ran. The bands' retry passed. The detector's passed every off-food gate and failed on food, so
+      it was scoped to off-food tracks, and its record keeps the first bar of 0.70 beside the new
+      ones
+      ([Logbook 107](../experiments/logbooks/107-benchmark-readouts.md),
+      [Logbook 109](../experiments/logbooks/109-benchmark-grading.md)).*
 
 11. **A mechanism must predict, not describe.** A proposed explanation earns its place by a test
     that could have refuted it. *The horizon was a description of the one-step-success /
@@ -226,6 +313,11 @@ down.
     rather than unmet, and a gate whose literal condition and stated rationale come apart is recorded
     with both rather than resolved by interpretation,
     [Logbook 059](../experiments/logbooks/059-7a-shipment.md).
+    *(Added 2026-10-25.)* **Every number in a record is read from a committed record or script, not
+    recalled.** A diagnosis worked out in a scratch session is committed as a script before the
+    logbook cites it, and the logbook's numbers are re-read from that script's output. *Logbook 111's
+    diagnosis of its unreachable gate is the committed `npe_recovery.py diagnose` stage, and every
+    number the logbook gives for it is read from that stage's `diagnosis.json`.*
 
 13. **Re-aim what watches the field.** *(Added 2026-09-20.)* A close changes which questions are
     open, so anything pointed at the old ones is now pointed at nothing. The standing case is the

@@ -54,8 +54,13 @@ registration. The non-negotiables, each learned from a lost run:
   or on a pilot, and exits nonzero if any level would be unreadable, sits within 5 points of the bar, or has no evidence.
   A.6t ran 16 hours into an unreadable panel that one minute of this would have caught
   ([Logbook 077](docs/experiments/logbooks/077-thermal-null-strength.md)).
-- **Pilots** run on seeds disjoint from the registered band, configured exactly as the campaign; cost is estimated from
-  them. A smoke run that only checks configs execute is not a pilot.
+- **Oracle before launch**: a positive control's success bar must be met by its known answer before it registers. Score
+  the generating parameters, re-simulated with fresh noise, against the bar. A bar on a statistic compared between
+  simulations is set against the simulator's own same-parameter noise. F.0a spent five hours on a gate its oracle could
+  not pass ([Logbook 111](docs/experiments/logbooks/111-npe-recovery.md); protocol principles 4 and 6).
+- **Pilots** run on seeds disjoint from the registered band, configured exactly as the campaign, and long enough to
+  reach the machine's sustained rate; cost is estimated from them. A smoke run that only checks configs execute is not a
+  pilot.
 - **During a campaign** never switch branches: the runner reads configs and package code from the working tree per run.
 - **Retention**: commit the per-seed CSV, analysis JSON and launch record; archive raw logs off-repo.
 
