@@ -49,3 +49,6 @@ htmlcov/
 # Claude
 .claude/
 CLAUDE.md
+
+# sbi training logs (TensorBoard), written to the working directory
+sbi-logs/

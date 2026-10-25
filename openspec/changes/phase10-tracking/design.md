@@ -86,6 +86,7 @@ here are cited by each registration.
 | N.3 receptor-placement null audit | 7501–7564 | 64 null draws for the matched-statistics table (Logbook 106) |
 | B.2 detector's simulated validation | 7601–7632 | constant hazards on López-Cruz's assay (Logbook 107) |
 | F.0a NPE recovery | 5401–5404; simulation animals 1,000,000 + 200·k + i (pilot 2,000,000; floor 3,000,000) | prior draws, flows, prior-predictive draws, and every simulation's animals (Logbook 111) |
+| F.0 region check | animals 20,000,000 and 24,000,000 + 200·k + i (k < 10,000), 28,000,000 + 200·k + i (k < 640); torch 9301–9302 | description after F.0a: near-wild-type re-simulations, a nearest-neighbour posterior and a round-1 flow (Logbook 111, addendum). F.0a's pilot animals (2,000,000 + 200·k, k < 64) coincide with its training simulations 5,000–5,063: harmless, since the pilot read no gate |
 | B.4 negatives and untrained networks | 5101–5300, 5301–5316 | animals and networks for the registered reading (Logbook 110) |
 | B.4 pilot | 9201–9280 | negatives at n = 64 and their untrained networks, as description (Logbook 110) |
 | B.3 preflight | 9101–9164 | ConstantHazards and PirouetteHazards graded at n = 64 on the three wild-type assays, as description (Logbook 109) |
