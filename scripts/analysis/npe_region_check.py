@@ -137,6 +137,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument("--workers", type=int, default=16)
+    parser.add_argument(
+        "--region-only",
+        action="store_true",
+        help="re-read only the region from the stored simulations, into an existing record",
+    )
     args = parser.parse_args(argv)
 
     import benchmark_grade as bg
@@ -155,6 +160,7 @@ def main(argv: list[str] | None = None) -> int:
         [sims[k]["statistics"]["local_search/early_late_ratio"] or np.nan for k in ks],
     )
     region = {
+        "D_min": float(d.min()),
         "D_quantiles": _quantiles(d),
         "D_fit_quantiles": _quantiles(d_fit),
         "within_D": {str(t): int((d <= t).sum()) for t in (3, 4, 5)},
@@ -162,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
         "pool_D5_presence1.5_defined": int(((d <= 5) & (presence > 1.5) & defined).sum()),
         "placement_D4.5_presence2_defined": int(((d <= 4.5) & (presence > 2) & defined).sum()),
     }
+    if args.region_only:
+        record = json.loads(args.out.read_text())
+        record["region"] = region
+        args.out.write_text(json.dumps(nr._finite(record), indent=2, allow_nan=False) + "\n")
+        print(json.dumps(region, indent=2))
+        return 0
 
     near = [int(k) for k in np.argsort(d)[:NEAR]]
     neighbours, jobs = [], []

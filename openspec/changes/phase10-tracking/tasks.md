@@ -383,8 +383,8 @@ nothing in W registers before C.2 has read.
 
 ## F.0 — the fitting methods' positive control (MUST)
 
-- [ ] **F.0** parameter recovery at known parameters, for NPE on C.1's model and sep-CMA on C.2's
-  encoder (seeds 5401–5464). It reports recovery and spread, and the spread sizes W.
+- [ ] **F.0** parameter recovery at known parameters, by sep-CMA on C.1's model and C.2's encoder
+  (seeds 5401–5464). *(Amended 2026-10-25: C.1's half was first NPE's; D38 as amended.)* It reports recovery and spread, and the spread sizes W.
 
   *(2026-10-25, F.0a: change `add-npe-recovery`, archived as `2026-10-25-add-npe-recovery`;
   [Logbook 111](../../../docs/experiments/logbooks/111-npe-recovery.md).)* **F.0a fails as
@@ -404,7 +404,8 @@ nothing in W registers before C.2 has read.
     **C.1 is fitted by sep-CMA** (the maintainer's decision; D38 as amended). Planning reads, committed
     as `scripts/analysis/npe_region_check.py` and its `region_check.json` (Logbook 111, addendum),
     showed the planned gate out of reach for the method rather than the oracle: near the wild type a
-    nearest-neighbour posterior gains far less than the bar, and truncation barely narrows the prior.
+    nearest-neighbour posterior gains far less than the bar, and a first truncated round keeps most of
+    the prior box.
     **F.0's remaining control is sep-CMA's, on C.1's model and C.2's encoder**, with floor-relative,
     preflighted statistic-space gates.
   - **C.1's note:** its real fit must simulate at the observation's size, or add between-date

@@ -118,7 +118,7 @@ Before its spec review, the maintainer asked whether the plan was likely to pass
 
 **The prior seldom makes a wild-type-like worm.**
 
-- Of F.0a's 10,000 prior simulations, the closest sits at D 3.04 from the bands, and 66 lie within D 4.
+- Of F.0a's 10,000 prior simulations, the closest sits at D 1.79 from the bands, 9 lie within D 3, and 66 within D 4.
 - Those 66 have weak local search: median early/late 1.20, against 2.97–6.17 in real batches.
 - Only 6 meet the planned acceptance rule: every statistic defined, D ≤ 4.5, and a presence bound above 2.
 
@@ -137,10 +137,10 @@ Before its spec review, the maintainer asked whether the plan was likely to pass
 
 The bar needs a posterior-predictive D of about 2.2. Even the best prior simulations do not get much closer than that.
 
-**Truncation barely narrows the prior.**
+**A first truncated round keeps most of the prior.**
 
 - A round-1 flow's highest-density region (quantile 10⁻⁴) keeps 27–65% of the prior box at 8 near-wild-type truths (median 58%), and 12% at the band cohorts' statistics.
-- Two truncated rounds would at most double the density of simulations near each truth. The region cannot shrink much, because the benchmark's 11 statistics leave most of C.1's 20 parameters unconstrained.
+- Only this first truncation was measured, not how far later rounds would narrow the region. A first round that keeps most of the box is what the benchmark's 11 statistics, leaving most of C.1's 20 parameters unconstrained, would lead one to expect.
 
 **The decision (the maintainer's).** F.0a-ii is withdrawn. Its proposal was never reviewed or registered, and no gate was read. **C.1 is fitted by sep-CMA on the benchmark's distance, like C.2 ([roadmap D38](../../roadmap.md), as amended).**
 
