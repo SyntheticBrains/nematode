@@ -37,6 +37,7 @@ import argparse
 import json
 import math
 import pickle
+import shutil
 import subprocess
 import sys
 import time
@@ -322,6 +323,13 @@ def _write_json(path: Path, record: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
+def _write_bytes(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_bytes(data)
+    temporary.replace(path)
+
+
 def simulate_jobs(
     jobs: list[tuple[int, list[float]]],
     seed_base: int,
@@ -345,17 +353,32 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
     pool: ProcessPoolExecutor,
     scales: dict[str, float],
 ) -> dict[str, Any]:
-    """Run, or resume, one fit; return its history. State is saved after every generation."""
+    """Run, or resume, one fit; return its history. State is saved after every generation.
+
+    The strategy's checkpoint and the history each carry the last completed generation; a resume
+    whose two markers differ is refused rather than continued from mismatched state.
+    """
     state_path = state_dir / f"fit{fit}.pkl"
     history_path = state_dir / f"fit{fit}.json"
-    if state_path.exists() and history_path.exists():
-        strategy = pickle.loads(state_path.read_bytes())  # noqa: S301 - this run's own state
-        history = json.loads(history_path.read_text())
+    saved = json.loads(history_path.read_text()) if history_path.exists() else None
+    if saved is not None and saved["stop"] is not None:
+        return saved
+    if saved is not None and state_path.exists():
+        history = saved
+        checkpoint = pickle.loads(state_path.read_bytes())  # noqa: S301 - this run's own state
+        if checkpoint["generation"] != history.get("generation"):
+            message = (
+                f"fit {fit}: checkpoint at generation {checkpoint['generation']}, "
+                f"history at {history.get('generation')}"
+            )
+            raise RuntimeError(message)
+        strategy = checkpoint["strategy"]
     else:
         strategy = new_strategy(cma_seed)
         history = {
             "fit": fit,
             "cma_seed": cma_seed,
+            "generation": 0,
             "medians": [],
             "sigmas": [],
             "answers": [],
@@ -379,8 +402,8 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
             history["stop"] = {"generation": generation, "by": "plateau"}
         elif generation >= cap:
             history["stop"] = {"generation": generation, "by": "cap"}
-        state_dir.mkdir(parents=True, exist_ok=True)
-        state_path.write_bytes(pickle.dumps(strategy))
+        history["generation"] = generation
+        _write_bytes(state_path, pickle.dumps({"generation": generation, "strategy": strategy}))
         _write_json(history_path, history)
         print(
             f"fit {fit} gen {generation}: median {history['medians'][-1]:.2f}, "
@@ -476,6 +499,9 @@ def _resimulate(
 def _pilot(workers: int) -> int:
     """Run the pilot fit to 300 generations; set the cap and project the cost."""
     preflight = json.loads(PREFLIGHT_PATH.read_text())
+    if not preflight.get("passed"):
+        print("the preflight did not pass; no pilot runs", file=sys.stderr)
+        return 1
     sims = nr.load_simulations()
     scales = nr.band_scales()
     truth = preflight["pilot_truth"]
@@ -540,7 +566,14 @@ def _pilot(workers: int) -> int:
 def _run(workers: int) -> int:
     """Run the registered fits to the registered cap, then re-simulate each answer."""
     preflight = json.loads(PREFLIGHT_PATH.read_text())
-    cap = int(json.loads(PILOT_PATH.read_text())["registered_cap"])
+    pilot = json.loads(PILOT_PATH.read_text())
+    if not preflight.get("passed"):
+        print("the preflight did not pass; no registered fit runs", file=sys.stderr)
+        return 1
+    if pilot["stops"]["gain_at_300_below_bar"]:
+        print("the pilot's gain at 300 is below the bar; no registered fit runs", file=sys.stderr)
+        return 1
+    cap = int(pilot["registered_cap"])
     sims = nr.load_simulations()
     scales = nr.band_scales()
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
@@ -642,6 +675,7 @@ def _smoke(workers: int) -> int:
     scales = nr.band_scales()
     observation = sims[candidate_pool(sims)[0]]
     state = BUILD / "smoke"
+    shutil.rmtree(state, ignore_errors=True)
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
         for cap in (1, 2):
             history = run_fit(

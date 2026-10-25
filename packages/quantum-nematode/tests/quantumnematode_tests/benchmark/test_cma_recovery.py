@@ -2,11 +2,15 @@
 
 Covers the fit-recovery spec's scenarios "A truth whose statistics flip", "A fit that never moves",
 "The best restart is chosen by the fit's own objective", "The answer stays in the box", "An early
-plateau does not shorten the cap" and "The read is guarded".
+plateau does not shorten the cap" and "The read is guarded", and a refused resume from mismatched
+checkpoints.
 """
 
 from __future__ import annotations
 
+import json
+import pickle
+import subprocess
 import sys
 from pathlib import Path
 
@@ -112,9 +116,68 @@ def test_the_seed_layout_is_disjoint() -> None:
     assert cr.PILOT_SEED_BASE + nr.ANIMALS * pilot_top < cr.SMOKE_SEED_BASE
 
 
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(  # noqa: S603 - fixed git arguments in a temporary repository
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],  # noqa: S607 - git on the PATH
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
+
+
 def test_the_read_is_guarded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A launch record outside the repository's history is not committed, so stages refuse."""
-    monkeypatch.setattr(cr, "LAUNCH_PATH", cr.SUPPORT / "not-a-launch-record.md")
+    """The guard passes only when the launch record and the records it binds match its commit."""
+    repo = tmp_path / "repo"
+    support = repo / "support"
+    support.mkdir(parents=True)
+    _git(repo, "init", "-q")
+    launch, preflight, pilot = (support / n for n in ("launch.md", "preflight.json", "pilot.json"))
+    monkeypatch.setattr(cr, "_REPO", repo)
+    monkeypatch.setattr(cr, "LAUNCH_PATH", launch)
+    monkeypatch.setattr(cr, "PREFLIGHT_PATH", preflight)
+    monkeypatch.setattr(cr, "PILOT_PATH", pilot)
+    launch.write_text("# Part A\n\n## Part B\n")
+    preflight.write_text("{}\n")
+    pilot.write_text('{"registered_cap": 210}\n')
+
+    # An untracked launch record is not committed.
     assert not cr.launch_committed()
+
+    # Matching committed records pass.
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "register")
+    assert cr.launch_committed()
+    assert cr.part_b_committed()
+
+    # A preflight record changed in the working tree fails.
+    preflight.write_text('{"passed": true}\n')
     assert not cr.part_b_committed()
-    assert cr.main(["read"]) == 1
+    preflight.write_text("{}\n")
+    assert cr.part_b_committed()
+
+    # A pilot record committed later, with the launch record unchanged, fails the byte comparison.
+    pilot.write_text('{"registered_cap": 300}\n')
+    _git(repo, "commit", "-q", "-am", "later pilot")
+    assert cr.launch_committed()
+    assert not cr.part_b_committed()
+
+
+def test_a_resume_with_mismatched_markers_is_refused(tmp_path: Path) -> None:
+    """A checkpoint a generation ahead of its history is refused, not continued."""
+    (tmp_path / "fit0.json").write_text(
+        json.dumps({"generation": 1, "stop": None, "medians": [1.0]}),
+    )
+    checkpoint = {"generation": 2, "strategy": None}
+    (tmp_path / "fit0.pkl").write_bytes(pickle.dumps(checkpoint))
+    with pytest.raises(RuntimeError, match="generation 2"):
+        cr.run_fit(
+            {},
+            fit=0,
+            cma_seed=1,
+            seed_base=0,
+            cap=10,
+            use_rule=True,
+            state_dir=tmp_path,
+            pool=None,  # pyright: ignore[reportArgumentType]
+            scales={},
+        )
