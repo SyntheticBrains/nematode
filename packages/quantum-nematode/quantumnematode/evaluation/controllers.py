@@ -440,7 +440,12 @@ MECHANISTIC_PARAMETERS = (
     "search_amplitude",
     "search_tau_s",
 )
-"""C.1's parameters, in the order a parameter vector holds them."""
+"""The mechanistic controller's 20 parameters, in the order a parameter vector holds them.
+
+Switching intercepts and their intake and satiety slopes; per-state speeds and curvature noise; the
+weathervane gain; per-state reversal hazards, their klinokinesis gain and the edge gain; per-state
+omega hazards and their klinokinesis gain; and the search amplitude and decay time.
+"""
 
 _NEVER_ON_FOOD_S = 1e9
 
