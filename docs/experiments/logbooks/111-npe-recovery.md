@@ -1,6 +1,6 @@
 # 111: Phase 10 — NPE Recovery of C.1's Baseline Fails Its Informative Gate, and the Gate Was Out of Reach
 
-**Status**: completed. **F.0a fails as registered.** NPE's posteriors for C.1's mechanistic baseline are calibrated, but they barely leave the prior, and they fail the informative gate.
+**Status**: completed. **F.0a fails as registered.** *(Addendum, 2026-10-25: C.1 moves to sep-CMA; see the end.)* NPE's posteriors for C.1's mechanistic baseline are calibrated, but they barely leave the prior, and they fail the informative gate.
 
 The diagnosis, read after the gates as description, finds the gate was out of reach. Two simulations of the *same* parameters already differ by more than the bar. NPE is not trusted for C.1 until F.0a-ii fixes this. The maintainer chose sequential NPE with a gate set against the measured noise.
 
@@ -103,8 +103,50 @@ Coverage per parameter lies between 0.83 and 0.95.
 
 ## Next steps
 
-- [ ] F.0a-ii (the maintainer's choice):
-  - truncated sequential NPE, with extra simulation rounds concentrated near each truth;
-  - truths drawn from the region C.1 is fitted in;
-  - an informative gate set against each truth's measured same-parameter floor, preflighted on pilot truths before launch.
-- [ ] F.0b: sep-CMA recovery on C.2's encoder, its statistic-space gate set against the measured floor and preflighted.
+- [x] ~~F.0a-ii: truncated sequential NPE near the wild type.~~ Withdrawn before its spec review; see the addendum.
+- [ ] F.0b: sep-CMA recovery on C.1's model and C.2's encoder, its statistic-space gate set against the measured floor and preflighted.
+
+## Addendum (2026-10-25): F.0a-ii withdrawn, and C.1 fitted by sep-CMA
+
+F.0a-ii was planned as the maintainer chose:
+
+- truncated sequential NPE (TSNPE) per truth;
+- truths near the wild type;
+- an informative gate on each truth's gain fraction, (prior D − posterior D) / (prior D − floor), at 0.75.
+
+Before its spec review, the maintainer asked whether the plan was likely to pass. Two reads answered it, committed as `scripts/analysis/npe_region_check.py` with their record, `region_check.json`. They are description, after F.0a's gates, which stand.
+
+**The prior seldom makes a wild-type-like worm.**
+
+- Of F.0a's 10,000 prior simulations, the closest sits at D 1.79 from the bands, 9 lie within D 3, and 66 within D 4.
+- Those 66 have weak local search: median early/late 1.20, against 2.97–6.17 in real batches.
+- Only 6 meet the planned acceptance rule: every statistic defined, D ≤ 4.5, and a presence bound above 2.
+
+**Near the wild type the floor is low, but the method cannot reach it.**
+
+- The 32 prior worms nearest the bands were re-simulated with fresh animals. Where γ stays defined, the floor's median is 0.62; where it flips, 4.09.
+- For the 12 truths whose floor is below 1.5:
+
+| | Median |
+|---|---|
+| floor | 0.57 |
+| prior-predictive D | 6.93 |
+| nearest training simulations' own D | 2.04 |
+| a nearest-neighbour posterior (20 nearest of 10,000, re-simulated) | 3.29 |
+| its gain fraction | **0.57** (none of 12 reach 0.75) |
+
+The bar needs a posterior-predictive D of about 2.2. Even the best prior simulations do not get much closer than that.
+
+**A first truncated round keeps most of the prior.**
+
+- A round-1 flow's highest-density region (quantile 10⁻⁴) keeps 27–65% of the prior box at 8 near-wild-type truths (median 58%), and 12% at the band cohorts' statistics.
+- Only this first truncation was measured, not how far later rounds would narrow the region. A first round that keeps most of the box is what the benchmark's 11 statistics, leaving most of C.1's 20 parameters unconstrained, would lead one to expect.
+
+**The decision (the maintainer's).** F.0a-ii is withdrawn. Its proposal was never reviewed or registered, and no gate was read. **C.1 is fitted by sep-CMA on the benchmark's distance, like C.2 ([roadmap D38](../../roadmap.md), as amended).**
+
+- An optimiser moves towards the worms whose statistics match, instead of having to learn them from the prior's thin coverage.
+- One fitting method makes C.2 against C.1 a contrast of models.
+- F.0's remaining control, F.0b, recovers both models by sep-CMA, with floor-relative gates preflighted.
+- F.0a's contraction stays on the record as which parameters the statistics constrain: weathervane steering clearly, the base hazards, speeds and search time a little, the rest hardly at all.
+
+**What the reads cost:** 704 simulations and one round-1 flow. They used seeds recorded in the tracker's seed table, which also records that F.0a's pilot animals coincide with its training simulations 5,000–5,063. That overlap was harmless, since the pilot read no gate. F.0a's sbi training logs (`sbi-logs/`), committed by accident with its launch record and this logbook, are removed and ignored.

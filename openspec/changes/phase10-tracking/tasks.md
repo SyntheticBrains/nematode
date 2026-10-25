@@ -383,8 +383,8 @@ nothing in W registers before C.2 has read.
 
 ## F.0 — the fitting methods' positive control (MUST)
 
-- [ ] **F.0** parameter recovery at known parameters, for NPE on C.1's model and sep-CMA on C.2's
-  encoder (seeds 5401–5464). It reports recovery and spread, and the spread sizes W.
+- [ ] **F.0** parameter recovery at known parameters, by sep-CMA on C.1's model and C.2's encoder
+  (seeds 5401–5464). *(Amended 2026-10-25: C.1's half was first NPE's; D38 as amended.)* It reports recovery and spread, and the spread sizes W.
 
   *(2026-10-25, F.0a: change `add-npe-recovery`, archived as `2026-10-25-add-npe-recovery`;
   [Logbook 111](../../../docs/experiments/logbooks/111-npe-recovery.md).)* **F.0a fails as
@@ -400,6 +400,14 @@ nothing in W registers before C.2 has read.
     - F.0a-ii: truncated sequential NPE, truths from the region C.1 is fitted in, and a gate set
       against each truth's measured floor, preflighted;
     - F.0b's statistic-space gate is also floor-relative and preflighted.
+  - *(2026-10-25, superseded the same day.)* **F.0a-ii was withdrawn before its spec review**, and
+    **C.1 is fitted by sep-CMA** (the maintainer's decision; D38 as amended). Planning reads, committed
+    as `scripts/analysis/npe_region_check.py` and its `region_check.json` (Logbook 111, addendum),
+    showed the planned gate out of reach for the method rather than the oracle: near the wild type a
+    nearest-neighbour posterior gains far less than the bar, and a first truncated round keeps most of
+    the prior box.
+    **F.0's remaining control is sep-CMA's, on C.1's model and C.2's encoder**, with floor-relative,
+    preflighted statistic-space gates.
   - **C.1's note:** its real fit must simulate at the observation's size, or add between-date
     noise matched to the bands.
   - **Seeds:**
@@ -411,6 +419,10 @@ nothing in W registers before C.2 has read.
 - [ ] **C.1 The mechanistic baseline**: a stochastic run/reversal switch, a roaming/dwelling state with
   intake and satiety dependence, pirouettes and weathervane, ≤ 30 parameters. Fitted by NPE, with
   priors set without search data; posterior-predictive checks.
+
+  *(Amended 2026-10-25, D38 as amended.)* Fitted by sep-CMA on the benchmark's distance, like C.2,
+  with its search box and x₀ set without search data. Its predictive checks re-simulate the
+  restarts' fits.
 
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by

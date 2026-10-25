@@ -1,0 +1,417 @@
+{
+  "description": "Why NPE is not used to fit C.1: the prior's coverage near the wild type, read after F.0a.",
+  "seeds": {
+    "repeats": [
+      20000000,
+      24000000
+    ],
+    "neighbours": 28000000,
+    "flow": 9301,
+    "box": 9302
+  },
+  "region": {
+    "D_min": 1.7876550401528357,
+    "D_quantiles": {
+      "0.001": 3.0416931056413277,
+      "0.01": 4.232753898450609,
+      "0.05": 5.297792194969181,
+      "0.5": 6.950375625706004
+    },
+    "D_fit_quantiles": {
+      "0.001": 2.4072338839355707,
+      "0.01": 4.046025556607359,
+      "0.05": 5.214616874689411,
+      "0.5": 7.6188906774079275
+    },
+    "within_D": {
+      "3": 9,
+      "4": 66,
+      "5": 323
+    },
+    "median_early_late_within_D_4": 1.1988111501431176,
+    "pool_D5_presence1.5_defined": 43,
+    "placement_D4.5_presence2_defined": 6
+  },
+  "near_wild_type": {
+    "floor_median": 2.7065978300872957,
+    "floor_median_gamma_stable": 0.6194321043231126,
+    "floor_median_gamma_flips": 4.089718515847591,
+    "low_floor_truths": 12,
+    "low_floor": {
+      "floor": 0.5690027931708153,
+      "prior_D": 6.926555893674655,
+      "nearest_own_D": 2.0438575798398864,
+      "neighbour_posterior_D": 3.293889509086082,
+      "gain": 0.5684809373968978
+    },
+    "low_floor_gain_at_least_0.75": 0
+  },
+  "truncation": {
+    "box_share_kept": {
+      "bands": 0.12046,
+      "training_443": 0.49633,
+      "training_4909": 0.26798,
+      "training_6888": 0.58865,
+      "training_1931": 0.61647,
+      "training_3478": 0.57804,
+      "training_6129": 0.6533,
+      "training_9038": 0.60011,
+      "training_7784": 0.44257
+    },
+    "median_over_near_wild_type": 0.583345
+  },
+  "truths": [
+    {
+      "training_simulation": 443,
+      "D_to_bands": 1.7876550401528357,
+      "floor": 4.091547519570301,
+      "floor_between_repeats": 4.121542262842192,
+      "gamma_flips": true,
+      "prior_D": 6.891898984938999,
+      "nearest_own_D": 2.1317549573751178,
+      "neighbour_posterior_D": 3.7016993584902442,
+      "gain": 1.1392140114914928
+    },
+    {
+      "training_simulation": 4909,
+      "D_to_bands": 2.349163091988649,
+      "floor": 0.4294441740643487,
+      "floor_between_repeats": 0.5195192846842478,
+      "gamma_flips": false,
+      "prior_D": 7.054347315762467,
+      "nearest_own_D": 3.278665521270778,
+      "neighbour_posterior_D": 3.459454685615577,
+      "gain": 0.5426332360272719
+    },
+    {
+      "training_simulation": 6888,
+      "D_to_bands": 2.523448099358406,
+      "floor": 0.2949710012155763,
+      "floor_between_repeats": 0.695024852643136,
+      "gamma_flips": false,
+      "prior_D": 6.866001251206207,
+      "nearest_own_D": 1.958437419539151,
+      "neighbour_posterior_D": 3.8671719863736573,
+      "gain": 0.45637124632576836
+    },
+    {
+      "training_simulation": 1931,
+      "D_to_bands": 2.6490252661394424,
+      "floor": 4.112997793319994,
+      "floor_between_repeats": 4.0882373826446345,
+      "gamma_flips": true,
+      "prior_D": 7.003635448035512,
+      "nearest_own_D": 2.321376350255962,
+      "neighbour_posterior_D": 2.54482847700542,
+      "gain": 1.5424994425560077
+    },
+    {
+      "training_simulation": 3478,
+      "D_to_bands": 2.697287977776871,
+      "floor": 0.7918209521152896,
+      "floor_between_repeats": 0.8742005809813265,
+      "gamma_flips": false,
+      "prior_D": 7.009435467079517,
+      "nearest_own_D": 2.0262737255505328,
+      "neighbour_posterior_D": 4.378051317054229,
+      "gain": 0.4232144247109902
+    },
+    {
+      "training_simulation": 6129,
+      "D_to_bands": 2.8562582396304865,
+      "floor": 4.08541752534152,
+      "floor_between_repeats": 0.5635875419430149,
+      "gamma_flips": true,
+      "prior_D": 6.915792054656546,
+      "nearest_own_D": 1.882945727842211,
+      "neighbour_posterior_D": 2.661615475067351,
+      "gain": 1.5030436910477503
+    },
+    {
+      "training_simulation": 9038,
+      "D_to_bands": 2.8590481326994333,
+      "floor": 4.083052342273038,
+      "floor_between_repeats": 0.08021930792680988,
+      "gamma_flips": true,
+      "prior_D": 6.962401712906059,
+      "nearest_own_D": 2.2025884033726064,
+      "neighbour_posterior_D": 2.9538359289422624,
+      "gain": 1.3921776304215971
+    },
+    {
+      "training_simulation": 7784,
+      "D_to_bands": 2.90442278123585,
+      "floor": 2.188932779502268,
+      "floor_between_repeats": 2.49257875158525,
+      "gamma_flips": false,
+      "prior_D": 7.2056739713883715,
+      "nearest_own_D": 2.8011620783201776,
+      "neighbour_posterior_D": 3.1769286828813312,
+      "gain": 0.8030602206514038
+    },
+    {
+      "training_simulation": 5195,
+      "D_to_bands": 2.96396953556809,
+      "floor": 0.7182767095553403,
+      "floor_between_repeats": 0.7056267082331487,
+      "gamma_flips": false,
+      "prior_D": 6.908270467599946,
+      "nearest_own_D": 2.089268785634112,
+      "neighbour_posterior_D": 2.5464898837049383,
+      "gain": 0.7046502394653266
+    },
+    {
+      "training_simulation": 6700,
+      "D_to_bands": 3.0141167980493,
+      "floor": 0.440799993625664,
+      "floor_between_repeats": 0.7637965108905391,
+      "gamma_flips": false,
+      "prior_D": 7.100488967678476,
+      "nearest_own_D": 1.8991437777240519,
+      "neighbour_posterior_D": 4.3097784824497065,
+      "gain": 0.4190451680404015
+    },
+    {
+      "training_simulation": 8207,
+      "D_to_bands": 3.0417207095528314,
+      "floor": 0.6194321043231126,
+      "floor_between_repeats": 0.9435789858604472,
+      "gamma_flips": false,
+      "prior_D": 6.938890831028477,
+      "nearest_own_D": 1.8247663753791878,
+      "neighbour_posterior_D": 2.4884309690046087,
+      "gain": 0.7042470019175369
+    },
+    {
+      "training_simulation": 3475,
+      "D_to_bands": 3.043927520553851,
+      "floor": 3.168513796691737,
+      "floor_between_repeats": 4.086247541293842,
+      "gamma_flips": true,
+      "prior_D": 6.903535839095991,
+      "nearest_own_D": 2.156144843460829,
+      "neighbour_posterior_D": 2.6477176105908073,
+      "gain": 1.1394359069874966
+    },
+    {
+      "training_simulation": 2090,
+      "D_to_bands": 3.0500551597331484,
+      "floor": 4.480834241441385,
+      "floor_between_repeats": 2.1229372000671427,
+      "gamma_flips": true,
+      "prior_D": 6.985834980400973,
+      "nearest_own_D": 3.5556346196695157,
+      "neighbour_posterior_D": 3.715549678173404,
+      "gain": 1.305502729546431
+    },
+    {
+      "training_simulation": 3004,
+      "D_to_bands": 3.0583472562646556,
+      "floor": 0.2819628679952354,
+      "floor_between_repeats": 0.2533769894239611,
+      "gamma_flips": false,
+      "prior_D": 6.906117653229151,
+      "nearest_own_D": 2.06144143412924,
+      "neighbour_posterior_D": 3.462123958041105,
+      "gain": 0.5199144354031622
+    },
+    {
+      "training_simulation": 6357,
+      "D_to_bands": 3.0725699746868527,
+      "floor": 4.0983639566697185,
+      "floor_between_repeats": 0.13330298036354435,
+      "gamma_flips": true,
+      "prior_D": 6.905804409868361,
+      "nearest_own_D": 1.8537524786821684,
+      "neighbour_posterior_D": 3.5521467906435675,
+      "gain": 1.194560552621453
+    },
+    {
+      "training_simulation": 7177,
+      "D_to_bands": 3.0877645549453248,
+      "floor": 4.0935932110258095,
+      "floor_between_repeats": 4.103979612419167,
+      "gamma_flips": true,
+      "prior_D": 6.984031493351063,
+      "nearest_own_D": 1.731892921605989,
+      "neighbour_posterior_D": 1.9229556949215976,
+      "gain": 1.7509717572512955
+    },
+    {
+      "training_simulation": 6460,
+      "D_to_bands": 3.117888250411071,
+      "floor": 2.3951137805927223,
+      "floor_between_repeats": 2.679865044789968,
+      "gamma_flips": false,
+      "prior_D": 6.974440181807888,
+      "nearest_own_D": 2.3095428029382115,
+      "neighbour_posterior_D": 3.5332443655633954,
+      "gain": 0.7514633190006592
+    },
+    {
+      "training_simulation": 3545,
+      "D_to_bands": 3.1723760655657083,
+      "floor": 4.102510135671661,
+      "floor_between_repeats": 0.1866818817803539,
+      "gamma_flips": true,
+      "prior_D": 7.016530700673237,
+      "nearest_own_D": 1.710652048286276,
+      "neighbour_posterior_D": 2.3508769216196277,
+      "gain": 1.6011053027867312
+    },
+    {
+      "training_simulation": 7853,
+      "D_to_bands": 3.183635708085238,
+      "floor": 1.763804734353412,
+      "floor_between_repeats": 3.919760061609145,
+      "gamma_flips": false,
+      "prior_D": 7.151012442822317,
+      "nearest_own_D": 3.677698781034236,
+      "neighbour_posterior_D": 4.240735789580054,
+      "gain": 0.5402198709857043
+    },
+    {
+      "training_simulation": 4436,
+      "D_to_bands": 3.260413503956204,
+      "floor": 1.774874989924829,
+      "floor_between_repeats": 4.192348176837669,
+      "gamma_flips": true,
+      "prior_D": 7.081661920935009,
+      "nearest_own_D": 2.026189288501399,
+      "neighbour_posterior_D": 3.449612644580199,
+      "gain": 0.684415885463754
+    },
+    {
+      "training_simulation": 4390,
+      "D_to_bands": 3.3125350797949107,
+      "floor": 4.111976530401105,
+      "floor_between_repeats": 0.6218963406806073,
+      "gamma_flips": true,
+      "prior_D": 7.042266558425871,
+      "nearest_own_D": 3.1991987951597545,
+      "neighbour_posterior_D": 3.5907570314705906,
+      "gain": 1.1778730070899688
+    },
+    {
+      "training_simulation": 6344,
+      "D_to_bands": 3.3351220263911623,
+      "floor": 3.018081879581869,
+      "floor_between_repeats": 2.2214637441907734,
+      "gamma_flips": false,
+      "prior_D": 7.364440857012841,
+      "nearest_own_D": 4.061522997290554,
+      "neighbour_posterior_D": 4.315323706929306,
+      "gain": 0.7015336666659309
+    },
+    {
+      "training_simulation": 7955,
+      "D_to_bands": 3.336893547613378,
+      "floor": 0.5783821723291173,
+      "floor_between_repeats": 4.119822172477917,
+      "gamma_flips": true,
+      "prior_D": 6.914220956320833,
+      "nearest_own_D": 1.9964235047415082,
+      "neighbour_posterior_D": 2.795565569409561,
+      "gain": 0.6500568476138576
+    },
+    {
+      "training_simulation": 5558,
+      "D_to_bands": 3.3427538940187898,
+      "floor": 4.71539884450694,
+      "floor_between_repeats": 4.110943380474622,
+      "gamma_flips": true,
+      "prior_D": 7.10982985502776,
+      "nearest_own_D": 3.420539106354874,
+      "neighbour_posterior_D": 4.4378035683609305,
+      "gain": 1.1159337124044468
+    },
+    {
+      "training_simulation": 3384,
+      "D_to_bands": 3.3484987386166725,
+      "floor": 4.089004627972556,
+      "floor_between_repeats": 0.29608088656352805,
+      "gamma_flips": true,
+      "prior_D": 6.949257087406586,
+      "nearest_own_D": 1.6782890114379199,
+      "neighbour_posterior_D": 2.9101178693984195,
+      "gain": 1.412161784770358
+    },
+    {
+      "training_simulation": 8805,
+      "D_to_bands": 3.3677088039909973,
+      "floor": 0.5596234140125131,
+      "floor_between_repeats": 1.8360701482340236,
+      "gamma_flips": false,
+      "prior_D": 6.891598416471972,
+      "nearest_own_D": 2.9122358826336745,
+      "neighbour_posterior_D": 3.1283243325565873,
+      "gain": 0.5943286387665235
+    },
+    {
+      "training_simulation": 219,
+      "D_to_bands": 3.396271783865736,
+      "floor": 1.1282708789913987,
+      "floor_between_repeats": 4.126588481959678,
+      "gamma_flips": true,
+      "prior_D": 7.016695269219266,
+      "nearest_own_D": 1.7317979489365298,
+      "neighbour_posterior_D": 4.243825806897629,
+      "gain": 0.47090176905784026
+    },
+    {
+      "training_simulation": 5340,
+      "D_to_bands": 3.403789339893049,
+      "floor": 0.41479108376437523,
+      "floor_between_repeats": 0.7780692318821631,
+      "gamma_flips": false,
+      "prior_D": 7.12965244247494,
+      "nearest_own_D": 2.3307720172361392,
+      "neighbour_posterior_D": 2.6102019148609505,
+      "gain": 0.6730519494272695
+    },
+    {
+      "training_simulation": 5905,
+      "D_to_bands": 3.4417068286705788,
+      "floor": 4.112980322275975,
+      "floor_between_repeats": 4.112789226198135,
+      "gamma_flips": true,
+      "prior_D": 6.821102720582551,
+      "nearest_own_D": 2.3783744649326546,
+      "neighbour_posterior_D": 3.192431128136646,
+      "gain": 1.3399215614164857
+    },
+    {
+      "training_simulation": 3767,
+      "D_to_bands": 3.444776442270397,
+      "floor": 4.089718515847591,
+      "floor_between_repeats": 0.21674401631273724,
+      "gamma_flips": true,
+      "prior_D": 7.1415652569870325,
+      "nearest_own_D": 2.3372807700217733,
+      "neighbour_posterior_D": 3.3148235559764343,
+      "gain": 1.2539101814732154
+    },
+    {
+      "training_simulation": 4218,
+      "D_to_bands": 3.5415945686124144,
+      "floor": 1.33927433205202,
+      "floor_between_repeats": 4.158661766864956,
+      "gamma_flips": true,
+      "prior_D": 6.899240762459662,
+      "nearest_own_D": 2.174302492134024,
+      "neighbour_posterior_D": 2.9595338219847425,
+      "gain": 0.7085846631966213
+    },
+    {
+      "training_simulation": 650,
+      "D_to_bands": 3.558368544926802,
+      "floor": 4.088975491410951,
+      "floor_between_repeats": 0.9536804983327474,
+      "gamma_flips": true,
+      "prior_D": 7.0776118248334186,
+      "nearest_own_D": 2.5506455158011425,
+      "neighbour_posterior_D": 3.0472173213104483,
+      "gain": 1.348573079451096
+    }
+  ]
+}
