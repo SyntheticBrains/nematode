@@ -104,3 +104,36 @@ There are no panel levels. The protocol's principle is applied by hand, through 
 ### Cost, before the pilot
 
 The planning probe ran 30 generations of 16 at a sustained 27 s per generation on 16 workers. That puts the pilot at about 2.3 h and the registered fits at up to about 18 h at a cap of 300. The pilot measures both.
+
+## Part B
+
+**Appended 2026-10-25**, after the preflight and the pilot, and before any registered fit. It changes no gate or threshold. `preflight.json` (committed in `91f34a11`) and `pilot.json` are bound to this commit.
+
+### The preflight (passed)
+
+The first batch of eight candidates was kept whole: no repeat flipped a statistic, and every candidate's gain was reachable. The pilot truth is simulation 4909 (floor 0.32, prior D 7.05).
+
+| Truth | Simulation | Floor | Oracle D | Prior D | Oracle gain | Box-centre gain |
+|---|---|---|---|---|---|---|
+| 0 | 3004 | 0.34 | 0.33 | 6.91 | 1.002 | 0.049 |
+| 1 | 5340 | 0.71 | 0.68 | 7.13 | 1.004 | -0.060 |
+| 2 | 9105 | 0.25 | 0.30 | 6.82 | 0.991 | 0.055 |
+| 3 | 2324 | 0.78 | 0.83 | 6.99 | 0.991 | 0.015 |
+
+- **The oracle's median gain** is 0.996, against at least 0.85.
+- **The unfitted start's** is 0.032, against at most 0.25.
+
+### The pilot
+
+| Measure | Value |
+|---|---|
+| G_p, the first generation the plateau rule holds | 140 |
+| gain at G_p | 0.893 |
+| gain at ⌈1.5·G_p⌉ = 210 | 0.909 |
+| gain at 300 | 0.921 |
+| sustained seconds per generation | 30.3 |
+
+The gain after ⌈1.5·G_p⌉ is 0.013, within 0.05, so there is no fallback. The gain at 300 clears the 0.75 stop.
+
+- **The registered cap is 210 generations.**
+- **Projected registered time:** at most 14.2 h, which is 8 fits × (210 generations plus about one more for re-simulating the answer) at the sustained rate, under the 20 h threshold. Fits that plateau stop sooner.
