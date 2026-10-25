@@ -386,6 +386,26 @@ nothing in W registers before C.2 has read.
 - [ ] **F.0** parameter recovery at known parameters, for NPE on C.1's model and sep-CMA on C.2's
   encoder (seeds 5401–5464). It reports recovery and spread, and the spread sizes W.
 
+  *(2026-10-25, F.0a: change `add-npe-recovery`, archived as `2026-10-25-add-npe-recovery`;
+  [Logbook 111](../../../docs/experiments/logbooks/111-npe-recovery.md).)* **F.0a fails as
+  registered.**
+
+  - C.1's 20-parameter mechanistic baseline (`BatchedMechanistic`) and NPE (`sbi`) are built.
+  - Both flows are calibrated (coverage 0.89) but weakly informative: posterior-predictive D 5.3
+    against the bar of 1.42.
+  - The diagnosis, read after the gates: two simulations of the same parameters differ by a median
+    D of 4.08, so the gate was unreachable. Local-search and bout statistics flip onto the z cap for
+    unrealistic prior worms.
+  - **The maintainer's decisions:**
+    - F.0a-ii: truncated sequential NPE, truths from the region C.1 is fitted in, and a gate set
+      against each truth's measured floor, preflighted;
+    - F.0b's statistic-space gate is also floor-relative and preflighted.
+  - **C.1's note:** its real fit must simulate at the observation's size, or add between-date
+    noise matched to the bands.
+  - **Seeds:**
+    - animals for simulation k at `1_000_000 + 200·k + i` (pilot `2_000_000`, floor `3_000_000`);
+    - prior draws 5401, flows 5402–5403, prior-predictive draws 5404.
+
 ## C — controllers and the fidelity table (MUST)
 
 - [ ] **C.1 The mechanistic baseline**: a stochastic run/reversal switch, a roaming/dwelling state with

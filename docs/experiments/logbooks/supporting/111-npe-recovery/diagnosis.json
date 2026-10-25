@@ -1,0 +1,211 @@
+{
+  "description": "F.0a's failed informative gate, diagnosed as description after the gates.",
+  "floor_seed_base": 3000000,
+  "median_same_parameter_D": 4.084716607926696,
+  "median_nearest_D": 2.579963094438753,
+  "median_of_median_D_20_nearest": 3.4491992762246166,
+  "one_capped_statistic_adds_D": {
+    "small_lawn": 2.3570226039551585,
+    "uniform_lawn": 3.3333333333333335,
+    "local_search": 4.08248290463863
+  },
+  "truths": [
+    {
+      "truth": 0,
+      "same_parameter_D": 3.3428178451602917,
+      "nearest_D": 1.4144148321137697,
+      "median_D_nearest": 3.3383407157611513,
+      "undefined_statistics": [
+        "small_lawn/roaming_bout_s",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/pre_exit_enrichment",
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 1,
+      "same_parameter_D": 6.544130348826096,
+      "nearest_D": 4.824181375836586,
+      "median_D_nearest": 5.503747436912575,
+      "undefined_statistics": [
+        "uniform_lawn/roaming_bout_s"
+      ]
+    },
+    {
+      "truth": 2,
+      "same_parameter_D": 3.397281981538176,
+      "nearest_D": 2.3999914267326057,
+      "median_D_nearest": 3.1358805081615166,
+      "undefined_statistics": [
+        "small_lawn/roaming_bout_s",
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 3,
+      "same_parameter_D": 4.0885134757496004,
+      "nearest_D": 3.3021763120400487,
+      "median_D_nearest": 4.282622028923114,
+      "undefined_statistics": []
+    },
+    {
+      "truth": 4,
+      "same_parameter_D": 4.086935193110378,
+      "nearest_D": 0.1679116377485278,
+      "median_D_nearest": 0.5706244123856594,
+      "undefined_statistics": [
+        "small_lawn/roaming_fraction",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/exits_per_on_lawn_hour",
+        "small_lawn/pre_exit_enrichment",
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 5,
+      "same_parameter_D": 4.082498022743015,
+      "nearest_D": 4.08248291002294,
+      "median_D_nearest": 4.082484070595081,
+      "undefined_statistics": [
+        "small_lawn/roaming_fraction",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/exits_per_on_lawn_hour",
+        "small_lawn/pre_exit_enrichment",
+        "uniform_lawn/roaming_bout_s",
+        "uniform_lawn/dwelling_bout_s"
+      ]
+    },
+    {
+      "truth": 6,
+      "same_parameter_D": 2.0744520536371005,
+      "nearest_D": 2.937980159463711,
+      "median_D_nearest": 3.19817515856428,
+      "undefined_statistics": [
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 7,
+      "same_parameter_D": 0.7441397228711543,
+      "nearest_D": 0.18488426049238663,
+      "median_D_nearest": 1.0874561650187768,
+      "undefined_statistics": [
+        "small_lawn/roaming_fraction",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/exits_per_on_lawn_hour",
+        "small_lawn/pre_exit_enrichment",
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 8,
+      "same_parameter_D": 4.728068691536434,
+      "nearest_D": 3.4418464622336926,
+      "median_D_nearest": 3.8673758628375707,
+      "undefined_statistics": []
+    },
+    {
+      "truth": 9,
+      "same_parameter_D": 0.32926532149503446,
+      "nearest_D": 1.9409440490140963,
+      "median_D_nearest": 2.5591799547914125,
+      "undefined_statistics": [
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 10,
+      "same_parameter_D": 0.5048339840104554,
+      "nearest_D": 0.416790051906559,
+      "median_D_nearest": 0.8421178599510027,
+      "undefined_statistics": [
+        "small_lawn/roaming_fraction",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/exits_per_on_lawn_hour",
+        "small_lawn/pre_exit_enrichment"
+      ]
+    },
+    {
+      "truth": 11,
+      "same_parameter_D": 5.774380974990987,
+      "nearest_D": 2.8256453063891867,
+      "median_D_nearest": 4.211672129964109,
+      "undefined_statistics": [
+        "small_lawn/roaming_bout_s"
+      ]
+    },
+    {
+      "truth": 12,
+      "same_parameter_D": 4.124810886099371,
+      "nearest_D": 3.8385221443681865,
+      "median_D_nearest": 4.230436766223429,
+      "undefined_statistics": []
+    },
+    {
+      "truth": 13,
+      "same_parameter_D": 4.863605262204017,
+      "nearest_D": 3.573345127740458,
+      "median_D_nearest": 3.8733295486837873,
+      "undefined_statistics": []
+    },
+    {
+      "truth": 14,
+      "same_parameter_D": 2.47811614652974,
+      "nearest_D": 2.4302502336167566,
+      "median_D_nearest": 2.69841581586876,
+      "undefined_statistics": [
+        "small_lawn/roaming_bout_s",
+        "small_lawn/dwelling_bout_s",
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 15,
+      "same_parameter_D": 0.22605983829829654,
+      "nearest_D": 0.10876018943138495,
+      "median_D_nearest": 0.39817519874505297,
+      "undefined_statistics": [
+        "small_lawn/roaming_fraction",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/exits_per_on_lawn_hour",
+        "small_lawn/pre_exit_enrichment",
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 16,
+      "same_parameter_D": 4.257568922429292,
+      "nearest_D": 2.72967595526075,
+      "median_D_nearest": 4.140852439514006,
+      "undefined_statistics": []
+    },
+    {
+      "truth": 17,
+      "same_parameter_D": 4.1021834543451074,
+      "nearest_D": 0.44537555359514586,
+      "median_D_nearest": 1.4473372550246841,
+      "undefined_statistics": [
+        "local_search/gamma_per_min"
+      ]
+    },
+    {
+      "truth": 18,
+      "same_parameter_D": 4.146547213912227,
+      "nearest_D": 2.307958025925557,
+      "median_D_nearest": 3.5600578366880815,
+      "undefined_statistics": []
+    },
+    {
+      "truth": 19,
+      "same_parameter_D": 3.1515428395378304,
+      "nearest_D": 4.6555015469611964,
+      "median_D_nearest": 5.0290586734147364,
+      "undefined_statistics": []
+    }
+  ]
+}
