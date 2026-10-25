@@ -113,7 +113,7 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "1.14.0"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -125,9 +125,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/c2/be99fac19b24c22b00d2a63ac1756b203bd3058ff54a14028c43b9f33116/anthropic-1.14.0.tar.gz", hash = "sha256:d9284895864a8457ed87f0accc51fd488ad9743952e597c814e7dc9d78ac8e38", size = 1715378, upload-time = "2026-10-14T17:13:33.508Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/6d/b94f1ea6287bed4d76e1110fba99fc33d39af857e4191820485c1e3cb0da/anthropic-2.1.0.tar.gz", hash = "sha256:7533cc9035ef056159ec44f54e309de7b7d5ae329ff8f7df9da9ba05188d3c25", size = 1766577, upload-time = "2026-10-21T22:00:56.769Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/66/c395049fa6bf20b7f244adc8b7466f86a416b11f03528fa325868483de3a/anthropic-1.14.0-py3-none-any.whl", hash = "sha256:abd787048378abfabeebbad917ae0f9eae1eb4dfaa0a754096b5eea02dcf8c12", size = 2043565, upload-time = "2026-10-14T17:13:35.513Z" },
+    { url = "https://files.pythonhosted.org/packages/02/f6/6c205e7e7fd2e6087692422b286fac4a2557ca60996b797276f23e03b431/anthropic-2.1.0-py3-none-any.whl", hash = "sha256:d776fa2ea9a07e20336a0668d1ef3a12357fdef75c895f54a050b3746b8e4de8", size = 2105866, upload-time = "2026-10-21T22:00:54.48Z" },
 ]
 
 [[package]]
@@ -614,11 +614,11 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "3.32.3"
+version = "4.2.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7d/64/a02e6765de08964ed371eca577870593245afc9dfac16d037de7c10d18e6/filelock-3.32.3.tar.gz", hash = "sha256:0ffa185a3540854c95caa7fa76b76cb219d907415e2c5dc9af25fd970563487f", size = 218135, upload-time = "2026-08-13T16:00:05.577Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/98/771d8ca889f220d7d7e352addf500666368f0fd081c6080a83767580c6e4/filelock-4.2.1.tar.gz", hash = "sha256:c4c937ccac2a813cee448e662a56366cfb374c0f8702e75f295c412cc1c5d5a3", size = 650997, upload-time = "2026-10-17T16:48:14.435Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a7/8e/50f46a9c0ce8d2861a394c1347caae037ea0431d2f67d7feb151cbc4649a/filelock-3.32.3-py3-none-any.whl", hash = "sha256:7f0ca4bcc0e181c60dbbd8aa9ab5b120ebb99e4e064e83636340056f833a1f09", size = 98901, upload-time = "2026-08-13T16:00:03.974Z" },
+    { url = "https://files.pythonhosted.org/packages/28/00/db89d339bc4ecdc8087fa7b8607ba22ffc27bf96286f340c9620bea428b3/filelock-4.2.1-py3-none-any.whl", hash = "sha256:7be2662e9e826b9bba28afc0f843a123280d799a2ea44bb5d35ccec67905ae44", size = 162455, upload-time = "2026-10-17T16:48:12.937Z" },
 ]
 
 [[package]]
