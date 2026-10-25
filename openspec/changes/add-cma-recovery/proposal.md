@@ -23,20 +23,29 @@ The maintainer's decisions of 2026-10-25:
 ## What Changes
 
 - **`scripts/analysis/cma_recovery.py`**, reusing F.0a's simulator, distance and pool. Its stages:
+
   - `preflight`: the truths' floors and stability, the oracle, the unfitted start, and reachable gain;
   - `pilot`: one fit on the pilot truth to 300 generations, which sets the cap and measures the sustained cost;
   - `run`: the 8 registered fits, resumable each generation;
   - `read`: the gate, refused until the launch record is committed and unchanged.
+
 - **The objective**, per D37: D on the benchmark's 11 statistics, local search included, between a candidate's simulation (200 fresh animals on the three assays) and the truth's observation, on the bands' n = 200 scales.
-- **Truths:** F.0a's prior simulations near the wild type, taken in a registered order. A candidate is kept only if 10 fresh re-simulations leave every statistic's definedness unchanged and its gain is reachable.
+
+- **Truths:** F.0a's prior simulations near the wild type, taken in a registered order. A candidate is kept only if its first 10 fresh re-simulations leave every statistic's definedness unchanged and its gain is reachable.
+
 - **The preflight** (protocol principles 4 and 6):
+
   - the oracle, re-simulations of each truth scored as a fit, must reach a median gain of at least 0.85;
   - the unfitted start, the box centre re-simulated, must score a median gain of at most 0.25.
+
 - **Reported beside the gate:**
+
   - the other restart's gain, the spread that sizes W;
   - parameter errors;
   - the plateau generation;
   - each fit's trajectory.
+
+- **F.0 clears per model** (the maintainer's decision, a dated tracker amendment): once F.0b-i passes, C.1 may be fitted to real worms. C.2 waits for F.0b-ii.
 
 ## Capabilities
 

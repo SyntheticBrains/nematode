@@ -21,9 +21,11 @@ Phase 10, block F, tracker item F.0. The maintainer's decisions of 2026-10-25:
   - the cap from G_p;
   - the truth-selection rule: flips are skipped, and so is a truth with no reachable gain;
   - the best-restart choice by S;
+  - the answer is `xfavorite` and lies in the box when the mean has left it;
+  - the cap falls back to 300 when the pilot's gain rises after ⌈1.5·G_p⌉;
   - the seed layout's disjointness;
   - `read` refuses when a record is uncommitted or changed.
-- [ ] 1.3 A smoke of the fit loop on a tiny budget (seeds 5991–5999, discarded).
+- [ ] 1.3 A smoke of the fit loop on a tiny budget (CMA seeds 5991–5999, animals at `99_000_000 + 200·k + i`, discarded).
 
 ## 2. Registration
 
@@ -39,7 +41,7 @@ Phase 10, block F, tracker item F.0. The maintainer's decisions of 2026-10-25:
 ## 4. Documentation and tracker
 
 - [ ] 4.1 Logbook 112: the truths, the preflight, the pilot, the gate, the spread, the parameter errors and the cost.
-- [ ] 4.2 The tracker: F.0's C.1 half, and the seed table (this change's schemes and the planning probe's).
+- [ ] 4.2 The tracker: F.0's C.1 half; the binding's dated amendment (F.0 clears per model); the seed table (this change's schemes, the smoke's and the planning probe's).
 - [ ] 4.3 AGENTS.md and the CHANGELOG.
 
 ## 5. Close-out
