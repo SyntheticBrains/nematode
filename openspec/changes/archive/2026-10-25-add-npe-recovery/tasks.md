@@ -67,7 +67,7 @@ Phase 10, block F, tracker item F.0 (first half). The maintainer's decisions of 
 
 ## 6. Close-out
 
-- [ ] 6.1 Full suite and `pre-commit run --all-files` after `git add`.
-- [ ] 6.2 `openspec validate add-npe-recovery --strict`.
-- [ ] 6.3 Archive, with the new specs' Purposes written.
-- [ ] 6.4 PR.
+- [x] 6.1 Full suite and `pre-commit run --all-files` after `git add`.
+- [x] 6.2 `openspec validate add-npe-recovery --strict`.
+- [x] 6.3 Archive, with the new specs' Purposes written.
+- [x] 6.4 PR.

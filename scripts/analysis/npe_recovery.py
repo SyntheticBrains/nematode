@@ -30,6 +30,11 @@ Subcommands::
     uv run python scripts/analysis/npe_recovery.py pilot --out <pilot.json>
     uv run python scripts/analysis/npe_recovery.py simulate --workers 16
     uv run python scripts/analysis/npe_recovery.py train --out <recovery.json>
+    uv run python scripts/analysis/npe_recovery.py diagnose --out <diagnosis.json>
+
+``diagnose`` reads, as description after the gates: each predictive truth's same-parameter noise
+floor (the truth re-simulated with fresh animals, ``3_000_000 + 200 k + i``, and D between the two),
+and its nearest training simulations in statistic space.
 """
 
 from __future__ import annotations
@@ -70,6 +75,8 @@ INFORMATIVE_GATE = 1.42
 SENTINEL = -5.0
 NEAR_WILD_TYPE = 25
 PILOT_SIMULATIONS = 64
+FLOOR_SEED_BASE = 3_000_000
+NEAREST = 20
 
 # Each parameter's prior: ("uniform", low, high) or ("log", low, high), the log one uniform in ln.
 # The switching intercepts are logs of rates per second, so their prior is uniform in [ln 1e-4,
@@ -356,6 +363,56 @@ def sample(posterior: Any, x: np.ndarray, n: int, seed: int) -> np.ndarray:  # n
     ).numpy()
 
 
+def _diagnose(out: Path, workers: int) -> int:
+    """Read each predictive truth's same-parameter floor and its nearest training simulations."""
+    from quantumnematode.benchmark import grading as g
+
+    sims = load_simulations()
+    scales = band_scales()
+    truths = [TRAINING + j for j in range(PREDICTIVE_TRUTHS)]
+    with ProcessPoolExecutor(max_workers=workers, initializer=_worker_setup) as pool:
+        again = list(
+            pool.map(
+                simulate,
+                truths,
+                [sims[k]["z"] for k in truths],
+                [FLOOR_SEED_BASE] * len(truths),
+            ),
+        )
+    rows = []
+    for k, repeat in zip(truths, again, strict=True):
+        truth = sims[k]
+        floor = predictive_distance(truth, _finite(repeat), scales)
+        d = np.array([predictive_distance(truth, sims[i], scales) for i in range(TRAINING)])
+        order = np.argsort(d)[:NEAREST]
+        rows.append(
+            {
+                "truth": k - TRAINING,
+                "same_parameter_D": floor,
+                "nearest_D": float(d[order[0]]),
+                "median_D_nearest": float(np.median(d[order])),
+                "undefined_statistics": [s for s, v in truth["statistics"].items() if v is None],
+            },
+        )
+    cap_contribution = {
+        family: math.sqrt(g.Z_CAP**2 / (len(g.FAMILIES) * len(stats)))
+        for family, stats in g.FAMILIES.items()
+    }
+    record = {
+        "description": "F.0a's failed informative gate, diagnosed as description after the gates.",
+        "floor_seed_base": FLOOR_SEED_BASE,
+        "median_same_parameter_D": float(np.median([r["same_parameter_D"] for r in rows])),
+        "median_nearest_D": float(np.median([r["nearest_D"] for r in rows])),
+        "median_of_median_D_20_nearest": float(np.median([r["median_D_nearest"] for r in rows])),
+        "one_capped_statistic_adds_D": cap_contribution,
+        "truths": rows,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(_finite(record), indent=2, allow_nan=False) + "\n")
+    print(json.dumps({k: v for k, v in record.items() if k != "truths"}, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:  # noqa: PLR0915 - three stages, one record
     """CLI: the pilot, the simulations, and the training with its gates."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -365,6 +422,9 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0915 - three stages,
     pilot.add_argument("--workers", type=int, default=16)
     sim = sub.add_parser("simulate")
     sim.add_argument("--workers", type=int, default=16)
+    diagnose = sub.add_parser("diagnose")
+    diagnose.add_argument("--out", type=Path, required=True)
+    diagnose.add_argument("--workers", type=int, default=16)
     train = sub.add_parser("train")
     train.add_argument("--out", type=Path, required=True)
     train.add_argument("--workers", type=int, default=16)
@@ -400,6 +460,9 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0915 - three stages,
         jobs = [(k, list(map(float, draws[k]))) for k in range(TRAINING + TRUTHS)]
         run_pool(jobs, args.workers, SIMS_PATH, SEED_BASE)
         return 0
+
+    if args.stage == "diagnose":
+        return _diagnose(args.out, args.workers)
 
     sims = load_simulations()
     missing = [k for k in range(TRAINING + TRUTHS) if k not in sims]
