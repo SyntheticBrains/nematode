@@ -43,9 +43,12 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import npe_recovery as nr
@@ -280,15 +283,16 @@ def _git(*args: str) -> subprocess.CompletedProcess[bytes]:
     )
 
 
-def launch_committed(bound: tuple[Path, ...] = ()) -> bool:
+def launch_committed(bound: tuple[Path, ...] = (), launch_path: Path | None = None) -> bool:
     """Return whether the launch record is committed and unchanged, and its bound records with it.
 
     Each bound record must be byte-identical to its version in the commit that last touched the
-    launch record, and unchanged in the working tree.
+    launch record, and unchanged in the working tree. The launch record defaults to this recovery's.
     """
-    if not LAUNCH_PATH.exists():
+    record = LAUNCH_PATH if launch_path is None else launch_path
+    if not record.exists():
         return False
-    launch = str(LAUNCH_PATH.relative_to(_REPO))
+    launch = str(record.relative_to(_REPO))
     commit = _git("log", "-1", "--format=%H", "--", launch).stdout.decode().strip()
     if not commit:
         return False
@@ -352,8 +356,11 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
     state_dir: Path,
     pool: ProcessPoolExecutor,
     scales: dict[str, float],
+    objective: Callable[[dict[str, Any]], float] | None = None,
 ) -> dict[str, Any]:
     """Run, or resume, one fit; return its history. State is saved after every generation.
+
+    The objective scores one graded simulation; by default it is the distance to ``observation``.
 
     The strategy's checkpoint and the history each carry the last completed generation; a resume
     whose two markers differ is refused rather than continued from mismatched state.
@@ -392,9 +399,14 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
         ks = [fit_k(fit, generation, member) for member in range(POPSIZE)]
         points = [list(map(float, x)) for x in population]
         records = list(pool.map(nr.simulate, ks, points, [seed_base] * POPSIZE))
-        objective = [nr.predictive_distance(observation, nr._finite(r), scales) for r in records]
-        strategy.tell(population, objective)
-        history["medians"].append(float(np.median(objective)))
+        scored = [
+            nr.predictive_distance(observation, nr._finite(r), scales)
+            if objective is None
+            else objective(nr._finite(r))
+            for r in records
+        ]
+        strategy.tell(population, scored)
+        history["medians"].append(float(np.median(scored)))
         history["sigmas"].append(float(strategy.sigma))
         history["answers"].append(answer(strategy).tolist())
         history["seconds"].append(time.perf_counter() - start)
