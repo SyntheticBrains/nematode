@@ -1,6 +1,6 @@
 # Grading external tracks
 
-The benchmark grades any worm track that can be put on a 1-s grid, from a lab's tracker or from another simulator. The tracks go through the same windows, classifier, statistics and bands as the project's own references and simulations (`quantumnematode.benchmark.track_import`). Grading imported tracks runs no simulation.
+The benchmark grades any worm track that can be put on a 1-s grid, from a lab's tracker or from another simulator. The tracks go through the same windows, classifier, statistics and bands as the project's own references and simulations (`quantumnematode.benchmark.track_import`). Grading imported tracks runs no simulation. Importing the grader loads none of the simulator and no PyTorch, so the benchmark works without the `torch` extra.
 
 ```bash
 uv run python scripts/analysis/benchmark_grade.py tracks --manifest <manifest.txt> --out <grade.json>

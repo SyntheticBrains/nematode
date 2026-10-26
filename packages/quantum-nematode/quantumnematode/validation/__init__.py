@@ -1,4 +1,12 @@
-"""Validation: chemotaxis metrics, reference values, and behavioural and kinematic instruments."""
+"""Validation: chemotaxis metrics, reference values, and behavioural and kinematic instruments.
+
+``adaptive_sensor`` loads the agent and its environment, so its names are imported on first use:
+importing a light submodule such as ``roaming_dwelling`` then pulls in none of the simulator.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from quantumnematode.dtypes import (
     Position,
@@ -6,12 +14,6 @@ from quantumnematode.dtypes import (
     PositionPath,
 )
 
-from .adaptive_sensor import (
-    StepInputResult,
-    run_step_input,
-    weber_invariance_peaks,
-    weber_spread,
-)
 from .chemotaxis import (
     ChemotaxisMetrics,
     ValidationLevel,
@@ -25,6 +27,27 @@ from .datasets import (
     LiteratureSource,
     load_chemotaxis_dataset,
 )
+
+if TYPE_CHECKING:
+    from .adaptive_sensor import (
+        StepInputResult,
+        run_step_input,
+        weber_invariance_peaks,
+        weber_spread,
+    )
+
+_LAZY = {"StepInputResult", "run_step_input", "weber_invariance_peaks", "weber_spread"}
+
+
+def __getattr__(name: str) -> Any:  # noqa: ANN401 - any of adaptive_sensor's names
+    """Import ``adaptive_sensor``'s names on first access."""
+    if name in _LAZY:
+        from . import adaptive_sensor
+
+        return getattr(adaptive_sensor, name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
 
 __all__ = [
     "ChemotaxisDataset",

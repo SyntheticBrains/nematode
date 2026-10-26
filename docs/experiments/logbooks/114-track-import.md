@@ -49,6 +49,8 @@ The maintainer's decisions of 2026-10-26:
 
 ## A limit stated, not hidden
 
+*(Lifted 2026-10-26, change `refactor-benchmark-light-imports`.)* `BehaviourStep` now lives in `report/behaviour.py`, re-exported from `report.dtypes`, and `validation` imports `adaptive_sensor` on first use. Importing the grader and the importer takes 0.14 s and loads 218 modules, none from `torch`, `qiskit`, the brain, the agent or the environment; before, it was 1.5 s and 2,511 modules. A fresh-interpreter test holds it. The paragraph below is the record as written.
+
 Grading imported tracks calls no simulator code: a test grades with the batched evaluator and the simulation function replaced by ones that raise. But importing the grader still loads simulator modules. `report/dtypes.py`, home of `BehaviourStep`, imports the brain base class, and the `validation` package eagerly imports its agent-side modules. Decoupling them is a refactor of core modules, recorded as a possible later change. It would not lighten the installed package either, since `qiskit` is a base dependency.
 
 ## Conclusions
