@@ -355,8 +355,9 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **The round trip is exact in both formats:**
     - 1,013 small-lawn and 69 uniform-well band-cohort Scheer animals, at tallies and statistics;
     - 78 Roberts calibration-cohort worms, at the detector.
-  - **Independence:** grading calls no simulator code. Importing the grader still loads simulator
-    modules through `report.dtypes` and `validation`, a possible later refactor.
+  - **Independence:** grading calls no simulator code. *(2026-10-26, change
+    `refactor-benchmark-light-imports`:)* importing the grader also loads none of the simulator and
+    no PyTorch, so the benchmark works without the `torch` extra.
   - **Positioning** against Tierpsy and OWMD is in `data/benchmark/IMPORT.md`. **The B block is
     complete.**
 

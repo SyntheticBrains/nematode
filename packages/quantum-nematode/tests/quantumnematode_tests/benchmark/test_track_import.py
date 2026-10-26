@@ -202,3 +202,25 @@ def test_a_manifest_family_must_match_the_file(tmp_path: Path) -> None:
     manifest.write_text(f"uniform_lawn {path}\n")
     with pytest.raises(ValueError, match="declares family"):
         bg.track_populations(manifest)
+
+
+def test_importing_the_grader_in_a_fresh_interpreter() -> None:
+    """The grader and the importer load no torch and no brain, agent or environment module."""
+    import subprocess
+
+    code = (
+        "import sys\n"
+        "import quantumnematode.benchmark.grading, quantumnematode.benchmark.track_import\n"
+        "heavy = [m for m in sys.modules if m == 'torch' or m.startswith(('torch.', "
+        "'quantumnematode.brain', 'quantumnematode.agent', 'quantumnematode.env'))]\n"
+        "print(len(heavy))\n"
+        "from quantumnematode.validation import run_step_input\n"
+        "print(run_step_input.__name__)\n"
+    )
+    out = subprocess.run(  # noqa: S603 - this interpreter, fixed code
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert out == ["0", "run_step_input"]

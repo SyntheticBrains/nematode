@@ -29,7 +29,7 @@ import numpy as np
 
 from quantumnematode.benchmark import grading as g
 from quantumnematode.benchmark.references import boundary_distance
-from quantumnematode.report.dtypes import BehaviourStep
+from quantumnematode.report.behaviour import BehaviourStep
 
 if TYPE_CHECKING:
     from pathlib import Path
