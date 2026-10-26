@@ -37,11 +37,11 @@ Band-cohort Scheer tracks (small lawn and uniform well) and Roberts 2016's off-f
 - **WHEN** the check is asked to export an animal whose split side is held out
 - **THEN** it SHALL stop before writing anything
 
-### Requirement: The import path does not need the simulator
+### Requirement: Grading imported tracks does not run the simulator
 
-Importing the track module and grading imported tracks SHALL load no environment, agent or brain module.
+Grading imported tracks SHALL run no simulation, read no simulator config, and call no simulator code.
 
-#### Scenario: Grading in a clean interpreter
+#### Scenario: Grading with the simulator disabled
 
-- **WHEN** a fresh interpreter imports the module and grades a small CSV
-- **THEN** no `quantumnematode.env`, `quantumnematode.agent` or `quantumnematode.brain` module SHALL be loaded
+- **WHEN** the batched evaluator and the simulation function are replaced by functions that raise, and a small CSV is graded
+- **THEN** the grade SHALL complete

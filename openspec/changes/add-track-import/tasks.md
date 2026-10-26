@@ -19,7 +19,8 @@ Phase 10, block B, tracker item B.5. The maintainer's decisions of 2026-10-26:
   - a circular and a polar lawn;
   - the column taking precedence;
   - a 1-s track passing through unchanged;
-  - independence from the simulator in a fresh interpreter.
+  - grading with the simulator disabled;
+  - WCON's `@nematode_benchmark` block, origin offsets and ignored `@` keys.
 
 ## 2. The round-trip control
 

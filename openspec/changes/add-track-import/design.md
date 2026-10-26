@@ -13,7 +13,7 @@
 
 - A real or simulated track from outside this repository is graded on the 11 statistics exactly as the project's own are.
 - A round trip through each format reproduces the native statistics exactly.
-- Nothing in the import path needs the simulator.
+- Grading an imported track runs no simulation, reads no simulator config, and calls no simulator code.
 
 **Non-goals**
 
@@ -30,22 +30,25 @@
 
    A sidecar `<file>.json` holds the metadata:
 
-   - `units` (`mm`, `um`, or `px` with `mm_per_px`);
+   - `units`: `mm`; `um`, `µm` or `microns`; or `px` or `pixels` with `mm_per_px`;
    - `family` (`small_lawn`, `uniform_lawn` or `local_search`);
    - `analysis_start_s`, the assay window's start;
    - the lawn: `{"centre": [x, y], "radius": r}`, or `{"centre": [x, y], "radii": [...]}` at equally spaced angles from +x, or `"uniform"`.
 
 2. **The WCON core.**
 
-   - **Read:** `units` (t in s; x and y in mm, µm or px with `metadata.mm_per_px`) and `data` records, merged by `id` in time order, plus a `metadata.nematode_benchmark` block carrying the same fields as the CSV sidecar.
+   - **Read:** `units` (t in s; x and y in mm, µm or px with `mm_per_px`) and `data` records, merged by `id` in time order. The benchmark's metadata, the same fields as the CSV sidecar, sit in a top-level `@nematode_benchmark` object, the form WCON gives custom fields.
    - **Skeletons:** a skeleton per time (x and y as lists) is reduced to its midpoint, the middle of its points by index, since the benchmark reads the midbody.
-   - **Refused:** anything else WCON allows, such as `offset` or `@`-extensions, with a message naming the field.
+   - **Origin offsets:** a record's offsets are added to its positions.
+   - **Ignored:** other `@`-prefixed keys, as a WCON reader may ignore extensions it does not know.
+   - **Refused:** any other key outside the core, with a message naming it.
+   - **Field names** (offsets, centroid, units) are checked against the WCON 1.0 specification during implementation and cited in `IMPORT.md`.
 
 3. **Resampling.**
 
    - Each animal is put on t = 0, 1, 2, … s from its first sample, by linear interpolation where neighbouring samples lie at most 1 s apart, and NaN otherwise. The grader's missing-sample rule then excludes any window that touches a gap.
    - The on-lawn column is resampled by nearest sample.
-   - A track already at 1 s passes through unchanged, which is what makes the round trip exact.
+   - A track already at 1 s passes through unchanged, which is what makes the round trip exact. The vendored Scheer tracks are 2,400 samples, `LAWN_SAMPLES`, and the native path (`benchmark_bands.per_date_tallies`) windows each whole track. With `analysis_start_s = 0`, the imported window is the native one.
 
 4. **Lawn membership.** The order is: the column if present, then the boundary, then `uniform`. A boundary's positions are taken relative to its centre, and a sample is on the lawn when `references.boundary_distance(x, y, radii) > 0`, Scheer's own rule. A circle is a constant `radii`.
 
@@ -70,7 +73,7 @@
    - **Held-out data:** an assertion refuses any animal whose split side is held out, before anything is written.
    - **The record:** `roundtrip.json`, with each family's values from each path.
 
-8. **Independence.** A test runs `python -c` that imports `track_import` and grades a small synthetic CSV, then asserts that no `quantumnematode.env`, `.agent` or `.brain` module was loaded.
+8. **Independence at run time.** A test patches `BatchedEvaluator.run` and `npe_recovery.simulate` to raise, then grades a small synthetic CSV, which must succeed. This is a property of what grading does, not of what it imports. Importing the grader already loads simulator modules: `report/dtypes.py`, home of `BehaviourStep`, imports `brain.arch._brain`, and the `validation` package eagerly imports its agent-side modules. Decoupling those is a refactor of core modules, outside B.5. A lighter import would not make the package lighter to install either, since `qiskit` is a base dependency.
 
 9. **The positioning note (`data/benchmark/IMPORT.md`).**
 

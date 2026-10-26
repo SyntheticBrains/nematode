@@ -28,7 +28,7 @@ The maintainer's decisions of 2026-10-26:
 
   Held-out cohorts are never written or read.
 
-- **Independent of the simulator:** a test checks that importing `track_import` and grading imported tracks loads no environment, agent or brain module.
+- **Independent of the simulator:** grading imported tracks runs no simulation and calls no simulator code. A test grades with the simulator disabled. Importing the grader still loads simulator modules through `report.dtypes` and the `validation` package; decoupling those is a separate refactor.
 
 - **The positioning note** (`data/benchmark/IMPORT.md`): the input contract, plus how the 11 statistics relate to Tierpsy's feature set and the Open Worm Movement Database's.
 
