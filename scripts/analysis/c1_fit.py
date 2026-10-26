@@ -56,6 +56,7 @@ PASS_NEEDED = 3
 RESIMULATIONS = 10
 SMOKE_CMA_SEED = 5992
 SMOKE_SEED_BASE = 99_100_000
+SMOKE_GRADE_BASE = 99_200_000
 RECOVERED = ("kappa_weathervane", "search_tau_s")
 
 
@@ -116,14 +117,17 @@ def grade_k(population: int) -> int:
 # ---------------------------------------------------------------------------------------------
 
 
-def grade_answer(population: int, z: list[float]) -> dict[str, Any]:
-    """Grade an answer on one registered population; return every family's readings and passes."""
+def grade_answer(population: int, z: list[float], base: int = GRADE_BASE) -> dict[str, Any]:
+    """Grade an answer on one population; return every family's readings and passes.
+
+    The registered populations are at ``GRADE_BASE``; a smoke passes its own discarded base.
+    """
     from quantumnematode.evaluation.batched import BatchedEvaluator
     from quantumnematode.evaluation.controllers import BatchedMechanistic
 
     shared = nr._shared()
     bg = shared["bg"]
-    seeds = [GRADE_BASE + nr.ANIMALS * grade_k(population) + i for i in range(nr.ANIMALS)]
+    seeds = [base + nr.ANIMALS * grade_k(population) + i for i in range(nr.ANIMALS)]
     populations = {}
     for family, config in shared["configs"].items():
         controller = BatchedMechanistic(nr.parameters_from_unit(np.asarray(z)))
@@ -234,17 +238,21 @@ def _read() -> int:
         )
     chosen = chosen_restart(histories)
     plateaued = [r for r in range(RESTARTS) if histories[r]["stop"]["by"] == "plateau"]
-    spread = [
-        float(
-            np.median(
-                [
-                    nr.predictive_distance(a, b, scales)
-                    for a, b in zip(runs[i], runs[j], strict=True)
-                ],
+    pairs = [
+        {
+            "restarts": [i, j],
+            "D": float(
+                np.median(
+                    [
+                        nr.predictive_distance(a, b, scales)
+                        for a, b in zip(runs[i], runs[j], strict=True)
+                    ],
+                ),
             ),
-        )
+        }
         for i, j in itertools.combinations(plateaued, 2)
     ]
+    spread = [pair["D"] for pair in pairs]
     record: dict[str, Any] = {
         "description": DESCRIPTION,
         "chosen_restart": chosen,
@@ -253,6 +261,7 @@ def _read() -> int:
             "pairs": len(spread),
             "median": float(np.median(spread)) if spread else None,
             "range": [min(spread), max(spread)] if spread else None,
+            "each_pair": pairs,
         },
     }
     if chosen is None:
@@ -324,7 +333,7 @@ def _smoke(workers: int) -> int:
             scales=scales,
             objective=objective,
         )
-    graded = grade_answer(0, history["answers"][-1])
+    graded = grade_answer(0, history["answers"][-1], base=SMOKE_GRADE_BASE)
     print(json.dumps({"medians": history["medians"], "family_passes": graded["family_passes"]}))
     return 0 if len(history["medians"]) == 2 and graded["D"] is not None else 1
 

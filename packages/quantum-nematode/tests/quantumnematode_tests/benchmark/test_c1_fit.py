@@ -78,6 +78,9 @@ def test_the_seed_layout_is_disjoint() -> None:
     top_grade = c1.GRADE_BASE + nr.ANIMALS * c1.GRADE_POPULATIONS
     assert top_grade < 200_000_000
     assert c1.SMOKE_SEED_BASE + nr.ANIMALS * 32 < c1.SEED_BASE
+    smoke_fit_top = c1.SMOKE_SEED_BASE + nr.ANIMALS * 32
+    assert smoke_fit_top <= c1.SMOKE_GRADE_BASE
+    assert c1.SMOKE_GRADE_BASE + nr.ANIMALS < c1.SEED_BASE
 
 
 class _Pool:
