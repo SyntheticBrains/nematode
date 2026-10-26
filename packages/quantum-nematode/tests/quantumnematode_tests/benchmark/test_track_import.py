@@ -51,6 +51,17 @@ def test_a_skeleton_is_reduced_to_its_midpoint(tmp_path: Path) -> None:
     assert tracks[0].y_mm.tolist() == [0.0, 1.0]
 
 
+def test_a_single_time_skeleton_is_one_sample(tmp_path: Path) -> None:
+    """A skeleton at one time, with the time listed or not, gives that time's midpoint."""
+    listed = {"id": "a", "t": [0], "x": [[0.0, 1.0, 2.0]], "y": [[0.0, 0.0, 0.0]]}
+    single = {"id": "b", "t": 1, "x": [3.0, 4.0, 5.0], "y": [1.0, 1.0, 1.0]}
+    tracks, _ = ti.read_wcon(_wcon(tmp_path / "s.wcon", [listed, single], _SEARCH))
+    by_id = {track.animal: track for track in tracks}
+    assert by_id["a"].x_mm.tolist() == [1.0]
+    assert by_id["b"].x_mm.tolist() == [4.0]
+    assert by_id["b"].y_mm.tolist() == [1.0]
+
+
 def test_wcon_offsets_extensions_and_merging(tmp_path: Path) -> None:
     """Origin offsets are added, records sharing an id merge in time order, @ keys are ignored."""
     data = [

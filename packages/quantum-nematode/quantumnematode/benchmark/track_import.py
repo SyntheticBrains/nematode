@@ -253,9 +253,12 @@ def read_wcon(path: Path) -> tuple[list[ImportedTrack], AssayMetadata]:
         if unknown:
             msg = f"{path}: data fields outside the core are not read: {sorted(unknown)}"
             raise ValueError(msg)
-        t = record["t"] if isinstance(record["t"], list) else [record["t"]]
-        x = record["x"] if isinstance(record["x"], list) and len(t) > 1 else [record["x"]]
-        y = record["y"] if isinstance(record["y"], list) and len(t) > 1 else [record["y"]]
+        # With a list of times, x and y hold one coordinate (a number or a skeleton) per time; with
+        # a single time, the record's coordinate is that time's.
+        timed = isinstance(record["t"], list)
+        t = record["t"] if timed else [record["t"]]
+        x = record["x"] if timed and isinstance(record["x"], list) else [record["x"]]
+        y = record["y"] if timed and isinstance(record["y"], list) else [record["y"]]
         ox = record.get("ox", [0.0] * len(t))
         oy = record.get("oy", [0.0] * len(t))
         ox = ox if isinstance(ox, list) else [ox] * len(t)
