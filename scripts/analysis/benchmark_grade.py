@@ -12,6 +12,11 @@ Two sources, one grading:
     Read behaviour captures, one per line of a manifest: ``<family> <behaviour_capture.json>``,
     family ``small_lawn``, ``uniform_lawn`` or ``local_search``. Each captured run is one animal.
 
+``tracks``
+    Read imported tracks, one file per line of a manifest: ``<family> <tracks.csv | tracks.wcon>``
+    (``quantumnematode.benchmark.track_import``; the CSV's metadata sit in ``<file>.json``). Each
+    track is one animal, cut from its metadata's analysis start.
+
 Every animal is read only over its assay's analysis window: the small lawn's and the uniform
 well's last 40 min, and López-Cruz's 45 min from removal. The output gives
 every statistic's value, band, capped z and pass; the wild type's pass at its Bonferroni bar; and
@@ -24,6 +29,8 @@ Usage::
     uv run python scripts/analysis/benchmark_grade.py batched --controller constant \
         --seeds 9101-9164 --out <grade.json>
     uv run python scripts/analysis/benchmark_grade.py captures --manifest <manifest.txt> \
+        --out <grade.json>
+    uv run python scripts/analysis/benchmark_grade.py tracks --manifest <manifest.txt> \
         --out <grade.json>
 """
 
@@ -237,6 +244,25 @@ def capture_populations(manifest: Path) -> dict[str, list[list[BehaviourStep]]]:
     return populations
 
 
+def track_populations(manifest: Path) -> dict[str, list[list[BehaviourStep]]]:
+    """Read ``<family> <tracks>`` lines: CSV (with its sidecar) or WCON files, imported tracks."""
+    from quantumnematode.benchmark.track_import import import_population
+
+    populations: dict[str, list[list[BehaviourStep]]] = {}
+    for raw in manifest.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        family, path_text = line.split(maxsplit=1)
+        path = Path(path_text.strip())
+        found, animals = import_population(path if path.is_absolute() else _REPO / path)
+        if found != family:
+            msg = f"{path} declares family {found!r}, but the manifest line names {family!r}"
+            raise ValueError(msg)
+        populations.setdefault(family, []).extend(animals)
+    return populations
+
+
 def parse_seeds(text: str) -> list[int]:
     """Parse ``a-b`` or ``a,b,c`` into seeds."""
     if "-" in text:
@@ -269,6 +295,9 @@ def main(argv: list[str] | None = None) -> int:
     captures = sub.add_parser("captures")
     captures.add_argument("--manifest", type=Path, required=True)
     captures.add_argument("--out", type=Path, required=True)
+    tracks = sub.add_parser("tracks")
+    tracks.add_argument("--manifest", type=Path, required=True)
+    tracks.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
     bands = load_bands()
     if args.source == "batched":
@@ -283,6 +312,9 @@ def main(argv: list[str] | None = None) -> int:
             "hazards_per_s": list(HAZARDS),
             **({"beta": PIROUETTE_BETA} if args.controller == "pirouette" else {}),
         }
+    elif args.source == "tracks":
+        populations = track_populations(args.manifest)
+        source = {"source": "tracks", "manifest": str(args.manifest)}
     else:
         populations = capture_populations(args.manifest)
         source = {"source": "captures", "manifest": str(args.manifest)}
