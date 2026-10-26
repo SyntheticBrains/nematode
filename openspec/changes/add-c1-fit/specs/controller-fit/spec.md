@@ -25,16 +25,21 @@ C.1 SHALL be fitted by sep-CMA with 8 restarts from the box centre (σ₀ 0.2, p
 
 ### Requirement: The wild-type verdict is the benchmark's rule
 
-Every restart's answer SHALL be graded on the registered population (animals 5501–5700). The chosen restart SHALL pass the wild type when every family passes: each statistic at |z| ≤ 2.84, and local search only where its presence test holds. Every restart's verdict and D, the restart spread and the parameters SHALL be reported beside the verdict.
+Every restart's answer SHALL be graded on five registered populations of 200 animals. A population SHALL pass when every family passes: each statistic at |z| ≤ 2.84, and local search only where its presence test holds. The chosen restart SHALL pass the wild type when at least 3 of its 5 populations pass. Every restart's verdict and D, the restart spread and the parameters SHALL be reported beside the verdict.
 
 #### Scenario: C.1 fails the wild type
 
-- **WHEN** a family fails for the chosen restart
+- **WHEN** fewer than 3 of the chosen restart's 5 populations pass
 - **THEN** the failing statistics SHALL be recorded as the diagnosis, and the roadmap's pivot SHALL go to the maintainer before C.2
+
+#### Scenario: One unlucky population does not fail a faithful controller
+
+- **WHEN** one of five populations fails a family and the other four pass
+- **THEN** the chosen restart SHALL pass the wild type
 
 ### Requirement: Mutant predictions that depend on the restart are unidentified
 
-Among a controller's restarts whose answers pass the wild type, a mutant prediction whose verdict differs between restarts SHALL be `unidentified`.
+Among a controller's restarts whose answers pass the wild type (3 of 5 populations), a mutant prediction whose verdict differs between restarts SHALL be `unidentified`.
 
 #### Scenario: Two passing restarts disagree
 

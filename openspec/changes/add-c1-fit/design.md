@@ -43,13 +43,17 @@
 
 04. **Grading.**
 
-    - **The registered grade:** every restart's answer is graded on one registered population, animals 5501–5700, on the three assays, through `grade_populations`. Common animals across restarts make their verdicts comparable.
+    - **The registered grade:** every restart's answer is graded on five registered populations of 200 animals each, g = 0–4, at animals `126_000_000 + 200·g + i`, on the three assays, through `grade_populations`. Common animals across restarts make their verdicts comparable.
     - **Re-simulation:** each answer is also re-simulated 10 times with fresh animals, for its median D to the bands and the restart spread.
 
-05. **The wild-type verdict (registered).** The chosen restart **passes the wild type** when every family passes on the registered population:
+05. **The wild-type verdict (registered).** A population passes when every family passes on it:
 
     - each statistic at |z| ≤ 2.84;
     - local search only where its presence test holds.
+
+    The chosen restart **passes the wild type** when **at least 3 of its 5 registered populations pass**.
+
+    **The verdict's oracle**, from B.4's registered failure rates for real wild-type data (0.075 on the small lawn, 0.05 on the uniform well, 0.038 for López-Cruz): a faithful population passes all three families with probability 0.925 × 0.95 × 0.962 = 0.845, so on a single population a perfect C.1 would fail 15.5% of the time. With 3 of 5, it passes with probability 0.971 (protocol principle 4).
 
     **The verdict map:**
 
@@ -86,25 +90,26 @@
 
     **The `unidentified` rule:**
 
-    - for a controller, take its restarts whose answers pass the wild type on the registered population;
+    - for a controller, take its restarts whose answers pass the wild type (3 of 5);
     - if a mutant's verdict differs among them, the prediction is `unidentified`;
     - otherwise it is their shared verdict;
     - with one passing restart, its verdict;
     - with none, the chosen restart's verdict, reported with the wild-type failure stated.
 
-07. **The launch record and its guard.** `launch.md` (decisions 1–6) and `encodings.md` are committed before any fit simulation. `c1_fit.py run` refuses unless `launch.md` is committed and unchanged, and `encodings.md` is byte-identical to its version in that commit (B.4's guard, through `cma_recovery.launch_committed`'s logic).
+07. **The launch record and its guard.** `launch.md` (decisions 1–6) and `encodings.md` are committed before any fit simulation. `c1_fit.py run` refuses unless `launch.md` is committed and unchanged, and `encodings.md` is byte-identical to its version in that commit (B.4's guard). `cma_recovery`'s guard is generalised to take the launch record's path, its default unchanged, so both scripts share one implementation.
 
 08. **Readiness.**
 
     - **The verdict is the benchmark's own rule,** which B.4 showed readable: held-out real worms pass under its allowance, and six negatives fail.
     - **No positive control is involved.** There is no oracle for a real-data fit, and F.0b-i was the method's control.
+    - **The cap of 210** comes from F.0b-i's pilot on a synthetic near-wild-type truth. On real data the plateau criterion (decision 3) is the safeguard.
     - **Cost** comes from F.0b-i's registered fits, which are this configuration with a different target (protocol principle 9). Typically 8 × about 160 generations × 32 s ≈ 11 h, and at most 8 × 210 × 34 s ≈ 16 h.
     - **The spec review gates the launch,** since the run is over two hours.
 
 09. **Seeds.**
 
     - Fit animals are `110_000_000 + 200·k + i`, with k = 10,000·r + 16·(n − 1) + p for evaluations, and 10,000·r + 5,000 + q (q < 10) for an answer's re-simulations. The largest k is 75,009, so the animals stay below 125.1 million.
-    - Grading uses animals 5501–5700.
+    - The five grading populations are at `126_000_000 + 200·g + i` (g < 5). C.1's band, 5501–5756, stays reserved for its posterior-predictive checks.
     - The smoke uses CMA seed 5992 at `99_100_000`, discarded.
     - All of these are disjoint from every band and earlier scheme.
 
@@ -115,5 +120,6 @@
 - **[C.1 fails the wild type]** → the registered diagnosis and the roadmap's pivot. That is a result, not a defect: the fit has passed its recovery control.
 - **[A restart sticks, as truth 2324's did]** → 8 restarts. Only plateaued restarts are chosen, and their spread is reported.
 - **[The cap carried from F.0b-i is short for real data]** → the plateau criterion decides. A capped restart cannot be chosen, and if none plateaus, the maintainer decides before any verdict.
+- **[tph-1's encoding acts on parameters F.0b-i did not recover]** → a_intake and b_intake (median errors 0.34 and 0.18) can differ between restarts, so zeroing them can predict anything from no change to a large one. The `unidentified` rule catches a prediction that depends on the restart. An `unidentified` tph-1 is an expected outcome, not a surprise.
 - **[tax-4's encoding leaves C.1's roaming unchanged]** → a structural prediction that may fail tax-4's lower roaming. It is registered before the fit and graded as it falls.
 - **[The tax-4 class list rests on the literature, not vendored data]** → cited in the table. The O₂ and CO₂ classes are inert in these assays either way.

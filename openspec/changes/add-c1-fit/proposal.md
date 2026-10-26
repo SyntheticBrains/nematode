@@ -27,11 +27,14 @@ The maintainer's decisions of 2026-10-26:
 
   - **objective:** the benchmark's own D on the 11 wild-type statistics, against the band cohorts at n = 200, for a fresh 200-animal population each evaluation;
   - **settings:** 8 restarts of sep-CMA from the box centre (σ₀ 0.2, population 16), with F.0b-i's plateau rule and cap of 210;
-  - **the answer:** each restart's answer is re-simulated 10 times, and graded on one registered 200-animal population (animals 5501–5700).
+  - **the answer:** each restart's answer is re-simulated 10 times, and graded on five registered 200-animal populations.
 
-- **The wild-type verdict:** the benchmark's own rule. The answer of the restart with the lowest final objective **passes the wild type when every family passes** on the registered population, local search with its presence test.
+- **The wild-type verdict:** the benchmark's own rule. A population passes when every family passes, local search with its presence test. The answer of the restart with the lowest final objective **passes the wild type when at least 3 of its 5 populations pass**.
+
+  - **Why five:** under B.4's failure rates for real wild-type data, a faithful single population fails 15.5% of the time. With 3 of 5, the oracle passes 97.1% of the time.
 
   - **On a pass,** C.1 enters C.4.
+
   - **On a fail,** the failing statistics are the diagnosis, and the risk row's pivot goes to the maintainer before C.2.
 
 - **Reported beside the verdict:**
@@ -52,13 +55,14 @@ The maintainer's decisions of 2026-10-26:
 
 ## Impact
 
-- **Code:** `scripts/analysis/c1_fit.py`, and the optional objective in `cma_recovery.run_fit`, with tests.
+- **Code:** `scripts/analysis/c1_fit.py`, with tests. `cma_recovery.run_fit` gains an optional objective, and its launch guard gains a path parameter. Both defaults are unchanged.
 - **Records:** `docs/experiments/logbooks/supporting/113-c1-fit/`:
   - `launch.md` and `encodings.md`, committed before any fit;
   - `fit.json`;
   - Logbook 113.
 - **Cost:** F.0b-i's registered fits are this configuration with a different target: 30–34 s per generation of 16, plateauing at 83–184 generations. So the 8 restarts take about 11 h, and at most about 16 h at the cap. Grading and re-simulation add minutes.
 - **Seeds:**
-  - CMA seeds 5741–5748, and grading animals 5501–5700, both in C.1's band (5501–5756);
+  - CMA seeds 5741–5748, in C.1's band (5501–5756);
+  - five grading populations at `126_000_000 + 200·g + i`;
   - fit animals at `110_000_000 + 200·k + i`;
   - a smoke on CMA seed 5992 at `99_100_000`, discarded.

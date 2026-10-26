@@ -14,7 +14,7 @@ Phase 10, block C, tracker item C.1 (and D37's table for C.4). The maintainer's 
 - [ ] 1.2 `scripts/analysis/c1_fit.py`, with stages:
 
   - `run`: 8 restarts, resumable;
-  - `grade`: every answer on animals 5501–5700, plus 10 re-simulations each;
+  - `grade`: every answer on the five registered populations, plus 10 re-simulations each;
   - `read`: the chosen restart, the verdict and the reported measures;
   - `smoke`.
 
@@ -25,10 +25,11 @@ Phase 10, block C, tracker item C.1 (and D37's table for C.4). The maintainer's 
   - the default objective is unchanged, and a custom objective is used;
   - capped restarts are not chosen;
   - no plateau, no verdict;
-  - the wild-type verdict from family passes;
+  - the wild-type verdict from family passes, 3 of 5;
   - the `unidentified` rule on toy verdicts;
   - the seed layout's disjointness;
-  - the guard binds the encoding table.
+  - the guard binds the encoding table;
+  - `cma_recovery`'s guard is unchanged at its default path.
 
 - [ ] 1.4 A smoke of `run` on a tiny budget (CMA seed 5992, animals at `99_100_000`, discarded).
 
