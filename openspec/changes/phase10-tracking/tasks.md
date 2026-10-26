@@ -22,7 +22,8 @@ and go/no-go. Every Phase 10 milestone PR updates this checklist as part of its 
 11. The synthesis.
 
 Binding: nothing is fitted before B reads valid; nothing is fitted on real data before F.0 clears;
-nothing in W registers before C.2 has read.
+nothing in W registers before C.2 has read. *(Amended 2026-10-25, the maintainer's decision: F.0
+clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-ii.)*
 
 ## H — housekeeping (MUST, first)
 
@@ -408,6 +409,18 @@ nothing in W registers before C.2 has read.
     the prior box.
     **F.0's remaining control is sep-CMA's, on C.1's model and C.2's encoder**, with floor-relative,
     preflighted statistic-space gates.
+  - *(2026-10-26, F.0b-i: change `add-cma-recovery`;
+    [Logbook 112](../../../docs/experiments/logbooks/112-cma-recovery.md).)* **F.0b-i passes, and F.0
+    clears for C.1.**
+    - Four near-wild-type truths were each fitted twice by sep-CMA from the box centre. The median
+      gain of each truth's best restart is 0.991, against 0.75, and every truth is at least 0.81.
+    - The oracle scored 0.996 and the unfitted start 0.032. The pilot plateaued at 140, which set the
+      cap at 210, and all eight fits plateaued before it, in 10.9 h.
+    - Only weathervane steering and the search time are recovered as parameters.
+    - **For W:** two restarts on the same data differ by a median D of 1.12 (0.48–1.92), close to
+      W's minimum of 1.42, so W's arms need several fits each.
+    - **For C.1:** keep at least two restarts. The registered plateau rule carries over.
+    - **Still open:** F.0b-ii, C.2's encoder and its recovery.
   - **C.1's note:** its real fit must simulate at the observation's size, or add between-date
     noise matched to the bands.
   - **Seeds:**
