@@ -9,9 +9,9 @@ Phase 10, block C, tracker item C.1 (and D37's table for C.4). The maintainer's 
 
 ## 1. Tooling
 
-- [ ] 1.1 `cma_recovery.run_fit` gains an optional `objective`, with the default unchanged.
+- [x] 1.1 `cma_recovery.run_fit` gains an optional `objective`, with the default unchanged.
 
-- [ ] 1.2 `scripts/analysis/c1_fit.py`, with stages:
+- [x] 1.2 `scripts/analysis/c1_fit.py`, with stages:
 
   - `run`: 8 restarts, resumable;
   - `grade`: every answer on the five registered populations, plus 10 re-simulations each;
@@ -20,7 +20,7 @@ Phase 10, block C, tracker item C.1 (and D37's table for C.4). The maintainer's 
 
   `run` is guarded on the launch record and the encoding table.
 
-- [ ] 1.3 Tests:
+- [x] 1.3 Tests:
 
   - the default objective is unchanged, and a custom objective is used;
   - capped restarts are not chosen;
@@ -31,31 +31,31 @@ Phase 10, block C, tracker item C.1 (and D37's table for C.4). The maintainer's 
   - the guard binds the encoding table;
   - `cma_recovery`'s guard is unchanged at its default path.
 
-- [ ] 1.4 A smoke of `run` on a tiny budget (CMA seed 5992, animals at `99_100_000`, discarded).
+- [x] 1.4 A smoke of `run` on a tiny budget (CMA seed 5992, animals at `99_100_000`, discarded).
 
 ## 2. Registration
 
-- [ ] 2.1 `supporting/113-c1-fit/launch.md` and `encodings.md`, committed before 3.1.
+- [x] 2.1 `supporting/113-c1-fit/launch.md` and `encodings.md`, committed before 3.1.
 
 ## 3. The run
 
-- [ ] 3.1 `run`: the 8 restarts.
-- [ ] 3.2 `grade` and `read`, into `fit.json`.
+- [x] 3.1 `run`: the 8 restarts.
+- [x] 3.2 `grade` and `read`, into `fit.json`.
 
 ## 4. Documentation and tracker
 
-- [ ] 4.1 Logbook 113: the verdict, every restart, the spread, the parameters and the cost.
-- [ ] 4.2 The tracker:
+- [x] 4.1 Logbook 113: the verdict, every restart, the spread, the parameters and the cost.
+- [x] 4.2 The tracker:
   - C.1;
   - C.4's encoding table and the `unidentified` rule;
   - W.2's note (the restart spread on real data);
   - the observation-size note, resolved;
   - the seed table.
-- [ ] 4.3 AGENTS.md and the CHANGELOG.
+- [x] 4.3 AGENTS.md and the CHANGELOG.
 
 ## 5. Close-out
 
-- [ ] 5.1 Full suite and `pre-commit run --all-files` after `git add -A`.
-- [ ] 5.2 `openspec validate add-c1-fit --strict`.
-- [ ] 5.3 Archive, with the new spec's Purpose written.
-- [ ] 5.4 PR.
+- [x] 5.1 Full suite and `pre-commit run --all-files` after `git add -A`.
+- [x] 5.2 `openspec validate add-c1-fit --strict`.
+- [x] 5.3 Archive, with the new spec's Purpose written.
+- [x] 5.4 PR.
