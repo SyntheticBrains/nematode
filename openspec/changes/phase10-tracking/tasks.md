@@ -340,11 +340,25 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - 5101–5300 (animals) and 5301–5316 (untrained networks);
     - pilot 9201–9280.
 
-- [ ] **B.5 Track import** (WCON or CSV), independent of the simulator, positioned against Tierpsy and
+- [x] **B.5 Track import** (WCON or CSV), independent of the simulator, positioned against Tierpsy and
   OWMD feature sets. NeuroSparkSNT and a wider novelty search checked at registration.
 
   *(2026-10-24: the novelty check is done, in B.3's registration ([Logbook 109](../../../docs/experiments/logbooks/109-benchmark-grading.md)):
   NeuroSparkSNT, PGOB and Morrison & Young 2025 do not occupy the claim. Track import remains.)*
+
+  *(Closed 2026-10-26: change `add-track-import`;
+  [Logbook 114](../../../docs/experiments/logbooks/114-track-import.md).)*
+
+  - **What it reads:** `quantumnematode.benchmark.track_import` reads CSV (with a sidecar) and
+    WCON 1.0's core, resamples to 1 s, and marks lawn membership by a column or Scheer's boundary
+    rule. `benchmark_grade.py tracks` grades the result.
+  - **The round trip is exact in both formats:**
+    - 1,013 small-lawn and 69 uniform-well band-cohort Scheer animals, at tallies and statistics;
+    - 78 Roberts calibration-cohort worms, at the detector.
+  - **Independence:** grading calls no simulator code. Importing the grader still loads simulator
+    modules through `report.dtypes` and `validation`, a possible later refactor.
+  - **Positioning** against Tierpsy and OWMD is in `data/benchmark/IMPORT.md`. **The B block is
+    complete.**
 
 ## N — the neuromodulator layer from data (MUST)
 
