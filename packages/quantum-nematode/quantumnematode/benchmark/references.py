@@ -31,6 +31,7 @@ SCHEER_SPLIT_PATH = BENCHMARK_DATA / "scheer2023_split.json"
 CALHOUN_TRACKS_PATH = BENCHMARK_DATA / "calhoun2014_tracks.npz"
 ROBERTS_TRACKS_PATH = BENCHMARK_DATA / "roberts2016_tracks.npz"
 LOPEZCRUZ_PATH = BENCHMARK_DATA / "lopezcruz2019_reorientations.json"
+CHEN_TRACKS_PATH = BENCHMARK_DATA / "chen2025_tracks.npz"
 
 SCHEER_FRAMES_PER_SECOND = 3.0
 SCHEER_BIN_SECONDS = 10.0
@@ -203,3 +204,77 @@ def load_search_tracks(source: Literal["calhoun2014", "roberts2016"]) -> SearchT
 def load_lopezcruz(path: Path = LOPEZCRUZ_PATH) -> dict[str, Any]:
     """Load López-Cruz 2019's reorientations per 2-min bin, every genotype row of the sheet."""
     return json.loads(path.read_text())
+
+
+@dataclass(frozen=True)
+class ChenTracks:
+    """Chen et al. 2025's naive N2 butanone chemotaxis tracks, as fragments at 1 s in mm.
+
+    Positions are in the imaged field's frame. Fragment ``f`` covers whole seconds
+    ``fragment_start_s[f]`` onwards for ``fragment_length_s[f]`` samples, stored consecutively in
+    ``x`` and ``y``. ``field`` is the measured odour landscape in the authors' units on cells of
+    ``field_cell_mm``, indexed ``[y, x]`` in the same frame. Recording ``r`` is
+    ``recording_date[r]``, on the ``standard`` protocol or ``off_protocol``.
+    """
+
+    x: np.ndarray
+    y: np.ndarray
+    fragment_recording: np.ndarray
+    fragment_start_s: np.ndarray
+    fragment_length_s: np.ndarray
+    recording_date: tuple[str, ...]
+    recording_protocol: tuple[str, ...]
+    field: np.ndarray
+    field_cell_mm: float
+
+    def fragments(self) -> list[tuple[int, int, np.ndarray, np.ndarray]]:
+        """Return each fragment as ``(recording, first second, x, y)``."""
+        ends = np.cumsum(self.fragment_length_s)
+        starts = ends - self.fragment_length_s
+        return [
+            (int(r), int(t), self.x[a:b], self.y[a:b])
+            for r, t, a, b in zip(
+                self.fragment_recording,
+                self.fragment_start_s,
+                starts,
+                ends,
+                strict=True,
+            )
+        ]
+
+    def concentration(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """Return the field at positions in mm, bilinear, held at its edge outside the field."""
+        return sample_field(self.field, self.field_cell_mm, x, y)
+
+
+def sample_field(field: np.ndarray, cell_mm: float, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Return a gridded field at positions in mm, bilinear, held at its edge outside the grid."""
+    rows, cols = field.shape
+    gx = np.clip(np.asarray(x, dtype=float) / cell_mm, 0.0, cols - 1.0)
+    gy = np.clip(np.asarray(y, dtype=float) / cell_mm, 0.0, rows - 1.0)
+    x0 = np.minimum(np.floor(gx).astype(int), cols - 2)
+    y0 = np.minimum(np.floor(gy).astype(int), rows - 2)
+    fx, fy = gx - x0, gy - y0
+    f = field
+    return (
+        f[y0, x0] * (1 - fx) * (1 - fy)
+        + f[y0, x0 + 1] * fx * (1 - fy)
+        + f[y0 + 1, x0] * (1 - fx) * fy
+        + f[y0 + 1, x0 + 1] * fx * fy
+    )
+
+
+def load_chen_tracks(path: Path = CHEN_TRACKS_PATH) -> ChenTracks:
+    """Load Chen 2025's naive N2 chemotaxis fragments and the measured odour field."""
+    with np.load(path) as store:
+        return ChenTracks(
+            x=dequantise(store["x_um"], 1000.0),
+            y=dequantise(store["y_um"], 1000.0),
+            fragment_recording=store["fragment_recording"],
+            fragment_start_s=store["fragment_start_s"],
+            fragment_length_s=store["fragment_length_s"],
+            recording_date=tuple(str(d) for d in store["recording_date"]),
+            recording_protocol=tuple(str(p) for p in store["recording_protocol"]),
+            field=store["field"].astype(float),
+            field_cell_mm=float(store["field_cell_mm"]),
+        )

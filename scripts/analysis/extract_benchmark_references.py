@@ -55,6 +55,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import math
 import re
 import struct
 import sys
@@ -856,6 +857,118 @@ def extract_lopezcruz(xls: Path, out: Path) -> dict[str, Any]:
 # ----------------------------------------------------------------------------------------------
 
 
+# ----------------------------------------------------------------------------------------------
+# Chen 2025
+# ----------------------------------------------------------------------------------------------
+
+CHEN_TRACKS_MEMBER = "temp/data4plots/track_learn_all.mat"
+CHEN_FOLDERS_MEMBER = "temp/data4plots/learn_folders4.mat"
+CHEN_LANDSCAPE_MEMBER = "temp/data4plots/Landscape_low_0623_2.mat"
+CHEN_RAW_MEMBER = "temp/track_data/rawTracks_N2nai.mat"
+CHEN_NAIVE = 1  # the naive condition's index in track_learn_all, in folder_nai order
+CHEN_STANDARD = ("Data_learn/N2/", "_11mM_35_400")
+CHEN_LANDSCAPE_STRIDE = 5  # landscape pixels per vendored cell
+CHEN_SCALE_MIN_SPEED = 0.05  # mm/s; slower samples are dominated by noise in the speed ratio
+
+
+def _chen_load(archive: Path, member: str) -> dict[str, Any]:
+    import io
+    import zipfile
+
+    import scipy.io as sio
+
+    with zipfile.ZipFile(archive) as z:
+        return sio.loadmat(io.BytesIO(z.read(member)), squeeze_me=True, struct_as_record=False)
+
+
+def chen_mm_per_px(raw: dict[str, Any]) -> dict[str, Any]:
+    """Return the pixel scale, from the authors' smoothed speeds.
+
+    It is the median, over tracks, of the authors' smoothed speed (mm/s) against the same smoothed
+    track's speed in pixels per second.
+    """
+    ratios = []
+    for t in raw["Tracks"]:
+        x, y, tt, sp = (np.atleast_1d(v) for v in (t.SmoothX, t.SmoothY, t.Time, t.SmoothSpeed))
+        if len(x) < 200:
+            continue
+        v = np.hypot(np.diff(x), np.diff(y)) / np.diff(tt)
+        ok = (sp[1:] > CHEN_SCALE_MIN_SPEED) & np.isfinite(v) & (v > 0)
+        if ok.sum() > 50:
+            ratios.append(float(np.median(sp[1:][ok] / v[ok])))
+    r = np.array(ratios)
+    return {
+        "mm_per_px": float(np.median(r)),
+        "iqr": [float(np.quantile(r, 0.25)), float(np.quantile(r, 0.75))],
+        "tracks": len(r),
+    }
+
+
+def resample_fragment(path_px: np.ndarray, time_s: np.ndarray) -> tuple[int, np.ndarray]:
+    """Return a fragment's first whole second and its positions at whole seconds, interpolated."""
+    first, last = math.ceil(time_s[0] - 1e-9), math.floor(time_s[-1] + 1e-9)
+    if last < first:
+        return first, np.empty((0, 2))
+    grid = np.arange(first, last + 1, dtype=float)
+    xy = np.column_stack([np.interp(grid, time_s, path_px[:, k]) for k in (0, 1)])
+    return first, xy
+
+
+def extract_chen(archive: Path, out: Path) -> dict[str, Any]:
+    """Write Chen 2025's naive N2 butanone tracks at 1 s in mm, by recording, and the field."""
+    raw = _chen_load(archive, CHEN_RAW_MEMBER)
+    scale = chen_mm_per_px(raw)
+    del raw
+    folders = [str(f) for f in _chen_load(archive, CHEN_FOLDERS_MEMBER)["folder_nai"]]
+    naive = _chen_load(archive, CHEN_TRACKS_MEMBER)["track_learn_all"][CHEN_NAIVE]
+    s = scale["mm_per_px"]
+    recording, start, length, xs, ys = [], [], [], [], []
+    for r, tracks in enumerate(naive):
+        for t in np.atleast_1d(tracks):
+            p = np.atleast_2d(t.Path).astype(float)
+            first, xy = resample_fragment(p, np.atleast_1d(t.Time).astype(float))
+            if len(xy) < 2:
+                continue
+            recording.append(r)
+            start.append(first)
+            length.append(len(xy))
+            xs.append(xy[:, 0] * s)
+            ys.append(xy[:, 1] * s)
+    landscape = _chen_load(archive, CHEN_LANDSCAPE_MEMBER)["vq1"]
+    # Stored rotated by 180 degrees: index [H - 1 - y, W - 1 - x] gives the track frame's [y, x].
+    field = np.rot90(landscape, 2)[::CHEN_LANDSCAPE_STRIDE, ::CHEN_LANDSCAPE_STRIDE]
+    dates = [Path(f).parent.name.split("_")[0] for f in folders]
+    protocol = [
+        "standard" if all(tag in f for tag in CHEN_STANDARD) else "off_protocol" for f in folders
+    ]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        out,
+        x_um=quantise_um(np.concatenate(xs), np.int32),
+        y_um=quantise_um(np.concatenate(ys), np.int32),
+        fragment_recording=np.array(recording, dtype=np.int16),
+        fragment_start_s=np.array(start, dtype=np.int32),
+        fragment_length_s=np.array(length, dtype=np.int32),
+        recording_date=np.array(dates),
+        recording_protocol=np.array(protocol),
+        recording_folder=np.array([Path(f).parent.name for f in folders]),
+        field=field.astype(np.float32),
+        field_cell_mm=np.array(CHEN_LANDSCAPE_STRIDE * s),
+        mm_per_px=np.array(s),
+    )
+    return {
+        "pixel_scale": scale,
+        "recordings": [
+            {"date": d, "protocol": p, "fragments": int(sum(1 for x in recording if x == r))}
+            for r, (d, p) in enumerate(zip(dates, protocol, strict=True))
+        ],
+        "fragments": len(recording),
+        "seconds": int(sum(length)),
+        "field_shape": list(field.shape),
+        "field_range": [float(np.nanmin(field)), float(np.nanmax(field))],
+    }
+
+
 def main() -> int:
     """CLI: run one source's extraction and print its record."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -874,6 +987,9 @@ def main() -> int:
     r = sub.add_parser("roberts")
     r.add_argument("--archive", type=Path, required=True)
     r.add_argument("--out", type=Path, required=True)
+    ch = sub.add_parser("chen")
+    ch.add_argument("--archive", type=Path, required=True)
+    ch.add_argument("--out", type=Path, required=True)
     lc = sub.add_parser("lopezcruz")
     lc.add_argument("--xls", type=Path, required=True)
     lc.add_argument("--out", type=Path, required=True)
@@ -891,6 +1007,8 @@ def main() -> int:
         record = extract_calhoun(args.xlsx, args.out)
     elif args.source == "roberts":
         record = extract_roberts(args.archive, args.out)
+    elif args.source == "chen":
+        record = extract_chen(args.archive, args.out)
     else:
         record = extract_lopezcruz(args.xls, args.out)
     print(json.dumps(record, indent=2, default=str))
