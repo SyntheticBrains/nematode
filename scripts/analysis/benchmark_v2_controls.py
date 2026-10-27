@@ -1555,7 +1555,11 @@ REACH_FREE = (
     ("roaming", "reversal_hazard_per_s"),
     ("dwelling", "omega_hazard_per_s"),
     ("roaming", "omega_hazard_per_s"),
+    ("dwelling", "speed_log_sd"),
+    ("roaming", "speed_log_sd"),
 )
+# The within-state speed spread has no matched value to centre on: its box is linear from 0.
+SPREAD_MAX = 1.5
 
 
 def split_band_dates(tracks: refs.ScheerTracks) -> tuple[list[int], list[int]]:
@@ -1686,11 +1690,18 @@ def gated_check(
 
 
 def reach_parameters(z: np.ndarray) -> dict[str, dict[str, float]]:
-    """Return the reachability worm's per-state parameters: log-uniform on [θ/4, 4θ] around B.4's."""
+    """Return the reachability worm's per-state parameters.
+
+    Speeds, curvature SDs and hazards are log-uniform on [θ/4, 4θ] around B.4's matched values;
+    each state's speed spread (a log SD, per 10-s window) is uniform on [0, :data:`SPREAD_MAX`].
+    """
     states = json.loads(bc.PARAMS_PATH.read_text())["states"]
     out = {s: dict(v) for s, v in states.items()}
     for (state, name), u in zip(REACH_FREE, np.asarray(z, dtype=float), strict=True):
-        out[state][name] = float(states[state][name] * REACH_BOX ** (2.0 * u - 1.0))
+        if name == "speed_log_sd":
+            out[state][name] = float(SPREAD_MAX * u)
+        else:
+            out[state][name] = float(states[state][name] * REACH_BOX ** (2.0 * u - 1.0))
     return out
 
 
@@ -1708,6 +1719,7 @@ def reach_controller(states: dict[str, dict[str, float]]) -> Any:  # noqa: ANN40
         tuple(s["curvature_sd_deg_per_s"] for s in order),  # type: ignore[arg-type]
         np.array([[s["reversal_hazard_per_s"], s["omega_hazard_per_s"], minimum] for s in order]),
         window_steps=round(params["hmm"]["window_seconds"]),
+        speed_log_sd=tuple(s.get("speed_log_sd", 0.0) for s in order),  # type: ignore[arg-type]
     )
 
 
@@ -1854,7 +1866,8 @@ def _noise_pilot(args: argparse.Namespace) -> int:
         "description": "The reachability worm: B.4's two-state structure, fitted through the "
         "measurement model on discarded seeds.",
         "free": [f"{s}/{n}" for s, n in REACH_FREE],
-        "box": f"log-uniform on [θ/{REACH_BOX:g}, {REACH_BOX:g}θ] around B.4's matched values",
+        "box": f"log-uniform on [θ/{REACH_BOX:g}, {REACH_BOX:g}θ] around B.4's matched values; "
+        f"each state's speed spread uniform on [0, {SPREAD_MAX:g}]",
         "restarts": [
             {k: h[k] for k in ("restart", "cma_seed", "stop", "medians", "sigmas")}
             for h in histories

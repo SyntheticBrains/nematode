@@ -21,7 +21,7 @@ B v2's lawn measurement model SHALL draw each simulated track's position noise f
 
 ### Requirement: The reachability oracle's worm can reach its bar
 
-The reachability oracle SHALL read an open-loop two-state worm whose per-state speeds, curvature and hazards are fitted through the measurement model on discarded seeds. Before registration, the fitted worm SHALL reach the five gated statistics at a median RMS z of at most 1 on fresh discarded populations. If it does not, B v2 SHALL stop before registration, with the statistics it misses as the diagnosis.
+The reachability oracle SHALL read an open-loop two-state worm whose per-state speeds, speed spreads (per 10-s window), curvature and hazards are fitted through the measurement model on discarded seeds. Before registration, the fitted worm SHALL reach the five gated statistics at a median RMS z of at most 1 on fresh discarded populations. If it does not, B v2 SHALL stop before registration, with the statistics it misses as the diagnosis.
 
 #### Scenario: The matched worm misses with no noise
 

@@ -183,5 +183,38 @@ def test_the_reachability_worm_spans_its_box_around_the_matched_values() -> None
     centre = v2.reach_parameters(np.full(len(v2.REACH_FREE), 0.5))
     low = v2.reach_parameters(np.zeros(len(v2.REACH_FREE)))
     for state, name in v2.REACH_FREE:
+        if name == "speed_log_sd":
+            assert low[state][name] == 0.0
+            assert centre[state][name] == pytest.approx(v2.SPREAD_MAX / 2)
+            continue
         assert centre[state][name] == pytest.approx(states[state][name])
         assert low[state][name] == pytest.approx(states[state][name] / v2.REACH_BOX)
+
+
+def test_a_worm_without_spread_runs_as_before() -> None:
+    """With no speed spread the open-loop worm makes no extra draw: its runs are unchanged."""
+    import torch
+    from quantumnematode.evaluation.controllers import BatchedStateHazards
+
+    kw = {
+        "transitions": np.array([[0.9, 0.1], [0.2, 0.8]]),
+        "speeds_mm_per_s": (0.02, 0.07),
+        "curvature_sd_deg_per_s": (60.0, 35.0),
+        "hazards_per_s": np.array([[0.09, 0.0001, 0.0001], [0.08, 0.001, 0.0001]]),
+        "window_steps": 10,
+    }
+    senses = type("Senses", (), {"concentration": np.zeros(3)})()
+
+    def run(worm: BatchedStateHazards) -> np.ndarray:
+        gens = [torch.Generator().manual_seed(k) for k in range(3)]
+        worm.reset(3)
+        return np.array([worm.act(senses, gens) for _ in range(25)])  # type: ignore[arg-type]
+
+    np.testing.assert_array_equal(
+        run(BatchedStateHazards(**kw)),
+        run(BatchedStateHazards(**kw, speed_log_sd=None)),
+    )
+    spread = run(BatchedStateHazards(**kw, speed_log_sd=(0.8, 0.8)))
+    # Within a window the speed holds; across windows it varies.
+    assert np.ptp(spread[0:10, :, 0], axis=0).max() == 0.0
+    assert np.unique(spread[:, 0, 0]).size > 2

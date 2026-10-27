@@ -95,7 +95,9 @@ B v2 (change `revise-benchmark-v2`, launch record 115) adds a measurement model 
 6. **The reachability worm** (it replaces B.4's matched worm in the reachability oracle; Part A's gate is unchanged):
 
    - **The structure:** `BatchedStateHazards`, with B.4's two states, transitions and window.
-   - **The free parameters, 8:** each state's speed, curvature SD, reversal hazard and omega hazard. Each is log-uniform on [θ/4, 4θ] around B.4's matched value θ (`negatives_params.json`), and the unit box's centre is B.4's worm.
+   - **The free parameters, 10** (revised 2026-10-28, after the 8-parameter fit; see "The second pilot" below):
+     - each state's speed, curvature SD, reversal hazard and omega hazard, log-uniform on [θ/4, 4θ] around B.4's matched value θ (`negatives_params.json`);
+     - each state's **speed spread**, a log SD in \[0, 1.5\]: at every 10-s window boundary each animal draws z, and runs that window at its state's speed × exp(spread · z). The window is the classifier's scale, so the state's speed is the median. This is `BatchedStateHazards`'s optional `speed_log_sd`, off by default, so B.4's negatives are unchanged.
    - **The objective:** the RMS z of the five gated statistics (the four speeds and the reversal rate) at n = 200, through the lawn model with the library, for 200 fresh animals per evaluation (`158_000_000 + 200·k + i`).
    - **The fit:** sep-CMA from the centre, σ₀ 0.2, population 16, 2 restarts (CMA seeds 9411 and 9412). The plateau rule stops a restart only once σ ≤ σ₀, and the cap is 100 generations. The answer is the best restart's `xfavorite`.
    - **Its own oracle, before registration:** the answer is re-simulated on 5 discarded populations (`158_900_000 + 200·g + i`). The median RMS z must be at most 1.
@@ -128,11 +130,29 @@ The gate allowed ±0.25.
 
 **The cause:** every resampled track has joins and real stretches have none, so the detector's 0.01-mm floor sits inside the noise. Decision 3b removes the dependence, and decision 3's splicing keeps the speeds. Both were chosen after these in-sample readings. Amendment 2 discloses this, and the check half stays unread.
 
+### The second pilot (2026-10-28; description)
+
+- **The floor and splicing passed in-sample.** The floor rule gave 0.03 mm. The draw read onsets +0.0034 per paused minute (range ±0.009), window speed median +0.00013 (±0.0004) and p90 +0.00006 (±0.0003).
+
+- **The 8-parameter reachability worm did not reach.** Both restarts plateaued near an RMS z of 2.6, and the answer's median on 5 fresh populations was 2.53:
+
+  | Statistic | z |
+  |---|---|
+  | reversals | −4.25 |
+  | roaming speed p90 | −3.57 |
+  | dwelling speed median | +2.58 |
+
+  The roaming reversal hazard and the dwelling curvature sat at their box edges.
+
+- **Why:** at one constant speed per state, a dwelling worm (about 0.017 mm/s) never makes the 0.03 mm steps the detector needs, and roaming has no spread to give the real p90. Real worms' speed varies within a state.
+
+- **The fix:** the maintainer chose to add the speed spread, as decision 6 says. The stop rule is unchanged.
+
 ## Risks / Trade-offs
 
 - **[Joining artefacts]** → end-to-end joins jump about 0.02 mm every 13 s, and they failed the first pilot. Splicing at the nearest offset replaces them; the second pilot reads it in-sample, and the check reads it at the rate a simulated track sees.
 - **[Micro-motion as noise]** → a paused real worm's slight motion is carried over as noise. That is the intent: the benchmark compares what the tracker reports. It raises every simulated dwelling window's speed slightly, as it raises real ones.
-- **[A two-state worm cannot reach the statistics]** → for instance, real dwelling's p90-to-median window-speed ratio (2.2) may need speed variability within a state, which this worm lacks. The fit shows it before registration. If it fails, the change stops there, and the diagnosis says which statistic no open-loop point worm reaches.
+- **[A two-state worm cannot reach the statistics]** → without within-state speed spread it could not (the second pilot). With the spread, the refit shows whether it can before registration; if not, the change stops there, and the diagnosis says which statistic no open-loop point worm reaches.
 - **[A wider gate]** → the permutation gate admits model noise that sits within the tracker's own date variation. That is the comparison the bands make too: their scales are between-date.
 - **[The bands file changes]** → `bands_v2.json` is rebuilt to name the library in its lawn model. The bands, the rule checks and the leave-one-out are deterministic and unchanged, and their record must come back byte-identical.
-- **[Cost]** → the reachability fit takes about 4 s per evaluation, 16 per generation on 16 workers: about 5 s per generation, at most about 20 min for both restarts at the cap.
+- **[Cost]** → the reachability fit takes about 10 s per generation of 16 on 16 workers, so at most about 35 min for both restarts at the cap.
