@@ -444,7 +444,7 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 
 ## C — controllers and the fidelity table (MUST)
 
-- [ ] **C.1 The mechanistic baseline**: a stochastic run/reversal switch, a roaming/dwelling state with
+- [x] **C.1 The mechanistic baseline**: a stochastic run/reversal switch, a roaming/dwelling state with
   intake and satiety dependence, pirouettes and weathervane, ≤ 30 parameters. Fitted by NPE, with
   priors set without search data; posterior-predictive checks.
 
@@ -452,10 +452,26 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   with its search box and x₀ set without search data. Its predictive checks re-simulate the
   restarts' fits.
 
+  *(Closed 2026-10-27: change `add-c1-fit`;
+  [Logbook 113](../../../docs/experiments/logbooks/113-c1-fit.md).)* **C.1 passes the wild type** at
+  the registered threshold.
+
+  - The chosen restart (3) passes 3 of its 5 registered populations, at D 0.95–1.26 from the bands.
+  - Its weak statistic is the small lawn's roaming-bout length (z 3.55 and 4.68 where it fails). The
+    uniform well's runs short, so one roaming state is stretched between the two lawns.
+  - Restarts 1 and 5 pass 5 of 5; two restarts stopped early on a false plateau.
+  - Weathervane steering is strong and toward food (κ_w −47.3 °/s), and the search time is 8.0 min.
+  - **The observation-size note is resolved:** the bands' n = 200 scales already carry the
+    between-date spread.
+
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
   and a plateau criterion.
+
+  *(Added 2026-10-27, C.1.)* **The plateau rule needs a guard.** Two of C.1's restarts stopped at
+  generations 40 and 43, still at D 5–6. C.2's registration adds a minimum generation or a σ
+  condition, so a stuck restart is not counted as converged.
 
   *(Added 2026-10-24 by B.3's hardening.)* `time_on_lawn`'s band scale is 0.006 at n = 200, so a
   controller that leaves the lawn a little reaches the z cap of 10 there, and an unweighted D_fit is
@@ -472,14 +488,31 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   are resolved by the references; every other mutant difference is graded by magnitude. The
   dissociation claim is narrowed accordingly in the roadmap.
 
+  *(Added 2026-10-27, change `add-c1-fit`.)* **The encoding table is registered**:
+  `docs/experiments/logbooks/supporting/113-c1-fit/encodings.md`, committed before any fit.
+
+  - **C.1's rows** are structural knockouts: tph-1 removes the intake dependence; pdfr-1 is not
+    encodable; tax-4 removes the chemosensory gains.
+  - **C.2's and C.3's rows** are gene and neuron knockouts.
+  - **tph-1's leaving** is left out and reported beside.
+  - **The `unidentified` rule** applies across the restarts that pass the wild type. For C.1 these
+    are restarts 1, 3 and 5.
+
 ## W — the wiring question on fidelity (MUST, after C.2 reads)
 
 - [ ] **W.1** The nulls: degree-preserving; gap-only on the corrected gap model; boundary-held;
   class-preserving left–right-symmetric; and N.3's receptor-placement nulls. Each has a fresh rewiring
   draw per fit, with parameters counted per arm.
+
 - [ ] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
   both directions. Draws per arm are sized from F.0 and the cost pilot. Every outcome is named,
   including "the nulls pass too" and "a null beats the wild type".
+
+  *(Added 2026-10-27, C.1.)* Restart-to-restart spread is a median D of 1.09 on real data (six
+  converged restarts) and 1.12 on F.0b-i's synthetic truths, against W's minimum of 1.42. A single fit
+  per arm would read fitting noise of about the minimum, so W's arms need several fits each, sized
+  from C.2's own spread.
+
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 
 ## The synthesis (MUST)
