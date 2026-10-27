@@ -476,7 +476,7 @@ def _committed(*, bands: bool) -> bool:
     """Return whether Part A (and, with ``bands``, Part B with the bands file) is committed."""
     import cma_recovery as cr
 
-    bound = (BANDS_V2_PATH, BANDS_V2_RECORD) if bands else ()
+    bound = (BANDS_V2_PATH, BANDS_V2_RECORD, NOISE_PATH, REACH_PATH) if bands else ()
     return cr.launch_committed(bound=bound, launch_path=LAUNCH_PATH)
 
 
@@ -838,23 +838,15 @@ def _oracle_population(
     base: int = ORACLE_BASE,
     path: Path = bg.BANDS_V2_PATH,
 ) -> dict[str, float]:
-    """Return the matched open-loop worm's kinematic statistics on one measured population."""
-    from quantumnematode.evaluation.batched import BatchedEvaluator
+    """Return the reachability worm's kinematic statistics on one measured population.
 
-    bands = bg.load_bands_v2(path)
-    clf = bg.classifier(bands)
-    model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
-    params = json.loads(bc.PARAMS_PATH.read_text())
-    config = nr._shared()["configs"]["small_lawn"]
+    The worm is the two-state open-loop worm fitted through the measurement model; the worm
+    matched on per-state mean speeds and hazards misses the kinematics with no noise at all.
+    """
+    del path  # the bands are read where the worm was fitted, from the vendored file
+    worm = json.loads(REACH_PATH.read_text())
     seeds = [base + ANIMALS * p + i for i in range(ANIMALS)]
-    traj = BatchedEvaluator(config, bc.hazard_controller("hmm", params), seeds).run()
-    assert traj.assay is not None  # noqa: S101 - an assay config records its timing
-    analysis = tuple(traj.assay["analysis_steps"])  # type: ignore[arg-type]
-    animals = [
-        bg.window("small_lawn", mm.measure(traj.to_behaviour_steps(i), seed, model), analysis)  # type: ignore[arg-type]
-        for i, seed in enumerate(seeds)
-    ]
-    return bg.kinematic_values(animals, clf)
+    return _measured_small_lawn(reach_controller(worm["states"]), seeds)
 
 
 def reachability_oracle(
@@ -1337,42 +1329,53 @@ def plateau_stop(medians: list[float], sigma: float) -> bool:
     return cr.plateau_reached(medians) and sigma <= BLIND_SIGMA0
 
 
-def _blind_restart(restart: int, pool: Any) -> dict[str, Any]:  # noqa: ANN401 - a pool
+def _cma_restart(  # noqa: PLR0913 - one restart's registered settings
+    state_dir: Path,
+    restart: int,
+    cma_seed: int,
+    dimension: int,
+    simulate: Any,  # noqa: ANN401 - a picklable (k, z) -> objective
+    cap: int,
+    pool: Any,  # noqa: ANN401 - a pool
+    tag: str,
+) -> dict[str, Any]:
+    """Run, or resume, one sep-CMA restart from the box centre; state saved every generation.
+
+    Simulation indices are :func:`blind_k`'s. The plateau stops a restart only once sigma is at
+    most sigma0; otherwise it runs to the cap.
+    """
     import pickle
 
     import cma
     import cma_recovery as cr
 
-    BLIND_STATE.mkdir(parents=True, exist_ok=True)
-    state_path, history_path = (
-        BLIND_STATE / f"restart{restart}.pkl",
-        BLIND_STATE / f"restart{restart}.json",
-    )
+    state_dir.mkdir(parents=True, exist_ok=True)
+    state_path = state_dir / f"restart{restart}.pkl"
+    history_path = state_dir / f"restart{restart}.json"
     history = json.loads(history_path.read_text()) if history_path.exists() else None
     if history is not None and history["stop"] is not None:
         return history
     if history is not None and state_path.exists():
         checkpoint = pickle.loads(state_path.read_bytes())  # noqa: S301 - this run's own state
         if checkpoint["generation"] != history["generation"]:
-            msg = f"restart {restart}: checkpoint and history disagree on the generation"
+            msg = f"{tag} restart {restart}: checkpoint and history disagree on the generation"
             raise RuntimeError(msg)
         es = checkpoint["strategy"]
     else:
-        free = len(_blind_free())
         es = cma.CMAEvolutionStrategy(
-            [0.5] * free,
+            [0.5] * dimension,
             BLIND_SIGMA0,
             {
                 "CMA_diagonal": True,
                 "bounds": [0, 1],
                 "popsize": BLIND_POPSIZE,
-                "seed": BLIND_V2_CMA_SEEDS[restart],
+                "seed": cma_seed,
                 "verbose": -9,
             },
         )
         history = {
             "restart": restart,
-            "cma_seed": BLIND_V2_CMA_SEEDS[restart],
+            "cma_seed": cma_seed,
             "generation": 0,
             "medians": [],
             "sigmas": [],
@@ -1383,23 +1386,37 @@ def _blind_restart(restart: int, pool: Any) -> dict[str, Any]:  # noqa: ANN401 -
         generation = history["generation"] + 1
         population = es.ask()
         ks = [blind_k(restart, generation, m) for m in range(BLIND_POPSIZE)]
-        scores = list(pool.map(_blind_simulate, ks, [list(map(float, x)) for x in population]))
+        scores = list(pool.map(simulate, ks, [list(map(float, x)) for x in population]))
         es.tell(population, scores)
         history["medians"].append(float(np.median(scores)))
         history["sigmas"].append(float(es.sigma))
         history["answers"].append(np.clip(es.result.xfavorite, 0, 1).tolist())
         if plateau_stop(history["medians"], float(es.sigma)):
             history["stop"] = {"generation": generation, "by": "plateau"}
-        elif generation >= BLIND_V2_CAP:
+        elif generation >= cap:
             history["stop"] = {"generation": generation, "by": "cap"}
         history["generation"] = generation
         cr._write_bytes(state_path, pickle.dumps({"generation": generation, "strategy": es}))
         cr._write_json(history_path, history)
         print(
-            f"blind restart {restart} gen {generation}: median {history['medians'][-1]:.2f}, sigma {history['sigmas'][-1]:.3f}",
+            f"{tag} restart {restart} gen {generation}: median {history['medians'][-1]:.3f}, "
+            f"sigma {history['sigmas'][-1]:.3f}",
             flush=True,
         )
     return history
+
+
+def _blind_restart(restart: int, pool: Any) -> dict[str, Any]:  # noqa: ANN401 - a pool
+    return _cma_restart(
+        BLIND_STATE,
+        restart,
+        BLIND_V2_CMA_SEEDS[restart],
+        len(_blind_free()),
+        _blind_simulate,
+        BLIND_V2_CAP,
+        pool,
+        "blind",
+    )
 
 
 def _blind_free() -> list[str]:
@@ -1486,7 +1503,7 @@ def verdict(
 def _verdict(_args: argparse.Namespace) -> int:
     parts = [
         json.loads(p.read_text())
-        for p in (ORACLE_AMENDED_PATH, BANDS_V2_RECORD, READ_PATH, BLIND_PATH)
+        for p in (ORACLE_AMENDED2_PATH, BANDS_V2_RECORD, READ_PATH, BLIND_PATH)
     ]
     out = {
         "description": "B v2's verdict, from the oracle, the bands record, the read and the blind fit.",
@@ -1496,6 +1513,362 @@ def _verdict(_args: argparse.Namespace) -> int:
     CONTROLS_PATH.write_text(json.dumps(bg._finite(out), indent=2, allow_nan=False) + "\n")
     print(json.dumps(out["checks"], indent=2), "\nverdict:", out["verdict"])
     return 0
+
+
+# ---------------------------------------------------------------------------------------------
+# The empirical noise library, its gate and the reachability worm
+# ---------------------------------------------------------------------------------------------
+
+NOISE_NAME = "scheer_tracker_noise.npz"
+NOISE_PATH = refs.BENCHMARK_DATA / NOISE_NAME
+NOISE_PILOT_PATH = SUPPORT / "noise_pilot.json"
+REACH_PATH = SUPPORT / "reachability_worm.json"
+ORACLE_AMENDED2_PATH = SUPPORT / "oracle_amendment2.json"
+REACH_STATE = _REPO / "build" / "benchmark-v2" / "reach"
+SPLIT_SEED = 2043
+LIBRARY_DATES = 21
+HALVINGS = 1000
+HALVING_SEED = 2044
+GATE_QUANTILES = (2.5, 97.5)
+NOISE_TRACK_S = 2700
+CHECK_BASE = 156_000_000
+PILOT_BASE = 157_000_000
+REACH_FIT_BASE = 158_000_000
+REACH_CHECK_BASE = 158_900_000
+REACH_CMA_SEEDS = (9411, 9412)
+REACH_CAP = 100
+REACH_BOX = 4.0
+REACH_CHECKS = 5
+REACH_BAR = 1.0
+GATED = ("onsets_per_paused_min", "paused_window_speed_median", "paused_window_speed_p90")
+REACH_FREE = (
+    ("dwelling", "speed_mm_per_s"),
+    ("roaming", "speed_mm_per_s"),
+    ("dwelling", "curvature_sd_deg_per_s"),
+    ("roaming", "curvature_sd_deg_per_s"),
+    ("dwelling", "reversal_hazard_per_s"),
+    ("roaming", "reversal_hazard_per_s"),
+    ("dwelling", "omega_hazard_per_s"),
+    ("roaming", "omega_hazard_per_s"),
+)
+
+
+def split_band_dates(tracks: refs.ScheerTracks) -> tuple[list[int], list[int]]:
+    """Return PD1074's band dates split into the library half (21) and the check half (20)."""
+    rows, _ = _band_rows_and_omega(tracks)
+    dates = sorted({int(d) for d in tracks.date[rows]})
+    order = np.random.default_rng(SPLIT_SEED).permutation(len(dates))
+    library = sorted(dates[k] for k in order[:LIBRARY_DATES])
+    check = sorted(dates[k] for k in order[LIBRARY_DATES:])
+    return library, check
+
+
+def _stretches_on(
+    tracks: refs.ScheerTracks,
+    dates: list[int],
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    rows, _ = _band_rows_and_omega(tracks)
+    return paused_stretches(tracks, rows[np.isin(tracks.date[rows], dates)])
+
+
+def build_library(tracks: refs.ScheerTracks) -> dict[str, Any]:
+    """Write the library half's paused stretches' offsets from their own means; return its facts."""
+    library, check = split_band_dates(tracks)
+    stretches = _stretches_on(tracks, library)
+    x = np.concatenate([sx - sx.mean() for sx, _ in stretches])
+    y = np.concatenate([sy - sy.mean() for _, sy in stretches])
+    lengths = np.array([len(sx) for sx, _ in stretches])
+    mm.save_noise_library(NOISE_PATH, x, y, lengths)
+    return {
+        "library_dates": library,
+        "check_dates": check,
+        "stretches": len(stretches),
+        "seconds": int(lengths.sum()),
+        "length_median_s": float(np.median(lengths)),
+        "sha256": mm.file_sha256(NOISE_PATH),
+    }
+
+
+def model_stretches(
+    real: list[tuple[np.ndarray, np.ndarray]],
+    library: mm.NoiseLibrary,
+    base: int,
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Return each real stretch's model counterpart: a still point's noise, cut from a full track.
+
+    Stretch k's track is the small-lawn assay's length, drawn at ``default_rng([base + k, 2033])``,
+    and its counterpart is cut at a uniform point from the same stream, so stretches are joined at
+    the rate a simulated track sees.
+    """
+    out = []
+    for k, (x, _) in enumerate(real):
+        rng = np.random.default_rng([base + k, mm.LAWN_STREAM])
+        track = library.draw(NOISE_TRACK_S, rng)
+        start = int(rng.integers(0, NOISE_TRACK_S - len(x) + 1))
+        out.append((track[start : start + len(x), 0], track[start : start + len(x), 1]))
+    return out
+
+
+def per_date_noise(tracks: refs.ScheerTracks) -> dict[int, dict[str, Any]]:
+    """Return each band date's still-worm readings' parts: onsets, seconds, window speeds, steps."""
+    rows, _ = _band_rows_and_omega(tracks)
+    out = {}
+    for d in sorted({int(v) for v in tracks.date[rows]}):
+        stretches = paused_stretches(tracks, rows[tracks.date[rows] == d])
+        onsets, seconds, speeds = 0, 0, []
+        for x, y in stretches:
+            onsets += len(ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR))
+            seconds += len(x) - 1
+            w = g.window_inputs(x, y, np.ones(len(x), dtype=bool))
+            speeds.append(w.speed[np.isfinite(w.speed)])
+        out[d] = {"onsets": onsets, "seconds": seconds, "speeds": np.concatenate(speeds)}
+    return out
+
+
+def _pooled(parts: list[dict[str, Any]]) -> dict[str, float]:
+    speed = np.concatenate([p["speeds"] for p in parts])
+    return {
+        "onsets_per_paused_min": 60.0
+        * sum(p["onsets"] for p in parts)
+        / sum(p["seconds"] for p in parts),
+        "paused_window_speed_median": float(np.median(speed)),
+        "paused_window_speed_p90": float(np.quantile(speed, 0.9)),
+    }
+
+
+def permutation_gate(per_date: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """Return each gated reading's central 95% of real-half differences over random date halvings."""
+    dates = sorted(per_date)
+    rng = np.random.default_rng(HALVING_SEED)
+    diffs: dict[str, list[float]] = {k: [] for k in GATED}
+    for _ in range(HALVINGS):
+        order = rng.permutation(len(dates))
+        a = _pooled([per_date[dates[k]] for k in order[:LIBRARY_DATES]])
+        b = _pooled([per_date[dates[k]] for k in order[LIBRARY_DATES:]])
+        for k in GATED:
+            diffs[k].append(a[k] - b[k])
+    return {
+        "halvings": HALVINGS,
+        "seed": HALVING_SEED,
+        "ranges": {
+            k: [float(np.percentile(v, q)) for q in GATE_QUANTILES] for k, v in diffs.items()
+        },
+        "sd": {k: float(np.std(v, ddof=1)) for k, v in diffs.items()},
+    }
+
+
+def gated_check(
+    real: list[tuple[np.ndarray, np.ndarray]],
+    model: list[tuple[np.ndarray, np.ndarray]],
+    gate: dict[str, Any],
+) -> dict[str, Any]:
+    """Return the model's still-worm readings against the real ones, each gated by its range."""
+    a, b = noise_statistics(real), noise_statistics(model)
+    rows: dict[str, Any] = {}
+    for name, value in a.items():
+        row: dict[str, Any] = {"real": value, "model": b[name], "difference": b[name] - value}
+        if name in GATED:
+            low, high = gate["ranges"][name]
+            row.update(range=[low, high], passes=bool(low <= b[name] - value <= high))
+        rows[name] = row
+    return {
+        "stretches": len(real),
+        "readings": rows,
+        "passes": all(r["passes"] for r in rows.values() if "passes" in r),
+    }
+
+
+def reach_parameters(z: np.ndarray) -> dict[str, dict[str, float]]:
+    """Return the reachability worm's per-state parameters: log-uniform on [θ/4, 4θ] around B.4's."""
+    states = json.loads(bc.PARAMS_PATH.read_text())["states"]
+    out = {s: dict(v) for s, v in states.items()}
+    for (state, name), u in zip(REACH_FREE, np.asarray(z, dtype=float), strict=True):
+        out[state][name] = float(states[state][name] * REACH_BOX ** (2.0 * u - 1.0))
+    return out
+
+
+def reach_controller(states: dict[str, dict[str, float]]) -> Any:  # noqa: ANN401 - a controller
+    """Return the two-state open-loop worm with B.4's transitions and these per-state parameters."""
+    from quantumnematode.env.primitives import load_kinematics
+    from quantumnematode.evaluation.controllers import BatchedStateHazards
+
+    params = json.loads(bc.PARAMS_PATH.read_text())
+    minimum = load_kinematics().hazard_min_per_s
+    order = [states["dwelling"], states["roaming"]]
+    return BatchedStateHazards(
+        np.asarray(params["hmm"]["transitions_per_10_s"]),
+        tuple(s["speed_mm_per_s"] for s in order),  # type: ignore[arg-type]
+        tuple(s["curvature_sd_deg_per_s"] for s in order),  # type: ignore[arg-type]
+        np.array([[s["reversal_hazard_per_s"], s["omega_hazard_per_s"], minimum] for s in order]),
+        window_steps=round(params["hmm"]["window_seconds"]),
+    )
+
+
+def _measured_small_lawn(controller: Any, seeds: list[int]) -> dict[str, float]:  # noqa: ANN401
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+
+    bands = bg.load_bands_v2()
+    model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+    traj = BatchedEvaluator(nr._shared()["configs"]["small_lawn"], controller, seeds).run()
+    assert traj.assay is not None  # noqa: S101 - an assay config records its timing
+    analysis = tuple(traj.assay["analysis_steps"])  # type: ignore[arg-type]
+    animals = [
+        bg.window("small_lawn", mm.measure(traj.to_behaviour_steps(i), seed, model), analysis)  # type: ignore[arg-type]
+        for i, seed in enumerate(seeds)
+    ]
+    return bg.kinematic_values(animals, bg.classifier(bands))
+
+
+def reach_rms(values: dict[str, float]) -> float:
+    """Return the RMS z of the five gated kinematics statistics at n = 200."""
+    band = bg.family_bands_v2(bg.load_bands_v2(), "kinematics", ANIMALS)
+    z = [g.z_score(values[s], band[s]) for s in ORACLE_STATISTICS]
+    return float(np.sqrt(np.mean(np.square(z))))
+
+
+def _reach_simulate(k: int, z: list[float], base: int = REACH_FIT_BASE) -> float:
+    seeds = [base + ANIMALS * k + i for i in range(ANIMALS)]
+    return reach_rms(_measured_small_lawn(reach_controller(reach_parameters(np.asarray(z))), seeds))
+
+
+def _noise_library_stage(_args: argparse.Namespace) -> int:
+    if not _committed(bands=False):
+        print(f"{LAUNCH_PATH} is not committed and clean; nothing is built.", file=sys.stderr)
+        return 1
+    facts = build_library(refs.load_scheer_tracks())
+    print(json.dumps(facts, indent=2))
+    return 0
+
+
+def _noise_pilot(args: argparse.Namespace) -> int:
+    """Run the pilot: the draw in-sample, the permutation gate, the reachability worm's fit."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    tracks = refs.load_scheer_tracks()
+    library_dates, _ = split_band_dates(tracks)
+    library = mm.load_noise_library(NOISE_NAME)
+    per_date = per_date_noise(tracks)
+    gate = permutation_gate(per_date)
+    real = _stretches_on(tracks, library_dates)
+    record: dict[str, Any] = {
+        "description": "The empirical-noise pilot, on the library half and discarded seeds.",
+        "library_sha256": mm.file_sha256(NOISE_PATH),
+        "gate": gate,
+        "gaussian_misses": {
+            k: v["model"] - v["real"]
+            for k, v in json.loads(ORACLE_AMENDED_PATH.read_text())["round_trip"]["lawn_jitter"][
+                "readings"
+            ].items()
+            if k in GATED
+        },
+        "in_sample": gated_check(real, model_stretches(real, library, PILOT_BASE), gate),
+    }
+    print(
+        json.dumps(
+            bg._finite({k: record[k] for k in ("gate", "gaussian_misses", "in_sample")}),
+            indent=2,
+        ),
+        flush=True,
+    )
+    if not record["in_sample"]["passes"]:
+        record["stop"] = "the draw fails in-sample: the joins distort the noise"
+        NOISE_PILOT_PATH.write_text(json.dumps(bg._finite(record), indent=2) + "\n")
+        return 1
+    with ProcessPoolExecutor(max_workers=args.workers, initializer=nr._worker_setup) as pool:
+        histories = [
+            _cma_restart(
+                REACH_STATE,
+                r,
+                REACH_CMA_SEEDS[r],
+                len(REACH_FREE),
+                _reach_simulate,
+                REACH_CAP,
+                pool,
+                "reach",
+            )
+            for r in range(len(REACH_CMA_SEEDS))
+        ]
+        import cma_recovery as cr
+
+        best = min(range(len(histories)), key=lambda r: cr.final_objective(histories[r]["medians"]))
+        z = histories[best]["answers"][-1]
+        checks = list(
+            pool.map(
+                _reach_simulate,
+                range(REACH_CHECKS),
+                [z] * REACH_CHECKS,
+                [REACH_CHECK_BASE] * REACH_CHECKS,
+            ),
+        )
+    worm = {
+        "description": "The reachability worm: B.4's two-state structure, fitted through the "
+        "measurement model on discarded seeds.",
+        "free": [f"{s}/{n}" for s, n in REACH_FREE],
+        "box": f"log-uniform on [θ/{REACH_BOX:g}, {REACH_BOX:g}θ] around B.4's matched values",
+        "restarts": [
+            {k: h[k] for k in ("restart", "cma_seed", "stop", "medians", "sigmas")}
+            for h in histories
+        ],
+        "best_restart": best,
+        "answer": z,
+        "states": reach_parameters(np.asarray(z)),
+        "check_rms_z": checks,
+        "check_median_rms_z": float(np.median(checks)),
+        "reaches": bool(np.median(checks) <= REACH_BAR),
+    }
+    REACH_PATH.write_text(json.dumps(bg._finite(worm), indent=2) + "\n")
+    record["reachability_worm"] = {
+        k: worm[k] for k in ("best_restart", "check_rms_z", "check_median_rms_z", "reaches")
+    }
+    NOISE_PILOT_PATH.write_text(json.dumps(bg._finite(record), indent=2) + "\n")
+    print(json.dumps(bg._finite(record["reachability_worm"]), indent=2))
+    return 0 if worm["reaches"] else 1
+
+
+def _oracle2(args: argparse.Namespace) -> int:
+    """Run the oracles as amended twice: the losses, the jitter on the check half, Chen, reachability."""
+    import cma_recovery as cr
+
+    bound = (BANDS_V2_PATH, BANDS_V2_RECORD, NOISE_PATH, REACH_PATH, NOISE_PILOT_PATH)
+    if not cr.launch_committed(bound=bound, launch_path=LAUNCH_PATH):
+        print(
+            f"{LAUNCH_PATH} with amendment 2 and the files it binds is not committed and clean.",
+            file=sys.stderr,
+        )
+        return 1
+    if ORACLE_AMENDED2_PATH.exists():
+        print(f"{ORACLE_AMENDED2_PATH} exists: the oracle is read once.", file=sys.stderr)
+        return 1
+    bands = bg.load_bands_v2()
+    tracks = refs.load_scheer_tracks()
+    _, check_dates = split_band_dates(tracks)
+    gate = json.loads(NOISE_PILOT_PATH.read_text())["gate"]
+    real = _stretches_on(tracks, check_dates)
+    library = mm.load_noise_library(NOISE_NAME)
+    rigs = {
+        "lawn_losses": loss_round_trip(bands),
+        "lawn_jitter": {
+            "check_dates": check_dates,
+            **gated_check(real, model_stretches(real, library, CHECK_BASE), gate),
+        },
+        "chemotaxis": chen_round_trip(bands, args.chen_archive),
+    }
+    record: dict[str, Any] = {
+        "description": "B v2's oracles as amended twice: the losses, the jitter on the check half, "
+        "Chen's round trip, then reachability with the fitted worm.",
+        "round_trip": {**rigs, "passes": all(r["passes"] for r in rigs.values())},
+    }
+    if record["round_trip"]["passes"]:
+        record["reachability"] = reachability_oracle(bands, args.workers)
+        record["passes"] = bool(record["reachability"]["passes"])
+    else:
+        record["reachability"] = "not run: a measurement check failed"
+        record["passes"] = False
+    ORACLE_AMENDED2_PATH.write_text(
+        json.dumps(bg._finite(record), indent=2, allow_nan=False) + "\n",
+    )
+    print(json.dumps(bg._finite(record), indent=2)[:6000])
+    return 0 if record["passes"] else 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1513,6 +1886,11 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("read", "blind"):
         sub.add_parser(name).add_argument("--workers", type=int, default=16)
     sub.add_parser("verdict")
+    sub.add_parser("noise-library")
+    sub.add_parser("noise-pilot").add_argument("--workers", type=int, default=16)
+    oracle2 = sub.add_parser("oracle2")
+    oracle2.add_argument("--chen-archive", type=Path, required=True)
+    oracle2.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
     stages = {
         "probe": _probe,
@@ -1520,6 +1898,9 @@ def main(argv: list[str] | None = None) -> int:
         "read": _read,
         "blind": _blind,
         "verdict": _verdict,
+        "noise-library": _noise_library_stage,
+        "noise-pilot": _noise_pilot,
+        "oracle2": _oracle2,
     }
     return stages[args.stage](args)
 

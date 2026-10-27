@@ -5,7 +5,9 @@ seconds of an omega turn, and Chen's breaks every track into fragments. A simula
 neither, so statistics computed on its exact positions are not comparable with real ones. Before
 any window is cut, every simulated track therefore passes through a :class:`TrackerModel`:
 
-- each 1-s position gains independent normal noise of ``jitter_mm`` per axis;
+- each 1-s position gains noise: with a ``noise_library``, the real tracker's readings of a still
+  worm, resampled (:class:`NoiseLibrary`); otherwise independent normal noise of ``jitter_mm`` per
+  axis;
 - tracking is then lost in runs: at each tracked second a loss starts with ``p_omega`` if the
   simulated primitive that second is an omega and ``p_other`` otherwise, and lasts a length drawn
   from that context's measured runs (``runs_omega_s``, ``runs_other_s``). Without runs, a start
@@ -20,11 +22,16 @@ measured the same way alone or in any population. Real and imported tracks are n
 from __future__ import annotations
 
 import dataclasses
+import functools
+import hashlib
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
+
+from quantumnematode.benchmark.references import BENCHMARK_DATA
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -33,6 +40,66 @@ if TYPE_CHECKING:
 
 LAWN_STREAM = 2033
 CHEMOTAXIS_STREAM = 2037
+UM_PER_MM = 1000.0
+
+
+@dataclass(frozen=True)
+class NoiseLibrary:
+    """The real tracker's readings of a still worm: stretches of offsets from their own mean.
+
+    Stretch ``k`` is ``lengths[k]`` consecutive 1-s offsets in ``x_mm`` and ``y_mm``. A noise track
+    joins whole stretches, drawn uniformly with replacement, end to end, offsets as stored, and
+    cuts the last to fit; where two meet, the track jumps from one's last offset to the next one's
+    first.
+    """
+
+    x_mm: np.ndarray
+    y_mm: np.ndarray
+    lengths: np.ndarray
+
+    @property
+    def starts(self) -> np.ndarray:
+        """Return each stretch's first index into the offsets."""
+        return np.concatenate(([0], np.cumsum(self.lengths)[:-1]))
+
+    def draw(self, n: int, rng: np.random.Generator) -> np.ndarray:
+        """Return an ``(n, 2)`` noise track drawn from ``rng``."""
+        out = np.empty((n, 2))
+        starts, t = self.starts, 0
+        while t < n:
+            k = int(rng.integers(len(self.lengths)))
+            a, length = int(starts[k]), int(self.lengths[k])
+            take = min(length, n - t)
+            out[t : t + take, 0] = self.x_mm[a : a + take]
+            out[t : t + take, 1] = self.y_mm[a : a + take]
+            t += take
+        return out
+
+
+def save_noise_library(path: Path, x_mm: np.ndarray, y_mm: np.ndarray, lengths: np.ndarray) -> None:
+    """Write a noise library, its offsets in whole micrometres as the Scheer store keeps them."""
+    np.savez_compressed(
+        path,
+        x_um=np.round(np.asarray(x_mm) * UM_PER_MM).astype(np.int32),
+        y_um=np.round(np.asarray(y_mm) * UM_PER_MM).astype(np.int32),
+        lengths=np.asarray(lengths, dtype=np.int32),
+    )
+
+
+@functools.cache
+def load_noise_library(name: str) -> NoiseLibrary:
+    """Return a vendored noise library by its file name under the benchmark data."""
+    with np.load(BENCHMARK_DATA / name) as store:
+        return NoiseLibrary(
+            x_mm=store["x_um"].astype(float) / UM_PER_MM,
+            y_mm=store["y_um"].astype(float) / UM_PER_MM,
+            lengths=store["lengths"].astype(int),
+        )
+
+
+def file_sha256(path: Path) -> str:
+    """Return a file's SHA-256, as recorded beside a model that names it."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -46,6 +113,8 @@ class TrackerModel:
     runs_other_s: tuple[int, ...] | None = None
     fragment_lengths_s: tuple[int, ...] | None = None
     stream_key: int = LAWN_STREAM
+    noise_library: str | None = None
+    noise_sha256: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         """Return the model as recorded with the bands."""
@@ -115,7 +184,10 @@ def measure(
     """
     rng = np.random.default_rng([seed, model.stream_key])
     n = len(steps)
-    noise = rng.normal(0.0, model.jitter_mm, size=(n, 2))
+    if model.noise_library is not None:
+        noise = load_noise_library(model.noise_library).draw(n, rng)
+    else:
+        noise = rng.normal(0.0, model.jitter_mm, size=(n, 2))
     lost = lost_seconds([s.primitive for s in steps], model, rng)
     if model.fragment_lengths_s is not None:
         lost[fragment_cuts(n, model.fragment_lengths_s, rng)] = True

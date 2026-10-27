@@ -281,6 +281,24 @@ def track_populations(manifest: Path) -> dict[str, list[list[BehaviourStep]]]:
 # ---------------------------------------------------------------------------------------------
 
 BANDS_V2_PATH = _REPO / "data" / "benchmark" / "bands_v2.json"
+CONTROLS_V2_PATH = (
+    _REPO
+    / "docs"
+    / "experiments"
+    / "logbooks"
+    / "supporting"
+    / "115-benchmark-v2"
+    / "controls_v2.json"
+)
+
+
+def v2_is_valid() -> bool:
+    """Return whether B v2's bands are vendored and its controls' verdict is VALID."""
+    if not (BANDS_V2_PATH.exists() and CONTROLS_V2_PATH.exists()):
+        return False
+    return json.loads(CONTROLS_V2_PATH.read_text()).get("verdict") == "VALID"
+
+
 CHEMOTAXIS_PROTOCOL = "chemotaxis_chen"
 
 
@@ -538,12 +556,12 @@ def main(argv: list[str] | None = None) -> int:
             "--bands",
             choices=("v1", "v2"),
             default=None,
-            help="v2 (the default once its bands are vendored): measured simulated tracks, 20 "
-            "statistics; v1 is frozen for past verdicts",
+            help="v2 (the default once its controls find it VALID): measured simulated tracks, "
+            "20 statistics; v1 is frozen for past verdicts",
         )
     args = parser.parse_args(argv)
     if args.bands is None:
-        args.bands = "v2" if BANDS_V2_PATH.exists() else "v1"
+        args.bands = "v2" if v2_is_valid() else "v1"
     if args.bands == "v2":
         return _main_v2(args)
     bands = load_bands()

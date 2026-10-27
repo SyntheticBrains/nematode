@@ -6,11 +6,15 @@ Covers the benchmark-grading spec's scenario "An omega second can go missing".
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from quantumnematode.benchmark import measurement as mm
 from quantumnematode.report.behaviour import BehaviourStep
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _steps(n: int, kinds: list[str] | None = None) -> list[BehaviourStep]:
@@ -93,3 +97,58 @@ def test_the_model_round_trips_through_its_record() -> None:
         fragment_lengths_s=(39,),
     )
     assert mm.TrackerModel.from_dict(model.to_dict()) == model
+
+
+def _library() -> mm.NoiseLibrary:
+    return mm.NoiseLibrary(
+        x_mm=np.array([1.0, 2.0, 3.0, 10.0, 20.0]),
+        y_mm=np.array([-1.0, -2.0, -3.0, -10.0, -20.0]),
+        lengths=np.array([3, 2]),
+    )
+
+
+def test_a_noise_track_joins_whole_stretches_as_stored() -> None:
+    """Covers "The lawn rig's tracker noise is resampled real noise": stretches join end to end.
+
+    Every drawn second is a stored offset, each stretch starts at its own first offset, and the
+    last stretch is cut to fit.
+    """
+    lib = _library()
+    track = lib.draw(11, np.random.default_rng(0))
+    assert track.shape == (11, 2)
+    stretches = {(1.0, 2.0, 3.0), (10.0, 20.0)}
+    t = 0
+    while t < 11:
+        head = track[t, 0]
+        run = (1.0, 2.0, 3.0) if head == 1.0 else (10.0, 20.0)
+        assert run in stretches
+        piece = tuple(track[t : t + len(run), 0])
+        assert piece == run[: len(piece)]
+        np.testing.assert_array_equal(track[t : t + len(piece), 1], -np.array(piece))
+        t += len(piece)
+
+
+def test_a_library_model_measures_an_animal_the_same_alone_or_in_a_population(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers "An animal is measured the same way alone or in a population" for the library."""
+    lib = _library()
+    monkeypatch.setattr(mm, "load_noise_library", lambda _name: lib)
+    model = mm.TrackerModel(jitter_mm=0.0, noise_library="toy.npz")
+    first = mm.measure(_steps(30), seed=7, model=model)
+    again = mm.measure(_steps(30), seed=7, model=model)
+    other = mm.measure(_steps(30), seed=8, model=model)
+    assert [s.x for s in first] == [s.x for s in again]
+    assert [s.x for s in first] != [s.x for s in other]
+    offsets = {round(s.x - i, 9) for i, s in enumerate(first)}
+    assert offsets <= {1.0, 2.0, 3.0, 10.0, 20.0}
+
+
+def test_a_saved_library_round_trips_to_the_micrometre(tmp_path: Path) -> None:
+    """A library is stored in whole micrometres and read back in millimetres."""
+    path = tmp_path / "lib.npz"
+    mm.save_noise_library(path, np.array([0.0012, -0.0034]), np.array([0.0, 0.0101]), np.array([2]))
+    with np.load(path) as store:
+        assert store["x_um"].tolist() == [1, -3]
+        assert store["y_um"].tolist() == [0, 10]
+        assert store["lengths"].tolist() == [2]

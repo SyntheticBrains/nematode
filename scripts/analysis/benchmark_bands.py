@@ -849,6 +849,7 @@ KINEMATICS_INDEX = 5  # the kinematics family's band generator, after v1's
 V2_KAPPA_SEED = 2039
 V2_CHECK_SEED = 2040
 CHEMOTAXIS_ALLOWANCE_TAIL = 0.025
+LAWN_NOISE_LIBRARY = "scheer_tracker_noise.npz"
 
 
 def v2_statistics() -> int:
@@ -982,7 +983,11 @@ def chemotaxis_leave_one_out(
 
 
 def measurement_models(probes: dict[str, Any], chen: refs.ChenTracks) -> dict[str, Any]:
-    """Return the lawn and chemotaxis trackers' models, from the probes and Chen's fragments."""
+    """Return the lawn and chemotaxis trackers' models, from the probes and Chen's fragments.
+
+    The lawn model's noise is the vendored library of the real tracker's readings of a still worm;
+    its Gaussian ``jitter_mm`` is kept for the record. Chen's rig keeps its Gaussian jitter.
+    """
     from quantumnematode.benchmark import measurement as mm
 
     tracker = probes["scheer"]["tracker"]
@@ -994,6 +999,8 @@ def measurement_models(probes: dict[str, Any], chen: refs.ChenTracks) -> dict[st
         runs_omega_s=tuple(runs["omega"]["lengths_s"]),
         runs_other_s=tuple(runs["other"]["lengths_s"]),
         stream_key=mm.LAWN_STREAM,
+        noise_library=LAWN_NOISE_LIBRARY,
+        noise_sha256=mm.file_sha256(refs.BENCHMARK_DATA / LAWN_NOISE_LIBRARY),
     )
     standard = [r for r, p in enumerate(chen.recording_protocol) if p == "standard"]
     lengths = chen.fragment_length_s[np.isin(chen.fragment_recording, standard)]

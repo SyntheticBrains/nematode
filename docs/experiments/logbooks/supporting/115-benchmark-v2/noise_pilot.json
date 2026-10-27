@@ -1,0 +1,79 @@
+{
+  "description": "The empirical-noise pilot, on the library half and discarded seeds.",
+  "library_sha256": "328bfbcece5c8ba21b7fe23c183d4a6efe14f9c88f56d46e0d555e36007ee1f4",
+  "gate": {
+    "halvings": 1000,
+    "seed": 2044,
+    "ranges": {
+      "onsets_per_paused_min": [
+        -0.2606552943888585,
+        0.23650518754057312
+      ],
+      "paused_window_speed_median": [
+        -0.00041444897395857214,
+        0.00038567469569475904
+      ],
+      "paused_window_speed_p90": [
+        -0.00035214370278509067,
+        0.00030991384522133193
+      ]
+    },
+    "sd": {
+      "onsets_per_paused_min": 0.12820119906063537,
+      "paused_window_speed_median": 0.00020990063259098028,
+      "paused_window_speed_p90": 0.00018075327036246153
+    }
+  },
+  "gaussian_misses": {
+    "onsets_per_paused_min": 1.7365192121407813,
+    "paused_window_speed_median": -0.0022513316438001188,
+    "paused_window_speed_p90": -0.004621347894778234
+  },
+  "in_sample": {
+    "stretches": 6213,
+    "readings": {
+      "step_median_mm": {
+        "real": 0.005385164807134509,
+        "model": 0.0058309518948453,
+        "difference": 0.00044578708771079133
+      },
+      "step_p90_mm": {
+        "real": 0.015811388300841875,
+        "model": 0.019000000000000003,
+        "difference": 0.003188611699158128
+      },
+      "onsets_per_paused_min": {
+        "real": 2.2839087723329694,
+        "model": 3.4758430516458896,
+        "difference": 1.1919342793129202,
+        "range": [
+          -0.2606552943888585,
+          0.23650518754057312
+        ],
+        "passes": false
+      },
+      "paused_window_speed_median": {
+        "real": 0.0037611986739267277,
+        "model": 0.004140812099047606,
+        "difference": 0.00037961342512087817,
+        "range": [
+          -0.00041444897395857214,
+          0.00038567469569475904
+        ],
+        "passes": true
+      },
+      "paused_window_speed_p90": {
+        "real": 0.00715907061300803,
+        "model": 0.008154991263597944,
+        "difference": 0.0009959206505899144,
+        "range": [
+          -0.00035214370278509067,
+          0.00030991384522133193
+        ],
+        "passes": false
+      }
+    },
+    "passes": false
+  },
+  "stop": "the draw fails in-sample: the joins distort the noise"
+}

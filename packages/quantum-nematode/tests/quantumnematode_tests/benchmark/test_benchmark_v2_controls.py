@@ -6,6 +6,7 @@ unit" (the verdict's checks), and the measurement-model round trip on toy tracks
 
 from __future__ import annotations
 
+import json
 import math
 import sys
 from pathlib import Path
@@ -140,3 +141,47 @@ def test_noise_statistics_of_a_still_worm_scale_with_jitter() -> None:
     assert high["step_median_mm"] == pytest.approx(4 * low["step_median_mm"], rel=0.1)
     assert high["paused_window_speed_median"] > low["paused_window_speed_median"]
     assert math.isfinite(low["onsets_per_paused_min"])
+
+
+def test_the_library_never_sees_the_check() -> None:
+    """Covers "The library never sees the check": the two halves of the band dates are disjoint."""
+    from quantumnematode.benchmark import references as refs
+
+    library, check = v2.split_band_dates(refs.load_scheer_tracks())
+    assert len(library) == v2.LIBRARY_DATES
+    assert not set(library) & set(check)
+    assert len(library) + len(check) == 41
+
+
+def test_the_permutation_gate_brackets_zero_and_passes_a_match() -> None:
+    """Covers "A still simulated worm reads like a still real worm": the gate's range and read."""
+    rng = np.random.default_rng(4)
+    per_date = {
+        d: {
+            "onsets": int(rng.integers(50, 150)),
+            "seconds": 3000,
+            "speeds": rng.gamma(2.0, 0.002, 300),
+        }
+        for d in range(41)
+    }
+    gate = v2.permutation_gate(per_date)
+    for name in v2.GATED:
+        low, high = gate["ranges"][name]
+        assert low < 0 < high
+    real = [tuple(rng.normal(0, 0.005, size=(2, 30))) for _ in range(200)]
+    same = v2.gated_check(real, real, gate)
+    assert same["passes"] is True
+    shifted = v2.gated_check(real, [(x * 4, y * 4) for x, y in real], gate)
+    assert shifted["passes"] is False
+
+
+def test_the_reachability_worm_spans_its_box_around_the_matched_values() -> None:
+    """Covers "The matched worm misses with no noise": the box's centre is B.4's matched worm."""
+    import benchmark_controls as bc  # pyright: ignore[reportMissingImports]
+
+    states = json.loads(bc.PARAMS_PATH.read_text())["states"]
+    centre = v2.reach_parameters(np.full(len(v2.REACH_FREE), 0.5))
+    low = v2.reach_parameters(np.zeros(len(v2.REACH_FREE)))
+    for state, name in v2.REACH_FREE:
+        assert centre[state][name] == pytest.approx(states[state][name])
+        assert low[state][name] == pytest.approx(states[state][name] / v2.REACH_BOX)

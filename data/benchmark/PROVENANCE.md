@@ -279,3 +279,11 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
 - **Licence:** CC0-1.0 for the parts from Scheer & Bargmann, and CC BY 4.0 for the parts from
   López-Cruz et al.
 - **Checksum:** SHA-256 `44122f9077b5911e1c5519ded43b558ffad2433e7b1315334aa41e02c3cb64a0` as written.
+
+## `scheer_tracker_noise.npz`
+
+- **Derived by** `scripts/analysis/benchmark_v2_controls.py noise-library` from `scheer2023_tracks.npz`. It is the real tracker's readings of a still worm, which B v2's lawn measurement model resamples as simulated tracks' position noise.
+  - **The stretches:** PD1074's band dates are split by `default_rng(2043).permutation` into a library half (21 dates) and a check half (20). The library holds the library half's paused stretches: runs of at least 10 s whose seconds have all three frames flagged `pause` and a position.
+  - **What is stored:** 6,213 stretches, 93,248 s. Each holds its offsets from its own mean position, x and y, in whole micrometres (`x_um`, `y_um`, int32), stored consecutively with their `lengths`.
+- **Licence:** CC0-1.0, as Scheer & Bargmann's deposit.
+- **Checksum:** SHA-256 `328bfbcece5c8ba21b7fe23c183d4a6efe14f9c88f56d46e0d555e36007ee1f4` as written.
