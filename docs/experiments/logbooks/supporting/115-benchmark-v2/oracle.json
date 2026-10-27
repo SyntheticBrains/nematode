@@ -1,0 +1,130 @@
+{
+  "description": "B v2's oracles: the round trip, then reachability.",
+  "round_trip": {
+    "lawn": {
+      "animals": 1013,
+      "denoiser": "interior gaps interpolated, then a centred 5-s moving average",
+      "kinematics": {
+        "dwelling_speed_median": {
+          "raw": 0.012838345155748037,
+          "round_trip": 0.010644817839592483,
+          "scale": 0.0004269456605953285,
+          "z": -5.137720133042042,
+          "passes": false
+        },
+        "dwelling_speed_p90": {
+          "raw": 0.028228348042629806,
+          "round_trip": 0.024623825458404046,
+          "scale": 0.0006806277497227299,
+          "z": -5.2958795548582165,
+          "passes": false
+        },
+        "roaming_speed_median": {
+          "raw": 0.037258195394971876,
+          "round_trip": 0.03657949079299796,
+          "scale": 0.0005408007119883247,
+          "z": -1.2549994608523554,
+          "passes": false
+        },
+        "roaming_speed_p90": {
+          "raw": 0.07326134970632286,
+          "round_trip": 0.07454559927394476,
+          "scale": 0.00241407185984869,
+          "z": 0.5319848132865398,
+          "passes": true
+        },
+        "reversals_per_on_lawn_min": {
+          "raw": 4.065549279868045,
+          "round_trip": 3.0232397518705634,
+          "scale": 0.0827934466925661,
+          "z": -12.589275717290185,
+          "passes": false
+        },
+        "roaming_survival_5min": {
+          "raw": 0.19388298312439115,
+          "round_trip": 0.13256259336905868,
+          "scale": 0.024651758585168843,
+          "z": -2.4874651251949405,
+          "passes": false
+        }
+      },
+      "small_lawn_reported": {
+        "roaming_fraction": {
+          "raw": 0.1693625364393881,
+          "round_trip": 0.13604752932857925,
+          "scale": 0.020968462609310786,
+          "z": -1.5888149613799405,
+          "passes": false
+        },
+        "roaming_bout_s": {
+          "raw": 216.66666666666666,
+          "round_trip": 173.18880351262348,
+          "scale": 13.165147388866009,
+          "z": -3.3024972580871483,
+          "passes": false
+        },
+        "dwelling_bout_s": {
+          "raw": 1067.927031509121,
+          "round_trip": 1104.0550964187328,
+          "scale": 123.71675141177889,
+          "z": 0.29202241812317825,
+          "passes": true
+        },
+        "exits_per_on_lawn_hour": {
+          "raw": 0.7104713257487811,
+          "round_trip": 0.7760594289064892,
+          "scale": 0.11616778901404211,
+          "z": 0.564598015632198,
+          "passes": true
+        },
+        "pre_exit_enrichment": {
+          "raw": 0.29533931414320275,
+          "round_trip": 0.26457358868384306,
+          "scale": 0.040368790302022055,
+          "z": -0.7621166061500396,
+          "passes": true
+        },
+        "time_on_lawn": {
+          "raw": 0.9781185208237833,
+          "round_trip": 0.9738832134564434,
+          "scale": 0.003550543038806348,
+          "z": -1.192861858326822,
+          "passes": false
+        }
+      },
+      "passes": false
+    },
+    "chemotaxis": {
+      "fragments": 4809,
+      "denoiser": "the authors' SmoothX/SmoothY, resampled to 1 s as the raw paths are",
+      "applied": "jitter only; the fragments are the real ones",
+      "chemotaxis": {
+        "drift_mm_s": {
+          "raw": 0.024224619888602073,
+          "round_trip": 0.024211498240416525,
+          "scale": 0.01607959636210519,
+          "z": -0.0008160433813172118,
+          "passes": true
+        },
+        "log_quintile_ratio": {
+          "raw": 1.140419019850904,
+          "round_trip": 1.175444720711398,
+          "scale": 0.7638468482245655,
+          "z": 0.04585435017753276,
+          "passes": true
+        },
+        "weathervane_deg_s": {
+          "raw": 0.3514905343773446,
+          "round_trip": 0.45021233972814373,
+          "scale": 0.8773919711653813,
+          "z": 0.11251733386581315,
+          "passes": true
+        }
+      },
+      "passes": true
+    },
+    "passes": false
+  },
+  "reachability": "not run: the round trip failed, so the measurement model is wrong",
+  "passes": false
+}

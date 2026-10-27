@@ -537,10 +537,13 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument(
             "--bands",
             choices=("v1", "v2"),
-            default="v1",
-            help="v1 (frozen for past verdicts) or v2: measured simulated tracks, 20 statistics",
+            default=None,
+            help="v2 (the default once its bands are vendored): measured simulated tracks, 20 "
+            "statistics; v1 is frozen for past verdicts",
         )
     args = parser.parse_args(argv)
+    if args.bands is None:
+        args.bands = "v2" if BANDS_V2_PATH.exists() else "v1"
     if args.bands == "v2":
         return _main_v2(args)
     bands = load_bands()
