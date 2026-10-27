@@ -236,3 +236,10 @@ def test_the_reversal_coupling_needs_a_spread() -> None:
         BatchedStateHazards(**kw, reversal_speed_coupling=1.0)
     worm = BatchedStateHazards(**kw, speed_log_sd=(0.5, 0.5), reversal_speed_coupling=2.0)
     assert worm.reversal_speed_coupling == 2.0
+
+
+def test_z_rows_report_an_unbanded_statistic() -> None:
+    """A statistic computed but not graded is reported, never read on a band."""
+    rows = v2._z_rows({"a": 1.0, "b": 2.0}, {"a": 1.5, "b": 9.0}, {"a": g.Band(0.0, 2.0)})
+    assert rows["a"]["passes"] is True
+    assert rows["b"] == {"raw": 2.0, "round_trip": 9.0, "reported": True}

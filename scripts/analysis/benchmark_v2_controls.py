@@ -542,8 +542,12 @@ def _z_rows(
     trip: dict[str, float],
     scales: dict[str, g.Band],
 ) -> dict[str, Any]:
-    rows = {}
+    rows: dict[str, Any] = {}
     for name, value in raw.items():
+        if name not in scales:
+            # Computed and reported beside the graded statistics; there is no band to read it on.
+            rows[name] = {"raw": value, "round_trip": trip[name], "reported": True}
+            continue
         z = (trip[name] - value) / scales[name].scale
         rows[name] = {
             "raw": value,
@@ -658,7 +662,7 @@ def loss_round_trip(bands: dict[str, Any]) -> dict[str, Any]:
         "animals": len(rows),
         "applied": "the losses alone, on gap-filled tracks",
         "kinematics": rows_z,
-        "passes": all(r["passes"] for r in rows_z.values()),
+        "passes": all(r["passes"] for r in rows_z.values() if "passes" in r),
     }
 
 
