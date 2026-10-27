@@ -450,9 +450,9 @@ Every other rule of Part A and amendments 1 and 2 is unchanged.
 
 | Check | Read in | Result |
 |---|---|---|
-| the losses on gap-filled tracks | `oracle_amendment2.json` | pass, every kinematics |z| ≤ 0.15 |
+| the losses on gap-filled tracks | `oracle_amendment2.json` | pass, every kinematics z within ±0.15 |
 | the jitter on the check half (7,014 stretches) | `oracle_amendment2.json` | pass: window speed median −0.000011, p90 −0.000044 mm/s, inside their ranges |
-| Chen's round trip | `oracle_amendment2.json` | pass, |z| ≤ 0.11 |
+| Chen's round trip | `oracle_amendment2.json` | pass, every z within ±0.11 |
 | reachability, 40 populations at 159 M | `oracle_amendment3.json` | pass: mean z −0.29, +0.04, +0.35, −0.74; shares 100%, 100%, 97.5%, 100% |
 
 Bout survival, excluded from the reachability gate, reads a mean z of −2.47.
