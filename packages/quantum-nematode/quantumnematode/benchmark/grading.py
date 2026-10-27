@@ -255,6 +255,9 @@ def lawn_statistics(total: np.ndarray) -> dict[str, float]:
 SPEED_BINS_MM_S = np.logspace(-4.0, 0.0, 81)
 # Roaming-bout survival is read at 5 min, 30 windows.
 SURVIVAL_WINDOWS = 30
+# The on-lawn reversal detector's step floor: the smallest 0.01-mm floor at which the real
+# tracker's readings of a still worm detect reversals at under 1% of the real on-lawn rate.
+ON_LAWN_REVERSAL_FLOOR_MM = 0.03
 KINEMATIC_STATISTICS = (
     "dwelling_speed_median",
     "dwelling_speed_p90",
@@ -295,12 +298,14 @@ def _roaming_bouts(states: np.ndarray) -> list[tuple[int, bool]]:
 def on_lawn_reversals(x: np.ndarray, y: np.ndarray, on_lawn: np.ndarray) -> tuple[int, int]:
     """Return reversal onsets detected on the lawn and the valid on-lawn seconds, from positions.
 
-    The off-food detector is applied to the whole track; an onset counts when its sample is on the
-    lawn, and a second is valid when both its samples are present and on the lawn.
+    The off-food detector is applied to the whole track with its step floor raised to
+    :data:`ON_LAWN_REVERSAL_FLOOR_MM`, so the tracker's noise on a slow worm cannot read as
+    reversals; an onset counts when its sample is on the lawn, and a second is valid when both its
+    samples are present and on the lawn.
     """
     x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
     on = np.asarray(on_lawn, dtype=bool)
-    onsets = reversal_onsets(x, y, OFF_FOOD_DETECTOR)
+    onsets = reversal_onsets(x, y, OFF_FOOD_DETECTOR, floor=ON_LAWN_REVERSAL_FLOOR_MM)
     valid = np.isfinite(np.diff(x)) & np.isfinite(np.diff(y)) & on[1:] & on[:-1]
     kept = sum(1 for o in onsets if int(o) < len(on) and on[int(o)])
     return kept, int(valid.sum())

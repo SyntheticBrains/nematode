@@ -107,25 +107,26 @@ def _library() -> mm.NoiseLibrary:
     )
 
 
-def test_a_noise_track_joins_whole_stretches_as_stored() -> None:
-    """Covers "The lawn rig's tracker noise is resampled real noise": stretches join end to end.
+def test_a_noise_track_is_spliced_at_the_nearest_offset() -> None:
+    """Covers "The lawn rig's tracker noise is resampled real noise": tracks splice, never jump.
 
-    Every drawn second is a stored offset, each stretch starts at its own first offset, and the
-    last stretch is cut to fit.
+    Every drawn second is a stored offset. Where a stretch ends, the track continues from the
+    offset after the nearest match in another stretch, a stretch's last offset never matching.
     """
-    lib = _library()
-    track = lib.draw(11, np.random.default_rng(0))
-    assert track.shape == (11, 2)
-    stretches = {(1.0, 2.0, 3.0), (10.0, 20.0)}
-    t = 0
-    while t < 11:
-        head = track[t, 0]
-        run = (1.0, 2.0, 3.0) if head == 1.0 else (10.0, 20.0)
-        assert run in stretches
-        piece = tuple(track[t : t + len(run), 0])
-        assert piece == run[: len(piece)]
-        np.testing.assert_array_equal(track[t : t + len(piece), 1], -np.array(piece))
-        t += len(piece)
+    lib = mm.NoiseLibrary(
+        x_mm=np.array([0.0, 1.0, 2.0, 10.0, 2.1, 5.0, 6.0]),
+        y_mm=np.zeros(7),
+        lengths=np.array([3, 4]),
+    )
+    for seed in range(50):
+        track = lib.draw(6, np.random.default_rng(seed))
+        assert set(track[:, 0]) <= set(lib.x_mm.tolist())
+        if track[0, 0] == 0.0:
+            # Stretch A ends at 2.0; the nearest usable match is B's 2.1, so it runs on at 5.0, 6.0.
+            np.testing.assert_array_equal(track[:5, 0], [0.0, 1.0, 2.0, 5.0, 6.0])
+            break
+    else:
+        pytest.fail("no draw started at the first stretch")
 
 
 def test_a_library_model_measures_an_animal_the_same_alone_or_in_a_population(

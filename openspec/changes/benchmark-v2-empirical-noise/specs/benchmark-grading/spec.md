@@ -2,7 +2,7 @@
 
 ### Requirement: The lawn rig's tracker noise is resampled real noise
 
-B v2's lawn measurement model SHALL draw each simulated track's position noise from a library of the real tracker's readings of a still worm: the offsets from their own mean of PD1074's paused stretches on half of its band dates. The draw SHALL join whole stretches end to end, from the animal's own stream, with no other transformation. The model SHALL pass the jitter check on the other half of the band dates, which the library never saw, before any further B v2 reading. The check's gate SHALL be calibrated on the tracker's own date-to-date variation.
+B v2's lawn measurement model SHALL draw each simulated track's position noise from a library of the real tracker's readings of a still worm: the offsets from their own mean of PD1074's paused stretches on half of its band dates. The draw SHALL splice stretches at the nearest stored offset (the best of 50 drawn stretches), from the animal's own stream, with no other transformation. The model SHALL pass the jitter check on the other half of the band dates, which the library never saw, before any further B v2 reading. The check's gate SHALL be calibrated on the tracker's own date-to-date variation.
 
 #### Scenario: A still simulated worm reads like a still real worm
 
@@ -32,3 +32,12 @@ The reachability oracle SHALL read an open-loop two-state worm whose per-state s
 
 - **WHEN** the fitted worm's median RMS z on fresh populations exceeds 1
 - **THEN** the change SHALL stop before registration, and the statistic it misses SHALL be recorded as unreachable by an open-loop point worm
+
+### Requirement: The on-lawn reversal rate is read above the tracker's noise
+
+The kinematics family's on-lawn reversal rate SHALL use the off-food detector with a step floor of 0.03 mm: the smallest 0.01-mm floor at which the real tracker's readings of a still worm, on the library half, detect reversals at under 1% of the real on-lawn rate. Off-food uses of the detector SHALL be unchanged.
+
+#### Scenario: Tracker noise does not read as reversals
+
+- **WHEN** a still worm's real readings are passed to the on-lawn reversal detector
+- **THEN** it SHALL detect reversals at under 1% of the real on-lawn rate

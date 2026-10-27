@@ -43,14 +43,18 @@ CHEMOTAXIS_STREAM = 2037
 UM_PER_MM = 1000.0
 
 
+SPLICE_CANDIDATES = 50
+
+
 @dataclass(frozen=True)
 class NoiseLibrary:
     """The real tracker's readings of a still worm: stretches of offsets from their own mean.
 
     Stretch ``k`` is ``lengths[k]`` consecutive 1-s offsets in ``x_mm`` and ``y_mm``. A noise track
-    joins whole stretches, drawn uniformly with replacement, end to end, offsets as stored, and
-    cuts the last to fit; where two meet, the track jumps from one's last offset to the next one's
-    first.
+    starts at a random stretch's first offset and runs along it. Where a stretch ends, the track is
+    spliced: of :data:`SPLICE_CANDIDATES` stretches drawn uniformly with replacement, it continues
+    from the one holding the offset nearest the track's last, at the offset after that one. So the
+    track never jumps further than the nearest match, and every step after a splice is a real step.
     """
 
     x_mm: np.ndarray
@@ -62,17 +66,31 @@ class NoiseLibrary:
         """Return each stretch's first index into the offsets."""
         return np.concatenate(([0], np.cumsum(self.lengths)[:-1]))
 
+    def _splice(self, x: float, y: float, rng: np.random.Generator) -> tuple[int, int]:
+        """Return the index to continue from and its stretch's end, nearest the offset (x, y)."""
+        ks = rng.integers(len(self.lengths), size=SPLICE_CANDIDATES)
+        starts, lengths = self.starts[ks], self.lengths[ks]
+        width = int(lengths.max()) - 1
+        index = starts[:, None] + np.arange(width)[None, :]
+        usable = np.arange(width)[None, :] < (lengths - 1)[:, None]
+        index = np.where(usable, index, 0)
+        distance = np.where(usable, np.hypot(self.x_mm[index] - x, self.y_mm[index] - y), np.inf)
+        row, column = np.unravel_index(int(np.argmin(distance)), distance.shape)
+        return int(index[row, column]) + 1, int(starts[row] + lengths[row])
+
     def draw(self, n: int, rng: np.random.Generator) -> np.ndarray:
         """Return an ``(n, 2)`` noise track drawn from ``rng``."""
         out = np.empty((n, 2))
-        starts, t = self.starts, 0
+        k = int(rng.integers(len(self.lengths)))
+        j, end = int(self.starts[k]), int(self.starts[k] + self.lengths[k])
+        t = 0
         while t < n:
-            k = int(rng.integers(len(self.lengths)))
-            a, length = int(starts[k]), int(self.lengths[k])
-            take = min(length, n - t)
-            out[t : t + take, 0] = self.x_mm[a : a + take]
-            out[t : t + take, 1] = self.y_mm[a : a + take]
+            take = min(end - j, n - t)
+            out[t : t + take, 0] = self.x_mm[j : j + take]
+            out[t : t + take, 1] = self.y_mm[j : j + take]
             t += take
+            if t < n:
+                j, end = self._splice(out[t - 1, 0], out[t - 1, 1], rng)
         return out
 
 

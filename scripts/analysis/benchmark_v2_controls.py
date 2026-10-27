@@ -104,7 +104,10 @@ def window_rows(
 
 
 def onlawn_reversals(x: np.ndarray, y: np.ndarray, on: np.ndarray) -> tuple[int, int]:
-    """Return detected reversal onsets on the lawn, and the valid on-lawn seconds."""
+    """Return detected reversal onsets on the lawn, and the valid on-lawn seconds.
+
+    The probe's own count, at the detector's default floor, as the planning probes read it.
+    """
     onsets = ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR)
     valid = np.isfinite(np.diff(x)) & np.isfinite(np.diff(y)) & on[1:] & on[:-1]
     kept = [o for o in onsets if int(o) < len(on) and on[int(o)]]
@@ -693,7 +696,9 @@ def noise_statistics(stretches: list[tuple[np.ndarray, np.ndarray]]) -> dict[str
     onsets, seconds = 0, 0
     for x, y in stretches:
         steps.append(np.hypot(np.diff(x), np.diff(y)))
-        onsets += len(ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR))
+        onsets += len(
+            ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR, floor=g.ON_LAWN_REVERSAL_FLOOR_MM),
+        )
         seconds += len(x) - 1
         w = g.window_inputs(x, y, np.ones(len(x), dtype=bool))
         speeds.append(w.speed[np.isfinite(w.speed)])
@@ -1617,7 +1622,9 @@ def per_date_noise(tracks: refs.ScheerTracks) -> dict[int, dict[str, Any]]:
         stretches = paused_stretches(tracks, rows[tracks.date[rows] == d])
         onsets, seconds, speeds = 0, 0, []
         for x, y in stretches:
-            onsets += len(ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR))
+            onsets += len(
+                ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR, floor=g.ON_LAWN_REVERSAL_FLOOR_MM),
+            )
             seconds += len(x) - 1
             w = g.window_inputs(x, y, np.ones(len(x), dtype=bool))
             speeds.append(w.speed[np.isfinite(w.speed)])
@@ -1731,6 +1738,41 @@ def _reach_simulate(k: int, z: list[float], base: int = REACH_FIT_BASE) -> float
     return reach_rms(_measured_small_lawn(reach_controller(reach_parameters(np.asarray(z))), seeds))
 
 
+FLOOR_GRID_MM = tuple(round(0.01 * k, 2) for k in range(1, 11))
+FLOOR_SHARE = 0.01
+
+
+def floor_rule(tracks: refs.ScheerTracks, dates: list[int]) -> dict[str, Any]:
+    """Return the on-lawn reversal floor's rule on these dates, and the floor it chooses.
+
+    It is the smallest floor on the grid at which the real tracker's still-worm onset rate is
+    under :data:`FLOOR_SHARE` of the real on-lawn rate, both read at that floor.
+    """
+    rows, _ = _band_rows_and_omega(tracks)
+    rows = rows[np.isin(tracks.date[rows], dates)]
+    stills = paused_stretches(tracks, rows)
+    grid = []
+    for floor in FLOOR_GRID_MM:
+        onsets = sum(
+            len(ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR, floor=floor)) for x, y in stills
+        )
+        still = 60.0 * onsets / sum(len(x) - 1 for x, _ in stills)
+        n_on = n_s = 0
+        for i in rows:
+            x, y = tracks.x[i], tracks.y[i]
+            on = g.real_on_lawn(x, y, tracks.boundary_radius[i])
+            kept = ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR, floor=floor)
+            n_on += sum(1 for o in kept if int(o) < len(on) and on[int(o)])
+            n_s += int((np.isfinite(np.diff(x)) & np.isfinite(np.diff(y)) & on[1:] & on[:-1]).sum())
+        lawn = 60.0 * n_on / n_s
+        grid.append({"floor_mm": floor, "still_per_min": still, "on_lawn_per_min": lawn})
+    chosen = next(
+        (r["floor_mm"] for r in grid if r["still_per_min"] < FLOOR_SHARE * r["on_lawn_per_min"]),
+        None,
+    )
+    return {"share": FLOOR_SHARE, "grid": grid, "chosen_mm": chosen}
+
+
 def _noise_library_stage(_args: argparse.Namespace) -> int:
     if not _committed(bands=False):
         print(f"{LAUNCH_PATH} is not committed and clean; nothing is built.", file=sys.stderr)
@@ -1750,11 +1792,17 @@ def _noise_pilot(args: argparse.Namespace) -> int:
     per_date = per_date_noise(tracks)
     gate = permutation_gate(per_date)
     real = _stretches_on(tracks, library_dates)
+    floor = floor_rule(tracks, library_dates)
+    print(json.dumps(floor, indent=2), flush=True)
+    if floor["chosen_mm"] != g.ON_LAWN_REVERSAL_FLOOR_MM:
+        msg = f"the floor rule chooses {floor['chosen_mm']}, not {g.ON_LAWN_REVERSAL_FLOOR_MM}"
+        raise RuntimeError(msg)
     record: dict[str, Any] = {
         "description": "The empirical-noise pilot, on the library half and discarded seeds.",
         "library_sha256": mm.file_sha256(NOISE_PATH),
+        "reversal_floor": floor,
         "gate": gate,
-        "gaussian_misses": {
+        "gaussian_misses_at_the_0.01_floor": {
             k: v["model"] - v["real"]
             for k, v in json.loads(ORACLE_AMENDED_PATH.read_text())["round_trip"]["lawn_jitter"][
                 "readings"
@@ -1765,7 +1813,9 @@ def _noise_pilot(args: argparse.Namespace) -> int:
     }
     print(
         json.dumps(
-            bg._finite({k: record[k] for k in ("gate", "gaussian_misses", "in_sample")}),
+            bg._finite(
+                {k: record[k] for k in ("gate", "gaussian_misses_at_the_0.01_floor", "in_sample")},
+            ),
             indent=2,
         ),
         flush=True,

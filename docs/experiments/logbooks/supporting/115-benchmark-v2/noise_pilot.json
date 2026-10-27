@@ -1,13 +1,69 @@
 {
   "description": "The empirical-noise pilot, on the library half and discarded seeds.",
   "library_sha256": "328bfbcece5c8ba21b7fe23c183d4a6efe14f9c88f56d46e0d555e36007ee1f4",
+  "reversal_floor": {
+    "share": 0.01,
+    "grid": [
+      {
+        "floor_mm": 0.01,
+        "still_per_min": 2.2839087723329694,
+        "on_lawn_per_min": 4.112549587171589
+      },
+      {
+        "floor_mm": 0.02,
+        "still_per_min": 0.18544263801918767,
+        "on_lawn_per_min": 3.049793540735828
+      },
+      {
+        "floor_mm": 0.03,
+        "still_per_min": 0.013098178893548572,
+        "on_lawn_per_min": 2.272475762889961
+      },
+      {
+        "floor_mm": 0.04,
+        "still_per_min": 0.001378755673005113,
+        "on_lawn_per_min": 1.6539090281545192
+      },
+      {
+        "floor_mm": 0.05,
+        "still_per_min": 0.0,
+        "on_lawn_per_min": 1.1879292973896556
+      },
+      {
+        "floor_mm": 0.06,
+        "still_per_min": 0.0,
+        "on_lawn_per_min": 0.8256568216267657
+      },
+      {
+        "floor_mm": 0.07,
+        "still_per_min": 0.0,
+        "on_lawn_per_min": 0.5608194206884619
+      },
+      {
+        "floor_mm": 0.08,
+        "still_per_min": 0.0,
+        "on_lawn_per_min": 0.3811971573325932
+      },
+      {
+        "floor_mm": 0.09,
+        "still_per_min": 0.0,
+        "on_lawn_per_min": 0.24731855285663562
+      },
+      {
+        "floor_mm": 0.1,
+        "still_per_min": 0.0,
+        "on_lawn_per_min": 0.15739928014116011
+      }
+    ],
+    "chosen_mm": 0.03
+  },
   "gate": {
     "halvings": 1000,
     "seed": 2044,
     "ranges": {
       "onsets_per_paused_min": [
-        -0.2606552943888585,
-        0.23650518754057312
+        -0.008552542163657938,
+        0.0088306703249231
       ],
       "paused_window_speed_median": [
         -0.00041444897395857214,
@@ -19,12 +75,12 @@
       ]
     },
     "sd": {
-      "onsets_per_paused_min": 0.12820119906063537,
+      "onsets_per_paused_min": 0.0054646213689565366,
       "paused_window_speed_median": 0.00020990063259098028,
       "paused_window_speed_p90": 0.00018075327036246153
     }
   },
-  "gaussian_misses": {
+  "gaussian_misses_at_the_0.01_floor": {
     "onsets_per_paused_min": 1.7365192121407813,
     "paused_window_speed_median": -0.0022513316438001188,
     "paused_window_speed_p90": -0.004621347894778234
@@ -34,28 +90,28 @@
     "readings": {
       "step_median_mm": {
         "real": 0.005385164807134509,
-        "model": 0.0058309518948453,
-        "difference": 0.00044578708771079133
+        "model": 0.00565685424949238,
+        "difference": 0.0002716894423578711
       },
       "step_p90_mm": {
         "real": 0.015811388300841875,
-        "model": 0.019000000000000003,
-        "difference": 0.003188611699158128
+        "model": 0.01655294535724685,
+        "difference": 0.0007415570564049748
       },
       "onsets_per_paused_min": {
-        "real": 2.2839087723329694,
-        "model": 3.4758430516458896,
-        "difference": 1.1919342793129202,
+        "real": 0.013098178893548572,
+        "model": 0.016545068076061355,
+        "difference": 0.0034468891825127825,
         "range": [
-          -0.2606552943888585,
-          0.23650518754057312
+          -0.008552542163657938,
+          0.0088306703249231
         ],
-        "passes": false
+        "passes": true
       },
       "paused_window_speed_median": {
         "real": 0.0037611986739267277,
-        "model": 0.004140812099047606,
-        "difference": 0.00037961342512087817,
+        "model": 0.0038951596305129054,
+        "difference": 0.0001339609565861777,
         "range": [
           -0.00041444897395857214,
           0.00038567469569475904
@@ -64,16 +120,27 @@
       },
       "paused_window_speed_p90": {
         "real": 0.00715907061300803,
-        "model": 0.008154991263597944,
-        "difference": 0.0009959206505899144,
+        "model": 0.0072228060444726,
+        "difference": 6.373543146457033e-05,
         "range": [
           -0.00035214370278509067,
           0.00030991384522133193
         ],
-        "passes": false
+        "passes": true
       }
     },
-    "passes": false
+    "passes": true
   },
-  "stop": "the draw fails in-sample: the joins distort the noise"
+  "reachability_worm": {
+    "best_restart": 1,
+    "check_rms_z": [
+      2.7441714695035073,
+      2.4853433605996798,
+      2.4741594923171615,
+      2.5315375808514733,
+      2.8458091377776427
+    ],
+    "check_median_rms_z": 2.5315375808514733,
+    "reaches": false
+  }
 }

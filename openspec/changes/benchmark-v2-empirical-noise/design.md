@@ -45,13 +45,23 @@ B v2 (change `revise-benchmark-v2`, launch record 115) adds a measurement model 
    - **What is stored:** each stretch's offsets from its own mean position (x and y), in micrometres as int32, as the Scheer store does, stored consecutively with their lengths.
    - **Where:** `data/benchmark/scheer_tracker_noise.npz`. Its `PROVENANCE.md` entry gives the source, the split and the checksum.
 
-3. **The draw.**
+3. **The draw** (revised 2026-10-28, after the first pilot; see "The first pilot" below).
 
    - For a simulated animal of n seconds with seed s, `rng = default_rng([s, 2033])` (the lawn stream).
-   - Stretches are drawn uniformly with replacement and joined end to end, offsets as stored, until the track reaches n seconds. The last stretch is cut to fit.
-   - Where two stretches meet there is a jump: the difference between one's last offset and the next one's first.
+   - The track starts at a random stretch's first offset and runs along it.
+   - **Where a stretch ends, the track is spliced.** Of 50 stretches drawn uniformly with replacement, the track continues from the one holding the offset nearest its last one, at the offset after that match. A stretch's own last offset never matches.
+   - So the track never jumps further than the nearest match, and every step after a splice is a real step. The last stretch is cut to fit.
    - The noise is added to the animal's positions, and then the losses are drawn from the same stream, as now.
-   - **There is one rule and no other freedom:** no rotation, scaling, reflection or continuity shift, and nothing tuned to the check. A continuity shift was considered and dropped: it makes the track wander about 0.3 mm RMS over 45 min, which nothing can check.
+   - **No other freedom:** no rotation, scaling or reflection, and nothing tuned to the check. The candidate count, 50, is the largest the first pilot tried.
+
+3b. **The on-lawn reversal floor** (decided 2026-10-28, after the first pilot).
+
+- The kinematics family's `reversals_per_on_lawn_min` uses the off-food detector with its step floor raised from 0.01 to **0.03 mm**.
+- **The rule:** the smallest floor on a 0.01-mm grid at which the real tracker's still-worm onset rate, on the library half, is under 1% of the real on-lawn rate, both read at that floor. The pilot recomputes it and stops if it does not give 0.03.
+- **Why:** at 0.01 mm the tracker's noise exceeds the floor often (median step 0.0054 mm, 90th percentile 0.0158), and about 45% of the real on-lawn "reversals" are noise or sub-0.03-mm wobble (4.11 per minute at 0.01 against 2.27 at 0.03).
+- **With the floor**, a still worm reads almost no reversals under any noise model: real 0.013, resampled 0.039, Gaussian 0.000 per paused minute. C.1's 0.15 per minute is still far from the real worms' 2.27.
+- The jitter check's onset reading uses the same floor, so it measures what is graded.
+- The kinematics bands, κ and the rule check are rebuilt at the floor. The other families, and every off-food use of the detector, are unchanged.
 
 4. **The pilot** (on the library half and on discarded seeds; description, not a verdict):
 
@@ -100,9 +110,27 @@ B v2 (change `revise-benchmark-v2`, launch record 115) adds a measurement model 
    - the reachability oracle with the reachability worm;
    - then Part B, the N2 read, the negatives, the blind worm and C.1's answer, all on the library model.
 
+### The first pilot (2026-10-28; description)
+
+The first draw joined stretches end to end, and the pilot's in-sample check stopped the change.
+
+**The joins added false onsets.** With every candidate draw, the onset rate came out above the real 2.28 per paused minute:
+
+| Draw tried (library half, 0.01 floor) | Onsets above real (per paused min) |
+|---|---|
+| joined end to end | +1.19 |
+| an autoregressive model (orders 1–8) on the library's own residuals | +0.44 to +0.58 |
+| nearest-offset splicing with 50 candidates | +0.43 |
+
+The gate allowed ±0.25.
+
+**The window speeds:** splicing passed both (median +0.00015, p90 +0.00011 mm/s, against ranges of about ±0.0004 and ±0.0003). The plain joins failed the p90 (+0.0010), and the autoregressive model failed both.
+
+**The cause:** every resampled track has joins and real stretches have none, so the detector's 0.01-mm floor sits inside the noise. Decision 3b removes the dependence, and decision 3's splicing keeps the speeds. Both were chosen after these in-sample readings. Amendment 2 discloses this, and the check half stays unread.
+
 ## Risks / Trade-offs
 
-- **[Joining artefacts]** → the gap between one stretch's last offset and the next one's first is about 0.02 mm, against a median 1-s step of 0.005 mm, and it comes about every 13 s. The in-sample pilot shows whether the joins distort the readings, and the check reads them at the rate a simulated track sees.
+- **[Joining artefacts]** → end-to-end joins jump about 0.02 mm every 13 s, and they failed the first pilot. Splicing at the nearest offset replaces them; the second pilot reads it in-sample, and the check reads it at the rate a simulated track sees.
 - **[Micro-motion as noise]** → a paused real worm's slight motion is carried over as noise. That is the intent: the benchmark compares what the tracker reports. It raises every simulated dwelling window's speed slightly, as it raises real ones.
 - **[A two-state worm cannot reach the statistics]** → for instance, real dwelling's p90-to-median window-speed ratio (2.2) may need speed variability within a state, which this worm lacks. The fit shows it before registration. If it fails, the change stops there, and the diagnosis says which statistic no open-loop point worm reaches.
 - **[A wider gate]** → the permutation gate admits model noise that sits within the tracker's own date variation. That is the comparison the bands make too: their scales are between-date.

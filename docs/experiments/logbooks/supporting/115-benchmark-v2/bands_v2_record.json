@@ -11,7 +11,7 @@
       "dwelling_speed_p90": 1.2625853154994922,
       "roaming_speed_median": 1.328419684798103,
       "roaming_speed_p90": 1.4373275581150167,
-      "reversals_per_on_lawn_min": 1.2483257617490369,
+      "reversals_per_on_lawn_min": 1.2410301007301392,
       "roaming_survival_5min": 1.2209875958227272
     },
     "kappa": {
@@ -19,7 +19,7 @@
       "dwelling_speed_p90": 1.2625853154994922,
       "roaming_speed_median": 1.328419684798103,
       "roaming_speed_p90": 1.4373275581150167,
-      "reversals_per_on_lawn_min": 1.2483257617490369,
+      "reversals_per_on_lawn_min": 1.2410301007301392,
       "roaming_survival_5min": 1.2209875958227272
     }
   },
@@ -259,7 +259,7 @@
       "dwelling_speed_p90": 0.026870327466911516,
       "roaming_speed_median": 0.04618279340267344,
       "roaming_speed_p90": 0.11006105294801538,
-      "reversals_per_on_lawn_min": 3.2160694749288194,
+      "reversals_per_on_lawn_min": 1.5493235300113481,
       "roaming_survival_5min": 0.34687086526067823
     },
     "off_protocol_chemotaxis": {
