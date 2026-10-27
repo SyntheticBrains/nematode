@@ -22,9 +22,9 @@ Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
 ## 1b. Chemotaxis data and assay
 
 - [ ] 1b.1 Chen 2025's deposit (downloaded by hand into the off-repo archive): `extract_benchmark_references.py chen`, naive N2 1-s midbody tracks, plates, dates and the gradient profile; `PROVENANCE.md`.
-- [ ] 1b.2 The held-out split, fixed and committed before any statistic is read on the data.
+- [ ] 1b.2 The leave-one-recording-out validation and its allowance, registered in Part A before any chemotaxis statistic is computed.
 - [ ] 1b.3 The `chemotaxis_chen` assay on the 1-s primitives worm; its tracker parameters in the measurement model.
-- [ ] 1b.4 The chemotaxis statistics, finalised (with the fallback if the gradient profile is not recoverable).
+- [ ] 1b.4 The chemotaxis statistics (drift, quintile ratio, weathervane slope) on real and simulated tracks; the off-protocol recordings reported; the literature-watch topic for chemotaxis datasets.
 
 ## 2. The v2 statistics and bands
 

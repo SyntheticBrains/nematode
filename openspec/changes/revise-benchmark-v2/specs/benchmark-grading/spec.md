@@ -43,7 +43,7 @@ B v1's bands and rule SHALL remain available for every past verdict. B v2's band
 
 ### Requirement: The chemotaxis family
 
-B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from a band side and a held-out side fixed before any reading. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and missingness.
+B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from its six standard-protocol recordings validated leave-one-recording-out, registered before any statistic is computed. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and missingness.
 
 #### Scenario: A worm that ignores the gradient
 

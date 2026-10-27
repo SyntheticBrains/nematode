@@ -94,18 +94,36 @@
    - **The z cap** stays at 10.
    - **The pass rule:** a population passes when every family passes, local search only where its presence holds. This is v1's rule with the new family.
 
-5b. **The chemotaxis family** (decided 2026-10-27, after the first draft).
-\- **The data:** Chen et al. 2025, naive N2, butanone in linear gradients on 10 cm square plates, 30 min at 14 Hz, 50–100 worms per plate, 9–13 plates per condition (CC BY 4.0). Derived 1-s midbody tracks are vendored with a `PROVENANCE.md` entry.
-\- **The assay:** `chemotaxis_chen`, a linear odour field on a square plate, off food, on the 1-s primitives worm. The worm senses it through the existing concentration, head-sweep and dC/dt senses. The plate geometry, gradient profile and placement match Chen's methods.
-\- **The statistics,** from positions and the known gradient, computed identically on real and simulated tracks, and finalised on the data before Part A:
-\- up-gradient drift, or the chemotaxis index;
-\- the quintile ratio, the reorientation rate in the lowest against the highest dC/dt quintile, by the off-food detector. It is unit-free, so robust to the gradient's absolute scale;
-\- the weathervane regression, the slope of heading change against the perpendicular gradient.
-\- **The bands:** by the date (or plate) bootstrap, from a band side. **The held-out split** (a third of dates or plates, by a seeded rule) is fixed and committed before any statistic is read on the data.
-\- **The measurement model** has chemotaxis-assay parameters (jitter and missingness) measured from Chen's own tracks, since it is another rig at another frame rate.
-\- **The positive control:** the held-out plates, read once.
-\- **The negatives and adversaries:** run on the chemotaxis assay too. The blind worm must fail it by construction.
-\- **The fallback, decided before Part A:** if the gradient profile is not recoverable from the deposit, only scale-free statistics enter (bearing-based drift and the quintile ratio).
+5b. **The chemotaxis family** (decided 2026-10-27, after the first draft; settled on the deposit).
+
+```
+- **The data.** The deposit is Chen et al. 2025's figshare article 24764403 (CC BY 4.0), downloaded by hand into the off-repo archive:
+  - outer `24764403.zip`, SHA-256 `94b59ead…72da`;
+  - inner `Chen_learning_2024.zip`, `6fee42b5…e363`;
+  - `S1_Data.xlsx`, `e0894b03…b51d`.
+
+  `data4plots/track_learn_all.mat` holds the tracks by condition and recording; condition 1 is naive, in `learn_folders4.mat`'s `folder_nai` order. **Its 8 naive N2 recordings, on 8 dates:**
+  - **6 on the standard protocol** (`Data_learn/N2/*_11mM_35_400*`: 2022-08-30, 09-13, 09-22, 11-08, 2023-06-09, 06-13). These are the reference;
+  - **2 on another flow rig** (`Data_odor_flow_equ`: 2022-08-04 "biased" and 2022-02-03 "6_32ml_400air"). These are reported only.
+- **The tracks:** 14 Hz `Path` in pixels, at 0.0301 mm per pixel (the median ratio of the authors' `SmoothSpeed` to pixel speed, IQR 0.0298–0.0302), so the imaged field is about 90 × 75 mm. Tracks are fragments, a median of 39 s, and are resampled to 1-s midbody positions.
+- **The field:** `data4plots/Landscape_low_0623_2.mat`'s `vq1`, 2500 × 3000 pixels (y, x), **stored rotated by 180°**. Sampled at `(W − 1 − x, H − 1 − y)`, it reproduces the concentration the authors record along their tracks (`Data_nai_test2.mat`'s `dc`): correlation 1.0000, median absolute difference 0.041. So its registration and units are the authors' own.
+- **The assay:** `chemotaxis_chen`, a 90 × 75 mm field, off food, 30 min, with the odour field `vq1` (bilinear, in mm, in the authors' units). The 1-s primitives worm senses it through its concentration, head-sweep and dC/dt senses. Worms are placed by the measured start distribution of fragments beginning in the first 30 s, near the field's centre.
+- **The measurement model for this rig**, measured from Chen's tracks by the `probe` stage:
+  - jitter, from the residual of `Path` against the authors' smoothed track (SD 0.0075 mm per frame);
+  - fragmentation: simulated 30-min tracks are cut into fragments drawn from the real fragment-length distribution. This stands in for missingness.
+- **The statistics,** pooled per recording over valid seconds, and identical on real and simulated tracks:
+  - **up-gradient drift:** the mean velocity component along ∇C/|∇C| at the worm's position, in mm/s;
+  - **the quintile ratio:** reorientation onsets per minute (the off-food detector) in the lowest dC/dt quintile against the highest, with dC/dt taken from the field along the path. It is unit-free;
+  - **the weathervane slope:** the regression slope, during runs (more than 2 s from a detected reorientation), of the heading's turning rate on the sine of the bearing to the gradient.
+- **The bands and their validation** (there is no held-out side, since 6 dates cannot spare one):
+  - the band is the mean over the 6 recordings, with its scale the SD across recordings times the Student-t prediction factor for a new recording (df 5);
+  - **leave-one-recording-out validation:** each recording is graded against bands built from the other five (t, df 4), every statistic at |z| ≤ z\*;
+  - the allowance comes from the binomial over 6 units at the family's nominal rate, registered before anything is computed;
+  - this is cross-validation, not a held-out read. The record says so, and states the limit: 6 dates, one lab, one odour.
+- **The off-protocol recordings** are reported beside the grade: their statistics, and their position against the bands.
+- **The negatives and adversaries** run the chemotaxis assay too. The blind worm, with no sensing, should fail it.
+- **The definitions are assay-agnostic** (drift along the local gradient, a dC/dt quintile ratio, a bearing regression), so a later source could enter as further bands within the family at the same weight. The literature watch's brief gains "public *C. elegans* chemotaxis track datasets".
+```
 
 06. **Bands v2.** The v1 builder is extended to histograms, bout lists, the reversal tally and the rise:
 
