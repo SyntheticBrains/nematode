@@ -1545,7 +1545,10 @@ REACH_CAP = 100
 REACH_BOX = 4.0
 REACH_CHECKS = 5
 REACH_BAR = 1.0
-GATED = ("onsets_per_paused_min", "paused_window_speed_median", "paused_window_speed_p90")
+# The still-worm readings given permutation ranges, and those of them gated: the window speeds bias
+# the graded dwelling speeds; the onset rate biases no graded statistic, so it is reported.
+NOISE_READINGS = ("onsets_per_paused_min", "paused_window_speed_median", "paused_window_speed_p90")
+GATED = ("paused_window_speed_median", "paused_window_speed_p90")
 REACH_FREE = (
     ("dwelling", "speed_mm_per_s"),
     ("roaming", "speed_mm_per_s"),
@@ -1557,7 +1560,9 @@ REACH_FREE = (
     ("roaming", "omega_hazard_per_s"),
     ("dwelling", "speed_log_sd"),
     ("roaming", "speed_log_sd"),
+    ("both", "reversal_speed_coupling"),
 )
+COUPLING_MAX = 3.0
 # The within-state speed spread has no matched value to centre on: its box is linear from 0.
 SPREAD_MAX = 1.5
 
@@ -1651,12 +1656,12 @@ def permutation_gate(per_date: dict[int, dict[str, Any]]) -> dict[str, Any]:
     """Return each gated reading's central 95% of real-half differences over random date halvings."""
     dates = sorted(per_date)
     rng = np.random.default_rng(HALVING_SEED)
-    diffs: dict[str, list[float]] = {k: [] for k in GATED}
+    diffs: dict[str, list[float]] = {k: [] for k in NOISE_READINGS}
     for _ in range(HALVINGS):
         order = rng.permutation(len(dates))
         a = _pooled([per_date[dates[k]] for k in order[:LIBRARY_DATES]])
         b = _pooled([per_date[dates[k]] for k in order[LIBRARY_DATES:]])
-        for k in GATED:
+        for k in NOISE_READINGS:
             diffs[k].append(a[k] - b[k])
     return {
         "halvings": HALVINGS,
@@ -1678,9 +1683,11 @@ def gated_check(
     rows: dict[str, Any] = {}
     for name, value in a.items():
         row: dict[str, Any] = {"real": value, "model": b[name], "difference": b[name] - value}
-        if name in GATED:
+        if name in NOISE_READINGS:
             low, high = gate["ranges"][name]
-            row.update(range=[low, high], passes=bool(low <= b[name] - value <= high))
+            row["range"] = [low, high]
+            if name in GATED:
+                row["passes"] = bool(low <= b[name] - value <= high)
         rows[name] = row
     return {
         "stretches": len(real),
@@ -1693,13 +1700,16 @@ def reach_parameters(z: np.ndarray) -> dict[str, dict[str, float]]:
     """Return the reachability worm's per-state parameters.
 
     Speeds, curvature SDs and hazards are log-uniform on [θ/4, 4θ] around B.4's matched values;
-    each state's speed spread (a log SD, per 10-s window) is uniform on [0, :data:`SPREAD_MAX`].
+    each state's speed spread (a log SD, per 10-s window) is uniform on [0, :data:`SPREAD_MAX`],
+    and the reversal hazard's coupling to the window's speed draw on [0, :data:`COUPLING_MAX`].
     """
     states = json.loads(bc.PARAMS_PATH.read_text())["states"]
     out = {s: dict(v) for s, v in states.items()}
     for (state, name), u in zip(REACH_FREE, np.asarray(z, dtype=float), strict=True):
         if name == "speed_log_sd":
             out[state][name] = float(SPREAD_MAX * u)
+        elif name == "reversal_speed_coupling":
+            out[state] = {name: float(COUPLING_MAX * u)}
         else:
             out[state][name] = float(states[state][name] * REACH_BOX ** (2.0 * u - 1.0))
     return out
@@ -1720,6 +1730,7 @@ def reach_controller(states: dict[str, dict[str, float]]) -> Any:  # noqa: ANN40
         np.array([[s["reversal_hazard_per_s"], s["omega_hazard_per_s"], minimum] for s in order]),
         window_steps=round(params["hmm"]["window_seconds"]),
         speed_log_sd=tuple(s.get("speed_log_sd", 0.0) for s in order),  # type: ignore[arg-type]
+        reversal_speed_coupling=states.get("both", {}).get("reversal_speed_coupling"),
     )
 
 
@@ -1867,7 +1878,8 @@ def _noise_pilot(args: argparse.Namespace) -> int:
         "measurement model on discarded seeds.",
         "free": [f"{s}/{n}" for s, n in REACH_FREE],
         "box": f"log-uniform on [θ/{REACH_BOX:g}, {REACH_BOX:g}θ] around B.4's matched values; "
-        f"each state's speed spread uniform on [0, {SPREAD_MAX:g}]",
+        f"each state's speed spread uniform on [0, {SPREAD_MAX:g}]; the reversal coupling on "
+        f"[0, {COUPLING_MAX:g}]",
         "restarts": [
             {k: h[k] for k in ("restart", "cma_seed", "stop", "medians", "sigmas")}
             for h in histories

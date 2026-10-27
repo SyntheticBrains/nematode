@@ -258,14 +258,17 @@ SURVIVAL_WINDOWS = 30
 # The on-lawn reversal detector's step floor: the smallest 0.01-mm floor at which the real
 # tracker's readings of a still worm detect reversals at under 1% of the real on-lawn rate.
 ON_LAWN_REVERSAL_FLOOR_MM = 0.03
+# The graded kinematics. The on-lawn reversal rate is computed and reported beside them, not
+# graded: no open-loop point worm reaches it through the tracker, since the detector sees a
+# reversal only after forward motion above its step floor.
 KINEMATIC_STATISTICS = (
     "dwelling_speed_median",
     "dwelling_speed_p90",
     "roaming_speed_median",
     "roaming_speed_p90",
-    "reversals_per_on_lawn_min",
     "roaming_survival_5min",
 )
+KINEMATIC_REPORTED = ("reversals_per_on_lawn_min",)
 _SPEED_BINS = len(SPEED_BINS_MM_S) - 1
 _K_DWELL = slice(0, _SPEED_BINS)
 _K_ROAM = slice(_SPEED_BINS, 2 * _SPEED_BINS)

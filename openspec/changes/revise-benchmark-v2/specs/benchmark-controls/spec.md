@@ -26,7 +26,7 @@ Otherwise it SHALL be VOID.
 
 #### Scenario: A real-rate point worm cannot reach a statistic
 
-- **WHEN** the matched open-loop worm, through the measurement model, fails a speed or reversal statistic in more than 10% of 40 populations, or its mean z lies outside [−1, 1]
+- **WHEN** the reachability worm, through the measurement model, fails a speed statistic in more than 10% of 40 populations, or its mean z lies outside [−1, 1]
 - **THEN** the run SHALL stop before Part B
 
 ### Requirement: The new statistics are validated on unread data

@@ -183,9 +183,10 @@ def test_the_reachability_worm_spans_its_box_around_the_matched_values() -> None
     centre = v2.reach_parameters(np.full(len(v2.REACH_FREE), 0.5))
     low = v2.reach_parameters(np.zeros(len(v2.REACH_FREE)))
     for state, name in v2.REACH_FREE:
-        if name == "speed_log_sd":
+        if name in ("speed_log_sd", "reversal_speed_coupling"):
+            top = v2.SPREAD_MAX if name == "speed_log_sd" else v2.COUPLING_MAX
             assert low[state][name] == 0.0
-            assert centre[state][name] == pytest.approx(v2.SPREAD_MAX / 2)
+            assert centre[state][name] == pytest.approx(top / 2)
             continue
         assert centre[state][name] == pytest.approx(states[state][name])
         assert low[state][name] == pytest.approx(states[state][name] / v2.REACH_BOX)
@@ -218,3 +219,20 @@ def test_a_worm_without_spread_runs_as_before() -> None:
     # Within a window the speed holds; across windows it varies.
     assert np.ptp(spread[0:10, :, 0], axis=0).max() == 0.0
     assert np.unique(spread[:, 0, 0]).size > 2
+
+
+def test_the_reversal_coupling_needs_a_spread() -> None:
+    """A reversal coupling without a speed spread to couple to is refused."""
+    from quantumnematode.evaluation.controllers import BatchedStateHazards
+
+    kw = {
+        "transitions": np.array([[0.9, 0.1], [0.2, 0.8]]),
+        "speeds_mm_per_s": (0.02, 0.07),
+        "curvature_sd_deg_per_s": (60.0, 35.0),
+        "hazards_per_s": np.array([[0.09, 0.0001, 0.0001], [0.08, 0.001, 0.0001]]),
+        "window_steps": 10,
+    }
+    with pytest.raises(ValueError, match="speed spread"):
+        BatchedStateHazards(**kw, reversal_speed_coupling=1.0)
+    worm = BatchedStateHazards(**kw, speed_log_sd=(0.5, 0.5), reversal_speed_coupling=2.0)
+    assert worm.reversal_speed_coupling == 2.0

@@ -287,3 +287,14 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
   - **What is stored:** 6,213 stretches, 93,248 s. Each holds its offsets from its own mean position, x and y, in whole micrometres (`x_um`, `y_um`, int32), stored consecutively with their `lengths`.
 - **Licence:** CC0-1.0, as Scheer & Bargmann's deposit.
 - **Checksum:** SHA-256 `328bfbcece5c8ba21b7fe23c183d4a6efe14f9c88f56d46e0d555e36007ee1f4` as written.
+
+## `bands_v2.json`
+
+- **Derived by** `scripts/analysis/benchmark_bands.py --version v2` from the files above, on band cohorts only. It holds:
+  - v1's bands;
+  - the kinematics bands (five graded statistics, generator `default_rng([2030, 5, n])`) and the chemotaxis bands (Chen's six standard recordings);
+  - the measurement models: the lawn model names `scheer_tracker_noise.npz` and its checksum, and Chen's rig keeps its Gaussian jitter;
+  - the five families, the 19-statistic bar (z\* 3.0078) and the weights.
+- **The record:** κ, the rule checks and the chemotaxis leave-one-out are in `docs/experiments/logbooks/supporting/115-benchmark-v2/bands_v2_record.json`.
+- **Licence:** CC0-1.0 for the parts from Scheer & Bargmann, and CC BY 4.0 for the parts from López-Cruz et al. and Chen et al.
+- **Checksum:** SHA-256 `21f591b864d497ee3ee305c217e3c9e197a8bc466298219d46841819b875f438` as written.

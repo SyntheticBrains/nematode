@@ -327,7 +327,9 @@ class BatchedStateHazards:
     With ``speed_log_sd``, the speed varies within a state: at the first step and at every window
     boundary each animal draws a standard normal z, and runs until the next boundary at its state's
     speed times ``exp(speed_log_sd[state] * z)``, so the state's speed is the median. Without it,
-    no draw is made and each state runs at its speed.
+    no draw is made and each state runs at its speed. With ``reversal_speed_coupling`` (beta, and
+    a spread), that window's reversal hazard is the state's times ``exp(beta * z)``, so reversals
+    come more often out of faster movement.
     """
 
     def __init__(  # noqa: PLR0913 - the chain, three per-state kinematics, the window, the spread
@@ -338,6 +340,7 @@ class BatchedStateHazards:
         hazards_per_s: np.ndarray,
         window_steps: int,
         speed_log_sd: tuple[float, float] | None = None,
+        reversal_speed_coupling: float | None = None,
     ) -> None:
         self.transitions = np.asarray(transitions, dtype=np.float64)
         self.speeds = np.asarray(speeds_mm_per_s, dtype=np.float64)
@@ -348,6 +351,10 @@ class BatchedStateHazards:
             None if speed_log_sd is None else np.asarray(speed_log_sd, dtype=np.float64)
         )
         self.speed_z: np.ndarray | None = None
+        self.reversal_speed_coupling = reversal_speed_coupling
+        if reversal_speed_coupling is not None and speed_log_sd is None:
+            msg = "a reversal-speed coupling needs a speed spread to couple to"
+            raise ValueError(msg)
         up, down = self.transitions[0, 1], self.transitions[1, 0]
         self.stationary_second = up / (up + down)
         self.state: np.ndarray | None = None
@@ -380,7 +387,11 @@ class BatchedStateHazards:
         raw = np.zeros((n, 5))
         raw[:, 0] = [_raw_speed(float(s)) for s in speeds]
         raw[:, 1] = _raw_curvature(curvature)
-        raw[:, 2:] = _raw_hazards(self.hazards[self.state])
+        hazards = self.hazards[self.state]
+        if self.reversal_speed_coupling is not None and self.speed_z is not None:
+            hazards = hazards.copy()
+            hazards[:, 0] = hazards[:, 0] * np.exp(self.reversal_speed_coupling * self.speed_z)
+        raw[:, 2:] = _raw_hazards(hazards)
         return raw
 
 

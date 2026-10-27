@@ -2,7 +2,7 @@
 
 ### Requirement: Simulated tracks are measured as the real tracker measures
 
-Before windowing, every simulated track SHALL receive per-axis position noise at the tracker's measured jitter, and SHALL lose seconds at the tracker's measured rates, conditioned on whether the simulated primitive that second is an omega. Both SHALL be measured from band cohorts and recorded with the bands. Real and imported tracks SHALL NOT be altered. Checks SHALL show the model reproduces the tracker without a smoothed truth: real tracks with their gaps filled, passed through the model's losses, SHALL give every kinematics statistic within |z| ≤ 1 of the raw tracks' value; the model's jitter on a still worm SHALL reproduce the real tracker's readings on the authors' paused stretches to within one graded-size band scale of the statistics they bias; and Chen's smoothed fragments with the model's jitter SHALL give every chemotaxis statistic within |z| ≤ 1.
+Before windowing, every simulated track graded against a measured rig SHALL receive that rig's position noise (on Scheer's rig, resampled from the real tracker's readings of a still worm), and SHALL lose seconds at the tracker's measured rates, conditioned on whether the simulated primitive that second is an omega. Both SHALL be measured from band cohorts and recorded with the bands. Real and imported tracks SHALL NOT be altered. Checks SHALL show the model reproduces the tracker without a smoothed truth: real tracks with their gaps filled, passed through the model's losses, SHALL give every kinematics statistic within |z| ≤ 1 of the raw tracks' value; the model's jitter on a still worm SHALL reproduce the real tracker's readings on the authors' paused stretches to within one graded-size band scale of the statistics they bias; and Chen's smoothed fragments with the model's jitter SHALL give every chemotaxis statistic within |z| ≤ 1. Local search, graded against counts from a rig no track measures, SHALL stay exact.
 
 #### Scenario: An omega second can go missing
 
@@ -16,7 +16,7 @@ Before windowing, every simulated track SHALL receive per-axis position noise at
 
 ### Requirement: The kinematics family
 
-B v2 SHALL grade a kinematics family on the small lawn: the median and 90th-percentile 10-s window speed in dwelling and in roaming windows, detected reversal onsets per on-lawn minute from positions alone, and Kaplan–Meier roaming-bout survival at 5 min. It SHALL be a family of equal weight in D, and part of D_fit for every controller.
+B v2 SHALL grade a kinematics family on the small lawn: the median and 90th-percentile 10-s window speed in dwelling and in roaming windows, and Kaplan–Meier roaming-bout survival at 5 min. Detected reversal onsets per on-lawn minute SHALL be computed and reported beside the grade, not graded, since no open-loop point worm reaches it through the tracker. It SHALL be a family of equal weight in D, and part of D_fit for every controller.
 
 #### Scenario: A worm that roams too fast
 
@@ -25,7 +25,7 @@ B v2 SHALL grade a kinematics family on the small lawn: the median and 90th-perc
 
 ### Requirement: Versioned bands and bar
 
-B v1's bands and rule SHALL remain available for every past verdict. B v2's bands SHALL be built from band cohorts only, with the new statistics' generators after v1's, and its bar SHALL be Bonferroni over its 20 wild-type statistics.
+B v1's bands and rule SHALL remain available for every past verdict. B v2's bands SHALL be built from band cohorts only, with the new statistics' generators after v1's, and its bar SHALL be Bonferroni over its 19 wild-type statistics.
 
 #### Scenario: A past verdict is reproduced
 

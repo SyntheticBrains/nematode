@@ -231,7 +231,8 @@ def capture_populations(
 ) -> dict[str, list[list[BehaviourStep]]]:
     """Read ``<family> <behaviour_capture.json>`` lines; each captured run is one animal.
 
-    With a tracker model, each run is measured on its own seed's stream before it is windowed.
+    With a tracker model, each run on Scheer's rig is measured on its own seed's stream before it is
+    windowed; local search stays exact.
     """
     populations: dict[str, list[list[BehaviourStep]]] = {}
     for raw in manifest.read_text().splitlines():
@@ -249,7 +250,7 @@ def capture_populations(
         analysis = tuple(data["assay"]["analysis_steps"])
         for run in data["runs"]:
             steps = [BehaviourStep(**s) for s in run["steps"]]
-            if model is not None:
+            if model is not None and family in LAWN_MEASURED:
                 from quantumnematode.benchmark import measurement as mm
 
                 steps = mm.measure(steps, int(run["seed"]), model)
@@ -300,6 +301,10 @@ def v2_is_valid() -> bool:
 
 
 CHEMOTAXIS_PROTOCOL = "chemotaxis_chen"
+# The families graded against Scheer's rig, whose tracker the lawn model measures. Local search is
+# graded against López-Cruz's reorientation counts from another rig, whose tracker no track
+# measures, so its simulated tracks stay exact.
+LAWN_MEASURED = ("small_lawn", "uniform_lawn")
 
 
 def load_bands_v2(path: Path = BANDS_V2_PATH) -> dict[str, Any]:
@@ -383,7 +388,7 @@ def simulate_v2(
     seeds: list[int],
     bands: dict[str, Any],
 ) -> tuple[dict[str, list[list[BehaviourStep]]], list[list[BehaviourStep]]]:
-    """Run a controller on the v2 assays; measure every track before it is windowed.
+    """Run a controller on the v2 assays; measure each rig's tracks before they are windowed.
 
     Returns the lawn families' windowed, measured animals and the chemotaxis assay's measured
     animals over its analysis window. ``controller`` builds a fresh
@@ -404,7 +409,9 @@ def simulate_v2(
         populations[family] = [
             window(
                 family,
-                mm.measure(trajectories.to_behaviour_steps(i), seed, lawn_model),
+                mm.measure(trajectories.to_behaviour_steps(i), seed, lawn_model)
+                if family in LAWN_MEASURED
+                else trajectories.to_behaviour_steps(i),
                 analysis,  # type: ignore[arg-type]
             )
             for i, seed in enumerate(seeds)

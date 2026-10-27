@@ -1,7 +1,7 @@
 {
   "description": "B v2's bands record: calibration, the rule's checks and the chemotaxis validation, from band cohorts and Chen's standard-protocol recordings only.",
-  "bar": 3.023341439739153,
-  "statistics": 20,
+  "bar": 3.0077865564732633,
+  "statistics": 19,
   "kinematics_calibration": {
     "seed": 2039,
     "splits": 200,
@@ -11,7 +11,6 @@
       "dwelling_speed_p90": 1.2625853154994922,
       "roaming_speed_median": 1.328419684798103,
       "roaming_speed_p90": 1.4373275581150167,
-      "reversals_per_on_lawn_min": 1.2410301007301392,
       "roaming_survival_5min": 1.2209875958227272
     },
     "kappa": {
@@ -19,7 +18,6 @@
       "dwelling_speed_p90": 1.2625853154994922,
       "roaming_speed_median": 1.328419684798103,
       "roaming_speed_p90": 1.4373275581150167,
-      "reversals_per_on_lawn_min": 1.2410301007301392,
       "roaming_survival_5min": 1.2209875958227272
     }
   },
@@ -28,7 +26,7 @@
       "seed": 2040,
       "splits": 200,
       "size": 200,
-      "bar": 3.023341439739153,
+      "bar": 3.0077865564732633,
       "joint_pass_rate": 0.94,
       "failures_by_statistic": {
         "roaming_fraction": 0,
@@ -45,15 +43,14 @@
       "seed": 2040,
       "splits": 200,
       "size": 200,
-      "bar": 3.023341439739153,
+      "bar": 3.0077865564732633,
       "joint_pass_rate": 0.96,
       "failures_by_statistic": {
         "dwelling_speed_median": 2,
         "dwelling_speed_p90": 4,
         "roaming_speed_median": 2,
         "roaming_speed_p90": 1,
-        "reversals_per_on_lawn_min": 1,
-        "roaming_survival_5min": 0
+        "roaming_survival_5min": 1
       },
       "gate": 0.9,
       "passes": true
@@ -189,67 +186,67 @@
       }
     }
   },
-  "chemotaxis_prediction_factor": 2.002152476050316,
+  "chemotaxis_prediction_factor": 1.9891956853881438,
   "chemotaxis_leave_one_out": {
     "recordings": {
       "20220830": {
         "z": {
-          "drift_mm_s": -0.17028063132636645,
-          "log_quintile_ratio": -0.18713025366060618,
-          "weathervane_deg_s": 1.1631331601930834
+          "drift_mm_s": -0.17175199592313212,
+          "log_quintile_ratio": -0.18874721284190185,
+          "weathervane_deg_s": 1.1731835865974356
         },
         "present": true,
         "passes": true
       },
       "20220913": {
         "z": {
-          "drift_mm_s": -0.1551169668824415,
-          "log_quintile_ratio": -0.09198020945755567,
-          "weathervane_deg_s": -0.2695982092216523
+          "drift_mm_s": -0.15645730495642393,
+          "log_quintile_ratio": -0.09277499405956684,
+          "weathervane_deg_s": -0.27192775931381674
         },
         "present": true,
         "passes": true
       },
       "20220922": {
         "z": {
-          "drift_mm_s": -0.12517474928297165,
-          "log_quintile_ratio": -0.35086841784070266,
-          "weathervane_deg_s": 0.13003396565719164
+          "drift_mm_s": -0.1262563619894161,
+          "log_quintile_ratio": -0.35390020932581,
+          "weathervane_deg_s": 0.13115756598656983
         },
         "present": true,
         "passes": true
       },
       "20221108": {
         "z": {
-          "drift_mm_s": -0.566564723972305,
-          "log_quintile_ratio": -0.5468027279353769,
-          "weathervane_deg_s": 0.10647089790817972
+          "drift_mm_s": -0.5714603088085591,
+          "log_quintile_ratio": -0.5515275528848274,
+          "weathervane_deg_s": 0.10739089396731866
         },
         "present": true,
         "passes": true
       },
       "20230609": {
         "z": {
-          "drift_mm_s": 0.11663003115962571,
-          "log_quintile_ratio": 0.9269370627389393,
-          "weathervane_deg_s": -0.7993456117698741
+          "drift_mm_s": 0.11763781047915996,
+          "log_quintile_ratio": 0.9349465607477292,
+          "weathervane_deg_s": -0.8062526147835284
         },
         "present": true,
         "passes": true
       },
       "20230613": {
         "z": {
-          "drift_mm_s": 1.8700984381081585,
-          "log_quintile_ratio": 0.4816980582270757,
-          "weathervane_deg_s": -0.08979561324763757
+          "drift_mm_s": 1.8862576255205261,
+          "log_quintile_ratio": 0.4858603253251325,
+          "weathervane_deg_s": -0.09057152114302355
         },
         "present": true,
         "passes": true
       }
     },
-    "unit_rate": 0.007481265624999844,
+    "unit_rate": 0.007873979443067558,
     "allowance": 1,
-    "tail_at_allowance": 0.0008229315756078391,
+    "tail_at_allowance": 0.0009106382083276027,
     "failures": 0,
     "passes": true
   },

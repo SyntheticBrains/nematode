@@ -44,8 +44,8 @@ def _steps(n: int, x0: float = 0.0, dx: float = 0.1) -> list[BehaviourStep]:
     ]
 
 
-def _capture(tmp_path: Path, seeds: list[int]) -> Path:
-    n = g.LAWN_SAMPLES
+def _capture(tmp_path: Path, seeds: list[int], family: str = "small_lawn") -> Path:
+    n = g.SEARCH_SAMPLES if family == "local_search" else g.LAWN_SAMPLES
     runs = [
         {
             "run": k,
@@ -60,7 +60,7 @@ def _capture(tmp_path: Path, seeds: list[int]) -> Path:
     path = tmp_path / "behaviour_capture.json"
     path.write_text(json.dumps({"runs": runs, "assay": {"analysis_steps": [0, n]}}))
     manifest = tmp_path / "manifest.txt"
-    manifest.write_text(f"small_lawn {path}\n")
+    manifest.write_text(f"{family} {path}\n")
     return manifest
 
 
@@ -85,16 +85,16 @@ def test_imported_tracks_are_never_measured() -> None:
 
 
 def test_v2_weights_give_each_of_five_families_a_fifth() -> None:
-    """D weights the five families equally, and D_fit its three fitted families equally."""
+    """D weights the five families equally (19 statistics), and D_fit its three fitted families."""
     families = bb.v2_families()
-    assert bb.v2_statistics() == sum(len(v) for v in families.values()) == 20
+    assert bb.v2_statistics() == sum(len(v) for v in families.values()) == 19
     w = g.weights(list(families), families)
     for family in families:
         assert sum(v for (f, _), v in w.items() if f == family) == pytest.approx(0.2)
     fit = g.weights(list(bb.V2_FIT_FAMILIES), families)
     assert {f for f, _ in fit} == {"small_lawn", "uniform_lawn", "kinematics"}
     assert sum(fit.values()) == pytest.approx(1.0)
-    assert g.z_star(20) == pytest.approx(3.0233, abs=1e-4)
+    assert g.z_star(19) == pytest.approx(3.0078, abs=1e-4)
 
 
 def test_v1_weights_and_bar_are_unchanged() -> None:
@@ -200,3 +200,11 @@ def test_pooled_statistics_match_the_fragment_path() -> None:
     direct = ch.chemotaxis_statistics(fragments, concentration)
     pooled = ch.pooled_statistics(ch.fragment_samples(fragments, concentration))
     assert direct == pooled
+
+
+def test_local_search_tracks_stay_exact(tmp_path: Path) -> None:
+    """Local search is graded against another rig's counts, so its captures are never measured."""
+    manifest = _capture(tmp_path, [11], family="local_search")
+    model = mm.TrackerModel(jitter_mm=0.01, p_other=0.01, runs_other_s=(5,))
+    animal = bg.capture_populations(manifest, model)["local_search"][0]
+    assert [s.x for s in animal] == [s.x for s in _steps(g.SEARCH_SAMPLES)]

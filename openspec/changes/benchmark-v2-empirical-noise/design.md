@@ -165,6 +165,19 @@ The gate allowed ±0.25.
 
 - **The fix:** the maintainer chose to add the speed spread, as decision 6 says. The stop rule is unchanged.
 
+### The third pilot and the registration (2026-10-28; description)
+
+**The reachability fits:**
+
+- **With the speed spread (10 parameters):** every speed was reached (|z| ≤ 1.3), but not the reversals (1.31 against 2.28 per minute). The roaming reversal hazard sat at its ceiling.
+- **With the coupling (11 parameters):** the median RMS z on 5 fresh populations was 1.59.
+- **So the registered fallback applied:** the on-lawn reversal rate is reported, not graded; kinematics has five statistics; z\* = 3.0078 over 19. The worm reaches the four speeds (median RMS z 0.86 on the same populations).
+
+**Two consequences, decided before registration:**
+
+- **The onset reading leaves the gate.** The jitter check's onset rate biased only the reversal statistic, so it is reported; its range at the 0.03 floor had shrunk to ±0.009 per paused minute. The gate keeps the two window speeds.
+- **The lawn model's scope** (maintainer's decision). It measures Scheer's families only. Applying Scheer's noise to simulated local search, graded against López-Cruz's counts from another rig, moved C.1's v1 answer from γ 0.112 to 0.038 on discarded seeds.
+
 ## Risks / Trade-offs
 
 - **[Joining artefacts]** → end-to-end joins jump about 0.02 mm every 13 s, and they failed the first pilot. Splicing at the nearest offset replaces them; the second pilot reads it in-sample, and the check reads it at the rate a simulated track sees.

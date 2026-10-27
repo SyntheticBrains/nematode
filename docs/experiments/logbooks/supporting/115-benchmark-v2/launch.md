@@ -264,6 +264,119 @@ Every gap-filled reading is within 0.3. The jitter added after smoothing restore
 
 `oracle` writes `oracle_amendment1.json` once, and the verdict reads it.
 
+## Part A, amendment 2: empirical noise, the reversal rate reported, reachability re-fitted (registered 2026-10-28)
+
+**What failed.** Amendment 1's jitter check (`oracle_amendment1.json`) stopped the run. On band-side paused stretches, the real tracker reads a still worm with fewer false onsets than independent Gaussian noise (2.14 against 3.87 per paused minute) and with more 10-s drift (window speed median 0.0038 against 0.0016 mm/s). That verdict stands.
+
+The revision is change `benchmark-v2-empirical-noise`. Its pilots ran on the library half's dates and on discarded seeds only, and they are description; the check half below has not been read.
+
+### The rules (this amendment registers)
+
+1. **The split.** PD1074's 41 band dates go into a library half and a check half by `default_rng(2043).permutation`: the first 21 to the library, the other 20 to the check.
+
+2. **The noise library.** `data/benchmark/scheer_tracker_noise.npz`, SHA-256 `328bfbce…`. It holds the library half's 6,213 paused stretches (93,248 s): runs of at least 10 s with all three frames flagged `pause` and a position, stored as offsets from each stretch's own mean.
+
+3. **The draw.** The lawn model's noise is a track drawn from the animal's lawn stream, `default_rng([s, 2033])`:
+
+   - it starts at a random stretch's first offset;
+   - where a stretch ends, it splices: of 50 stretches drawn uniformly with replacement, it continues at the offset after the nearest match to its last offset. A stretch's own last offset never matches.
+
+   The losses are unchanged.
+
+4. **The scope** (decided by the maintainer, 2026-10-28). The lawn model measures only the families graded against Scheer's rig: the small lawn, the uniform well and kinematics. Local search is graded against López-Cruz's reorientation counts from another rig, which no track measures, so its simulated tracks stay exact, as in v1. Chen's assay keeps its own measured model.
+
+   - **Sized beforehand** on discarded seeds (199.8 M): Scheer's noise on simulated local search moved C.1's v1 answer from γ 0.112 to 0.038, and its early/late ratio from 3.51 to 2.03.
+
+5. **The on-lawn reversal rate is reported, not graded** (the registered fallback).
+
+   - **The floor:** the rate is read with the detector's step floor at 0.03 mm, the smallest 0.01-mm floor at which the real still worm detects reversals at under 1% of the real on-lawn rate (library half: 0.013 against 2.27 per minute).
+   - **The fallback:** it was fixed in the change's design (commit `0e4e8407`) before the last reachability refit, and that refit triggered it. No open-loop point worm reaches the rate through the tracker: the 11-parameter worm still read 1.31 against 2.28 per minute.
+   - **The family:** kinematics has five graded statistics: the four speeds and roaming survival at 5 min.
+   - **The bar:** D v2 has **19 statistics, z\* = 3.0078**. The reversal rate is computed and reported beside the grade.
+
+6. **The bands.** `bands_v2.json` was rebuilt at 19 statistics (SHA-256 `21f591b8…`). Both rule checks pass: the small lawn 0.94, kinematics 0.96. The chemotaxis leave-one-out passes with 0 failures (allowance 1), and the bands record is `bands_v2_record.json`. The records of the earlier builds are kept: Part A's as `bands_v2_record_partA.json`, the others in git history.
+
+7. **The jitter check**, read once on the check half:
+
+   - **The real side:** the check half's paused stretches.
+   - **The model side:** for stretch k, a 2,700-s noise track drawn at `default_rng([156_000_000 + k, 2033])`, with the stretch's length cut at a uniform point from the same stream.
+   - **The gated readings:** the median and 90th percentile of the classifier's 10-s window speed, which bias the graded dwelling speeds.
+     - **The gate:** each model-minus-real difference must lie within the central 95% of 1,000 random halvings of the band dates (21 against 20, `default_rng(2044)`): **median [−0.000414, +0.000386] and p90 [−0.000352, +0.000310] mm/s** (`noise_pilot.json`).
+     - **The Gaussian model's misses** at the 0.01 floor were −0.0023 and −0.0046.
+   - **Reported only:**
+     - the onset rate per paused minute at the 0.03 floor (range [−0.0086, +0.0088]), since it biases no graded statistic;
+     - the 1-s step quantiles.
+
+8. **The reachability worm** replaces B.4's matched worm, which misses the kinematics with no noise at all (dwelling median z +7.3).
+
+   - **The structure:** `BatchedStateHazards`, with B.4's two states, transitions and window, plus two options, both off by default: a per-state speed spread (a log SD, per 10-s window) and a coupling of each window's reversal hazard to its speed draw.
+
+   - **The fit** (`reachability_worm.json`): 11 parameters by sep-CMA against the RMS z of the then-gated five statistics, on animals at 158 M, CMA seeds 9411–9412, restarts stopping at generations 95 and 81 (plateau). The parameters as fitted:
+
+     | | dwelling | roaming |
+     |---|---|---|
+     | speed (mm/s) | 0.01264 | 0.10433 |
+     | speed spread (log SD) | 0.716 | 1.207 |
+     | curvature SD (°/s) | 15.24 | 41.78 |
+     | reversal hazard (/s) | 0.0292 | 0.2950 |
+     | omega hazard (/s) | 0.00021 | 0.00055 |
+
+     The reversal coupling β is 1.323.
+
+   - **Its oracle, before registration:** on the fit's 5 discarded check populations (158.9 M), the four speeds' RMS z reads 0.79, 1.31, 0.86, 0.79 and 1.48 (median 0.86).
+
+   - **Registered:** the 40 oracle populations (`150_000_000 + 200·p + i`) are read with this worm through the lawn model under Part A's gate, for **the four speeds**: mean z in [−1, 1], and |z| ≤ z\* in at least 90% of populations. Bout survival stays excluded, its mean z reported.
+
+9. **Unchanged:** every other rule, threshold and seed of Part A and amendment 1, and the losses check, which applies no noise and is re-run. The validity map is Part A's, with the measurement checks as amended.
+
+### Seeds added
+
+| Seeds | Use |
+|---|---|
+| 2043 | the library/check split |
+| 2044 | the gate's halvings |
+| 156 M | the check's model side |
+| 157 M | the pilot's model side |
+| 158 M | the reachability fit |
+| 158.9 M | the fit's check populations |
+| 9411–9412 | the fit's CMA seeds |
+| 199.6 M, 199.7 M, 199.8 M | discarded probes |
+
+All are disjoint from every band and earlier scheme.
+
+### Disclosures
+
+Seen before this amendment, all on the library half or on discarded seeds:
+
+- **The tracker varies by date.** The library half reads 2.28 onsets per paused minute at the 0.01 floor. The check half's 2.01 is implied by amendment 1's committed all-date total; at the 0.03 floor it is not known.
+
+- **The first draw, joined end to end, failed in-sample.** The onset rate was +1.19 and the window-speed p90 +0.0010. An autoregressive model and nearest-offset splicing were then tried in-sample (onsets +0.44 to +0.58 and +0.43). Splicing passed both window speeds.
+
+- **The floor grid** on the library half, with still-worm and on-lawn rates per minute:
+
+  | Floor (mm) | Still worm | On lawn |
+  |---|---|---|
+  | 0.01 | 2.28 | 4.11 |
+  | 0.02 | 0.19 | 3.05 |
+  | 0.03 | 0.013 | 2.27 |
+  | 0.04 | 0.001 | 1.65 |
+
+- **The splice in-sample at 0.03:** onsets +0.0034, window speed median +0.00013, p90 +0.00006.
+
+- **The three reachability fits:**
+
+  | Worm | Median RMS z on 5 fresh populations | What it missed |
+  |---|---|---|
+  | 8 parameters | 2.53 | reversals −4.25, roaming p90 −3.57, dwelling median +2.58 |
+  | 10 parameters, with the spread | 2.00 | reversals −4.17 |
+  | 11 parameters, with the coupling | 1.59 | the reversal rate (−2.75 to −3.17) |
+
+- **Not seen:** the check half's still-worm window speeds, the 40 registered reachability populations, and everything after them.
+
+### Guard
+
+`benchmark_v2_controls.py oracle2` refuses unless this record is committed and unchanged, with `bands_v2.json`, `bands_v2_record.json`, the noise library, `reachability_worm.json` and `noise_pilot.json` byte-identical to their versions in that commit. It runs once, writing `oracle_amendment2.json`.
+
 ## Part B: the measured parameters, the bands and the oracles
 
 *Added after the bands build and the oracles, before the N2 read and the adversary fits.*

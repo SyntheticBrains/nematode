@@ -33,11 +33,20 @@ The reachability oracle SHALL read an open-loop two-state worm whose per-state s
 - **WHEN** the fitted worm's median RMS z on fresh populations exceeds 1
 - **THEN** the change SHALL stop before registration, and the statistic it misses SHALL be recorded as unreachable by an open-loop point worm
 
-### Requirement: The on-lawn reversal rate is read above the tracker's noise
+### Requirement: The on-lawn reversal rate is reported above the tracker's noise, not graded
 
-The kinematics family's on-lawn reversal rate SHALL use the off-food detector with a step floor of 0.03 mm: the smallest 0.01-mm floor at which the real tracker's readings of a still worm, on the library half, detect reversals at under 1% of the real on-lawn rate. Off-food uses of the detector SHALL be unchanged.
+The kinematics family's on-lawn reversal rate SHALL be read with the off-food detector at a step floor of 0.03 mm: the smallest 0.01-mm floor at which the real tracker's readings of a still worm, on the library half, detect reversals at under 1% of the real on-lawn rate. Because no open-loop point worm reaches it through the tracker, it SHALL be reported beside the grade and not graded, and B v2's bar SHALL be Bonferroni over 19 statistics. Off-food uses of the detector SHALL be unchanged.
 
 #### Scenario: Tracker noise does not read as reversals
 
 - **WHEN** a still worm's real readings are passed to the on-lawn reversal detector
 - **THEN** it SHALL detect reversals at under 1% of the real on-lawn rate
+
+### Requirement: Only Scheer's rig is measured by the lawn model
+
+The lawn measurement model SHALL apply to the families graded against Scheer's rig (the small lawn, the uniform well and kinematics). Simulated local-search tracks SHALL stay exact, since López-Cruz's reorientation counts come from a rig whose tracker no track measures.
+
+#### Scenario: Local search stays exact
+
+- **WHEN** a simulated local-search population is graded on v2
+- **THEN** its tracks SHALL NOT pass through the lawn model

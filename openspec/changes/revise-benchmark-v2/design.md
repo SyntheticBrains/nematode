@@ -78,6 +78,8 @@
 
 03. **The kinematics family** (small lawn; fitted, so in D_fit, for every controller):
 
+    *Amended 2026-10-28 (launch record, amendment 2; change `benchmark-v2-empirical-noise`): the on-lawn reversal rate is read at a 0.03 mm step floor and reported, not graded, since no open-loop point worm reaches it through the tracker. Five statistics remain, D v2 has 19, and z\* = 3.0078. The lawn model's noise is resampled real noise, and it measures Scheer's families only.*
+
     - **the four speed statistics:** median and 90th-percentile classifier-window speed (the classifier's own 10-s speed, from the 5-s steps) over on-lawn dwelling windows, and the same over roaming windows. They are pooled over the population's windows through a fixed log-spaced histogram per state, so the tally stays additive for the date bootstrap;
     - **the on-lawn reversal rate:** onsets from `readouts.reversal_onsets` with the off-food detector, applied to every on-lawn sample run identically on real and simulated tracks, per minute of valid on-lawn seconds. It is a statistic of the trajectory, not a count of the authors' labels (D36);
     - **roaming-bout survival at 5 min:** Kaplan–Meier over on-lawn roaming bouts, a bout at the window's edge censored. Bout lists are tallied per animal for the bootstrap.
