@@ -412,8 +412,12 @@ def grade_populations_v2(
     chemotaxis: list[list[BehaviourStep]] | None,
     bands: dict[str, Any],
 ) -> dict[str, Any]:
-    """Grade on B v2: v1's families, kinematics from the small lawn's animals, and chemotaxis."""
+    """Grade on B v2: v1's families, kinematics from the small lawn's animals, and chemotaxis.
+
+    Chemotaxis, like local search, passes only where it is present.
+    """
     from quantumnematode.benchmark import chemotaxis as ch
+    from quantumnematode.benchmark.references import sample_field
     from quantumnematode.evaluation.odour_field import chen_field
 
     clf = classifier(bands)
@@ -435,20 +439,25 @@ def grade_populations_v2(
                 family_bands_v2(bands, "kinematics", len(animals)),
                 bar,
             )
+    chemotaxis_presence: dict[str, Any] | None = None
     if chemotaxis is not None:
         field = chen_field()
-        fragments = chemotaxis_fragments(chemotaxis, field)
-        from quantumnematode.benchmark.references import sample_field
 
         def concentration(x: np.ndarray, y: np.ndarray) -> np.ndarray:
             return sample_field(field.field, field.cell_mm, x, y)
 
+        # One group per animal: presence resamples animals, as local search's does.
+        groups = [
+            ch.fragment_samples(chemotaxis_fragments([animal], field), concentration)
+            for animal in chemotaxis
+        ]
         sizes["chemotaxis"] = len(chemotaxis)
         readings["chemotaxis"] = g.grade(
-            ch.chemotaxis_statistics(fragments, concentration),
+            ch.pooled_statistics([sample for group in groups for sample in group]),
             family_bands_v2(bands, "chemotaxis", len(chemotaxis)),
             bar,
         )
+        chemotaxis_presence = ch.chemotaxis_presence(groups)
     out: dict[str, Any] = {
         "version": 2,
         "n": sizes,
@@ -472,6 +481,12 @@ def grade_populations_v2(
         out["local_search_presence"] = presence
         out["family_passes"]["local_search"] = bool(
             out["family_passes"]["local_search"] and presence["present"],
+        )
+    if chemotaxis_presence is not None:
+        # Chemotaxis passes only where it is present: drift and the log ratio above 0.
+        out["chemotaxis_presence"] = chemotaxis_presence
+        out["family_passes"]["chemotaxis"] = bool(
+            out["family_passes"]["chemotaxis"] and chemotaxis_presence["present"],
         )
     complete = set(readings) == set(family_map)
     out["wild_type_passes"] = complete and all(out["family_passes"].values())

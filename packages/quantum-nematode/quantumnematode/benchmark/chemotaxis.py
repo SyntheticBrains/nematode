@@ -12,12 +12,17 @@ way:
 - **the weathervane slope** (degrees per second): the least-squares slope, over run seconds more
   than :data:`RUN_MARGIN_S` from an onset, of the heading's turning rate on the sine of the bearing
   to the gradient. Positive means turning toward higher concentration.
+
+The bands, from a handful of recordings, are wide enough that a worm ignoring the gradient can sit
+inside them. Chemotaxis must therefore also be **present**: drift and the log quintile ratio each
+above zero at the population's own lower bound (:func:`chemotaxis_presence`). The weathervane slope
+takes no part, since a real recording's own bound on it can fall below zero.
 """
 
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -34,6 +39,10 @@ QUINTILES = 5
 # The fewest samples a fragment needs for its steps and the detector; a regression's fewest points.
 MIN_FRAGMENT_SAMPLES = 3
 MIN_REGRESSION_POINTS = 3
+PRESENCE_STATISTICS = ("drift_mm_s", "log_quintile_ratio")
+PRESENCE_RESAMPLES = 2000
+PRESENCE_QUANTILE = 0.025
+PRESENCE_SEED = 2041
 
 
 def _wrap(angle: np.ndarray) -> np.ndarray:
@@ -97,40 +106,47 @@ def fragment_measures(
     }
 
 
-def chemotaxis_statistics(
+def fragment_samples(
     fragments: Sequence[tuple[np.ndarray, np.ndarray]],
     concentration: Callable[[np.ndarray, np.ndarray], np.ndarray],
-) -> dict[str, float]:
-    """Return a population's chemotaxis statistics from its fragments; NaN where undefined."""
-    drift, dcdt, onset, turning, sin_bearing = [], [], [], [], []
+) -> list[dict[str, np.ndarray]]:
+    """Return each usable fragment's samples the statistics pool: computed once, pooled later."""
+    out = []
     for x, y in fragments:
         if len(x) < MIN_FRAGMENT_SAMPLES:
             continue
         m = fragment_measures(x, y, concentration)
         keep = m["valid"] & np.isfinite(m["dcdt"])
-        drift.append(m["drift"][m["valid"]])
-        dcdt.append(m["dcdt"][keep])
-        onset.append(m["onset"][keep])
-        turning.append(m["turning"])
-        sin_bearing.append(m["sin_bearing"])
-    if not drift:
+        out.append(
+            {
+                "drift": m["drift"][m["valid"]],
+                "dcdt": m["dcdt"][keep],
+                "onset": m["onset"][keep],
+                "turning": m["turning"],
+                "sin_bearing": m["sin_bearing"],
+            },
+        )
+    return out
+
+
+def pooled_statistics(samples: Sequence[dict[str, np.ndarray]]) -> dict[str, float]:
+    """Return the chemotaxis statistics of fragments' pooled samples; NaN where undefined."""
+    if not samples:
         return dict.fromkeys(CHEMOTAXIS_STATISTICS, math.nan)
-    d = np.concatenate(drift)
-    rate, change = np.concatenate(onset).astype(float), np.concatenate(dcdt)
-    edges = np.quantile(change, np.linspace(0, 1, QUINTILES + 1)) if len(change) else None
-    if edges is None:
-        ratio = math.nan
-    else:
+    d = np.concatenate([s["drift"] for s in samples])
+    rate = np.concatenate([s["onset"] for s in samples]).astype(float)
+    change = np.concatenate([s["dcdt"] for s in samples])
+    ratio = math.nan
+    if len(change):
+        edges = np.quantile(change, np.linspace(0, 1, QUINTILES + 1))
         low = rate[change <= edges[1]]
         high = rate[change >= edges[-2]]
-        ratio = (
-            float(low.mean() / high.mean())
-            if len(low) and len(high) and high.mean() > 0
-            else math.nan
-        )
-    w, s = np.concatenate(turning), np.concatenate(sin_bearing)
-    if len(w) >= MIN_REGRESSION_POINTS and np.var(s) > 0:
-        slope = float(np.cov(s, w, ddof=0)[0, 1] / np.var(s))
+        if len(low) and len(high) and high.mean() > 0:
+            ratio = float(low.mean() / high.mean())
+    w = np.concatenate([s["turning"] for s in samples])
+    b = np.concatenate([s["sin_bearing"] for s in samples])
+    if len(w) >= MIN_REGRESSION_POINTS and np.var(b) > 0:
+        slope = float(np.cov(b, w, ddof=0)[0, 1] / np.var(b))
     else:
         slope = math.nan
     return {
@@ -138,6 +154,40 @@ def chemotaxis_statistics(
         "log_quintile_ratio": math.log(ratio) if ratio > 0 else math.nan,
         "weathervane_deg_s": slope,
     }
+
+
+def chemotaxis_statistics(
+    fragments: Sequence[tuple[np.ndarray, np.ndarray]],
+    concentration: Callable[[np.ndarray, np.ndarray], np.ndarray],
+) -> dict[str, float]:
+    """Return a population's chemotaxis statistics from its fragments; NaN where undefined."""
+    return pooled_statistics(fragment_samples(fragments, concentration))
+
+
+def chemotaxis_presence(
+    groups: Sequence[Sequence[dict[str, np.ndarray]]],
+    seed: int = PRESENCE_SEED,
+) -> dict[str, Any]:
+    """Return whether chemotaxis is present: drift and the log ratio above 0 at their lower bounds.
+
+    ``groups`` are the resampled units' samples (:func:`fragment_samples`): one per animal for a
+    simulated population, one per fragment for a real recording, whose fragments cannot be joined
+    into animals. Units are resampled with replacement; each statistic's lower bound is the
+    :data:`PRESENCE_QUANTILE` quantile of its resampled values, and a resample where it is undefined
+    counts as no chemotaxis.
+    """
+    rng = np.random.default_rng(seed)
+    draws = rng.integers(0, len(groups), size=(PRESENCE_RESAMPLES, len(groups))) if groups else []
+    values: dict[str, list[float]] = {k: [] for k in PRESENCE_STATISTICS}
+    for pick in draws:
+        stats = pooled_statistics([sample for i in pick for sample in groups[i]])
+        for k in PRESENCE_STATISTICS:
+            values[k].append(stats[k] if math.isfinite(stats[k]) else -math.inf)
+    lower = {
+        k: float(np.quantile(v, PRESENCE_QUANTILE, method="lower")) if v else -math.inf
+        for k, v in values.items()
+    }
+    return {"lower_bounds": lower, "present": all(b > 0 for b in lower.values())}
 
 
 def split_fragments(x: np.ndarray, y: np.ndarray) -> list[tuple[np.ndarray, np.ndarray]]:

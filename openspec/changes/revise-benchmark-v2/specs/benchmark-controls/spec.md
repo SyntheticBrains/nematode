@@ -7,8 +7,8 @@ B v2 SHALL be VALID only when all of the following hold:
 - the measurement-model round trip passes, for both rigs;
 - the reachability oracle passes;
 - the fresh N2 control passes, with at most 1 of its 4 units failing;
-- the chemotaxis leave-one-recording-out validation passes within its registered allowance;
-- B.4's six negatives each fail the wild type;
+- the chemotaxis leave-one-recording-out validation passes within its registered allowance, a recording's unit failing where its chemotaxis is not present;
+- B.4's six negatives each fail the wild type, and its four open-loop negatives (`hmm`, `poisson`, `random_walk`, `correlated_walk`), which ignore the odour, each fail the chemotaxis family;
 - the blind worm fitted against v2's D fails the wild type at 3 of 5;
 - C.1's v1 chosen answer fails the wild type at 3 of 5.
 

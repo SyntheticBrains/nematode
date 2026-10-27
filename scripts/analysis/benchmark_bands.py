@@ -907,10 +907,12 @@ def chemotaxis_recordings(chen: refs.ChenTracks) -> dict[str, dict[str, Any]]:
         zip(chen.recording_date, chen.recording_protocol, strict=True),
     ):
         mine = [(x, y) for rec, _, x, y in fragments if rec == r]
+        samples = ch.fragment_samples(mine, chen.concentration)
         out[date] = {
             "protocol": protocol,
             "fragments": len(mine),
-            "statistics": ch.chemotaxis_statistics(mine, chen.concentration),
+            "statistics": ch.pooled_statistics(samples),
+            "presence": ch.chemotaxis_presence([[sample] for sample in samples]),
         }
     return out
 
@@ -946,15 +948,25 @@ def chemotaxis_unit_rate() -> float:
     return 1.0 - (1.0 - per) ** len(ch.CHEMOTAXIS_STATISTICS)
 
 
-def chemotaxis_leave_one_out(stats: dict[str, dict[str, float]], bar: float) -> dict[str, Any]:
-    """Grade each standard recording against a band from the other five."""
+def chemotaxis_leave_one_out(
+    stats: dict[str, dict[str, float]],
+    bar: float,
+    presence: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Grade each standard recording against a band from the other five.
+
+    With ``presence``, a recording also fails its unit where its chemotaxis is not present, as a
+    simulated population's family does.
+    """
     rows = {}
     for date, values in stats.items():
         band = chemotaxis_band([v for d, v in stats.items() if d != date])
         readings = g.grade(values, band, bar)
+        present = True if presence is None else bool(presence[date]["present"])
         rows[date] = {
             "z": {k: r.z for k, r in readings.items()},
-            "passes": all(r.passes for r in readings.values()),
+            "present": present,
+            "passes": all(r.passes for r in readings.values()) and present,
         }
     rate = chemotaxis_unit_rate()
     allowance = binomial_allowance(len(stats), rate)
@@ -1026,7 +1038,11 @@ def build_v2(
     recordings = chemotaxis_recordings(chen)
     standard = {d: r["statistics"] for d, r in recordings.items() if r["protocol"] == "standard"}
     chem_band = chemotaxis_band(list(standard.values()))
-    loo = chemotaxis_leave_one_out(standard, bar)
+    loo = chemotaxis_leave_one_out(
+        standard,
+        bar,
+        {d: r["presence"] for d, r in recordings.items() if r["protocol"] == "standard"},
+    )
     uniform_kin = per_date_kinematic_tallies(tracks, UNIFORM, classifier, uniform=True)
     bands = json.loads(json.dumps(v1["bands"]))
     for n in SIZES:

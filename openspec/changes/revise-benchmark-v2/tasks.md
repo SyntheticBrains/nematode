@@ -47,6 +47,7 @@ Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
   - the held-out refusal;
   - the landscape's 180° registration, the pixel scale and the fragmentation;
   - the three chemotaxis statistics on toy tracks;
+  - the chemotaxis presence test (a gradient-blind population is absent; an undefined resample counts as absent);
   - the measurement-model round trip on toy tracks.
 
 ## 3. Registration
@@ -58,7 +59,7 @@ Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
 
 - [ ] 4.1 The N2 positive control: 4 units, allowance 1 (read once, guarded).
 - [ ] 4.1b The chemotaxis leave-one-recording-out validation.
-- [ ] 4.2 B.4's six negatives on v2.
+- [ ] 4.2 B.4's six negatives on v2; the four open-loop negatives each fail the chemotaxis family.
 - [ ] 4.3 The blind worm fitted against v2 (2 restarts, the σ guard), graded 3 of 5.
 - [ ] 4.4 C.1's v1 answer graded on v2.
 - [ ] 4.5 W's minimum v2, on both family sets.

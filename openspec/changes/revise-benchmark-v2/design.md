@@ -146,7 +146,16 @@
 
     - **The off-protocol recordings** are reported beside the grade: their statistics, and their position against the bands.
 
-    - **The negatives and adversaries** run the chemotaxis assay too. The blind worm, with no sensing, should fail it.
+    - **Presence** (added during implementation, before Part A). With 6 recordings and the bar at 20 statistics, the prediction factor is 2.0, so the bands are wide: drift's runs from about −0.02 to 0.07 mm/s. The constant-hazard worm, which ignores the odour, sat inside every band (drift z −1.6, log ratio −1.8, weathervane −0.2 at n = 64). The spec requires a worm that ignores the gradient to fail. So chemotaxis, like local search, passes only where it is present:
+
+      - drift and the log quintile ratio each above 0 at the 2.5% quantile of 2,000 resamples (seed 2041) of the population's units;
+      - the units are animals for a simulated population and fragments for a real recording, whose fragments cannot be joined into animals. A resample where a statistic is undefined counts as absent;
+      - the weathervane slope takes no part, since 4 of the 6 standard recordings' own lower bounds on it fall below 0;
+      - each standard recording must be present too, or its leave-one-out unit fails.
+
+      Measured before it was registered: all 6 standard recordings are present (drift's lower bounds 0.013–0.028 mm/s, the log ratio's 0.65–1.49). Of the off-protocol two, 20220804 is present and 20220203 is not: its log ratio's bound sits at 0 (0.010 on a trial seed, exactly 0 on the registered one, a resample with ratio 1), as its point value, 0.13, already set it apart. It is reported, not graded. The constant-hazard worm is absent at n = 64 and 200 (bounds −0.004 and −0.001 mm/s; −0.11 and −0.07). The pirouette worm, which turns on dC/dt, is present (0.015 and 0.017 mm/s; 0.73 and 0.84).
+
+    - **The negatives and adversaries** run the chemotaxis assay too. B.4's four open-loop negatives (`hmm`, `poisson`, `random_walk`, `correlated_walk`) ignore the odour, and each must fail the chemotaxis family: the spec's "a worm that ignores the gradient", tested. The blind worm, with no sensing, should fail it too; that is reported, not gated, since it fails the wild type through other families.
 
     - **The definitions are assay-agnostic** (drift along the local gradient, a dC/dt quintile ratio, a bearing regression), so a later source could enter as further bands within the family at the same weight. The literature watch's brief gains "public *C. elegans* chemotaxis track datasets".
 
@@ -178,7 +187,7 @@
 
 10. **The negatives and adversaries** (simulated, through the measurement model).
 
-    - **B.4's six negatives,** on B.4's animal seeds, each fail the wild type on v2.
+    - **B.4's six negatives,** on B.4's animal seeds, each fail the wild type on v2, and the four open-loop ones each fail the chemotaxis family.
     - **The blind worm:**
       - C.1 with every sensing term pinned off: κ_w, β_r, β_o and edge 0; intake and satiety slopes 0; search amplitude 0;
       - fitted by sep-CMA against v2's D, from the box centre, population 16, with 2 restarts;
@@ -191,8 +200,8 @@
     - the measurement-model round trip passes, for both rigs;
     - the reachability oracle passes;
     - the N2 control passes within its allowance (at most 1 of 4 units fails);
-    - the chemotaxis leave-one-recording-out validation passes within its registered allowance;
-    - all six negatives fail;
+    - the chemotaxis leave-one-recording-out validation passes within its registered allowance, a recording failing its unit where it is not present;
+    - all six negatives fail, and the four open-loop ones fail the chemotaxis family;
     - both adversaries fail.
 
     Otherwise **VOID**, and the statistics are revised in a new change. Every reading is recorded either way.

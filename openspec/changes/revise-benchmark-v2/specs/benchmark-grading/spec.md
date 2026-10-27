@@ -34,9 +34,10 @@ B v1's bands and rule SHALL remain available for every past verdict. B v2's band
 
 ### Requirement: The chemotaxis family
 
-B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from its six standard-protocol recordings validated leave-one-recording-out, registered before any statistic is computed. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and fragmentation. The simulated arena SHALL be the full plate, with samples outside the imaged field missing, so no statistic reads a wall.
+B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from its six standard-protocol recordings validated leave-one-recording-out, registered before any statistic is computed. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and fragmentation. The simulated arena SHALL be the full plate, with samples outside the imaged field missing, so no statistic reads a wall. Like local search, chemotaxis SHALL pass only where it is present: up-gradient drift and the log quintile ratio each above zero at the 2.5% quantile of 2,000 resamples of the population's units (animals for a simulated population, fragments for a real recording).
 
 #### Scenario: A worm that ignores the gradient
 
 - **WHEN** a controller's up-gradient drift and turning bias match a random walk's
 - **THEN** its chemotaxis statistics SHALL fail
+- **AND** this SHALL hold even where its values lie inside the bands, through the presence test
