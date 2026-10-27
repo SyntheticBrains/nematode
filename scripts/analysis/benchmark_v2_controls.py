@@ -1515,12 +1515,13 @@ def verdict(
 
 
 def _verdict(_args: argparse.Namespace) -> int:
-    parts = [
-        json.loads(p.read_text())
-        for p in (ORACLE_AMENDED2_PATH, BANDS_V2_RECORD, READ_PATH, BLIND_PATH)
-    ]
+    measurement = json.loads(ORACLE_AMENDED2_PATH.read_text())
+    reach = json.loads(ORACLE_AMENDED3_PATH.read_text())
+    oracle = {"round_trip": measurement["round_trip"], "reachability": reach["reachability"]}
+    parts = [oracle, *(json.loads(p.read_text()) for p in (BANDS_V2_RECORD, READ_PATH, BLIND_PATH))]
     out = {
-        "description": "B v2's verdict, from the oracle, the bands record, the read and the blind fit.",
+        "description": "B v2's verdict: the measurement checks (amendment 2), reachability "
+        "(amendment 3), the bands record, the read and the blind fit.",
         **verdict(*parts),
         "w_minimum": parts[2]["w_minimum"],
     }

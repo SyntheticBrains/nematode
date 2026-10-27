@@ -424,4 +424,42 @@ Every other rule of Part A and amendments 1 and 2 is unchanged.
 
 ## Part B: the measured parameters, the bands and the oracles
 
-*Added after the bands build and the oracles, before the N2 read and the adversary fits.*
+*Added 2026-10-28, after the bands build and the oracles, before the N2 read and the adversary fits. It changes no rule.*
+
+### The measurement models
+
+- **The lawn model**, from `probes.json` and the library:
+
+  - the noise is resampled from `scheer_tracker_noise.npz` (6,213 stretches, SHA-256 `328bfbce…`), spliced at the nearest offset of 50;
+  - losses start at p_omega = 0.0484 and p_other = 0.000168 per tracked second, with lengths drawn from 215 and 402 real interior runs.
+
+  It measures the small lawn, the uniform well and kinematics only.
+
+- **Chen's model:** Gaussian jitter of σ = 0.00871 mm, and fragments drawn from the 4,809 standard-protocol fragment lengths.
+
+### The bands
+
+`data/benchmark/bands_v2.json`, SHA-256 `21f591b8…`, with 19 statistics and z\* = 3.0078 (`bands_v2_record.json`):
+
+- **κ** for kinematics is calibrated on seed 2039;
+- **the rule checks** (seed 2040, 200 splits at size 200, gate 0.90): the small lawn 0.94, kinematics 0.96, both pass;
+- **the chemotaxis leave-one-out:** every standard recording passes and is present, with 0 failures against an allowance of 1;
+- **the off-protocol recordings,** reported: 20220804 present, 20220203 not.
+
+### The oracles
+
+| Check | Read in | Result |
+|---|---|---|
+| the losses on gap-filled tracks | `oracle_amendment2.json` | pass, every kinematics |z| ≤ 0.15 |
+| the jitter on the check half (7,014 stretches) | `oracle_amendment2.json` | pass: window speed median −0.000011, p90 −0.000044 mm/s, inside their ranges |
+| Chen's round trip | `oracle_amendment2.json` | pass, |z| ≤ 0.11 |
+| reachability, 40 populations at 159 M | `oracle_amendment3.json` | pass: mean z −0.29, +0.04, +0.35, −0.74; shares 100%, 100%, 97.5%, 100% |
+
+Bout survival, excluded from the reachability gate, reads a mean z of −2.47.
+
+### Figures the read uses
+
+- **The N2 control:** the rule checks' failure rates are 0.06 for the small lawn and 0.04 for kinematics. Over the 4 units, that gives **P(more than 1 fails) = 0.014**.
+- **The 3-of-5 oracle for v2:** a faithful population passes all five families with probability 0.94 × 0.96 × 0.95 × 0.962 × 0.9925 = 0.818. So a faithful controller passes the wild type at 3 of 5 with probability **0.955**, which the C.1b and C.2 registrations carry.
+
+**Next, under the guard:** `read` (the N2 control, B.4's six negatives, C.1's v1 answer, W's minimum) and `blind` (the blind worm fitted against v2), then `verdict`.
