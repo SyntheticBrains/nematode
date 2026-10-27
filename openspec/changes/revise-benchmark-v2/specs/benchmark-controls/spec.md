@@ -4,8 +4,10 @@
 
 B v2 SHALL be VALID only when all of the following hold:
 
+- the measurement-model round trip passes, for both rigs;
 - the reachability oracle passes;
-- both fresh N2 positive-control units pass;
+- the fresh N2 control passes, with at most 1 of its 4 units failing;
+- the chemotaxis leave-one-recording-out validation passes within its registered allowance;
 - B.4's six negatives each fail the wild type;
 - the blind worm fitted against v2's D fails the wild type at 3 of 5;
 - C.1's v1 chosen answer fails the wild type at 3 of 5.
@@ -16,6 +18,11 @@ Otherwise it SHALL be VOID.
 
 - **WHEN** C.1's v1 answer passes v2's wild type
 - **THEN** B v2 SHALL be VOID
+
+#### Scenario: One unlucky N2 unit
+
+- **WHEN** one of the four N2 units fails and the other three pass
+- **THEN** the N2 control SHALL pass
 
 #### Scenario: A real-rate point worm cannot reach a statistic
 
@@ -31,11 +38,11 @@ The new statistics SHALL be validated on N2's held-out dates that no reading has
 - **WHEN** any v2 stage would read a PD1074 held-out date
 - **THEN** it SHALL refuse
 
-### Requirement: W's minimum v2 is on the families W reads
+### Requirement: W's minimum v2 is recorded on both family sets
 
-W's minimum v2 SHALL be the 95th percentile of D, over the small-lawn and kinematics families, between halves of N2's unread held-out dates, and W SHALL read its arms on the same families.
+B v2 SHALL record W's minimum on the fitted families (small lawn and kinematics, between halves of N2's unread held-out dates) and on the held-out families (local search, between halves of López-Cruz's band batches; chemotaxis, between every 3-against-3 split of Chen's recordings). W SHALL read its arms on the same family set as the minimum it cites.
 
 #### Scenario: The families agree
 
 - **WHEN** W registers
-- **THEN** its distance SHALL be over the same families as its minimum
+- **THEN** its distance SHALL be over the same family set as its minimum

@@ -2,7 +2,7 @@
 
 ### Requirement: Simulated tracks are measured as the real tracker measures
 
-Before windowing, every simulated track SHALL receive per-axis position noise at the tracker's measured jitter, and SHALL lose seconds at the tracker's measured rates, conditioned on whether the simulated primitive that second is an omega. Both SHALL be measured from band cohorts and recorded with the bands. Real and imported tracks SHALL NOT be altered.
+Before windowing, every simulated track SHALL receive per-axis position noise at the tracker's measured jitter, and SHALL lose seconds at the tracker's measured rates, conditioned on whether the simulated primitive that second is an omega. Both SHALL be measured from band cohorts and recorded with the bands. Real and imported tracks SHALL NOT be altered. A round trip SHALL show the model reproduces the tracker: denoised real tracks passed through it SHALL give every new statistic within |z| ≤ 1 of the raw tracks' value.
 
 #### Scenario: An omega second can go missing
 
@@ -23,18 +23,9 @@ B v2 SHALL grade a kinematics family on the small lawn: the median and 90th-perc
 - **WHEN** a controller's roaming windows are much faster than the band cohorts'
 - **THEN** its roaming speed statistics SHALL fail, whatever its roaming fraction
 
-### Requirement: Local search's rise
-
-B v2's local-search family SHALL also grade the rise: the mean reorientation rate over 2–6 min after removal divided by the 0–2 min rate, computed the same way for López-Cruz's band batches and for simulated curves.
-
-#### Scenario: A curve that only decays
-
-- **WHEN** a simulated search curve falls from its first bin
-- **THEN** its rise SHALL be below 1 and be graded against the band batches' rise
-
 ### Requirement: Versioned bands and bar
 
-B v1's bands and rule SHALL remain available for every past verdict. B v2's bands SHALL be built from band cohorts only, with the new statistics' generators after v1's, and its bar SHALL be Bonferroni over its 18 wild-type statistics.
+B v1's bands and rule SHALL remain available for every past verdict. B v2's bands SHALL be built from band cohorts only, with the new statistics' generators after v1's, and its bar SHALL be Bonferroni over its 20 wild-type statistics.
 
 #### Scenario: A past verdict is reproduced
 
@@ -43,7 +34,7 @@ B v1's bands and rule SHALL remain available for every past verdict. B v2's band
 
 ### Requirement: The chemotaxis family
 
-B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from its six standard-protocol recordings validated leave-one-recording-out, registered before any statistic is computed. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and missingness.
+B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from its six standard-protocol recordings validated leave-one-recording-out, registered before any statistic is computed. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and fragmentation. The simulated arena SHALL be the full plate, with samples outside the imaged field missing, so no statistic reads a wall.
 
 #### Scenario: A worm that ignores the gradient
 

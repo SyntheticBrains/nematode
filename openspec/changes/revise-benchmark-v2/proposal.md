@@ -8,7 +8,6 @@ C.1 passed the wild type ([Logbook 113](../../../docs/experiments/logbooks/113-c
   - the on-food reversal rate is ungraded. C.1's detected on-lawn reversals are about 4% of the real rate;
   - the omega rate is ungraded. C.1's dwelling omega hazard is thousands of times Scheer's;
   - only the mean of the roaming-bout distribution is graded, though real roaming bouts are double-exponential;
-  - local search's 2–6 min rise is ungraded.
 
 - **Measurement asymmetries:**
 
@@ -23,7 +22,7 @@ The planning probes behind these numbers are uncommitted, and this change's prob
 
 The maintainer's decisions of 2026-10-27:
 
-- **statistics:** per-state speed, on-lawn reversal rate, roaming-bout shape, and local search's rise;
+- **statistics:** per-state speed, on-lawn reversal rate and roaming-bout shape. Local search's rise was considered and dropped, as handling rather than search;
 - **a measurement model:** jitter and missingness, measured from Scheer's band cohorts and applied to every simulated track;
 - **validation on fresh N2 data:** 26 held-out N2 dates no reading has touched, so PD1074's held-out cohorts are not re-read;
 - **weighting:** a separate kinematics family, fitted for every controller;
@@ -48,20 +47,18 @@ The maintainer's decisions of 2026-10-27:
     - detected reversal onsets per on-lawn minute;
     - Kaplan–Meier roaming-bout survival at 5 min;
 
-  - **the local-search family** gains its rise: the mean rate over 2–6 min against the 0–2 min bin;
-
   - **the chemotaxis family:**
 
     - a linear-gradient assay on the 1-s primitives worm, matched to Chen's plates;
     - statistics derivable from positions and the known gradient: up-gradient drift or the chemotaxis index, the unit-free quintile ratio of reorientation rate against dC/dt, and the weathervane regression;
-    - bands by plate and date, a held-out split fixed before any reading, and its own positive control;
+    - bands from the 6 standard-protocol recordings, validated leave-one-recording-out, with the allowance registered first;
     - its own tracker parameters in the measurement model.
 
     The details that depend on the data are fixed after extraction and before Part A;
 
   - **the other three families are unchanged.** D now weights five families equally. D_fit, for C.2 and C.3, is small lawn, uniform well and kinematics, while C.1 fits all five;
 
-  - **z\*** is Bonferroni over 18 wild-type statistics. The κ calibration and the rule checks are extended.
+  - **z\*** is Bonferroni over 20 wild-type statistics, Φ⁻¹(1 − 0.05/40) ≈ 3.02. The κ calibration and the rule checks are extended.
 
 - **Validity** (`scripts/analysis/benchmark_v2_controls.py`), registered before any held-out read or adversary fit:
 
@@ -80,12 +77,12 @@ The maintainer's decisions of 2026-10-27:
 
 ### Modified Capabilities
 
-- `benchmark-grading`: the measurement model, the kinematics family, the rise, and v2's bands and weights.
+- `benchmark-grading`: the measurement model, the kinematics and chemotaxis families, and v2's bands and weights.
 - `benchmark-controls`: B v2's validity, with the oracle, the N2 positive control, the negatives, the adversaries and W's minimum v2.
 
 ## Impact
 
-- **Code:** `benchmark/measurement.py` (new); `benchmark/grading.py`, extended for histograms, bout lists, the reversal rate, the rise and four families; `benchmark_bands.py`; `benchmark_grade.py`; `scripts/analysis/benchmark_v2_controls.py` (new); `track_import_check.py`. With tests.
+- **Code:** `benchmark/measurement.py` (new); `benchmark/grading.py`, extended for histograms, bout lists, the reversal rate, the chemotaxis statistics and five families; `benchmark_bands.py`; `benchmark_grade.py`; `scripts/analysis/benchmark_v2_controls.py` (new); `track_import_check.py`. With tests.
 - **Records:** `docs/experiments/logbooks/supporting/115-benchmark-v2/` and Logbook 115.
 - **Compute:** about 1–2 h to build the bands and run the checks, 1–2 h for the controls, and about 3–4 h for the blind adversary (2 restarts, with the chemotaxis assay in each evaluation). Every later fit evaluation is about 25–35% slower.
 - **Data:** Chen 2025's deposit (3.5 GB, downloaded by hand into the off-repo archive). Only derived naive-N2 tracks are vendored, with a `PROVENANCE.md` entry.

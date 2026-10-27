@@ -47,7 +47,8 @@
 
 **Non-goals, declared, with reasons:**
 
-- **Chemotaxis** (the quintile ratio, the weathervane regression): no real gradient tracks are vendored.
+- **Chemotaxis beyond Chen's butanone assay** (other odours, salt, other labs): one deposit is fitted. The family's definitions are assay-agnostic, so a later source enters within it.
+- **Local search's rise** (considered and dropped, the maintainer's decision of 2026-10-27). López-Cruz's recordings start about 4 min after removal, so the rise from the first recording bin to the 2–6 min bins falls 4–10 min after removal, while the worms recover from being picked and transferred. B.3 already starts the γ fit at the peak bin because the curve rises first, and Calhoun's authors discard their first 2 min. A simulated assay has no handling, so a faithful search worm is already decaying there, and no controller could reach the statistic.
 - **Head pokes and edge contact:** they need a body, which opens in Phase 11 (D41).
 - **Depletion-driven leaving:** there are about 3.5 exits per date.
 - **Food-density dependence:** OD 1 has 45 animals on 1 date and OD 4 has 83 on 3. It is reported only.
@@ -72,7 +73,8 @@
     - **Its parameters** are measured on band cohorts by the `probe` stage:
       - **σ** from paused seconds: the per-axis SD implied by consecutive paused 1-s steps, `mean step / √π`;
       - **p_omega and p_other** from Scheer's per-frame flags, by second.
-    - **Missing runs:** before registration, the `probe` stage compares the lengths of real and modelled missing runs. If real runs are longer than Bernoulli gives (median run over 1 s), missingness is drawn as runs with the real length distribution instead, and Part A says which.
+    - **Missing runs:** before registration, the `probe` stage compares the real and modelled missing-run length distributions. If the real median run is longer than 1 s, or the real 90th percentile exceeds the Bernoulli model's by more than 2 s, missingness is drawn as runs with the real length distribution instead, and Part A says which.
+    - **Its effect on v1's statistics:** noise and missing seconds feed the classifier, so roaming fraction, the bout means and the rest change for *simulated* controllers under v2. That is intended: real and simulated tracks are then cut the same way. v1's real-data validation still holds, because real tracks are untouched. The six negatives' v1 and v2 values are recorded side by side.
 
 03. **The kinematics family** (small lawn; fitted, so in D_fit, for every controller):
 
@@ -80,17 +82,13 @@
     - **the on-lawn reversal rate:** onsets from `readouts.reversal_onsets` with the off-food detector, applied to every on-lawn sample run identically on real and simulated tracks, per minute of valid on-lawn seconds. It is a statistic of the trajectory, not a count of the authors' labels (D36);
     - **roaming-bout survival at 5 min:** Kaplan–Meier over on-lawn roaming bouts, a bout at the window's edge censored. Bout lists are tallied per animal for the bootstrap.
 
-04. **Local search's rise** (in the local-search family; held out for C.2 and C.3, fitted for C.1 under D37): the mean reorientation rate over the 2–4 and 4–6 min bins, divided by the 0–2 min bin's.
-
-    - **Real:** from López-Cruz's band batches.
-    - **Simulated:** from the same 2-min bins of `simulated_search`'s curve.
-    - **The limit:** no unread López-Cruz batch exists, so the rise has only the band batches' rule check, no fresh positive control. The record says so.
+04. **Local search is unchanged:** γ, early/late and the presence test, as in v1. The rise was considered and dropped (see the non-goals).
 
 05. **D v2.**
 
     - **D:** five families (small lawn, uniform well, local search, kinematics, chemotaxis), equal weight, split equally within each.
     - **D_fit**, which C.2 and C.3 fit on: small lawn, uniform well and kinematics. Local search and chemotaxis are their held-out predictions. **C.1** fits D.
-    - **The bar:** z\* is Bonferroni over every wild-type statistic, 18 plus chemotaxis's.
+    - **The bar:** z\* is Bonferroni over the 20 wild-type statistics (11 from v1, 6 kinematics, 3 chemotaxis), Φ⁻¹(1 − 0.05/40) ≈ 3.02.
     - **The z cap** stays at 10.
     - **The pass rule:** a population passes when every family passes, local search only where its presence holds. This is v1's rule with the new family.
 
@@ -112,6 +110,21 @@
     - **The field:** `data4plots/Landscape_low_0623_2.mat`'s `vq1`, 2500 × 3000 pixels (y, x), **stored rotated by 180°**. Sampled at `(W − 1 − x, H − 1 − y)`, it reproduces the concentration the authors record along their tracks (`Data_nai_test2.mat`'s `dc`): correlation 1.0000, median absolute difference 0.041. So its registration and units are the authors' own.
 
     - **The assay:** `chemotaxis_chen`, a 90 × 75 mm field, off food, 30 min, with the odour field `vq1` (bilinear, in mm, in the authors' units). The 1-s primitives worm senses it through its concentration, head-sweep and dC/dt senses. Worms are placed by the measured start distribution of fragments beginning in the first 30 s, near the field's centre.
+
+    - **The arena's edges:**
+
+      - the simulated arena is Chen's 100 × 100 mm plate, with the imaged 90 × 75 mm field placed centred on it (an assumption, stated);
+      - outside the field, the concentration takes the nearest field value;
+      - samples outside the imaged field are missing, as a real worm's track ends when it leaves the field. No statistic reads a wall.
+
+    - **Population sizes differ:** a real chemotaxis population is one plate of fragments (50–100 worms), and a simulated one is 200 continuous worms. The band's prediction scale comes from plate-to-plate spread, so it is conservative for the simulated side. The record says so.
+
+    - **The probe stage records Chen's facts** before Part A:
+
+      - the landscape's 180° registration against the recorded concentrations;
+      - the pixel scale;
+      - the jitter;
+      - the fragment-length distribution.
 
     - **The measurement model for this rig**, measured from Chen's tracks by the `probe` stage:
 
@@ -137,25 +150,28 @@
 
     - **The definitions are assay-agnostic** (drift along the local gradient, a dC/dt quintile ratio, a bearing regression), so a later source could enter as further bands within the family at the same weight. The literature watch's brief gains "public *C. elegans* chemotaxis track datasets".
 
-07. **Bands v2.** The v1 builder is extended to histograms, bout lists, the reversal tally and the rise:
+07. **Bands v2.** The v1 builder is extended to histograms, bout lists and the reversal tally (the chemotaxis family's bands are decision 06's):
 
     - from band cohorts only, by the date bootstrap at n;
     - each band on its own generator, `default_rng([2030, index, n])`, with the new statistics' indices appended after v1's, so v1's values are reproduced;
     - **κ calibration and the rule check** as in v1 (a split of band dates): the check's failure rate per family is the input to the oracle and the allowance.
 
-08. **The reachability oracle** (registered; run on scratch seeds before Part B):
+08. **The oracles** (registered; run before Part B).
+
+    **First, the measurement-model round trip,** for both rigs. Real band-side tracks are denoised: Chen's own `SmoothX/Y`, and Scheer's 1-s tracks smoothed by a centred 5-s moving average (registered). They are then passed through the model, and every new statistic is recomputed. For each statistic and rig, the round-tripped population value must lie within |z| ≤ 1 of the raw tracks' value, on that statistic's band scale. If it fails, the model is wrong, and the run stops.
+
+    **Then the reachability oracle** (scratch seeds):
 
     - **the populations:** B.4's matched open-loop worm (`hazard_controller("hmm")`, at the real band-cohort speeds and hazards) passes through the measurement model, at 40 populations of 200;
     - **the gate:** for each of the four speed statistics and the reversal rate, the mean z lies in [−1, 1] and |z| ≤ z\* in at least 90% of populations;
-    - **excluded:** bout survival and the rise, which that worm is not matched for (its bouts are exponential, and it has no search). Their oracle is the N2 control;
-    - **on failure:** the measurement model or the statistic is wrong. The run stops before Part B and returns to the maintainer.
+    - **excluded:** bout survival, which that worm is not matched for (its bouts are exponential). Its oracle is the N2 control, and the chemotaxis statistics' is their leave-one-out validation;
+    - **on failure:** if the round trip has passed, the measurement model is right, so the failure belongs to the matched worm or to the statistic. The record says which, and the run stops before Part B and returns to the maintainer.
 
 09. **The positive control: fresh N2** (`benchmark_v2_controls.py read`, guarded):
 
     - **the bands:** N2 bands for the small lawn and kinematics families, from N2's 42 band dates, at the size of its unread held-out set;
-    - **the units:** pooled small lawn and pooled kinematics over the 26 unread held-out dates;
-    - **the gate:** each unit passes its family;
-    - **the allowance:** with two units, at most 0 may fail. Each unit's failure rate is the rule check's, and the joint P(spurious void) is stated;
+    - **the units:** the 26 unread held-out dates split into two halves by date (`default_rng(2035)`, registered), times the two families: 4 units;
+    - **the gate:** at most **1** of the 4 units fails its family. From the rule check's per-family rates, P(more than 1 fails) is about 0.02, computed and stated in Part B. A systematic misfit of a family fails both its halves, so it is still caught;
     - **the read:** once, under the guard. PD1074's held-out cohorts are not read.
 
     The N2 control validates band construction and the new statistics' calibration on unseen data from the same lab and assay. It does not validate PD1074's bands, which B.4 did.
@@ -172,20 +188,24 @@
 
 11. **Validity v2:** **VALID** when all of the following hold:
 
-    - the oracle passes;
-    - both N2 units pass;
+    - the measurement-model round trip passes, for both rigs;
+    - the reachability oracle passes;
+    - the N2 control passes within its allowance (at most 1 of 4 units fails);
+    - the chemotaxis leave-one-recording-out validation passes within its registered allowance;
     - all six negatives fail;
     - both adversaries fail.
 
     Otherwise **VOID**, and the statistics are revised in a new change. Every reading is recorded either way.
 
-12. **W's minimum v2:**
+12. **W's minimum v2, on both family sets.** W reads on D40's held-out fidelity distance, but which families that is for C.2 belongs to W's registration. So v2 records both:
 
-    - the N2 held-out dates (26) are split into halves by date, 1,000 times (`default_rng(2034)`);
-    - D over the small-lawn and kinematics families between the halves, on PD1074's v2 band scales at each half's size;
-    - the 95th percentile.
+    - **the fitted families** (small lawn and kinematics): between halves of N2's 26 unread held-out dates, split by date 1,000 times (`default_rng(2034)`), on PD1074's v2 band scales at each half's size;
+    - **the held-out families** (local search and chemotaxis):
+      - local search between halves of López-Cruz's 17 *band* batches, 1,000 splits (`default_rng(2036)`); its held-out batches were read in B.4;
+      - chemotaxis between every 3-against-3 split of Chen's 6 recordings, all 10 of them;
+    - each set's minimum is the 95th percentile.
 
-    W's registration reads its arms on the same two families, closing v1's mismatch between W's minimum (small lawn plus local search) and D_fit.
+    W's registration must read its arms on the same family set as the minimum it cites. That closes v1's mismatch between W's minimum (small lawn plus local search) and D_fit.
 
 13. **The launch record, in two parts.**
 
@@ -200,7 +220,8 @@
     - blind-worm fits on CMA seeds 9401–9402, with animals `151_000_000 + 200·k + i` (k = 10,000·r + 16·(n − 1) + m), and its grading at `152_000_000 + 200·g + i`;
     - C.1's answer graded at `153_000_000 + 200·g + i`;
     - the negatives on B.4's seeds (5101–5300; networks 5301–5316);
-    - the measurement model's streams, `default_rng([seed, 2033])`;
+    - the measurement model's streams, `default_rng([seed, 2033])` on the lawn assays and `default_rng([seed, 2037])` on the chemotaxis assay;
+    - chemotaxis-assay populations: every simulated population on `chemotaxis_chen` uses the same animal seeds as its lawn populations, so a controller's families are read on the same animals;
     - all recorded in the seed table.
 
 15. **Track import and documentation.**
@@ -217,7 +238,6 @@
 
 - **[The oracle fails]** → the measurement model under-represents the real tracker. It stops before Part B, by design.
 - **[N2 differs from PD1074]** → the N2 control tests the construction on N2's own bands, not PD1074's. That is stated.
-- **[A faithful controller fails more often]** with 18 statistics and four families. The bar is Bonferroni, and the 3-of-5 oracle is recomputed for v2 from the rule check's rates. The C.1b and C.2 registrations carry the v2 figure.
-- **[The rise has no fresh positive control]** → stated, and it sits in the held-out family for C.2 and C.3.
+- **[A faithful controller fails more often]** with 20 statistics and five families. The bar is Bonferroni, and the 3-of-5 oracle is recomputed for v2 from the rule check's rates. The C.1b and C.2 registrations carry the v2 figure.
 - **[The adversaries pass]** → v2 is void, and the loophole is not closed. That is the purpose.
 - **[Cost]** → about 5–7 h of compute for this change. The F.0b-i re-run (11–13 h) and C.1b (8–9 h) follow in their own changes.

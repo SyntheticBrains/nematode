@@ -2,7 +2,8 @@
 
 Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
 
-- four statistics: per-state speed, reversal rate, bout shape, and the rise;
+- three statistics: per-state speed, reversal rate and bout shape (the rise dropped);
+- chemotaxis as a fifth family, from Chen 2025 (6 recordings, leave-one-out);
 - jitter and missingness;
 - fresh N2 data;
 - a separate kinematics family;
@@ -32,11 +33,10 @@ Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
   - per-state window-speed histograms;
   - the on-lawn reversal tally;
   - roaming-bout lists and Kaplan–Meier at 5 min;
-  - the rise;
-  - four families;
+  - five families;
   - D, D_fit and z\* for v2;
   - v1 unchanged.
-- [ ] 2.2 `benchmark_bands.py --version v2`: bands from band cohorts, generators after v1's, κ calibration and the rule check; `bands_v2.json` and its checksum in `PROVENANCE.md`.
+- [ ] 2.2 `benchmark_bands.py --version v2`: bands from band cohorts, generators after v1's, κ calibration and the rule check; the chemotaxis bands from Chen's 6 recordings; `bands_v2.json` and its checksum in `PROVENANCE.md`.
 - [ ] 2.3 `benchmark_grade.py --bands v1|v2`; the measurement model on `batched` and `captures`.
 - [ ] 2.4 Tests:
   - v1 reproduced exactly;
@@ -44,20 +44,24 @@ Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
   - each new statistic on toy tracks;
   - the KM survival with censoring;
   - four-family weights;
-  - the held-out refusal.
+  - the held-out refusal;
+  - the landscape's 180° registration, the pixel scale and the fragmentation;
+  - the three chemotaxis statistics on toy tracks;
+  - the measurement-model round trip on toy tracks.
 
 ## 3. Registration
 
 - [ ] 3.1 `supporting/115-benchmark-v2/launch.md` Part A.
-- [ ] 3.2 Probe, bands, rule check and the oracle (stop if it fails); Part B with `bands_v2.json`.
+- [ ] 3.2 Probe (with Chen's facts), bands, rule check, the measurement-model round trip and the reachability oracle (stop if either fails); Part B with `bands_v2.json`.
 
 ## 4. The controls
 
-- [ ] 4.1 The N2 positive control (read once, guarded).
+- [ ] 4.1 The N2 positive control: 4 units, allowance 1 (read once, guarded).
+- [ ] 4.1b The chemotaxis leave-one-recording-out validation.
 - [ ] 4.2 B.4's six negatives on v2.
 - [ ] 4.3 The blind worm fitted against v2 (2 restarts, the σ guard), graded 3 of 5.
 - [ ] 4.4 C.1's v1 answer graded on v2.
-- [ ] 4.5 W's minimum v2.
+- [ ] 4.5 W's minimum v2, on both family sets.
 - [ ] 4.6 The verdict into `controls_v2.json`.
 
 ## 5. Documentation and tracker
