@@ -361,7 +361,7 @@ def chemotaxis_fragments(
 
 def simulate_v2(
     arm: str,
-    controller: Callable[[], Any],
+    controller: Callable[[Path], Any],
     seeds: list[int],
     bands: dict[str, Any],
 ) -> tuple[dict[str, list[list[BehaviourStep]]], list[list[BehaviourStep]]]:
@@ -369,7 +369,7 @@ def simulate_v2(
 
     Returns the lawn families' windowed, measured animals and the chemotaxis assay's measured
     animals over its analysis window. ``controller`` builds a fresh
-    controller for each assay.
+    controller for each assay from that assay's config path.
     """
     from quantumnematode.benchmark import measurement as mm
     from quantumnematode.evaluation.odour_field import chen_field, chen_starts
@@ -379,8 +379,9 @@ def simulate_v2(
     populations: dict[str, list[list[BehaviourStep]]] = {}
 
     for family, protocol in PROTOCOLS.items():
-        config = load_simulation_config(str(FORAGING / f"{ARMS[arm]}_assay_{protocol}.yml"))
-        trajectories = BatchedEvaluator(config, controller(), seeds).run()
+        path = FORAGING / f"{ARMS[arm]}_assay_{protocol}.yml"
+        config = load_simulation_config(str(path))
+        trajectories = BatchedEvaluator(config, controller(path), seeds).run()
         analysis = tuple(trajectories.assay["analysis_steps"])  # type: ignore[index]
         populations[family] = [
             window(
@@ -390,11 +391,12 @@ def simulate_v2(
             )
             for i, seed in enumerate(seeds)
         ]
-    config = load_simulation_config(str(FORAGING / f"{ARMS[arm]}_assay_{CHEMOTAXIS_PROTOCOL}.yml"))
+    path = FORAGING / f"{ARMS[arm]}_assay_{CHEMOTAXIS_PROTOCOL}.yml"
+    config = load_simulation_config(str(path))
     field = chen_field()
     trajectories = BatchedEvaluator(
         config,
-        controller(),
+        controller(path),
         seeds,
         odour_field=field,
         field_starts=chen_starts(seeds, field),
@@ -587,7 +589,7 @@ def _main_v2(args: argparse.Namespace) -> int:
         seeds = parse_seeds(args.seeds)
         populations, chemotaxis = simulate_v2(
             args.arm,
-            lambda: _hazard_controller(args.controller),
+            lambda _path: _hazard_controller(args.controller),
             seeds,
             bands,
         )

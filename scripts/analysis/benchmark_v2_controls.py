@@ -13,10 +13,27 @@ r"""B v2's probes and controls: the measurements behind the revision, its oracle
 - **the blind worm on v1** (``--blind``): C.1 with every sensing term pinned off, fitted by sep-CMA
   against v1's D and graded on five populations.
 
+``oracle`` (refuses until launch Part A is committed): the measurement-model round trip on both
+rigs (band-side tracks denoised, measured again, every new statistic within |z| <= 1 of the raw
+value), then the reachability oracle (B.4's matched open-loop worm, 40 measured populations).
+
+``read`` (refuses until Part B and the bands it binds are committed; runs once): the fresh N2
+control (4 units), B.4's six negatives on v2, C.1's v1 answer on five populations, and W's minimum
+on both family sets.
+
+``blind`` (refuses until Part B is committed; resumable): the blind worm fitted against v2's D, two
+sep-CMA restarts with the sigma guard, the best graded on five populations.
+
+``verdict``: VALID only when every registered check holds, into ``controls_v2.json``.
+
 Usage::
 
     uv run python scripts/analysis/benchmark_v2_controls.py probe \
         --chen-archive <Chen_learning_2024.zip> [--blind] [--out <probes.json>]
+    uv run python scripts/analysis/benchmark_v2_controls.py oracle --chen-archive <zip>
+    uv run python scripts/analysis/benchmark_v2_controls.py read
+    uv run python scripts/analysis/benchmark_v2_controls.py blind
+    uv run python scripts/analysis/benchmark_v2_controls.py verdict
 """
 
 from __future__ import annotations
@@ -24,6 +41,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import math
 import sys
 import zipfile
 from pathlib import Path
@@ -390,16 +408,930 @@ def _probe(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------------------------
+# Registered settings for the oracles and the controls
+# ---------------------------------------------------------------------------------------------
+
+LAUNCH_PATH = SUPPORT / "launch.md"
+BANDS_V2_PATH = _REPO / "data" / "benchmark" / "bands_v2.json"
+BANDS_V2_RECORD = SUPPORT / "bands_v2_record.json"
+ORACLE_PATH = SUPPORT / "oracle.json"
+READ_PATH = SUPPORT / "read.json"
+BLIND_PATH = SUPPORT / "blind_v2.json"
+CONTROLS_PATH = SUPPORT / "controls_v2.json"
+BLIND_STATE = _REPO / "build" / "benchmark-v2" / "blind"
+CONTROLS_V1 = _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "110-benchmark-controls"
+
+SMOOTH_S = 5
+STORE_UM_MM = 1e-3  # the store keeps positions in whole micrometres
+ROUND_TRIP_BAR = 1.0
+ROUND_TRIP_BASE = 154_000_000
+ORACLE_BASE = 150_000_000
+ORACLE_POPULATIONS = 40
+ORACLE_MEAN_Z = 1.0
+ORACLE_SHARE = 0.9
+ORACLE_STATISTICS = tuple(s for s in g.KINEMATIC_STATISTICS if s != "roaming_survival_5min")
+N2_ARM = "N2_od2_Data"
+N2_SPLIT_SEED = 2035
+N2_BAND_SEED = 2042
+N2_ALLOWANCE = 1
+W_SPLITS = 1000
+W_FITTED_SEED = 2034
+W_SEARCH_SEED = 2036
+W_SIZE_STEP = 25
+W_QUANTILE = 95
+OPEN_LOOP = ("hmm", "poisson", "random_walk", "correlated_walk")
+GRADE_POPULATIONS = 5
+BLIND_V2_CMA_SEEDS = (9401, 9402)
+BLIND_V2_FIT_BASE = 151_000_000
+BLIND_V2_GRADE_BASE = 152_000_000
+C1_V2_GRADE_BASE = 153_000_000
+BLIND_V2_CAP = 210
+BLIND_POPSIZE = 16
+BLIND_SIGMA0 = 0.2
+BLIND_PINNED = {
+    "a_intake": 0.5,
+    "a_satiety": 0.5,
+    "b_intake": 0.5,
+    "b_satiety": 0.5,
+    "kappa_weathervane": 0.5,
+    "beta_reversal": 0.0,
+    "beta_omega": 0.0,
+    "edge": 0.0,
+    "search_amplitude": 0.0,
+    "search_tau_s": 0.5,
+}
+
+
+def _committed(*, bands: bool) -> bool:
+    """Return whether Part A (and, with ``bands``, Part B with the bands file) is committed."""
+    import cma_recovery as cr
+
+    bound = (BANDS_V2_PATH, BANDS_V2_RECORD) if bands else ()
+    return cr.launch_committed(bound=bound, launch_path=LAUNCH_PATH)
+
+
+# ---------------------------------------------------------------------------------------------
+# The measurement-model round trip
+# ---------------------------------------------------------------------------------------------
+
+
+def denoise(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Return a 1-s track's denoised positions: interior gaps interpolated, a centred 5-s mean.
+
+    The seconds before the worm is first found and after it is last seen stay missing; every
+    second between is a position, so the measurement model alone decides which go missing.
+    """
+    out = []
+    for v in (np.asarray(x, dtype=float), np.asarray(y, dtype=float)):
+        present = np.flatnonzero(np.isfinite(v))
+        filled = np.full(len(v), np.nan)
+        if len(present):
+            a, b = present[0], present[-1] + 1
+            t = np.arange(a, b)
+            filled[a:b] = np.interp(t, present, v[present])
+            kernel = np.ones(SMOOTH_S)
+            seg = filled[a:b]
+            total = np.convolve(seg, kernel, mode="same")
+            count = np.convolve(np.ones(len(seg)), kernel, mode="same")
+            filled[a:b] = total / count
+        out.append(filled)
+    return out[0], out[1]
+
+
+def _as_steps(x: np.ndarray, y: np.ndarray, primitive: np.ndarray | None = None) -> list[Any]:
+    from quantumnematode.report.behaviour import BehaviourStep
+
+    return [
+        BehaviourStep(
+            step=t,
+            x=float(x[t]),
+            y=float(y[t]),
+            heading_rad=0.0,
+            concentration=0.0,
+            dc_dt=0.0,
+            grad_dir=0.0,
+            grad_strength=0.0,
+            primitive=None if primitive is None else ("omega" if primitive[t] else "run"),
+        )
+        for t in range(len(x))
+    ]
+
+
+def _positions(steps: list[Any]) -> tuple[np.ndarray, np.ndarray]:
+    return (
+        np.array([s.x for s in steps], dtype=float),
+        np.array([s.y for s in steps], dtype=float),
+    )
+
+
+def _z_rows(
+    raw: dict[str, float],
+    trip: dict[str, float],
+    scales: dict[str, g.Band],
+) -> dict[str, Any]:
+    rows = {}
+    for name, value in raw.items():
+        z = (trip[name] - value) / scales[name].scale
+        rows[name] = {
+            "raw": value,
+            "round_trip": trip[name],
+            "scale": scales[name].scale,
+            "z": z,
+            "passes": bool(abs(z) <= ROUND_TRIP_BAR),
+        }
+    return rows
+
+
+def scheer_round_trip(bands: dict[str, Any]) -> dict[str, Any]:
+    """Return the lawn rig's round trip: band-side PD1074 tracks, denoised and measured again."""
+    import benchmark_bands as bb
+
+    tracks = refs.load_scheer_tracks()
+    clf = bg.classifier(bands)
+    model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+    rows = bb.band_rows(tracks, bb.WILD_TYPE)
+    n = tracks.x.shape[1]
+    omega = tracks.flag("omega")[rows][:, : 3 * n].reshape(len(rows), n, 3).any(axis=2)
+    raw_k, trip_k = np.zeros(g.KINEMATIC_FIELDS), np.zeros(g.KINEMATIC_FIELDS)
+    raw_l, trip_l = np.zeros(len(g.TALLY_FIELDS)), np.zeros(len(g.TALLY_FIELDS))
+    for j, i in enumerate(rows):
+        x, y, radius = tracks.x[i], tracks.y[i], tracks.boundary_radius[i]
+        on = g.real_on_lawn(x, y, radius)
+        w = g.animal_windows(x, y, on, clf)
+        raw_k += g.kinematic_tally(w, x, y, on)
+        raw_l += g.tally(w)
+        sx, sy = denoise(x, y)
+        measured = mm.measure(_as_steps(sx, sy, omega[j]), ROUND_TRIP_BASE + int(i), model)
+        mx, my = _positions(measured)
+        mon = g.real_on_lawn(mx, my, radius)
+        mw = g.animal_windows(mx, my, mon, clf)
+        trip_k += g.kinematic_tally(mw, mx, my, mon)
+        trip_l += g.tally(mw)
+    kin = _z_rows(
+        g.kinematic_statistics(raw_k),
+        g.kinematic_statistics(trip_k),
+        bg.family_bands_v2(bands, "kinematics", len(rows)),
+    )
+    lawn = _z_rows(
+        g.lawn_statistics(raw_l),
+        g.lawn_statistics(trip_l),
+        bg.family_bands_v2(bands, "small_lawn", len(rows)),
+    )
+    return {
+        "animals": len(rows),
+        "denoiser": f"interior gaps interpolated, then a centred {SMOOTH_S}-s moving average",
+        "kinematics": kin,
+        "small_lawn_reported": lawn,
+        "passes": all(r["passes"] for r in kin.values()),
+    }
+
+
+def chen_smoothed(
+    archive: Path,
+) -> list[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    """Return each standard-protocol fragment's raw and the authors' smoothed positions at 1 s, mm.
+
+    The vendored fragments are the raw paths; the authors' smoothing is in their raw-track file,
+    matched to each fragment by its path. The raw positions are re-derived here and must equal the
+    vendored ones, to the store's micrometre.
+    """
+    import extract_benchmark_references as ex
+
+    chen = refs.load_chen_tracks()
+    with np.load(refs.CHEN_TRACKS_PATH) as store:
+        scale = float(store["mm_per_px"])
+    raw = np.atleast_1d(_archive_mat(archive, "temp/track_data/rawTracks_N2nai.mat")["Tracks"])
+    smooth = {
+        np.atleast_2d(t.Path).astype(float).tobytes(): (
+            np.atleast_1d(t.SmoothX),
+            np.atleast_1d(t.SmoothY),
+        )
+        for t in raw
+    }
+    naive = _archive_mat(archive, ex.CHEN_TRACKS_MEMBER)["track_learn_all"][ex.CHEN_NAIVE]
+    vendored = chen.fragments()
+    out = []
+    f = 0
+    for r, recording in enumerate(naive):
+        for t in np.atleast_1d(recording):
+            p = np.atleast_2d(t.Path).astype(float)
+            time_s = np.atleast_1d(t.Time).astype(float)
+            _, xy = ex.resample_fragment(p, time_s)
+            if len(xy) < 2:
+                continue
+            rec, _, vx, vy = vendored[f]
+            f += 1
+            if chen.recording_protocol[r] != "standard":
+                continue
+            if rec != r or not (
+                np.allclose(vx, xy[:, 0] * scale, rtol=0, atol=STORE_UM_MM)
+                and np.allclose(vy, xy[:, 1] * scale, rtol=0, atol=STORE_UM_MM)
+            ):
+                msg = f"fragment {f - 1} does not match the vendored store"
+                raise RuntimeError(msg)
+            sx, sy = smooth[p.tobytes()]
+            _, sxy = ex.resample_fragment(np.column_stack([sx, sy]).astype(float), time_s)
+            out.append((r, vx, vy, sxy[:, 0] * scale, sxy[:, 1] * scale))
+    return out
+
+
+def chen_round_trip(bands: dict[str, Any], archive: Path) -> dict[str, Any]:
+    """Return Chen's rig's round trip: the authors' smoothed fragments with the model's jitter.
+
+    The fragments' cuts are the real ones, so only the jitter is applied; the model's fragment
+    lengths are the real distribution by construction.
+    """
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    chen = refs.load_chen_tracks()
+    model = mm.TrackerModel.from_dict(bands["measurement"]["chemotaxis"])
+    jitter_only = mm.TrackerModel(jitter_mm=model.jitter_mm, stream_key=model.stream_key)
+    fragments = chen_smoothed(archive)
+    raw = [(vx, vy) for _, vx, vy, _, _ in fragments]
+    trip = []
+    for k, (_, _, _, sx, sy) in enumerate(fragments):
+        mx, my = _positions(mm.measure(_as_steps(sx, sy), ROUND_TRIP_BASE + k, jitter_only))
+        trip.append((mx, my))
+    rows = _z_rows(
+        ch.chemotaxis_statistics(raw, chen.concentration),
+        ch.chemotaxis_statistics(trip, chen.concentration),
+        bg.family_bands_v2(bands, "chemotaxis", 0),
+    )
+    return {
+        "fragments": len(fragments),
+        "denoiser": "the authors' SmoothX/SmoothY, resampled to 1 s as the raw paths are",
+        "applied": "jitter only; the fragments are the real ones",
+        "chemotaxis": rows,
+        "passes": all(r["passes"] for r in rows.values()),
+    }
+
+
+# ---------------------------------------------------------------------------------------------
+# The reachability oracle
+# ---------------------------------------------------------------------------------------------
+
+
+def _oracle_population(p: int, base: int = ORACLE_BASE) -> dict[str, float]:
+    """Return the matched open-loop worm's kinematic statistics on one measured population."""
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+
+    bands = bg.load_bands_v2()
+    clf = bg.classifier(bands)
+    model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+    params = json.loads(bc.PARAMS_PATH.read_text())
+    config = nr._shared()["configs"]["small_lawn"]
+    seeds = [base + ANIMALS * p + i for i in range(ANIMALS)]
+    traj = BatchedEvaluator(config, bc.hazard_controller("hmm", params), seeds).run()
+    assert traj.assay is not None  # noqa: S101 - an assay config records its timing
+    analysis = tuple(traj.assay["analysis_steps"])  # type: ignore[arg-type]
+    animals = [
+        bg.window("small_lawn", mm.measure(traj.to_behaviour_steps(i), seed, model), analysis)  # type: ignore[arg-type]
+        for i, seed in enumerate(seeds)
+    ]
+    return bg.kinematic_values(animals, clf)
+
+
+def reachability_oracle(bands: dict[str, Any], workers: int) -> dict[str, Any]:
+    """Return the reachability oracle: 40 measured populations of the matched open-loop worm."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        values = list(pool.map(_oracle_population, range(ORACLE_POPULATIONS)))
+    band = bg.family_bands_v2(bands, "kinematics", ANIMALS)
+    bar = float(bands["bars"]["wild_type"])
+    rows = {}
+    for name in ORACLE_STATISTICS:
+        z = np.array([g.z_score(v[name], band[name]) for v in values])
+        mean, share = float(np.mean(z)), float(np.mean(np.abs(z) <= bar))
+        rows[name] = {
+            "mean_z": mean,
+            "share_passing": share,
+            "z": z.tolist(),
+            "passes": bool(abs(mean) <= ORACLE_MEAN_Z and share >= ORACLE_SHARE),
+        }
+    survival = np.array(
+        [g.z_score(v["roaming_survival_5min"], band["roaming_survival_5min"]) for v in values],
+    )
+    return {
+        "populations": ORACLE_POPULATIONS,
+        "animals": ANIMALS,
+        "seed_base": ORACLE_BASE,
+        "statistics": rows,
+        "reported_roaming_survival_mean_z": float(np.mean(survival)),
+        "passes": all(r["passes"] for r in rows.values()),
+    }
+
+
+def _oracle(args: argparse.Namespace) -> int:
+    if not _committed(bands=False):
+        print(
+            f"{LAUNCH_PATH} (Part A) is not committed and clean; nothing is run.",
+            file=sys.stderr,
+        )
+        return 1
+    bands = bg.load_bands_v2()
+    record: dict[str, Any] = {"description": "B v2's oracles: the round trip, then reachability."}
+    rigs = {
+        "lawn": scheer_round_trip(bands),
+        "chemotaxis": chen_round_trip(bands, args.chen_archive),
+    }
+    record["round_trip"] = {**rigs, "passes": all(r["passes"] for r in rigs.values())}
+    if record["round_trip"]["passes"]:
+        record["reachability"] = reachability_oracle(bands, args.workers)
+        record["passes"] = bool(record["reachability"]["passes"])
+    else:
+        record["reachability"] = "not run: the round trip failed, so the measurement model is wrong"
+        record["passes"] = False
+    ORACLE_PATH.write_text(json.dumps(bg._finite(record), indent=2, allow_nan=False) + "\n")
+    print(json.dumps(bg._finite(record), indent=2)[:4000])
+    return 0 if record["passes"] else 1
+
+
+# ---------------------------------------------------------------------------------------------
+# The positive control: fresh N2
+# ---------------------------------------------------------------------------------------------
+
+
+def n2_unread_dates(tracks: refs.ScheerTracks) -> list[int]:
+    """Return N2's held-out dates that no earlier read has touched: all but tph-1's paired dates."""
+    controls = json.loads((CONTROLS_V1 / "controls.json").read_text())
+    read = set(controls["positive_controls"]["units"]["mutant/tph-1"]["paired_dates"])
+    rows = tracks.arm(N2_ARM)
+    held = rows[tracks.side[rows] == refs.HELD_OUT]
+    return sorted({int(d) for d in tracks.date[held]} - read)
+
+
+def _tallies_by_date(
+    tracks: refs.ScheerTracks,
+    rows: np.ndarray,
+    clf: rd.GaussianClassifier,
+) -> tuple[dict[int, np.ndarray], dict[int, np.ndarray]]:
+    lawn: dict[int, list[np.ndarray]] = {}
+    kin: dict[int, list[np.ndarray]] = {}
+    for i in rows:
+        x, y = tracks.x[i], tracks.y[i]
+        on = g.real_on_lawn(x, y, tracks.boundary_radius[i])
+        w = g.animal_windows(x, y, on, clf)
+        lawn.setdefault(int(tracks.date[i]), []).append(g.tally(w))
+        kin.setdefault(int(tracks.date[i]), []).append(g.kinematic_tally(w, x, y, on))
+    stack = lambda d: {k: np.vstack(v) for k, v in sorted(d.items())}  # noqa: E731
+    return stack(lawn), stack(kin)
+
+
+def n2_control(bands: dict[str, Any]) -> dict[str, Any]:
+    """Grade the 4 N2 units: two halves of the unread held-out dates, on two families each."""
+    import benchmark_bands as bb
+
+    tracks = refs.load_scheer_tracks()
+    clf = bg.classifier(bands)
+    bar = float(bands["bars"]["wild_type"])
+    rows = tracks.arm(N2_ARM)
+    band_lawn, band_kin = _tallies_by_date(tracks, rows[tracks.side[rows] == refs.BANDS], clf)
+    unread = n2_unread_dates(tracks)
+    held = rows[np.isin(tracks.date[rows], unread) & (tracks.side[rows] == refs.HELD_OUT)]
+    held_lawn, held_kin = _tallies_by_date(tracks, held, clf)
+    order = np.random.default_rng(N2_SPLIT_SEED).permutation(len(unread))
+    halves = [
+        sorted(unread[k] for k in order[: len(unread) // 2]),
+        sorted(unread[k] for k in order[len(unread) // 2 :]),
+    ]
+    v1_kappa = json.loads(bb.RECORD_PATH.read_text())["calibration"]["kappa"]
+    families = {
+        "small_lawn": (band_lawn, held_lawn, g.LAWN_STATISTICS, g.lawn_statistics, v1_kappa, 0),
+        "kinematics": (
+            band_kin,
+            held_kin,
+            g.KINEMATIC_STATISTICS,
+            g.kinematic_statistics,
+            bands["kinematics_kappa"],
+            1,
+        ),
+    }
+    units = {}
+    for h, dates in enumerate(halves):
+        for family, (band, heldout, names, statistic, kappa, index) in families.items():
+            tallies = np.vstack([heldout[d] for d in dates])
+            n = len(tallies)
+            nb = bb.lawn_bands(
+                band,
+                names,
+                n,
+                np.random.default_rng([N2_BAND_SEED, index, n]),
+                kappa=kappa,
+                statistic=statistic,
+            )
+            readings = g.grade(statistic(tallies.sum(axis=0)), nb, bar)
+            units[f"{family}/half{h}"] = {
+                "dates": dates,
+                "n": n,
+                "statistics": bc._reading_dict(readings),
+                "passes": all(r.passes for r in readings.values()),
+            }
+    record = json.loads(BANDS_V2_RECORD.read_text())["checks"]
+    rates = [1.0 - record[u.split("/")[0]]["joint_pass_rate"] for u in units]
+    failed = [u for u, r in units.items() if not r["passes"]]
+    return {
+        "arm": N2_ARM,
+        "band_dates": len(band_lawn),
+        "unread_dates": len(unread),
+        "split_seed": N2_SPLIT_SEED,
+        "units": units,
+        "failed": failed,
+        "allowance": N2_ALLOWANCE,
+        "p_more_than_allowance": bc.allowance_tail(rates, N2_ALLOWANCE),
+        "passes": len(failed) <= N2_ALLOWANCE,
+        "_halves": halves,
+        "_held_lawn": held_lawn,
+        "_held_kin": held_kin,
+    }
+
+
+# ---------------------------------------------------------------------------------------------
+# The negatives and C.1's answer, through the measurement model
+# ---------------------------------------------------------------------------------------------
+
+
+def _negative_v2(
+    name: str,
+    bands: dict[str, Any],
+    animals: list[int] = bc.READ_ANIMALS,
+    networks: dict[str, list[int]] = bc.READ_NETWORKS,
+) -> dict[str, Any]:
+    """Run and grade one of B.4's negatives on v2: measured, with the chemotaxis assay."""
+    from quantumnematode.evaluation.controllers import BatchedConnectome, BatchedMLP
+
+    params = json.loads(bc.PARAMS_PATH.read_text())
+    if not name.startswith("untrained_"):
+        populations, chemotaxis = bg.simulate_v2(
+            "mlp",
+            lambda _path: bc.hazard_controller(name, params),
+            animals,
+            bands,
+        )
+    else:
+        arm = "mlp" if name == "untrained_mlp" else "connectome"
+        seeds = networks[name]
+        per = len(animals) // len(seeds)
+        populations, chemotaxis = {}, []
+        for j, seed in enumerate(seeds):
+            block = animals[j * per : (j + 1) * per]
+
+            def build(path: Path, seed: int = seed) -> Any:  # noqa: ANN401 - a controller
+                brain, _, _ = bc.harness.build_brain(path, seed)
+                return BatchedMLP(brain) if arm == "mlp" else BatchedConnectome(brain)  # type: ignore[arg-type]
+
+            pops, chem = bg.simulate_v2(arm, build, block, bands)
+            for family, part in pops.items():
+                populations.setdefault(family, []).extend(part)
+            chemotaxis.extend(chem)
+    graded = bg.grade_populations_v2(populations, chemotaxis, bands)
+    graded["fails_wild_type"] = not graded["wild_type_passes"]
+    graded["fails_chemotaxis"] = not graded["family_passes"]["chemotaxis"]
+    return graded
+
+
+def _mechanistic_grade(population: int, z: list[float], base: int) -> dict[str, Any]:
+    """Grade a C.1 parameter point on one v2 population of 200 animals."""
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+
+    bands = bg.load_bands_v2()
+    seeds = [base + ANIMALS * population + i for i in range(ANIMALS)]
+    params = nr.parameters_from_unit(np.asarray(z))
+    populations, chemotaxis = bg.simulate_v2(
+        "mlp",
+        lambda _path: BatchedMechanistic(params),
+        seeds,
+        bands,
+    )
+    return bg._finite(bg.grade_populations_v2(populations, chemotaxis, bands))
+
+
+def _graded_answer(z: list[float], base: int, pool: Any) -> dict[str, Any]:  # noqa: ANN401 - a pool
+    import c1_fit as c1
+
+    grades = list(
+        pool.map(
+            _mechanistic_grade,
+            range(GRADE_POPULATIONS),
+            [z] * GRADE_POPULATIONS,
+            [base] * GRADE_POPULATIONS,
+        ),
+    )
+    passes = [c1.population_passes(gr["family_passes"]) for gr in grades]
+    return {
+        "seed_base": base,
+        "population_passes": passes,
+        "passes_wild_type": c1.wild_type_verdict(passes),
+        "population_D": [gr["D"] for gr in grades],
+        "family_passes": [gr["family_passes"] for gr in grades],
+    }
+
+
+# ---------------------------------------------------------------------------------------------
+# W's minimum, on both family sets
+# ---------------------------------------------------------------------------------------------
+
+
+def _difference(
+    a: dict[str, float],
+    b: dict[str, float],
+    scales: dict[str, float],
+) -> dict[str, g.Reading]:
+    out = {}
+    for s, scale in scales.items():
+        band = g.Band(0.0, scale)
+        out[s] = g.Reading(a[s] - b[s], band, g.z_score(a[s] - b[s], band), passes=True)
+    return out
+
+
+def _mean_of(
+    rows: list[dict[str, float]],
+    picked: Any,  # noqa: ANN401 - indices
+    names: tuple[str, ...],
+) -> dict[str, float]:
+    return {s: float(np.nanmean([rows[j][s] for j in picked])) for s in names}
+
+
+def w_minimum_v2(bands: dict[str, Any], n2: dict[str, Any]) -> dict[str, Any]:
+    """Return W's minimum on the fitted and on the held-out families: each the 95th percentile."""
+    import itertools
+
+    import benchmark_bands as bb
+
+    family_map = bg._v2_family_map(bands)
+    held_lawn, held_kin = n2["_held_lawn"], n2["_held_kin"]
+    dates = sorted(held_lawn)
+    builder = bg._builder()
+    rng = np.random.default_rng(W_FITTED_SEED)
+    fitted = []
+    for _ in range(W_SPLITS):
+        order = rng.permutation(len(dates))
+        sides = [
+            [dates[k] for k in order[: len(dates) // 2]],
+            [dates[k] for k in order[len(dates) // 2 :]],
+        ]
+        lawn = [np.vstack([held_lawn[d] for d in side]) for side in sides]
+        kin = [np.vstack([held_kin[d] for d in side]) for side in sides]
+        size = max(W_SIZE_STEP, round(min(len(lawn[0]), len(lawn[1])) / W_SIZE_STEP) * W_SIZE_STEP)
+        small, kinematic = builder.small_lawn(size), bg._kinematic_bands_at(size)
+        readings = {
+            "small_lawn": _difference(
+                g.lawn_statistics(lawn[0].sum(axis=0)),
+                g.lawn_statistics(lawn[1].sum(axis=0)),
+                {s: small[s].scale for s in g.LAWN_STATISTICS},
+            ),
+            "kinematics": _difference(
+                g.kinematic_statistics(kin[0].sum(axis=0)),
+                g.kinematic_statistics(kin[1].sum(axis=0)),
+                {s: kinematic[s].scale for s in g.KINEMATIC_STATISTICS},
+            ),
+        }
+        fitted.append(g.distance(readings, ["small_lawn", "kinematics"], family_map))
+    lopezcruz = refs.load_lopezcruz()
+    batches = bb.lopezcruz_batches(lopezcruz)
+    split = json.loads(bb.LOPEZCRUZ_SPLIT_PATH.read_text())["sides"]
+    band_batches = [
+        bb.search_statistics(batches[b]) for b, side in sorted(split.items()) if side == refs.BANDS
+    ]
+    search_sd = {
+        s: g.scale_of(np.array([b[s] for b in band_batches], dtype=float))
+        for s in g.LOCAL_SEARCH_STATISTICS
+    }
+    record = json.loads(BANDS_V2_RECORD.read_text())
+    recordings = [
+        r["statistics"]
+        for r in record["chemotaxis_recordings"].values()
+        if r["protocol"] == "standard"
+    ]
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    chem_sd = {
+        s: g.scale_of(np.array([r[s] for r in recordings], dtype=float))
+        for s in ch.CHEMOTAXIS_STATISTICS
+    }
+    k_chem = len(recordings) // 2
+    chem_splits = []
+    for picked in itertools.combinations(range(len(recordings)), k_chem):
+        if 0 not in picked:
+            continue  # each 3-against-3 split once
+        rest = [j for j in range(len(recordings)) if j not in picked]
+        chem_splits.append(
+            _difference(
+                _mean_of(recordings, picked, ch.CHEMOTAXIS_STATISTICS),
+                _mean_of(recordings, rest, ch.CHEMOTAXIS_STATISTICS),
+                {s: v / math.sqrt(k_chem) for s, v in chem_sd.items()},
+            ),
+        )
+    rng = np.random.default_rng(W_SEARCH_SEED)
+    k_search = len(band_batches) // 2
+    held_out = []
+    search_only = []
+    for _ in range(W_SPLITS):
+        order = rng.permutation(len(band_batches))
+        search = _difference(
+            _mean_of(band_batches, order[:k_search], g.LOCAL_SEARCH_STATISTICS),
+            _mean_of(band_batches, order[k_search:], g.LOCAL_SEARCH_STATISTICS),
+            {s: v / math.sqrt(k_search) for s, v in search_sd.items()},
+        )
+        search_only.append(g.distance({"local_search": search}, ["local_search"], family_map))
+        held_out.extend(
+            g.distance(
+                {"local_search": search, "chemotaxis": chem},
+                ["local_search", "chemotaxis"],
+                family_map,
+            )
+            for chem in chem_splits
+        )
+    chem_only = [g.distance({"chemotaxis": c}, ["chemotaxis"], family_map) for c in chem_splits]
+    return {
+        "fitted": {
+            "families": ["small_lawn", "kinematics"],
+            "source": f"halves of N2's {len(dates)} unread held-out dates, on PD1074's v2 band scales",
+            "splits": W_SPLITS,
+            "seed": W_FITTED_SEED,
+            "median": float(np.median(fitted)),
+            "minimum_95th": float(np.percentile(fitted, W_QUANTILE)),
+        },
+        "held_out": {
+            "families": ["local_search", "chemotaxis"],
+            "source": (
+                f"halves of López-Cruz's {len(band_batches)} band batches ({W_SPLITS} splits) crossed "
+                f"with every 3-against-3 split of Chen's {len(recordings)} recordings ({len(chem_splits)})"
+            ),
+            "seed": W_SEARCH_SEED,
+            "pairs": len(held_out),
+            "median": float(np.median(held_out)),
+            "minimum_95th": float(np.percentile(held_out, W_QUANTILE)),
+            "reported_local_search_95th": float(np.percentile(search_only, W_QUANTILE)),
+            "reported_chemotaxis_95th": float(np.percentile(chem_only, W_QUANTILE)),
+        },
+    }
+
+
+def _read(args: argparse.Namespace) -> int:
+    from concurrent.futures import ProcessPoolExecutor
+
+    if not _committed(bands=True):
+        print(
+            f"{LAUNCH_PATH} with Part B, and the bands it binds, are not committed and clean; "
+            "nothing held-out is read.",
+            file=sys.stderr,
+        )
+        return 1
+    if READ_PATH.exists():
+        print(f"{READ_PATH} exists: the read is made once.", file=sys.stderr)
+        return 1
+    bands = bg.load_bands_v2()
+    n2 = n2_control(bands)
+    record: dict[str, Any] = {
+        "description": "B v2's read: fresh N2, the negatives, C.1's answer, W.",
+    }
+    record["w_minimum"] = w_minimum_v2(bands, n2)
+    record["n2_control"] = {k: v for k, v in n2.items() if not k.startswith("_")}
+    print(
+        "n2",
+        json.dumps(bg._finite({k: record["n2_control"][k] for k in ("failed", "passes")})),
+        flush=True,
+    )
+    record["negatives"] = {}
+    for name in bc.NEGATIVES:
+        graded = _negative_v2(name, bands)
+        record["negatives"][name] = graded
+        print(
+            name,
+            json.dumps(bg._finite({k: graded[k] for k in ("family_passes", "D", "D_fit")})),
+            flush=True,
+        )
+    fit = json.loads(C1_FIT.read_text())
+    z = fit["restarts"][fit["chosen_restart"]]["answer"]
+    with ProcessPoolExecutor(max_workers=args.workers, initializer=nr._worker_setup) as pool:
+        record["c1_answer"] = {
+            "restart": fit["chosen_restart"],
+            **_graded_answer(z, C1_V2_GRADE_BASE, pool),
+        }
+    READ_PATH.write_text(json.dumps(bg._finite(record), indent=2, allow_nan=False) + "\n")
+    return 0
+
+
+# ---------------------------------------------------------------------------------------------
+# The blind worm, fitted against v2
+# ---------------------------------------------------------------------------------------------
+
+
+def _blind_full(z: np.ndarray) -> list[float]:
+    from quantumnematode.evaluation.controllers import MECHANISTIC_PARAMETERS
+
+    free = [p for p in MECHANISTIC_PARAMETERS if p not in BLIND_PINNED]
+    out = dict(BLIND_PINNED)
+    out.update(zip(free, map(float, z), strict=True))
+    return [out[p] for p in MECHANISTIC_PARAMETERS]
+
+
+def _blind_simulate(k: int, z: list[float]) -> float:
+    """Return v2's D for the blind worm at a free-parameter point on simulation k; the cap if none."""
+    graded = _mechanistic_grade(k, _blind_full(np.asarray(z)), BLIND_V2_FIT_BASE)
+    return float(g.Z_CAP) if graded["D"] is None else float(graded["D"])
+
+
+def blind_k(restart: int, generation: int, member: int) -> int:
+    """Return a blind-fit simulation's index: 10,000 per restart, 16 per generation."""
+    return 10_000 * restart + BLIND_POPSIZE * (generation - 1) + member
+
+
+def plateau_stop(medians: list[float], sigma: float) -> bool:
+    """Return whether the plateau rule stops a blind fit: it holds and sigma is at most sigma0.
+
+    A restart stuck at a wide sigma has not converged, however flat its medians.
+    """
+    import cma_recovery as cr
+
+    return cr.plateau_reached(medians) and sigma <= BLIND_SIGMA0
+
+
+def _blind_restart(restart: int, pool: Any) -> dict[str, Any]:  # noqa: ANN401 - a pool
+    import pickle
+
+    import cma
+    import cma_recovery as cr
+
+    BLIND_STATE.mkdir(parents=True, exist_ok=True)
+    state_path, history_path = (
+        BLIND_STATE / f"restart{restart}.pkl",
+        BLIND_STATE / f"restart{restart}.json",
+    )
+    history = json.loads(history_path.read_text()) if history_path.exists() else None
+    if history is not None and history["stop"] is not None:
+        return history
+    if history is not None and state_path.exists():
+        checkpoint = pickle.loads(state_path.read_bytes())  # noqa: S301 - this run's own state
+        if checkpoint["generation"] != history["generation"]:
+            msg = f"restart {restart}: checkpoint and history disagree on the generation"
+            raise RuntimeError(msg)
+        es = checkpoint["strategy"]
+    else:
+        free = len(_blind_free())
+        es = cma.CMAEvolutionStrategy(
+            [0.5] * free,
+            BLIND_SIGMA0,
+            {
+                "CMA_diagonal": True,
+                "bounds": [0, 1],
+                "popsize": BLIND_POPSIZE,
+                "seed": BLIND_V2_CMA_SEEDS[restart],
+                "verbose": -9,
+            },
+        )
+        history = {
+            "restart": restart,
+            "cma_seed": BLIND_V2_CMA_SEEDS[restart],
+            "generation": 0,
+            "medians": [],
+            "sigmas": [],
+            "answers": [],
+            "stop": None,
+        }
+    while history["stop"] is None:
+        generation = history["generation"] + 1
+        population = es.ask()
+        ks = [blind_k(restart, generation, m) for m in range(BLIND_POPSIZE)]
+        scores = list(pool.map(_blind_simulate, ks, [list(map(float, x)) for x in population]))
+        es.tell(population, scores)
+        history["medians"].append(float(np.median(scores)))
+        history["sigmas"].append(float(es.sigma))
+        history["answers"].append(np.clip(es.result.xfavorite, 0, 1).tolist())
+        if plateau_stop(history["medians"], float(es.sigma)):
+            history["stop"] = {"generation": generation, "by": "plateau"}
+        elif generation >= BLIND_V2_CAP:
+            history["stop"] = {"generation": generation, "by": "cap"}
+        history["generation"] = generation
+        cr._write_bytes(state_path, pickle.dumps({"generation": generation, "strategy": es}))
+        cr._write_json(history_path, history)
+        print(
+            f"blind restart {restart} gen {generation}: median {history['medians'][-1]:.2f}, sigma {history['sigmas'][-1]:.3f}",
+            flush=True,
+        )
+    return history
+
+
+def _blind_free() -> list[str]:
+    from quantumnematode.evaluation.controllers import MECHANISTIC_PARAMETERS
+
+    return [p for p in MECHANISTIC_PARAMETERS if p not in BLIND_PINNED]
+
+
+def _blind(args: argparse.Namespace) -> int:
+    from concurrent.futures import ProcessPoolExecutor
+
+    import cma_recovery as cr
+
+    if not _committed(bands=True):
+        print(
+            f"{LAUNCH_PATH} with Part B is not committed and clean; the fit is not run.",
+            file=sys.stderr,
+        )
+        return 1
+    with ProcessPoolExecutor(max_workers=args.workers, initializer=nr._worker_setup) as pool:
+        histories = [_blind_restart(r, pool) for r in range(len(BLIND_V2_CMA_SEEDS))]
+        best = min(range(len(histories)), key=lambda r: cr.final_objective(histories[r]["medians"]))
+        z = _blind_full(np.asarray(histories[best]["answers"][-1]))
+        graded = _graded_answer(z, BLIND_V2_GRADE_BASE, pool)
+    record = {
+        "description": "The blind worm fitted against v2's D, graded on five populations.",
+        "free": _blind_free(),
+        "pinned": BLIND_PINNED,
+        "restarts": [
+            {k: h[k] for k in ("restart", "cma_seed", "stop", "medians", "sigmas")}
+            for h in histories
+        ],
+        "best_restart": best,
+        "answer": z,
+        **graded,
+    }
+    BLIND_PATH.write_text(json.dumps(bg._finite(record), indent=2, allow_nan=False) + "\n")
+    print(
+        json.dumps(
+            bg._finite(
+                {
+                    k: record[k]
+                    for k in (
+                        "best_restart",
+                        "population_passes",
+                        "passes_wild_type",
+                        "population_D",
+                    )
+                },
+            ),
+        ),
+    )
+    return 0
+
+
+# ---------------------------------------------------------------------------------------------
+# The verdict
+# ---------------------------------------------------------------------------------------------
+
+
+def verdict(
+    oracle: dict[str, Any],
+    record: dict[str, Any],
+    read: dict[str, Any],
+    blind: dict[str, Any],
+) -> dict[str, Any]:
+    """Return B v2's validity from its registered readings: VALID only if every check holds."""
+    negatives = read["negatives"]
+    checks = {
+        "round_trip": bool(oracle["round_trip"]["passes"]),
+        "reachability": bool(
+            isinstance(oracle["reachability"], dict) and oracle["reachability"]["passes"],
+        ),
+        "n2_control": bool(read["n2_control"]["passes"]),
+        "chemotaxis_leave_one_out": bool(record["chemotaxis_leave_one_out"]["passes"]),
+        "negatives_fail_wild_type": all(negatives[n]["fails_wild_type"] for n in bc.NEGATIVES),
+        "open_loop_fail_chemotaxis": all(negatives[n]["fails_chemotaxis"] for n in OPEN_LOOP),
+        "blind_worm_fails": not blind["passes_wild_type"],
+        "c1_answer_fails": not read["c1_answer"]["passes_wild_type"],
+    }
+    return {"checks": checks, "verdict": "VALID" if all(checks.values()) else "VOID"}
+
+
+def _verdict(_args: argparse.Namespace) -> int:
+    parts = [
+        json.loads(p.read_text()) for p in (ORACLE_PATH, BANDS_V2_RECORD, READ_PATH, BLIND_PATH)
+    ]
+    out = {
+        "description": "B v2's verdict, from the oracle, the bands record, the read and the blind fit.",
+        **verdict(*parts),
+        "w_minimum": parts[2]["w_minimum"],
+    }
+    CONTROLS_PATH.write_text(json.dumps(bg._finite(out), indent=2, allow_nan=False) + "\n")
+    print(json.dumps(out["checks"], indent=2), "\nverdict:", out["verdict"])
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    """CLI: the probes; the oracles and the controls follow in later stages."""
+    """CLI: the probes, the oracles, the read, the blind fit and the verdict."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     sub = parser.add_subparsers(dest="stage", required=True)
     probe = sub.add_parser("probe")
     probe.add_argument("--chen-archive", type=Path, required=True)
     probe.add_argument("--blind", action="store_true")
     probe.add_argument("--out", type=Path, default=PROBES_PATH)
+    oracle = sub.add_parser("oracle")
+    oracle.add_argument("--chen-archive", type=Path, required=True)
+    oracle.add_argument("--workers", type=int, default=16)
+    for name in ("read", "blind"):
+        sub.add_parser(name).add_argument("--workers", type=int, default=16)
+    sub.add_parser("verdict")
     args = parser.parse_args(argv)
-    return _probe(args)
+    stages = {
+        "probe": _probe,
+        "oracle": _oracle,
+        "read": _read,
+        "blind": _blind,
+        "verdict": _verdict,
+    }
+    return stages[args.stage](args)
 
 
 if __name__ == "__main__":
