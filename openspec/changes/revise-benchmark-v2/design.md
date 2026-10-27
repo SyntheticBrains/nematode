@@ -57,42 +57,55 @@
 
 ## Decisions
 
-01. **Versions.**
+1. **Versions.**
 
-    - **Files:** v1 (`bands.json`) is frozen, and v2 is `bands_v2.json`.
-    - **Grading:** `grading` carries both rules. `benchmark_grade.py --bands v1|v2` defaults to v2 once Part B is committed.
-    - **Past verdicts:** B.4, F.0b-i and C.1 stay on v1 and are never re-read on v2 except as description.
+   - **Files:** v1 (`bands.json`) is frozen, and v2 is `bands_v2.json`.
+   - **Grading:** `grading` carries both rules. `benchmark_grade.py --bands v1|v2` defaults to v2 once Part B is committed.
+   - **Past verdicts:** B.4, F.0b-i and C.1 stay on v1 and are never re-read on v2 except as description.
 
-02. **The measurement model** (`benchmark/measurement.py`, parameters in `bands_v2.json`):
+2. **The measurement model** (`benchmark/measurement.py`, parameters in `bands_v2.json`):
 
-    - **What it does:** for each simulated animal with seed s, `rng = default_rng([s, 2033])`:
-      - every 1-s position gains independent N(0, σ²) noise per axis;
-      - each second is then dropped (made NaN) with p_omega if the animal's primitive that second is an omega, and with p_other otherwise.
-    - **What it applies to:** simulated sources only (`batched` and `captures`), before `window`. Real and imported tracks are never touched.
-    - **Its parameters** are measured on band cohorts by the `probe` stage:
-      - **σ** from paused seconds: the per-axis SD implied by consecutive paused 1-s steps, `mean step / √π`;
-      - **p_omega and p_other** from Scheer's per-frame flags, by second.
-    - **Missing runs:** before registration, the `probe` stage compares the lengths of real and modelled missing runs. If real runs are longer than Bernoulli gives (median run over 1 s), missingness is drawn as runs with the real length distribution instead, and Part A says which.
+   - **What it does:** for each simulated animal with seed s, `rng = default_rng([s, 2033])`:
+     - every 1-s position gains independent N(0, σ²) noise per axis;
+     - each second is then dropped (made NaN) with p_omega if the animal's primitive that second is an omega, and with p_other otherwise.
+   - **What it applies to:** simulated sources only (`batched` and `captures`), before `window`. Real and imported tracks are never touched.
+   - **Its parameters** are measured on band cohorts by the `probe` stage:
+     - **σ** from paused seconds: the per-axis SD implied by consecutive paused 1-s steps, `mean step / √π`;
+     - **p_omega and p_other** from Scheer's per-frame flags, by second.
+   - **Missing runs:** before registration, the `probe` stage compares the lengths of real and modelled missing runs. If real runs are longer than Bernoulli gives (median run over 1 s), missingness is drawn as runs with the real length distribution instead, and Part A says which.
 
-03. **The kinematics family** (small lawn; fitted, so in D_fit, for every controller):
+3. **The kinematics family** (small lawn; fitted, so in D_fit, for every controller):
 
-    - **the four speed statistics:** median and 90th-percentile classifier-window speed (the classifier's own 10-s speed, from the 5-s steps) over on-lawn dwelling windows, and the same over roaming windows. They are pooled over the population's windows through a fixed log-spaced histogram per state, so the tally stays additive for the date bootstrap;
-    - **the on-lawn reversal rate:** onsets from `readouts.reversal_onsets` with the off-food detector, applied to every on-lawn sample run identically on real and simulated tracks, per minute of valid on-lawn seconds. It is a statistic of the trajectory, not a count of the authors' labels (D36);
-    - **roaming-bout survival at 5 min:** Kaplan–Meier over on-lawn roaming bouts, a bout at the window's edge censored. Bout lists are tallied per animal for the bootstrap.
+   - **the four speed statistics:** median and 90th-percentile classifier-window speed (the classifier's own 10-s speed, from the 5-s steps) over on-lawn dwelling windows, and the same over roaming windows. They are pooled over the population's windows through a fixed log-spaced histogram per state, so the tally stays additive for the date bootstrap;
+   - **the on-lawn reversal rate:** onsets from `readouts.reversal_onsets` with the off-food detector, applied to every on-lawn sample run identically on real and simulated tracks, per minute of valid on-lawn seconds. It is a statistic of the trajectory, not a count of the authors' labels (D36);
+   - **roaming-bout survival at 5 min:** Kaplan–Meier over on-lawn roaming bouts, a bout at the window's edge censored. Bout lists are tallied per animal for the bootstrap.
 
-04. **Local search's rise** (in the local-search family; held out for C.2 and C.3, fitted for C.1 under D37): the mean reorientation rate over the 2–4 and 4–6 min bins, divided by the 0–2 min bin's.
+4. **Local search's rise** (in the local-search family; held out for C.2 and C.3, fitted for C.1 under D37): the mean reorientation rate over the 2–4 and 4–6 min bins, divided by the 0–2 min bin's.
 
-    - **Real:** from López-Cruz's band batches.
-    - **Simulated:** from the same 2-min bins of `simulated_search`'s curve.
-    - **The limit:** no unread López-Cruz batch exists, so the rise has only the band batches' rule check, no fresh positive control. The record says so.
+   - **Real:** from López-Cruz's band batches.
+   - **Simulated:** from the same 2-min bins of `simulated_search`'s curve.
+   - **The limit:** no unread López-Cruz batch exists, so the rise has only the band batches' rule check, no fresh positive control. The record says so.
 
-05. **D v2.**
+5. **D v2.**
 
-    - **D:** four families (small lawn, uniform well, local search, kinematics), equal weight, split equally within each.
-    - **D_fit:** small lawn, uniform well and kinematics.
-    - **The bar:** z\* is Bonferroni over the 18 wild-type statistics, Φ⁻¹(1 − 0.05/36).
-    - **The z cap** stays at 10.
-    - **The pass rule:** a population passes when every family passes, local search only where its presence holds. This is v1's rule with the new family.
+   - **D:** five families (small lawn, uniform well, local search, kinematics, chemotaxis), equal weight, split equally within each.
+   - **D_fit**, which C.2 and C.3 fit on: small lawn, uniform well and kinematics. Local search and chemotaxis are their held-out predictions. **C.1** fits D.
+   - **The bar:** z\* is Bonferroni over every wild-type statistic, 18 plus chemotaxis's.
+   - **The z cap** stays at 10.
+   - **The pass rule:** a population passes when every family passes, local search only where its presence holds. This is v1's rule with the new family.
+
+5b. **The chemotaxis family** (decided 2026-10-27, after the first draft).
+\- **The data:** Chen et al. 2025, naive N2, butanone in linear gradients on 10 cm square plates, 30 min at 14 Hz, 50–100 worms per plate, 9–13 plates per condition (CC BY 4.0). Derived 1-s midbody tracks are vendored with a `PROVENANCE.md` entry.
+\- **The assay:** `chemotaxis_chen`, a linear odour field on a square plate, off food, on the 1-s primitives worm. The worm senses it through the existing concentration, head-sweep and dC/dt senses. The plate geometry, gradient profile and placement match Chen's methods.
+\- **The statistics,** from positions and the known gradient, computed identically on real and simulated tracks, and finalised on the data before Part A:
+\- up-gradient drift, or the chemotaxis index;
+\- the quintile ratio, the reorientation rate in the lowest against the highest dC/dt quintile, by the off-food detector. It is unit-free, so robust to the gradient's absolute scale;
+\- the weathervane regression, the slope of heading change against the perpendicular gradient.
+\- **The bands:** by the date (or plate) bootstrap, from a band side. **The held-out split** (a third of dates or plates, by a seeded rule) is fixed and committed before any statistic is read on the data.
+\- **The measurement model** has chemotaxis-assay parameters (jitter and missingness) measured from Chen's own tracks, since it is another rig at another frame rate.
+\- **The positive control:** the held-out plates, read once.
+\- **The negatives and adversaries:** run on the chemotaxis assay too. The blind worm must fail it by construction.
+\- **The fallback, decided before Part A:** if the gradient profile is not recoverable from the deposit, only scale-free statistics enter (bearing-based drift and the quintile ratio).
 
 06. **Bands v2.** The v1 builder is extended to histograms, bout lists, the reversal tally and the rise:
 

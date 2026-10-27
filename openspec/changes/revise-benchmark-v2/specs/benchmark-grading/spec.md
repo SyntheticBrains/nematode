@@ -16,7 +16,7 @@ Before windowing, every simulated track SHALL receive per-axis position noise at
 
 ### Requirement: The kinematics family
 
-B v2 SHALL grade a kinematics family on the small lawn: the median and 90th-percentile 10-s window speed in dwelling and in roaming windows, detected reversal onsets per on-lawn minute from positions alone, and Kaplan–Meier roaming-bout survival at 5 min. It SHALL be a fourth family of equal weight in D, and part of D_fit for every controller.
+B v2 SHALL grade a kinematics family on the small lawn: the median and 90th-percentile 10-s window speed in dwelling and in roaming windows, detected reversal onsets per on-lawn minute from positions alone, and Kaplan–Meier roaming-bout survival at 5 min. It SHALL be a family of equal weight in D, and part of D_fit for every controller.
 
 #### Scenario: A worm that roams too fast
 
@@ -40,3 +40,12 @@ B v1's bands and rule SHALL remain available for every past verdict. B v2's band
 
 - **WHEN** grading is asked for v1
 - **THEN** it SHALL reproduce v1's values exactly
+
+### Requirement: The chemotaxis family
+
+B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from a band side and a held-out side fixed before any reading. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and missingness.
+
+#### Scenario: A worm that ignores the gradient
+
+- **WHEN** a controller's up-gradient drift and turning bias match a random walk's
+- **THEN** its chemotaxis statistics SHALL fail

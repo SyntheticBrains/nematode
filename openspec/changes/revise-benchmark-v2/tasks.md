@@ -19,6 +19,13 @@ Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
   - the blind worm on v1.
 - [ ] 1.2 `benchmark/measurement.py`: noise and missingness (Bernoulli or runs, per 1.1), per-animal streams, simulated sources only.
 
+## 1b. Chemotaxis data and assay
+
+- [ ] 1b.1 Chen 2025's deposit (downloaded by hand into the off-repo archive): `extract_benchmark_references.py chen`, naive N2 1-s midbody tracks, plates, dates and the gradient profile; `PROVENANCE.md`.
+- [ ] 1b.2 The held-out split, fixed and committed before any statistic is read on the data.
+- [ ] 1b.3 The `chemotaxis_chen` assay on the 1-s primitives worm; its tracker parameters in the measurement model.
+- [ ] 1b.4 The chemotaxis statistics, finalised (with the fallback if the gradient profile is not recoverable).
+
 ## 2. The v2 statistics and bands
 
 - [ ] 2.1 `grading`:

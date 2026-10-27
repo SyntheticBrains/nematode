@@ -26,7 +26,8 @@ The maintainer's decisions of 2026-10-27:
 - **statistics:** per-state speed, on-lawn reversal rate, roaming-bout shape, and local search's rise;
 - **a measurement model:** jitter and missingness, measured from Scheer's band cohorts and applied to every simulated track;
 - **validation on fresh N2 data:** 26 held-out N2 dates no reading has touched, so PD1074's held-out cohorts are not re-read;
-- **weighting:** a separate kinematics family, a quarter of D, fitted for every controller;
+- **weighting:** a separate kinematics family, fitted for every controller;
+- **chemotaxis** (decided after the first draft): a fifth family, from Chen et al. 2025's naive N2 butanone tracks (*PLoS Biology*; CC BY 4.0, figshare 10.6084/m9.figshare.24764403). It is held out as a prediction for C.2 and C.3, and fitted for C.1, as local search is under D37. Families are now weighted a fifth each;
 - **adversaries:** the blind worm and C.1's unconstrained answer must both fail, as conditions of validity;
 - **three changes in sequence:** this one (B v2), then F.0b-i re-run in full on v2, then C.1b on v2.
 
@@ -42,11 +43,24 @@ The maintainer's decisions of 2026-10-27:
 - **B v2's statistics** (`data/benchmark/bands_v2.json`, built from band cohorts only):
 
   - **the kinematics family** (small lawn, a quarter of D, in D_fit):
+
     - median and 90th-percentile 10-s window speed in dwelling, and in roaming;
     - detected reversal onsets per on-lawn minute;
     - Kaplan–Meier roaming-bout survival at 5 min;
+
   - **the local-search family** gains its rise: the mean rate over 2–6 min against the 0–2 min bin;
-  - **the other three families are unchanged.** D now weights four families equally, and D_fit is small lawn, uniform well and kinematics;
+
+  - **the chemotaxis family:**
+
+    - a linear-gradient assay on the 1-s primitives worm, matched to Chen's plates;
+    - statistics derivable from positions and the known gradient: up-gradient drift or the chemotaxis index, the unit-free quintile ratio of reorientation rate against dC/dt, and the weathervane regression;
+    - bands by plate and date, a held-out split fixed before any reading, and its own positive control;
+    - its own tracker parameters in the measurement model.
+
+    The details that depend on the data are fixed after extraction and before Part A;
+
+  - **the other three families are unchanged.** D now weights five families equally. D_fit, for C.2 and C.3, is small lawn, uniform well and kinematics, while C.1 fits all five;
+
   - **z\*** is Bonferroni over 18 wild-type statistics. The κ calibration and the rule checks are extended.
 
 - **Validity** (`scripts/analysis/benchmark_v2_controls.py`), registered before any held-out read or adversary fit:
@@ -73,4 +87,5 @@ The maintainer's decisions of 2026-10-27:
 
 - **Code:** `benchmark/measurement.py` (new); `benchmark/grading.py`, extended for histograms, bout lists, the reversal rate, the rise and four families; `benchmark_bands.py`; `benchmark_grade.py`; `scripts/analysis/benchmark_v2_controls.py` (new); `track_import_check.py`. With tests.
 - **Records:** `docs/experiments/logbooks/supporting/115-benchmark-v2/` and Logbook 115.
-- **Compute:** about 1–2 h to build the bands and run the checks, 1–2 h for the controls, and about 3 h for the blind adversary (2 restarts).
+- **Compute:** about 1–2 h to build the bands and run the checks, 1–2 h for the controls, and about 3–4 h for the blind adversary (2 restarts, with the chemotaxis assay in each evaluation). Every later fit evaluation is about 25–35% slower.
+- **Data:** Chen 2025's deposit (3.5 GB, downloaded by hand into the off-repo archive). Only derived naive-N2 tracks are vendored, with a `PROVENANCE.md` entry.
