@@ -94,6 +94,7 @@ here are cited by each registration.
 | B.3 preflight | 9101–9164 | ConstantHazards and PirouetteHazards graded at n = 64 on the three wild-type assays, as description (Logbook 109) |
 | D36 amendment's pilot | 9001–9064 | constant-hazard and pirouette controllers on Flavell's and Scheer's lawns under each reversal setting, as description (Logbook 108) |
 | W rewiring draws and fits | 7201–7456 | one fresh draw per null fit, 8–16 per arm, sized after the cost pilot. *(Moved from 6001–6256 on 2026-10-24; see the amendment below.)* |
+| B v2 (Logbook 115) | probes 140–144 M and CMA 9331; oracle populations 150 M (amendment 2) and 159 M (amendment 3); blind fit 151 M, CMA 9401–9402, grading 152 M; C.1's answer 153 M; round trip 154 M; amendment 1's jitter model 155 M; the jitter check 156 M; the noise pilot 157 M; the reachability fits 158 M (checks 158.9 M) and 160 M (checks 160.9 M), CMA 9411–9412; generators 2033–2044; smokes 990,001–990,200 and 199 M | every reading in `docs/experiments/logbooks/supporting/115-benchmark-v2/launch.md`'s seed tables; the negatives reuse B.4's 5101–5316 |
 | Smokes | 5991–5999 | execution checks only, discarded; E.2's positive-control fixtures use 5994–5999 as fixed test seeds, not a registration |
 | *Used, not a band* | 6001–7132, in twelve blocks of 32 (6001–6032, 6101–6132, … 7101–7132) | Logbook 104's calibration of the batched evaluator's statistic-level parity: simulated MLP and pirouette-rule animals on full Scheer and Flavell assays. No registration may draw from these blocks |
 

@@ -1,0 +1,132 @@
+{
+  "description": "The track importer's round trip against the native grading path.",
+  "lawn": {
+    "small_lawn": {
+      "arm": "PD1074_od2_Data",
+      "animals": 1013,
+      "native_statistics": {
+        "roaming_fraction": 0.1693625364393881,
+        "roaming_bout_s": 216.66666666666666,
+        "dwelling_bout_s": 1067.927031509121,
+        "exits_per_on_lawn_hour": 0.7104713257487811,
+        "pre_exit_enrichment": 0.29533931414320275,
+        "time_on_lawn": 0.9781185208237833
+      },
+      "csv": {
+        "statistics": {
+          "roaming_fraction": 0.1693625364393881,
+          "roaming_bout_s": 216.66666666666666,
+          "dwelling_bout_s": 1067.927031509121,
+          "exits_per_on_lawn_hour": 0.7104713257487811,
+          "pre_exit_enrichment": 0.29533931414320275,
+          "time_on_lawn": 0.9781185208237833
+        },
+        "tallies_equal": true,
+        "statistics_equal": true,
+        "kinematic_tallies_equal": true,
+        "kinematic_statistics": {
+          "dwelling_speed_median": 0.012838345155748037,
+          "dwelling_speed_p90": 0.028228348042629806,
+          "roaming_speed_median": 0.037258195394971876,
+          "roaming_speed_p90": 0.07326134970632286,
+          "reversals_per_on_lawn_min": 2.2840783215998797,
+          "roaming_survival_5min": 0.19388298312439115
+        }
+      },
+      "wcon": {
+        "statistics": {
+          "roaming_fraction": 0.1693625364393881,
+          "roaming_bout_s": 216.66666666666666,
+          "dwelling_bout_s": 1067.927031509121,
+          "exits_per_on_lawn_hour": 0.7104713257487811,
+          "pre_exit_enrichment": 0.29533931414320275,
+          "time_on_lawn": 0.9781185208237833
+        },
+        "tallies_equal": true,
+        "statistics_equal": true,
+        "kinematic_tallies_equal": true,
+        "kinematic_statistics": {
+          "dwelling_speed_median": 0.012838345155748037,
+          "dwelling_speed_p90": 0.028228348042629806,
+          "roaming_speed_median": 0.037258195394971876,
+          "roaming_speed_p90": 0.07326134970632286,
+          "reversals_per_on_lawn_min": 2.2840783215998797,
+          "roaming_survival_5min": 0.19388298312439115
+        }
+      }
+    },
+    "uniform_lawn": {
+      "arm": "PD1074_od2_uniformlawn_Data",
+      "animals": 69,
+      "native_statistics": {
+        "roaming_fraction": 0.21302061713020617,
+        "roaming_bout_s": 327.5531914893617,
+        "dwelling_bout_s": 1263.888888888889,
+        "exits_per_on_lawn_hour": 0.0,
+        "pre_exit_enrichment": null,
+        "time_on_lawn": 1.0
+      },
+      "csv": {
+        "statistics": {
+          "roaming_fraction": 0.21302061713020617,
+          "roaming_bout_s": 327.5531914893617,
+          "dwelling_bout_s": 1263.888888888889,
+          "exits_per_on_lawn_hour": 0.0,
+          "pre_exit_enrichment": null,
+          "time_on_lawn": 1.0
+        },
+        "tallies_equal": true,
+        "statistics_equal": true,
+        "kinematic_tallies_equal": true,
+        "kinematic_statistics": {
+          "dwelling_speed_median": 0.01158374319407272,
+          "dwelling_speed_p90": 0.026870327466911516,
+          "roaming_speed_median": 0.04618279340267344,
+          "roaming_speed_p90": 0.11006105294801538,
+          "reversals_per_on_lawn_min": 1.5493235300113481,
+          "roaming_survival_5min": 0.34687086526067823
+        }
+      },
+      "wcon": {
+        "statistics": {
+          "roaming_fraction": 0.21302061713020617,
+          "roaming_bout_s": 327.5531914893617,
+          "dwelling_bout_s": 1263.888888888889,
+          "exits_per_on_lawn_hour": 0.0,
+          "pre_exit_enrichment": null,
+          "time_on_lawn": 1.0
+        },
+        "tallies_equal": true,
+        "statistics_equal": true,
+        "kinematic_tallies_equal": true,
+        "kinematic_statistics": {
+          "dwelling_speed_median": 0.01158374319407272,
+          "dwelling_speed_p90": 0.026870327466911516,
+          "roaming_speed_median": 0.04618279340267344,
+          "roaming_speed_p90": 0.11006105294801538,
+          "reversals_per_on_lawn_min": 1.5493235300113481,
+          "roaming_survival_5min": 0.34687086526067823
+        }
+      }
+    }
+  },
+  "local_search": {
+    "source": "roberts2016",
+    "cohorts": [
+      "C15",
+      "C162",
+      "C57"
+    ],
+    "worms": 78,
+    "native_onsets": 2323,
+    "csv": {
+      "worms_matching": 78,
+      "equal": true
+    },
+    "wcon": {
+      "worms_matching": 78,
+      "equal": true
+    }
+  },
+  "passes": true
+}

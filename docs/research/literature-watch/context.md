@@ -41,6 +41,10 @@ is a 3.
   The simulator's movement primitives use published off-food values, and real worms reverse more
   briefly and more slowly on a lawn. And **differences between wild-type strains**, N2 against the
   PD1074 reference strain, in any of these behaviours: one mutant's batch-matched control is N2.
+  *(Added 2026-10-28, B v2.)* Also a 3: **public *C. elegans* chemotaxis track datasets**: tracks on a
+  measured or known odour gradient, with the gradient, from any lab or odour. The benchmark's
+  chemotaxis family rests on one deposit (Chen et al. 2025, six recordings), and a second source
+  would enter as further bands within that family.
 - **Models of these behaviours graded against data.** Mechanistic, circuit or connectome models of
   roaming/dwelling, lawn leaving, local search or pirouettes, in closed loop with food, that are
   graded quantitatively against real worms; above all any that hold out an assay or a mutant, or that

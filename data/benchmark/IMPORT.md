@@ -8,6 +8,37 @@ uv run python scripts/analysis/benchmark_grade.py tracks --manifest <manifest.tx
 
 Each manifest line is `<family> <file>`. A file is a CSV with its metadata sidecar, or a WCON file. Each animal in a file is one member of the family's population, and the population is graded at its own size.
 
+## The benchmark's versions
+
+`benchmark_grade.py --bands v1|v2` picks the rule. v1 (`bands.json`) is frozen for every verdict read on it. v2 (`bands_v2.json`) becomes the default once its controls find it VALID.
+
+**What v2 adds for imported tracks:**
+
+- **The kinematics family**, read on the small-lawn animals:
+
+  - the median and 90th-percentile 10-s window speed in dwelling and in roaming windows;
+  - roaming-bout survival at 5 min;
+  - the on-lawn reversal rate, read at a 0.03 mm step floor and reported beside the grade, not graded.
+
+  The round trip is exact for these too (`docs/experiments/logbooks/supporting/115-benchmark-v2/import_roundtrip_v2.json`).
+
+- **The bar:** z\* over v2's 19 statistics (3.0078).
+
+**What v2 does not do for imported tracks:**
+
+- **They are never passed through a measurement model.** v2 adds the real tracker's noise and losses to *simulated* tracks only, so they are read the way real tracks are. An imported track is taken as measured.
+- **The chemotaxis family cannot be imported.** It is graded on Chen et al. 2025's measured butanone field, which an imported track does not carry. Imported populations are graded on the other families; their D, which needs all five, is not defined, and D_fit is.
+
+**Declared non-goals** of v2:
+
+- **Not graded:**
+  - the omega rate;
+  - the on-lawn reversal rate (no open-loop point worm reaches it through the tracker);
+  - local search's rise after removal (a handling artefact).
+- **Not modelled:**
+  - the tracker's noise while the worm moves (the noise is the real tracker's readings of a still worm);
+  - López-Cruz's tracker (local search's simulated tracks stay exact).
+
 ## The input contract
 
 **Metadata.** These go in a CSV's sidecar `<file>.json`, or in a WCON file's top-level `@nematode_benchmark` object:
