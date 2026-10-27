@@ -8,7 +8,7 @@ way:
   field's gradient direction at the step's midpoint;
 - **the quintile ratio:** reorientation onsets per second (the off-food detector) in the lowest
   quintile of dC/dt, against the highest, the quintiles the population's own (Pierce-Shimomura
-  1999's pirouette analysis, unit-free);
+  1999's pirouette analysis, unit-free), graded as its logarithm since it is positively skewed;
 - **the weathervane slope** (degrees per second): the least-squares slope, over run seconds more
   than :data:`RUN_MARGIN_S` from an onset, of the heading's turning rate on the sine of the bearing
   to the gradient. Positive means turning toward higher concentration.
@@ -26,7 +26,7 @@ from quantumnematode.benchmark.readouts import OFF_FOOD_DETECTOR, reversal_onset
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-CHEMOTAXIS_STATISTICS = ("drift_mm_s", "quintile_ratio", "weathervane_deg_s")
+CHEMOTAXIS_STATISTICS = ("drift_mm_s", "log_quintile_ratio", "weathervane_deg_s")
 RUN_MARGIN_S = 2
 HEADING_FLOOR_MM = 0.02
 GRADIENT_STEP_MM = 0.15
@@ -135,7 +135,7 @@ def chemotaxis_statistics(
         slope = math.nan
     return {
         "drift_mm_s": float(d.mean()) if len(d) else math.nan,
-        "quintile_ratio": ratio,
+        "log_quintile_ratio": math.log(ratio) if ratio > 0 else math.nan,
         "weathervane_deg_s": slope,
     }
 

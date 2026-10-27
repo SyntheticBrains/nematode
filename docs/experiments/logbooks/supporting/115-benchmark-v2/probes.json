@@ -720,5 +720,50 @@
       "median": 39.0,
       "p90": 167.0
     }
+  },
+  "blind_on_v1": {
+    "stop_generation": 83,
+    "population_passes": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "passes_wild_type": false,
+    "population_D": [
+      5.6848896848130215,
+      5.609998616282498,
+      5.549979821864229,
+      5.651947065559522,
+      3.9266420431219613
+    ],
+    "family_passes": [
+      {
+        "small_lawn": false,
+        "uniform_lawn": true,
+        "local_search": false
+      },
+      {
+        "small_lawn": false,
+        "uniform_lawn": false,
+        "local_search": false
+      },
+      {
+        "small_lawn": false,
+        "uniform_lawn": false,
+        "local_search": false
+      },
+      {
+        "small_lawn": false,
+        "uniform_lawn": false,
+        "local_search": false
+      },
+      {
+        "small_lawn": false,
+        "uniform_lawn": false,
+        "local_search": false
+      }
+    ]
   }
 }

@@ -58,13 +58,16 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from quantumnematode.benchmark import grading as g
 from quantumnematode.benchmark import references as refs
 from quantumnematode.validation import roaming_dwelling as rd
 from scipy import stats as scipy_stats
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 DESCRIPTION = "Build the benchmark's bands from the band cohorts, and check the rule on them."
 _REPO = Path(__file__).resolve().parents[2]
@@ -196,20 +199,21 @@ def lawn_bands(  # noqa: PLR0913 - the arm, its statistics, the size, the stream
     *,
     floor: dict[str, float] | None = None,
     kappa: dict[str, float] | None = None,
+    statistic: Callable[[np.ndarray], dict[str, float]] = g.lawn_statistics,
 ) -> dict[str, g.Band]:
-    """Return a lawn arm's bands at n.
+    """Return a lawn arm's bands at n, by ``statistic`` (the lawn statistics unless given).
 
     The scale is ``kappa * sqrt(sd_n^2 + sd_centre^2)``: the bootstrap SD of a population of n, and
     of the pooled centre over the band dates at their full size. With ``floor``, a scale is at least
     the floor's.
     """
     everyone = np.vstack(list(per_date.values()))
-    pooled = g.lawn_statistics(everyone.sum(axis=0))
-    boot = g.cluster_bootstrap(list(per_date.values()), n, g.lawn_statistics, RESAMPLES, rng)
+    pooled = statistic(everyone.sum(axis=0))
+    boot = g.cluster_bootstrap(list(per_date.values()), n, statistic, RESAMPLES, rng)
     centre = g.cluster_bootstrap(
         list(per_date.values()),
         len(everyone),
-        g.lawn_statistics,
+        statistic,
         RESAMPLES,
         rng,
     )
@@ -491,6 +495,8 @@ def _half_split(
     per_date: dict[int, np.ndarray],
     rng: np.random.Generator,
     kappa: dict[str, float] | None,
+    statistics: tuple[str, ...] = g.LAWN_STATISTICS,
+    statistic: Callable[[np.ndarray], dict[str, float]] = g.lawn_statistics,
 ) -> tuple[dict[str, float], dict[str, g.Band]]:
     """Draw one half-split: bands at N from one half, and a population of N from the other."""
     dates = list(per_date)
@@ -498,22 +504,27 @@ def _half_split(
     half = len(dates) // 2
     build = {dates[k]: per_date[dates[k]] for k in order[:half]}
     held = [per_date[dates[k]] for k in order[half:]]
-    bands = lawn_bands(build, g.LAWN_STATISTICS, CHECK_SIZE, rng, kappa=kappa)
-    population = g.cluster_bootstrap(held, CHECK_SIZE, g.lawn_statistics, 1, rng)
+    bands = lawn_bands(build, statistics, CHECK_SIZE, rng, kappa=kappa, statistic=statistic)
+    population = g.cluster_bootstrap(held, CHECK_SIZE, statistic, 1, rng)
     return {name: float(v[0]) for name, v in population.items()}, bands
 
 
-def measure_kappa(per_date: dict[int, np.ndarray]) -> dict[str, Any]:
+def measure_kappa(
+    per_date: dict[int, np.ndarray],
+    statistics: tuple[str, ...] = g.LAWN_STATISTICS,
+    statistic: Callable[[np.ndarray], dict[str, float]] = g.lawn_statistics,
+    seed: int = 0,
+) -> dict[str, Any]:
     """Return each statistic's calibration factor: its z's SD over half-splits, floored at 1."""
-    rng = np.random.default_rng(KAPPA_SEED)
-    zs: dict[str, list[float]] = {name: [] for name in g.LAWN_STATISTICS}
+    rng = np.random.default_rng(seed or KAPPA_SEED)
+    zs: dict[str, list[float]] = {name: [] for name in statistics}
     for _ in range(CHECK_SPLITS):
-        values, bands = _half_split(per_date, rng, None)
-        for name in g.LAWN_STATISTICS:
+        values, bands = _half_split(per_date, rng, None, statistics, statistic)
+        for name in statistics:
             zs[name].append(g.z_score(values[name], bands[name]))
     sd = {name: float(np.std(v, ddof=1)) for name, v in zs.items()}
     return {
-        "seed": KAPPA_SEED,
+        "seed": seed or KAPPA_SEED,
         "splits": CHECK_SPLITS,
         "size": CHECK_SIZE,
         "z_sd": sd,
@@ -521,24 +532,27 @@ def measure_kappa(per_date: dict[int, np.ndarray]) -> dict[str, Any]:
     }
 
 
-def check_small_lawn(
+def check_small_lawn(  # noqa: PLR0913 - the dates, the bar, the factors and the family's statistics
     per_date: dict[int, np.ndarray],
     bar: float,
     kappa: dict[str, float],
+    statistics: tuple[str, ...] = g.LAWN_STATISTICS,
+    statistic: Callable[[np.ndarray], dict[str, float]] = g.lawn_statistics,
+    seed: int = 0,
 ) -> dict[str, Any]:
     """Grade a 200-animal population from one half of the dates against bands from the other."""
-    rng = np.random.default_rng(CHECK_SEED)
+    rng = np.random.default_rng(seed or CHECK_SEED)
     passes = 0
-    failures: dict[str, int] = dict.fromkeys(g.LAWN_STATISTICS, 0)
+    failures: dict[str, int] = dict.fromkeys(statistics, 0)
     for _ in range(CHECK_SPLITS):
-        values, bands = _half_split(per_date, rng, kappa)
+        values, bands = _half_split(per_date, rng, kappa, statistics, statistic)
         readings = g.grade(values, bands, bar)
         passes += all(r.passes for r in readings.values())
         for name, r in readings.items():
             failures[name] += not r.passes
     rate = passes / CHECK_SPLITS
     return {
-        "seed": CHECK_SEED,
+        "seed": seed or CHECK_SEED,
         "splits": CHECK_SPLITS,
         "size": CHECK_SIZE,
         "bar": bar,
@@ -823,12 +837,265 @@ def build(
     return _finite(bands_file), _finite({**record, "split": split})
 
 
+# ---------------------------------------------------------------------------------------------
+# B v2: the kinematics and chemotaxis families, and the measurement models
+# ---------------------------------------------------------------------------------------------
+
+BANDS_V1_PATH = _REPO / "data" / "benchmark" / "bands.json"
+PROBES_PATH = (
+    _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "115-benchmark-v2" / "probes.json"
+)
+KINEMATICS_INDEX = 5  # the kinematics family's band generator, after v1's
+V2_KAPPA_SEED = 2039
+V2_CHECK_SEED = 2040
+CHEMOTAXIS_ALLOWANCE_TAIL = 0.025
+
+
+def v2_statistics() -> int:
+    """Return B v2's count of wild-type statistics: v1's, kinematics and chemotaxis."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    return WILD_TYPE_STATISTICS + len(g.KINEMATIC_STATISTICS) + len(ch.CHEMOTAXIS_STATISTICS)
+
+
+def v2_families() -> dict[str, tuple[str, ...]]:
+    """Return B v2's families: v1's three, kinematics and chemotaxis."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    return {
+        **g.FAMILIES,
+        "kinematics": g.KINEMATIC_STATISTICS,
+        "chemotaxis": ch.CHEMOTAXIS_STATISTICS,
+    }
+
+
+V2_FIT_FAMILIES = ("small_lawn", "uniform_lawn", "kinematics")
+
+
+def per_date_kinematic_tallies(
+    tracks: refs.ScheerTracks,
+    arm: str,
+    classifier: rd.GaussianClassifier,
+    *,
+    uniform: bool = False,
+) -> dict[int, np.ndarray]:
+    """Return each band date's animals' kinematic tallies, ``(animals, fields)``."""
+    out: dict[int, list[np.ndarray]] = {}
+    for i in band_rows(tracks, arm):
+        lawn = g.real_on_lawn(tracks.x[i], tracks.y[i], tracks.boundary_radius[i], uniform=uniform)
+        windows = g.animal_windows(tracks.x[i], tracks.y[i], lawn, classifier)
+        out.setdefault(int(tracks.date[i]), []).append(
+            g.kinematic_tally(windows, tracks.x[i], tracks.y[i], lawn),
+        )
+    return {d: np.vstack(v) for d, v in sorted(out.items())}
+
+
+def prediction_factor_v2(k: int) -> float:
+    """Return the Student-t prediction factor for one new recording, at v2's bar."""
+    m = v2_statistics()
+    q = 1.0 - g.FAMILY_ALPHA / (2 * m)
+    return math.sqrt(1.0 + 1.0 / k) * float(scipy_stats.t.ppf(q, k - 1)) / g.z_star(m)
+
+
+def chemotaxis_recordings(chen: refs.ChenTracks) -> dict[str, dict[str, Any]]:
+    """Return each Chen recording's chemotaxis statistics, with its date and protocol."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    fragments = chen.fragments()
+    out = {}
+    for r, (date, protocol) in enumerate(
+        zip(chen.recording_date, chen.recording_protocol, strict=True),
+    ):
+        mine = [(x, y) for rec, _, x, y in fragments if rec == r]
+        out[date] = {
+            "protocol": protocol,
+            "fragments": len(mine),
+            "statistics": ch.chemotaxis_statistics(mine, chen.concentration),
+        }
+    return out
+
+
+def chemotaxis_band(stats: list[dict[str, float]]) -> dict[str, g.Band]:
+    """Return the recordings' mean, and their SD widened to a prediction interval at v2's bar."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    out = {}
+    for name in ch.CHEMOTAXIS_STATISTICS:
+        values = np.array([s[name] for s in stats], dtype=float)
+        values = values[np.isfinite(values)]
+        out[name] = g.Band(
+            centre=float(values.mean()),
+            scale=g.scale_of(values) * prediction_factor_v2(len(values)),
+        )
+    return out
+
+
+def binomial_allowance(units: int, rate: float, tail: float = CHEMOTAXIS_ALLOWANCE_TAIL) -> int:
+    """Return the fewest failures a with P(more than a of ``units`` fail) at most ``tail``."""
+    for a in range(units + 1):
+        if float(scipy_stats.binom.sf(a, units, rate)) <= tail:
+            return a
+    return units
+
+
+def chemotaxis_unit_rate() -> float:
+    """Return a recording's nominal failure rate: each statistic misses at the bar's alpha/m."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    per = g.FAMILY_ALPHA / v2_statistics()
+    return 1.0 - (1.0 - per) ** len(ch.CHEMOTAXIS_STATISTICS)
+
+
+def chemotaxis_leave_one_out(stats: dict[str, dict[str, float]], bar: float) -> dict[str, Any]:
+    """Grade each standard recording against a band from the other five."""
+    rows = {}
+    for date, values in stats.items():
+        band = chemotaxis_band([v for d, v in stats.items() if d != date])
+        readings = g.grade(values, band, bar)
+        rows[date] = {
+            "z": {k: r.z for k, r in readings.items()},
+            "passes": all(r.passes for r in readings.values()),
+        }
+    rate = chemotaxis_unit_rate()
+    allowance = binomial_allowance(len(stats), rate)
+    failures = sum(not r["passes"] for r in rows.values())
+    return {
+        "recordings": rows,
+        "unit_rate": rate,
+        "allowance": allowance,
+        "tail_at_allowance": float(scipy_stats.binom.sf(allowance, len(stats), rate)),
+        "failures": failures,
+        "passes": failures <= allowance,
+    }
+
+
+def measurement_models(probes: dict[str, Any], chen: refs.ChenTracks) -> dict[str, Any]:
+    """Return the lawn and chemotaxis trackers' models, from the probes and Chen's fragments."""
+    from quantumnematode.benchmark import measurement as mm
+
+    tracker = probes["scheer"]["tracker"]
+    runs = tracker["interior_runs"]
+    lawn = mm.TrackerModel(
+        jitter_mm=tracker["jitter_mm"],
+        p_omega=runs["omega"]["start_rate_per_s"],
+        p_other=runs["other"]["start_rate_per_s"],
+        runs_omega_s=tuple(runs["omega"]["lengths_s"]),
+        runs_other_s=tuple(runs["other"]["lengths_s"]),
+        stream_key=mm.LAWN_STREAM,
+    )
+    standard = [r for r, p in enumerate(chen.recording_protocol) if p == "standard"]
+    lengths = chen.fragment_length_s[np.isin(chen.fragment_recording, standard)]
+    chemotaxis = mm.TrackerModel(
+        jitter_mm=probes["chen"]["jitter_mm"],
+        fragment_lengths_s=tuple(int(v) for v in lengths),
+        stream_key=mm.CHEMOTAXIS_STREAM,
+    )
+    return {"lawn": lawn.to_dict(), "chemotaxis": chemotaxis.to_dict()}
+
+
+def build_v2(
+    tracks: refs.ScheerTracks,
+    probes: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return B v2's bands file and its record: v1's bands, the new families and the models."""
+    classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(CLASSIFIER_PATH))
+    v1 = json.loads(BANDS_V1_PATH.read_text())
+    bar = g.z_star(v2_statistics())
+    families = v2_families()
+    wild = per_date_tallies(tracks, WILD_TYPE, classifier)
+    kinematic = per_date_kinematic_tallies(tracks, WILD_TYPE, classifier)
+    kin_kappa = measure_kappa(
+        kinematic,
+        g.KINEMATIC_STATISTICS,
+        g.kinematic_statistics,
+        seed=V2_KAPPA_SEED,
+    )
+    kappa = json.loads(RECORD_PATH.read_text())["calibration"]["kappa"]
+    checks = {
+        "small_lawn": check_small_lawn(wild, bar, kappa, seed=V2_CHECK_SEED),
+        "kinematics": check_small_lawn(
+            kinematic,
+            bar,
+            kin_kappa["kappa"],
+            g.KINEMATIC_STATISTICS,
+            g.kinematic_statistics,
+            seed=V2_CHECK_SEED,
+        ),
+    }
+    chen = refs.load_chen_tracks()
+    recordings = chemotaxis_recordings(chen)
+    standard = {d: r["statistics"] for d, r in recordings.items() if r["protocol"] == "standard"}
+    chem_band = chemotaxis_band(list(standard.values()))
+    loo = chemotaxis_leave_one_out(standard, bar)
+    uniform_kin = per_date_kinematic_tallies(tracks, UNIFORM, classifier, uniform=True)
+    bands = json.loads(json.dumps(v1["bands"]))
+    for n in SIZES:
+        kin = lawn_bands(
+            kinematic,
+            g.KINEMATIC_STATISTICS,
+            n,
+            np.random.default_rng([BAND_SEED, KINEMATICS_INDEX, n]),
+            kappa=kin_kappa["kappa"],
+            statistic=g.kinematic_statistics,
+        )
+        bands[str(n)]["kinematics"] = {k: _band_dict(v) for k, v in kin.items()}
+        bands[str(n)]["chemotaxis"] = {k: _band_dict(v) for k, v in chem_band.items()}
+    models = measurement_models(probes, chen)
+    bands_file = {
+        **v1,
+        "description": "B v2's bands: v1's, the kinematics and chemotaxis families, and the "
+        "measurement models simulated tracks pass through; from band cohorts only.",
+        "version": 2,
+        "families": {f: list(st) for f, st in families.items()},
+        "fit_families": list(V2_FIT_FAMILIES),
+        "bars": {**v1["bars"], "wild_type": bar},
+        "weights": {f"{f}/{st}": w for (f, st), w in g.weights(list(families), families).items()},
+        "fit_weights": {
+            f"{f}/{st}": w for (f, st), w in g.weights(list(V2_FIT_FAMILIES), families).items()
+        },
+        "bands": bands,
+        "kinematics_kappa": kin_kappa["kappa"],
+        "measurement": models,
+        "arms": {
+            **v1["arms"],
+            "kinematics": {"arm": WILD_TYPE, "band_dates": len(kinematic)},
+            "chemotaxis": {
+                "source": "Chen et al. 2025, naive N2, butanone; the standard-protocol recordings",
+                "recordings": sorted(standard),
+            },
+        },
+    }
+    record = {
+        "description": "B v2's bands record: calibration, the rule's checks and the chemotaxis "
+        "validation, from band cohorts and Chen's standard-protocol recordings only.",
+        "bar": bar,
+        "statistics": v2_statistics(),
+        "kinematics_calibration": kin_kappa,
+        "checks": checks,
+        "chemotaxis_recordings": recordings,
+        "chemotaxis_prediction_factor": prediction_factor_v2(len(standard)),
+        "chemotaxis_leave_one_out": loo,
+        "reported": {
+            "uniform_lawn_kinematics": g.kinematic_statistics(
+                np.vstack(list(uniform_kin.values())).sum(axis=0),
+            ),
+            "off_protocol_chemotaxis": {
+                d: r for d, r in recordings.items() if r["protocol"] != "standard"
+            },
+        },
+    }
+    return _finite(bands_file), _finite(record)
+
+
 def main() -> int:
     """CLI: build, check, and write the bands, the López-Cruz split and the record."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--record", type=Path, required=True)
+    parser.add_argument("--version", choices=("v1", "v2"), default="v1")
     args = parser.parse_args()
+    if args.version == "v2":
+        return _main_v2(args)
     bands, record = build(refs.load_scheer_tracks(), refs.load_lopezcruz())
     print(json.dumps(record["checks"], indent=2))
     failed = [name for name, check in record["checks"].items() if not check["passes"]]
@@ -844,6 +1111,40 @@ def main() -> int:
     LOPEZCRUZ_SPLIT_PATH.write_text(json.dumps(split, indent=2, allow_nan=False) + "\n")
     args.out.write_text(json.dumps(bands, indent=2, allow_nan=False) + "\n")
     args.record.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    return 0
+
+
+V2_LAUNCH_PATH = PROBES_PATH.parent / "launch.md"
+
+
+def _main_v2(args: argparse.Namespace) -> int:
+    """Build B v2's bands after Part A is committed; refuse if a check or the validation fails."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import cma_recovery as cr
+
+    if not cr.launch_committed(launch_path=V2_LAUNCH_PATH):
+        print("B v2's launch record (Part A) is not committed, or has changed", file=sys.stderr)
+        return 1
+    bands, record = build_v2(refs.load_scheer_tracks(), json.loads(PROBES_PATH.read_text()))
+    args.record.parent.mkdir(parents=True, exist_ok=True)
+    args.record.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    print(
+        json.dumps(
+            {
+                "checks": record["checks"],
+                "chemotaxis_leave_one_out": record["chemotaxis_leave_one_out"],
+            },
+            indent=2,
+        ),
+    )
+    failed = [name for name, check in record["checks"].items() if not check["passes"]]
+    if failed:
+        print(
+            f"The rule's own check failed for {failed}; the bands were not written.",
+            file=sys.stderr,
+        )
+        return 1
+    args.out.write_text(json.dumps(bands, indent=2, allow_nan=False) + "\n")
     return 0
 
 
