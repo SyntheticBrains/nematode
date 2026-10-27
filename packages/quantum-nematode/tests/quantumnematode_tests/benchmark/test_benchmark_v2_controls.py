@@ -117,3 +117,26 @@ def test_an_open_loop_worm_passing_chemotaxis_voids_v2() -> None:
 def test_an_unrun_reachability_oracle_voids_v2() -> None:
     """When the round trip fails, reachability is not run and B v2 is VOID."""
     assert v2.verdict(*_parts(reachability="not run"))["verdict"] == "VOID"
+
+
+def test_gap_fill_changes_no_present_reading() -> None:
+    """Gap-filling interpolates interior gaps only; every present reading is kept exactly."""
+    x = np.array([np.nan, 0.3, np.nan, 0.9, 1.0, np.nan])
+    fx, _ = v2.gap_fill(x, x)
+    assert math.isnan(fx[0])
+    assert math.isnan(fx[-1])
+    assert fx[2] == pytest.approx(0.6)
+    np.testing.assert_array_equal(fx[[1, 3, 4]], x[[1, 3, 4]])
+
+
+def test_noise_statistics_of_a_still_worm_scale_with_jitter() -> None:
+    """A still worm's step median grows with the jitter; it reads as a finite onset rate."""
+    rng = np.random.default_rng(2)
+
+    def stretches(sigma: float) -> list[tuple[np.ndarray, np.ndarray]]:
+        return [tuple(rng.normal(0.0, sigma, size=(2, 60))) for _ in range(50)]
+
+    low, high = v2.noise_statistics(stretches(0.002)), v2.noise_statistics(stretches(0.008))
+    assert high["step_median_mm"] == pytest.approx(4 * low["step_median_mm"], rel=0.1)
+    assert high["paused_window_speed_median"] > low["paused_window_speed_median"]
+    assert math.isfinite(low["onsets_per_paused_min"])

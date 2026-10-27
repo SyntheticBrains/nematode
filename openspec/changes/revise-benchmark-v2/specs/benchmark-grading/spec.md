@@ -2,7 +2,7 @@
 
 ### Requirement: Simulated tracks are measured as the real tracker measures
 
-Before windowing, every simulated track SHALL receive per-axis position noise at the tracker's measured jitter, and SHALL lose seconds at the tracker's measured rates, conditioned on whether the simulated primitive that second is an omega. Both SHALL be measured from band cohorts and recorded with the bands. Real and imported tracks SHALL NOT be altered. A round trip SHALL show the model reproduces the tracker: denoised real tracks passed through it SHALL give every new statistic within |z| ≤ 1 of the raw tracks' value.
+Before windowing, every simulated track SHALL receive per-axis position noise at the tracker's measured jitter, and SHALL lose seconds at the tracker's measured rates, conditioned on whether the simulated primitive that second is an omega. Both SHALL be measured from band cohorts and recorded with the bands. Real and imported tracks SHALL NOT be altered. Checks SHALL show the model reproduces the tracker without a smoothed truth: real tracks with their gaps filled, passed through the model's losses, SHALL give every kinematics statistic within |z| ≤ 1 of the raw tracks' value; the model's jitter on a still worm SHALL reproduce the real tracker's readings on the authors' paused stretches to within one graded-size band scale of the statistics they bias; and Chen's smoothed fragments with the model's jitter SHALL give every chemotaxis statistic within |z| ≤ 1.
 
 #### Scenario: An omega second can go missing
 

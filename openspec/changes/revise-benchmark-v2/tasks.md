@@ -54,6 +54,7 @@ Phase 10, block B, reopened once. The maintainer's decisions of 2026-10-27:
 
 - [ ] 3.1 `supporting/115-benchmark-v2/launch.md` Part A.
 - [ ] 3.2 Probe (with Chen's facts), bands, rule check, the measurement-model round trip and the reachability oracle (stop if either fails); Part B with `bands_v2.json`.
+- [ ] 3.2a Amendment 1, after the Scheer round trip failed on its denoiser: the losses on gap-filled tracks and the jitter on paused stretches replace it, registered before the jitter check is read.
 
 ## 4. The controls
 

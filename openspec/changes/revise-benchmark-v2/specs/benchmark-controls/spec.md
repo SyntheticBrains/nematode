@@ -4,7 +4,7 @@
 
 B v2 SHALL be VALID only when all of the following hold:
 
-- the measurement-model round trip passes, for both rigs;
+- the measurement-model checks pass: the losses and the jitter on Scheer's rig, and the round trip on Chen's;
 - the reachability oracle passes;
 - the fresh N2 control passes, with at most 1 of its 4 units failing;
 - the chemotaxis leave-one-recording-out validation passes within its registered allowance, a recording's unit failing where its chemotaxis is not present;

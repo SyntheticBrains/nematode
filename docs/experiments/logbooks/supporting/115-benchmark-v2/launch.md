@@ -216,6 +216,54 @@ The total is about 2–5 h.
 - `read` and `blind` refuse unless it is committed with Part B and `bands_v2.json` and `bands_v2_record.json` are byte-identical to their versions in that commit.
 - `read` runs once: it refuses if `read.json` exists.
 
+## Part A, amendment 1: the oracle's round trip (registered 2026-10-27)
+
+**What failed.** The bands were built under Part A: both rule checks pass (0.94 and 0.96), and the chemotaxis leave-one-out passes with no failures. The bands file is SHA-256 `74d4dac0…`. The round trip then ran as registered (`oracle.json`):
+
+- **Chen's rig passed:** every |z| ≤ 0.11.
+- **Scheer's rig failed** on 5 of its 6 statistics:
+  - reversals per on-lawn minute z −12.6;
+  - dwelling speed median −5.1 and p90 −5.3;
+  - roaming survival −2.5;
+  - roaming speed median −1.3.
+
+By the rule, the reachability oracle was not run and the run stopped. That verdict stands and is not re-read.
+
+**The diagnosis** (description, run after the failure; `build/benchmark-v2/roundtrip_diag.json`). The failure is the denoiser's, not the tracker model's:
+
+| Variant | Reversals per minute (z) | Dwelling speed median (z) |
+|---|---|---|
+| the 5-s mean alone, unmeasured | 2.09 (−23.8) | −5.5 |
+| gap-filled, then the model's losses alone | −0.3 | −0.1 |
+| a 3-s mean with the full model | −3.4 | −2.1 |
+
+Every gap-filled reading is within 0.3. The jitter added after smoothing restores about 0.9 detected onsets per minute, so the noise model's realism matters, and a smoothed track is no clean truth to test it on.
+
+**The amendment** (decided by the maintainer). The Scheer round trip is replaced by two checks, each needing no smoothed truth. Chen's round trip and the reachability oracle are unchanged, and reachability runs only if all three checks pass:
+
+1. **The losses.** The band-side tracks, gap-filled (interior gaps interpolated, nothing else changed), pass through the lawn model's losses alone (σ = 0), at `default_rng([154_000_000 + row, 2033])`. Every kinematics statistic must lie within **|z| ≤ 1** of the raw value at the band scale for n = 1,013. **Already seen in the diagnosis to pass (all within 0.3);** it is registered so the record holds it.
+2. **The jitter**, not yet seen:
+   - **The stretches:** on the authors' paused stretches the worm is still, so the real readings are the tracker's noise. A stretch is a run of at least 10 band-side PD1074 seconds, each with all three frames flagged `pause` and its position present.
+
+   - **The model's counterpart:** each stretch's mean position held still, with the lawn model's jitter, at `default_rng([155_000_000 + k, 2033])` for stretch k.
+
+   - **The readings:**
+
+     - detected reversal onsets per paused minute (the off-food detector, on each stretch alone);
+     - the median and 90th percentile of the classifier's 10-s window speed;
+     - the 1-s step median and 90th percentile, reported only.
+
+   - **The gate:** each gated reading's model-minus-real difference must be at most **1 band scale** of the statistic it biases, at **n = 200**, the size every controller is graded at:
+
+     - the onset rate on `reversals_per_on_lawn_min`;
+     - the window speeds on `dwelling_speed_median` and `dwelling_speed_p90`.
+
+     A still worm is where the noise weighs most on what is graded.
+
+   - **If it fails:** the model's independent Gaussian noise does not reproduce the tracker. The run stops, and the noise model (for instance its time correlation) is revised in a new change.
+
+`oracle` writes `oracle_amendment1.json` once, and the verdict reads it.
+
 ## Part B: the measured parameters, the bands and the oracles
 
 *Added after the bands build and the oracles, before the N2 read and the adversary fits.*

@@ -169,6 +169,13 @@
 
     **First, the measurement-model round trip,** for both rigs. Real band-side tracks are denoised: Chen's own `SmoothX/Y`, and Scheer's 1-s tracks smoothed by a centred 5-s moving average (registered). They are then passed through the model, and every new statistic is recomputed. For each statistic and rig, the round-tripped population value must lie within |z| ≤ 1 of the raw tracks' value, on that statistic's band scale. If it fails, the model is wrong, and the run stops.
 
+    **Amended 2026-10-27, after the round trip failed** (launch record, amendment 1). The 5-s mean deletes real reversals and slow dwelling motion (alone: reversals z −23.8), so the Scheer round trip failed on the denoiser, not the model. Its place is taken by two checks needing no smoothed truth:
+
+    - **the losses** on gap-filled band-side tracks (σ = 0), every kinematics statistic within |z| ≤ 1 at n = 1,013;
+    - **the jitter** on the authors' paused stretches (≥ 10 s), whose readings are the tracker's noise, against each stretch's mean position held still with the model's jitter. Onsets per paused minute and the 10-s window speed's median and 90th percentile must each differ by at most one n = 200 band scale of the statistic they bias (the reversal rate and the two dwelling speeds).
+
+    Chen's round trip is unchanged.
+
     **Then the reachability oracle** (scratch seeds):
 
     - **the populations:** B.4's matched open-loop worm (`hazard_controller("hmm")`, at the real band-cohort speeds and hazards) passes through the measurement model, at 40 populations of 200;
@@ -197,7 +204,7 @@
 
 11. **Validity v2:** **VALID** when all of the following hold:
 
-    - the measurement-model round trip passes, for both rigs;
+    - the measurement-model checks pass (as amended: the losses and the jitter on Scheer's rig, the round trip on Chen's);
     - the reachability oracle passes;
     - the N2 control passes within its allowance (at most 1 of 4 units fails);
     - the chemotaxis leave-one-recording-out validation passes within its registered allowance, a recording failing its unit where it is not present;

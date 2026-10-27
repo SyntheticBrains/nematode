@@ -416,6 +416,7 @@ LAUNCH_PATH = SUPPORT / "launch.md"
 BANDS_V2_PATH = _REPO / "data" / "benchmark" / "bands_v2.json"
 BANDS_V2_RECORD = SUPPORT / "bands_v2_record.json"
 ORACLE_PATH = SUPPORT / "oracle.json"
+ORACLE_AMENDED_PATH = SUPPORT / "oracle_amendment1.json"
 READ_PATH = SUPPORT / "read.json"
 BLIND_PATH = SUPPORT / "blind_v2.json"
 CONTROLS_PATH = SUPPORT / "controls_v2.json"
@@ -426,6 +427,14 @@ SMOOTH_S = 5
 STORE_UM_MM = 1e-3  # the store keeps positions in whole micrometres
 ROUND_TRIP_BAR = 1.0
 ROUND_TRIP_BASE = 154_000_000
+JITTER_BASE = 155_000_000
+PAUSED_MIN_S = 10
+JITTER_SCALE_N = 200
+JITTER_GATED = {
+    "onsets_per_paused_min": "reversals_per_on_lawn_min",
+    "paused_window_speed_median": "dwelling_speed_median",
+    "paused_window_speed_p90": "dwelling_speed_p90",
+}
 ORACLE_BASE = 150_000_000
 ORACLE_POPULATIONS = 40
 ORACLE_MEAN_Z = 1.0
@@ -587,6 +596,158 @@ def scheer_round_trip(bands: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def gap_fill(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Return a 1-s track with its interior gaps interpolated and nothing else changed."""
+    out = []
+    for v in (np.asarray(x, dtype=float), np.asarray(y, dtype=float)):
+        present = np.flatnonzero(np.isfinite(v))
+        filled = np.full(len(v), np.nan)
+        if len(present):
+            a, b = present[0], present[-1] + 1
+            filled[a:b] = np.interp(np.arange(a, b), present, v[present])
+        out.append(filled)
+    return out[0], out[1]
+
+
+def _band_rows_and_omega(tracks: refs.ScheerTracks) -> tuple[np.ndarray, np.ndarray]:
+    import benchmark_bands as bb
+
+    rows = bb.band_rows(tracks, bb.WILD_TYPE)
+    n = tracks.x.shape[1]
+    omega = tracks.flag("omega")[rows][:, : 3 * n].reshape(len(rows), n, 3).any(axis=2)
+    return rows, omega
+
+
+def loss_round_trip(bands: dict[str, Any]) -> dict[str, Any]:
+    """Return the loss model's round trip: gap-filled band-side tracks through the losses alone.
+
+    Gap-filling leaves every real reading in place, so the real tracker's own noise stays and no
+    jitter is added; the losses are drawn as the lawn model draws them, on the real omega flags.
+    """
+    tracks = refs.load_scheer_tracks()
+    clf = bg.classifier(bands)
+    lawn = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+    losses = mm.TrackerModel(
+        jitter_mm=0.0,
+        p_omega=lawn.p_omega,
+        p_other=lawn.p_other,
+        runs_omega_s=lawn.runs_omega_s,
+        runs_other_s=lawn.runs_other_s,
+        stream_key=lawn.stream_key,
+    )
+    rows, omega = _band_rows_and_omega(tracks)
+    raw, trip = np.zeros(g.KINEMATIC_FIELDS), np.zeros(g.KINEMATIC_FIELDS)
+    for j, i in enumerate(rows):
+        x, y, radius = tracks.x[i], tracks.y[i], tracks.boundary_radius[i]
+        on = g.real_on_lawn(x, y, radius)
+        raw += g.kinematic_tally(g.animal_windows(x, y, on, clf), x, y, on)
+        fx, fy = gap_fill(x, y)
+        measured = mm.measure(_as_steps(fx, fy, omega[j]), ROUND_TRIP_BASE + int(i), losses)
+        mx, my = _positions(measured)
+        mon = g.real_on_lawn(mx, my, radius)
+        trip += g.kinematic_tally(g.animal_windows(mx, my, mon, clf), mx, my, mon)
+    rows_z = _z_rows(
+        g.kinematic_statistics(raw),
+        g.kinematic_statistics(trip),
+        bg.family_bands_v2(bands, "kinematics", len(rows)),
+    )
+    return {
+        "animals": len(rows),
+        "applied": "the losses alone, on gap-filled tracks",
+        "kinematics": rows_z,
+        "passes": all(r["passes"] for r in rows_z.values()),
+    }
+
+
+def paused_stretches(
+    tracks: refs.ScheerTracks,
+    rows: np.ndarray,
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Return every band-side run of paused, tracked seconds at least :data:`PAUSED_MIN_S` long.
+
+    A second is paused when the authors flag all three of its frames as a pause.
+    """
+    n = tracks.x.shape[1]
+    paused = tracks.flag("pause")[rows][:, : 3 * n].reshape(len(rows), n, 3).all(axis=2)
+    out = []
+    for j, i in enumerate(rows):
+        x, y = tracks.x[i], tracks.y[i]
+        keep = paused[j] & np.isfinite(x) & np.isfinite(y)
+        t = 0
+        while t < n:
+            if not keep[t]:
+                t += 1
+                continue
+            u = t
+            while u < n and keep[u]:
+                u += 1
+            if u - t >= PAUSED_MIN_S:
+                out.append((np.asarray(x[t:u], dtype=float), np.asarray(y[t:u], dtype=float)))
+            t = u
+    return out
+
+
+def noise_statistics(stretches: list[tuple[np.ndarray, np.ndarray]]) -> dict[str, float]:
+    """Return a still worm's readings: 1-s steps, detected onsets and 10-s window speeds."""
+    steps, speeds = [], []
+    onsets, seconds = 0, 0
+    for x, y in stretches:
+        steps.append(np.hypot(np.diff(x), np.diff(y)))
+        onsets += len(ro.reversal_onsets(x, y, g.OFF_FOOD_DETECTOR))
+        seconds += len(x) - 1
+        w = g.window_inputs(x, y, np.ones(len(x), dtype=bool))
+        speeds.append(w.speed[np.isfinite(w.speed)])
+    step, speed = np.concatenate(steps), np.concatenate(speeds)
+    return {
+        "step_median_mm": float(np.median(step)),
+        "step_p90_mm": float(np.quantile(step, 0.9)),
+        "onsets_per_paused_min": 60.0 * onsets / seconds,
+        "paused_window_speed_median": float(np.median(speed)),
+        "paused_window_speed_p90": float(np.quantile(speed, 0.9)),
+    }
+
+
+def jitter_check(bands: dict[str, Any]) -> dict[str, Any]:
+    """Return the jitter check: the real tracker's readings of a still worm against the model's.
+
+    On the authors' paused stretches the worm is still, so its readings are the tracker's noise.
+    Each stretch's model counterpart is its mean position held still, with the lawn model's
+    jitter. The gated readings are judged on the kinematics bands' scales at the graded size,
+    since a still worm is where the noise weighs most on what is graded.
+    """
+    tracks = refs.load_scheer_tracks()
+    lawn = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+    jitter = mm.TrackerModel(jitter_mm=lawn.jitter_mm, stream_key=lawn.stream_key)
+    rows, _ = _band_rows_and_omega(tracks)
+    real = paused_stretches(tracks, rows)
+    model = []
+    for k, (x, y) in enumerate(real):
+        still_x, still_y = np.full(len(x), float(np.mean(x))), np.full(len(y), float(np.mean(y)))
+        model.append(_positions(mm.measure(_as_steps(still_x, still_y), JITTER_BASE + k, jitter)))
+    a, b = noise_statistics(real), noise_statistics(model)
+    scales = bg.family_bands_v2(bands, "kinematics", JITTER_SCALE_N)
+    rows_z = {}
+    for name, value in a.items():
+        row: dict[str, Any] = {"real": value, "model": b[name]}
+        if name in JITTER_GATED:
+            scale = scales[JITTER_GATED[name]].scale
+            row.update(
+                scale_of=JITTER_GATED[name],
+                scale=scale,
+                z=(b[name] - value) / scale,
+                passes=bool(abs(b[name] - value) / scale <= ROUND_TRIP_BAR),
+            )
+        rows_z[name] = row
+    return {
+        "stretches": len(real),
+        "paused_seconds": int(sum(len(x) for x, _ in real)),
+        "minimum_stretch_s": PAUSED_MIN_S,
+        "scale_n": JITTER_SCALE_N,
+        "readings": rows_z,
+        "passes": all(r["passes"] for r in rows_z.values() if "passes" in r),
+    }
+
+
 def chen_smoothed(
     archive: Path,
 ) -> list[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
@@ -672,11 +833,15 @@ def chen_round_trip(bands: dict[str, Any], archive: Path) -> dict[str, Any]:
 # ---------------------------------------------------------------------------------------------
 
 
-def _oracle_population(p: int, base: int = ORACLE_BASE) -> dict[str, float]:
+def _oracle_population(
+    p: int,
+    base: int = ORACLE_BASE,
+    path: Path = bg.BANDS_V2_PATH,
+) -> dict[str, float]:
     """Return the matched open-loop worm's kinematic statistics on one measured population."""
     from quantumnematode.evaluation.batched import BatchedEvaluator
 
-    bands = bg.load_bands_v2()
+    bands = bg.load_bands_v2(path)
     clf = bg.classifier(bands)
     model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
     params = json.loads(bc.PARAMS_PATH.read_text())
@@ -692,12 +857,23 @@ def _oracle_population(p: int, base: int = ORACLE_BASE) -> dict[str, float]:
     return bg.kinematic_values(animals, clf)
 
 
-def reachability_oracle(bands: dict[str, Any], workers: int) -> dict[str, Any]:
+def reachability_oracle(
+    bands: dict[str, Any],
+    workers: int,
+    path: Path = bg.BANDS_V2_PATH,
+) -> dict[str, Any]:
     """Return the reachability oracle: 40 measured populations of the matched open-loop worm."""
     from concurrent.futures import ProcessPoolExecutor
 
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
-        values = list(pool.map(_oracle_population, range(ORACLE_POPULATIONS)))
+        values = list(
+            pool.map(
+                _oracle_population,
+                range(ORACLE_POPULATIONS),
+                [ORACLE_BASE] * ORACLE_POPULATIONS,
+                [path] * ORACLE_POPULATIONS,
+            ),
+        )
     band = bg.family_bands_v2(bands, "kinematics", ANIMALS)
     bar = float(bands["bars"]["wild_type"])
     rows = {}
@@ -724,27 +900,39 @@ def reachability_oracle(bands: dict[str, Any], workers: int) -> dict[str, Any]:
 
 
 def _oracle(args: argparse.Namespace) -> int:
+    """Run the oracles as amended: the losses, the jitter and Chen's round trip, then reachability.
+
+    Part A's original round trip (``scheer_round_trip``, a 5-s mean as the denoiser) failed and is
+    kept in ``oracle.json``; the amendment's readings go to ``oracle_amendment1.json``.
+    """
     if not _committed(bands=False):
         print(
             f"{LAUNCH_PATH} (Part A) is not committed and clean; nothing is run.",
             file=sys.stderr,
         )
         return 1
-    bands = bg.load_bands_v2()
-    record: dict[str, Any] = {"description": "B v2's oracles: the round trip, then reachability."}
+    if ORACLE_AMENDED_PATH.exists():
+        print(f"{ORACLE_AMENDED_PATH} exists: the amended oracle is read once.", file=sys.stderr)
+        return 1
+    bands = bg.load_bands_v2(args.bands)
+    record: dict[str, Any] = {
+        "description": "B v2's oracles as amended: the losses, the jitter, Chen's round trip, "
+        "then reachability.",
+    }
     rigs = {
-        "lawn": scheer_round_trip(bands),
+        "lawn_losses": loss_round_trip(bands),
+        "lawn_jitter": jitter_check(bands),
         "chemotaxis": chen_round_trip(bands, args.chen_archive),
     }
     record["round_trip"] = {**rigs, "passes": all(r["passes"] for r in rigs.values())}
     if record["round_trip"]["passes"]:
-        record["reachability"] = reachability_oracle(bands, args.workers)
+        record["reachability"] = reachability_oracle(bands, args.workers, args.bands)
         record["passes"] = bool(record["reachability"]["passes"])
     else:
         record["reachability"] = "not run: the round trip failed, so the measurement model is wrong"
         record["passes"] = False
-    ORACLE_PATH.write_text(json.dumps(bg._finite(record), indent=2, allow_nan=False) + "\n")
-    print(json.dumps(bg._finite(record), indent=2)[:4000])
+    ORACLE_AMENDED_PATH.write_text(json.dumps(bg._finite(record), indent=2, allow_nan=False) + "\n")
+    print(json.dumps(bg._finite(record), indent=2)[:6000])
     return 0 if record["passes"] else 1
 
 
@@ -1297,7 +1485,8 @@ def verdict(
 
 def _verdict(_args: argparse.Namespace) -> int:
     parts = [
-        json.loads(p.read_text()) for p in (ORACLE_PATH, BANDS_V2_RECORD, READ_PATH, BLIND_PATH)
+        json.loads(p.read_text())
+        for p in (ORACLE_AMENDED_PATH, BANDS_V2_RECORD, READ_PATH, BLIND_PATH)
     ]
     out = {
         "description": "B v2's verdict, from the oracle, the bands record, the read and the blind fit.",
@@ -1320,6 +1509,7 @@ def main(argv: list[str] | None = None) -> int:
     oracle = sub.add_parser("oracle")
     oracle.add_argument("--chen-archive", type=Path, required=True)
     oracle.add_argument("--workers", type=int, default=16)
+    oracle.add_argument("--bands", type=Path, default=bg.BANDS_V2_PATH)
     for name in ("read", "blind"):
         sub.add_parser(name).add_argument("--workers", type=int, default=16)
     sub.add_parser("verdict")
