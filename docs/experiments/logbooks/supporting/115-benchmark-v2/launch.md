@@ -377,6 +377,51 @@ Seen before this amendment, all on the library half or on discarded seeds:
 
 `benchmark_v2_controls.py oracle2` refuses unless this record is committed and unchanged, with `bands_v2.json`, `bands_v2_record.json`, the noise library, `reachability_worm.json` and `noise_pilot.json` byte-identical to their versions in that commit. It runs once, writing `oracle_amendment2.json`.
 
+## Part A, amendment 3: the reachability worm refitted on the graded speeds (registered 2026-10-28)
+
+**What failed.** Under amendment 2 (`oracle_amendment2.json`):
+
+- **Every measurement check passed:** the losses, the jitter check on the check half, and Chen's round trip.
+- **Reachability missed on one criterion.** Every one of the 40 populations passed every speed at |z| ≤ z\*, but the roaming speed p90's mean z was −1.07, against Part A's [−1, 1].
+- **Why:** the worm had been fitted with the then-graded reversal rate in its objective, which drove its roaming reversal hazard to its ceiling.
+- **A lapse in preflight:** before registration only the four speeds' RMS z was checked on the fit's discarded populations, not Part A's per-statistic gate. There the p90 already averaged −0.97.
+
+That verdict stands, and the measurement checks stand as read.
+
+**The amendment** (decided by the maintainer):
+
+1. **The refit.** The same 11-parameter worm and box are refitted by sep-CMA against the RMS z of the four graded speeds only, the statistics amendment 2 registered for reachability:
+
+   - animals at `160_000_000 + 200·k + i`, CMA seeds 9411–9412, σ guard, cap 100;
+   - restart 0 stopped at the cap (final objective 1.04), and restart 1 plateaued at generation 78 (0.58) and is chosen (`reach_refit.json`, `reachability_worm.json`).
+
+   The parameters as fitted:
+
+   | | dwelling | roaming |
+   |---|---|---|
+   | speed (mm/s) | 0.01423 | 0.07733 |
+   | speed spread (log SD) | 0.663 | 1.440 |
+   | curvature SD (°/s) | 172.5 | 87.0 |
+   | reversal hazard (/s) | 0.0225 | 0.2148 |
+   | omega hazard (/s) | 0.00017 | 0.00041 |
+
+   The reversal coupling β is 1.290.
+
+2. **Part A's own gate, on 10 discarded populations** (`160_900_000 + 200·g + i`) before registration:
+
+   | Statistic | Mean z | Share within z\* | z SD |
+   |---|---|---|---|
+   | dwelling speed median | −0.22 | 100% | 0.11 |
+   | dwelling speed p90 | +0.22 | 100% | 0.19 |
+   | roaming speed median | +0.38 | 90% | 1.32 |
+   | roaming speed p90 | −0.63 | 100% | 0.46 |
+
+   Under those spreads, 40 populations fail the share criterion with probability about 0.005, and the mean criterion with about 0.002. Bout survival, excluded from the gate, reads a mean z of −3.31.
+
+3. **Registered:** 40 new populations, `159_000_000 + 200·p + i`, since the 150 M populations have been seen. They are read once with this worm through the lawn model, under Part A's gate for the four speeds: mean z in [−1, 1], and |z| ≤ z\* in at least 90%. The stage is `benchmark_v2_controls.py oracle3`, which writes `oracle_amendment3.json` once and refuses unless this record is committed with the bands, the noise library, `reachability_worm.json` and `reach_refit.json` unchanged.
+
+Every other rule of Part A and amendments 1 and 2 is unchanged.
+
 ## Part B: the measured parameters, the bands and the oracles
 
 *Added after the bands build and the oracles, before the N2 read and the adversary fits.*

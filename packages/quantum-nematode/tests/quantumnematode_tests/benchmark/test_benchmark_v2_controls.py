@@ -243,3 +243,19 @@ def test_z_rows_report_an_unbanded_statistic() -> None:
     rows = v2._z_rows({"a": 1.0, "b": 2.0}, {"a": 1.5, "b": 9.0}, {"a": g.Band(0.0, 2.0)})
     assert rows["a"]["passes"] is True
     assert rows["b"] == {"raw": 2.0, "round_trip": 9.0, "reported": True}
+
+
+def test_the_reachability_gate_reads_each_speeds_mean_and_share(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers "A real-rate point worm cannot reach a statistic": a biased mean fails the gate."""
+    names = (*v2.ORACLE_STATISTICS, "roaming_survival_5min")
+    bands = {name: g.Band(0.0, 1.0) for name in names}
+    monkeypatch.setattr(v2.bg, "family_bands_v2", lambda *_args: bands)
+    fake = {"bars": {"wild_type": 3.0}}
+    centred = [dict.fromkeys(names, 0.0) for _ in range(10)]
+    assert v2.reachability_gate(centred, fake)["passes"] is True
+    biased = [{**row, v2.ORACLE_STATISTICS[-1]: -1.2} for row in centred]
+    out = v2.reachability_gate(biased, fake)
+    assert out["passes"] is False
+    assert out["statistics"][v2.ORACLE_STATISTICS[-1]]["share_passing"] == 1.0

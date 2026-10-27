@@ -858,23 +858,8 @@ def _oracle_population(
     return _measured_small_lawn(reach_controller(worm["states"]), seeds)
 
 
-def reachability_oracle(
-    bands: dict[str, Any],
-    workers: int,
-    path: Path = bg.BANDS_V2_PATH,
-) -> dict[str, Any]:
-    """Return the reachability oracle: 40 measured populations of the matched open-loop worm."""
-    from concurrent.futures import ProcessPoolExecutor
-
-    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
-        values = list(
-            pool.map(
-                _oracle_population,
-                range(ORACLE_POPULATIONS),
-                [ORACLE_BASE] * ORACLE_POPULATIONS,
-                [path] * ORACLE_POPULATIONS,
-            ),
-        )
+def reachability_gate(values: list[dict[str, float]], bands: dict[str, Any]) -> dict[str, Any]:
+    """Return Part A's reachability gate on populations' kinematics: each speed's mean z and share."""
     band = bg.family_bands_v2(bands, "kinematics", ANIMALS)
     bar = float(bands["bars"]["wild_type"])
     rows = {}
@@ -891,13 +876,33 @@ def reachability_oracle(
         [g.z_score(v["roaming_survival_5min"], band["roaming_survival_5min"]) for v in values],
     )
     return {
-        "populations": ORACLE_POPULATIONS,
+        "populations": len(values),
         "animals": ANIMALS,
-        "seed_base": ORACLE_BASE,
         "statistics": rows,
         "reported_roaming_survival_mean_z": float(np.mean(survival)),
         "passes": all(r["passes"] for r in rows.values()),
     }
+
+
+def reachability_oracle(
+    bands: dict[str, Any],
+    workers: int,
+    path: Path = bg.BANDS_V2_PATH,
+    base: int = ORACLE_BASE,
+) -> dict[str, Any]:
+    """Return the reachability oracle: 40 measured populations of the reachability worm."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        values = list(
+            pool.map(
+                _oracle_population,
+                range(ORACLE_POPULATIONS),
+                [base] * ORACLE_POPULATIONS,
+                [path] * ORACLE_POPULATIONS,
+            ),
+        )
+    return {"seed_base": base, **reachability_gate(values, bands)}
 
 
 def _oracle(args: argparse.Namespace) -> int:
@@ -1950,6 +1955,109 @@ def _oracle2(args: argparse.Namespace) -> int:
     return 0 if record["passes"] else 1
 
 
+REFIT_BASE = 160_000_000
+REFIT_CHECK_BASE = 160_900_000
+REFIT_CHECKS = 10
+REFIT_STATE = _REPO / "build" / "benchmark-v2" / "reach_refit"
+REFIT_PATH = SUPPORT / "reach_refit.json"
+ORACLE3_BASE = 159_000_000
+ORACLE_AMENDED3_PATH = SUPPORT / "oracle_amendment3.json"
+
+
+def _refit_simulate(k: int, z: list[float]) -> float:
+    return _reach_simulate(k, z, REFIT_BASE)
+
+
+def _refit_values(g_index: int, z: list[float]) -> dict[str, float]:
+    seeds = [REFIT_CHECK_BASE + ANIMALS * g_index + i for i in range(ANIMALS)]
+    return _measured_small_lawn(reach_controller(reach_parameters(np.asarray(z))), seeds)
+
+
+def _reach_refit(args: argparse.Namespace) -> int:
+    """Refit the reachability worm on the graded speeds; check Part A's gate before registering."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    import cma_recovery as cr
+
+    bands = bg.load_bands_v2()
+    with ProcessPoolExecutor(max_workers=args.workers, initializer=nr._worker_setup) as pool:
+        histories = [
+            _cma_restart(
+                REFIT_STATE,
+                r,
+                REACH_CMA_SEEDS[r],
+                len(REACH_FREE),
+                _refit_simulate,
+                REACH_CAP,
+                pool,
+                "refit",
+            )
+            for r in range(len(REACH_CMA_SEEDS))
+        ]
+        best = min(range(len(histories)), key=lambda r: cr.final_objective(histories[r]["medians"]))
+        z = histories[best]["answers"][-1]
+        values = list(pool.map(_refit_values, range(REFIT_CHECKS), [z] * REFIT_CHECKS))
+    gate = reachability_gate(values, bands)
+    worm = {
+        "description": "The reachability worm, refitted on the four graded speeds through the "
+        "measurement model on discarded seeds.",
+        "objective": list(ORACLE_STATISTICS),
+        "free": [f"{s}/{n}" for s, n in REACH_FREE],
+        "restarts": [
+            {k: h[k] for k in ("restart", "cma_seed", "stop", "medians", "sigmas")}
+            for h in histories
+        ],
+        "best_restart": best,
+        "answer": z,
+        "states": reach_parameters(np.asarray(z)),
+        "check_seed_base": REFIT_CHECK_BASE,
+        "check_gate": gate,
+        "reaches": bool(gate["passes"]),
+    }
+    REFIT_PATH.write_text(json.dumps(bg._finite(worm), indent=2) + "\n")
+    if worm["reaches"]:
+        REACH_PATH.write_text(json.dumps(bg._finite(worm), indent=2) + "\n")
+    print(
+        json.dumps(
+            bg._finite({k: worm[k] for k in ("best_restart", "check_gate", "reaches")}),
+            indent=2,
+        )[:3000],
+    )
+    return 0 if worm["reaches"] else 1
+
+
+def _oracle3(args: argparse.Namespace) -> int:
+    """Read the reachability oracle once more, with the refitted worm, on new populations."""
+    import cma_recovery as cr
+
+    bound = (BANDS_V2_PATH, BANDS_V2_RECORD, NOISE_PATH, REACH_PATH, REFIT_PATH)
+    if not cr.launch_committed(bound=bound, launch_path=LAUNCH_PATH):
+        print(
+            f"{LAUNCH_PATH} with amendment 3 and the files it binds is not committed and clean.",
+            file=sys.stderr,
+        )
+        return 1
+    if ORACLE_AMENDED3_PATH.exists():
+        print(f"{ORACLE_AMENDED3_PATH} exists: the oracle is read once.", file=sys.stderr)
+        return 1
+    record = {
+        "description": "B v2's reachability oracle as amended a third time: the refitted worm on "
+        "40 new populations. The measurement checks stand as read in oracle_amendment2.json.",
+        "reachability": reachability_oracle(bg.load_bands_v2(), args.workers, base=ORACLE3_BASE),
+    }
+    record["passes"] = bool(record["reachability"]["passes"])
+    ORACLE_AMENDED3_PATH.write_text(
+        json.dumps(bg._finite(record), indent=2, allow_nan=False) + "\n",
+    )
+    print(
+        json.dumps(
+            bg._finite(dict(record["reachability"]["statistics"])),
+            indent=2,
+        )[:3000],
+    )
+    return 0 if record["passes"] else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: the probes, the oracles, the read, the blind fit and the verdict."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -1967,6 +2075,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("verdict")
     sub.add_parser("noise-library")
     sub.add_parser("noise-pilot").add_argument("--workers", type=int, default=16)
+    sub.add_parser("reach-refit").add_argument("--workers", type=int, default=16)
+    sub.add_parser("oracle3").add_argument("--workers", type=int, default=16)
     oracle2 = sub.add_parser("oracle2")
     oracle2.add_argument("--chen-archive", type=Path, required=True)
     oracle2.add_argument("--workers", type=int, default=16)
@@ -1980,6 +2090,8 @@ def main(argv: list[str] | None = None) -> int:
         "noise-library": _noise_library_stage,
         "noise-pilot": _noise_pilot,
         "oracle2": _oracle2,
+        "reach-refit": _reach_refit,
+        "oracle3": _oracle3,
     }
     return stages[args.stage](args)
 
