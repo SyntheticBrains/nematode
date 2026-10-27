@@ -95,13 +95,30 @@ B v2 (change `revise-benchmark-v2`, launch record 115) adds a measurement model 
 6. **The reachability worm** (it replaces B.4's matched worm in the reachability oracle; Part A's gate is unchanged):
 
    - **The structure:** `BatchedStateHazards`, with B.4's two states, transitions and window.
+
    - **The free parameters, 10** (revised 2026-10-28, after the 8-parameter fit; see "The second pilot" below):
+
      - each state's speed, curvature SD, reversal hazard and omega hazard, log-uniform on [θ/4, 4θ] around B.4's matched value θ (`negatives_params.json`);
      - each state's **speed spread**, a log SD in \[0, 1.5\]: at every 10-s window boundary each animal draws z, and runs that window at its state's speed × exp(spread · z). The window is the classifier's scale, so the state's speed is the median. This is `BatchedStateHazards`'s optional `speed_log_sd`, off by default, so B.4's negatives are unchanged.
+
    - **The objective:** the RMS z of the five gated statistics (the four speeds and the reversal rate) at n = 200, through the lawn model with the library, for 200 fresh animals per evaluation (`158_000_000 + 200·k + i`).
+
    - **The fit:** sep-CMA from the centre, σ₀ 0.2, population 16, 2 restarts (CMA seeds 9411 and 9412). The plateau rule stops a restart only once σ ≤ σ₀, and the cap is 100 generations. The answer is the best restart's `xfavorite`.
+
+   - **The reversal coupling, 11th parameter** (decided 2026-10-28, after the 10-parameter fit, with its fallback fixed before the refit runs). Each window's reversal hazard is the state's hazard × exp(β · z), where z is the window's speed draw and β is uniform on [0, 3]. Reversals then come more often out of faster movement, as real reversals interrupt forward runs. This is `BatchedStateHazards`'s optional `reversal_speed_coupling`, off by default.
+
+   - **The fallback, registered now:** if the 11-parameter worm's median RMS z on its 5 fresh populations still exceeds 1, the on-lawn reversal rate leaves the kinematics family:
+
+     - five kinematics statistics remain, and z\* is recomputed for 19 statistics;
+     - the bands are rebuilt without it, and reachability is registered on the four speeds, with the 11-parameter worm as fitted;
+     - no further structure is tried.
+
+     Roaming speed still catches C.1's main exploit (2.6× the real speed at the classifier's scale).
+
    - **Its own oracle, before registration:** the answer is re-simulated on 5 discarded populations (`158_900_000 + 200·g + i`). The median RMS z must be at most 1.
+
    - **If it is not:** no open-loop two-state point worm reaches the statistics through the tracker. The statistics it misses are the diagnosis, and the change stops before registration and goes back to the maintainer.
+
    - **Registered:** the answer's parameters go into amendment 2. The 40 oracle populations (`150_000_000 + 200·p + i`) are read with it under Part A's gate: mean z in [−1, 1], and |z| ≤ z\* in at least 90% of populations, for each of the five statistics.
 
 7. **Then B v2 continues**, writing `oracle_amendment2.json`:

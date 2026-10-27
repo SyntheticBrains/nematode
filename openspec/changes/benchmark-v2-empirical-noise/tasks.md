@@ -12,6 +12,7 @@
 - [ ] 2.2 The permutation gate: 1,000 date halvings (seed 2044), the central 95% of each reading's real-half difference; reported beside the Gaussian model's misses.
 - [x] 2.2a `BatchedStateHazards` gains an optional per-state speed spread (a log SD, drawn per window), off by default.
 - [x] 2.3 The reachability worm (stopped again: with the spread every speed is reached, |z| \<= 1.3, but reversals read 1.31 against 2.28 per minute, z -4.17, median RMS z 2.00): sep-CMA over the 10 per-state parameters (log box [θ/4, 4θ] around B.4's, spreads on [0, 1.5]), 2 restarts (CMA 9411–9412), animals 158 M, the σ guard and a cap of 100; re-simulated on 5 discarded populations (158.9 M); stop if the median RMS z exceeds 1.
+- [ ] 2.3a The reversal coupling (11th parameter, β on [0, 3]); refit; if the median RMS z exceeds 1, drop the on-lawn reversal rate (z\* for 19) and register reachability on the four speeds.
 - [ ] 2.4 Tests: the permutation gate on toy readings; the reachability worm's parameter map and objective.
 - [ ] 2.5 `bands_v2.json`'s lawn model names the library and its checksum (rebuild; the bands and their record unchanged).
 - [ ] 2.6 115's launch record, amendment 2: the split, the library, the draw, the re-registered check and its gate, the reachability worm's parameters, the seeds (156–158 M, 2043, 2044, 9411–9412); the pilot and the review's readings as description. Committed before the check half is read directly.
