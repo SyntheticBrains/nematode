@@ -153,3 +153,14 @@ def test_a_saved_library_round_trips_to_the_micrometre(tmp_path: Path) -> None:
         assert store["x_um"].tolist() == [1, -3]
         assert store["y_um"].tolist() == [0, 10]
         assert store["lengths"].tolist() == [2]
+
+
+def test_a_changed_library_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A model whose library file no longer matches its recorded digest refuses to measure."""
+    monkeypatch.setattr(mm, "_library_sha256", lambda _name: "f" * 64)
+    monkeypatch.setattr(mm, "load_noise_library", lambda _name: _library())
+    model = mm.TrackerModel(jitter_mm=0.0, noise_library="toy.npz", noise_sha256="0" * 64)
+    with pytest.raises(ValueError, match="digest"):
+        mm.measure(_steps(10), seed=1, model=model)
+    unchecked = mm.TrackerModel(jitter_mm=0.0, noise_library="toy.npz")
+    assert len(mm.measure(_steps(10), seed=1, model=unchecked)) == 10

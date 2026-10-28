@@ -120,6 +120,30 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+@functools.cache
+def _library_sha256(name: str) -> str:
+    return file_sha256(BENCHMARK_DATA / name)
+
+
+def checked_noise_library(model: TrackerModel) -> NoiseLibrary:
+    """Return a model's noise library, refusing one whose file differs from the recorded digest.
+
+    Raises
+    ------
+    ValueError
+        If the model records a digest and the library's file no longer matches it, so a seed's
+        noise cannot change silently under a registered model.
+    """
+    name = model.noise_library
+    if name is None:
+        msg = "the model names no noise library"
+        raise ValueError(msg)
+    if model.noise_sha256 is not None and _library_sha256(name) != model.noise_sha256:
+        msg = f"{name} does not match the digest its model records ({model.noise_sha256})"
+        raise ValueError(msg)
+    return load_noise_library(name)
+
+
 @dataclass(frozen=True)
 class TrackerModel:
     """One tracker's measurement: position noise, lost seconds and fragmentation."""
@@ -203,7 +227,7 @@ def measure(
     rng = np.random.default_rng([seed, model.stream_key])
     n = len(steps)
     if model.noise_library is not None:
-        noise = load_noise_library(model.noise_library).draw(n, rng)
+        noise = checked_noise_library(model).draw(n, rng)
     else:
         noise = rng.normal(0.0, model.jitter_mm, size=(n, 2))
     lost = lost_seconds([s.primitive for s in steps], model, rng)

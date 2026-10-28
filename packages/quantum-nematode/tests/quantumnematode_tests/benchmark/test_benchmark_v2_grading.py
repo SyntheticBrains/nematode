@@ -77,11 +77,45 @@ def test_captures_are_measured_on_their_own_seed(tmp_path: Path) -> None:
     assert any(math.isnan(s.x) for s in measured[0])
 
 
-def test_imported_tracks_are_never_measured() -> None:
-    """The v2 path measures captures and batched animals only; imported tracks take no model."""
-    import inspect
+def test_imported_tracks_are_never_measured(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers "Real tracks are untouched": grading imported tracks on v2 never calls the model.
 
-    assert "model" not in inspect.signature(bg.track_populations).parameters
+    Sixty-four copies of one band-cohort Scheer animal are graded through the CLI with
+    ``--bands v2``, the vendored bands' size; the reversal rate is reported beside the grade.
+    """
+    import track_import_check as tic  # pyright: ignore[reportMissingImports]
+    from quantumnematode.benchmark import references as refs
+
+    def refuse(*_args: object, **_kwargs: object) -> None:
+        msg = "imported tracks must not be measured"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(mm, "measure", refuse)
+    tracks = refs.load_scheer_tracks()
+    row = int(bb.band_rows(tracks, bb.WILD_TYPE)[0])
+    t = np.arange(tracks.x.shape[1], dtype=float)
+    path = tic.write_track(
+        tmp_path,
+        "animal",
+        "csv",
+        t,
+        tracks.x[row],
+        tracks.y[row],
+        tic._lawn_metadata("small_lawn", tracks.boundary_radius[row]),
+    )
+    manifest = tmp_path / "manifest.txt"
+    manifest.write_text(f"small_lawn {path}\n" * 64)
+    out = tmp_path / "grade.json"
+    assert bg.main(["tracks", "--manifest", str(manifest), "--out", str(out), "--bands", "v2"]) == 0
+    result = json.loads(out.read_text())
+    assert result["bands"] == "v2"
+    assert result["n"] == {"small_lawn": 64, "kinematics": 64}
+    assert set(result["families"]["kinematics"]) == set(g.KINEMATIC_STATISTICS)
+    assert set(result["kinematics_reported"]) == set(g.KINEMATIC_REPORTED)
+    assert result["D"] is None
 
 
 def test_v2_weights_give_each_of_five_families_a_fifth() -> None:
@@ -98,10 +132,29 @@ def test_v2_weights_give_each_of_five_families_a_fifth() -> None:
 
 
 def test_v1_weights_and_bar_are_unchanged() -> None:
-    """v1's distance still reads its own three families at its own bar."""
+    """Covers "A past verdict is reproduced": v1 reads its own three families at its own bar."""
     w = g.weights(list(g.FAMILIES))
     assert {f for f, _ in w} == set(g.FAMILIES)
     assert sum(w.values()) == pytest.approx(1.0)
+    assert bg.load_bands()["bars"]["wild_type"] == pytest.approx(2.8375969129437877)
+
+
+def test_v2_is_the_default_only_for_the_validated_bands(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The default is v2 only when the verdict is VALID for the very bands file now vendored."""
+    bands = tmp_path / "bands_v2.json"
+    bands.write_text("{}\n")
+    controls = tmp_path / "controls_v2.json"
+    monkeypatch.setattr(bg, "BANDS_V2_PATH", bands)
+    monkeypatch.setattr(bg, "CONTROLS_V2_PATH", controls)
+    controls.write_text(json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bands)}))
+    assert bg.v2_is_valid() is True
+    bands.write_text('{"changed": true}\n')
+    assert bg.v2_is_valid() is False
+    controls.write_text(json.dumps({"verdict": "VALID"}))
+    assert bg.v2_is_valid() is False
 
 
 def test_samples_outside_the_field_are_missing() -> None:

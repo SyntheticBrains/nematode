@@ -294,10 +294,19 @@ CONTROLS_V2_PATH = (
 
 
 def v2_is_valid() -> bool:
-    """Return whether B v2's bands are vendored and its controls' verdict is VALID."""
+    """Return whether B v2's controls found VALID the very bands file now vendored.
+
+    The verdict records the SHA-256 of the bands it validated; a bands file that differs from it,
+    or a verdict that records none, does not make v2 the default.
+    """
     if not (BANDS_V2_PATH.exists() and CONTROLS_V2_PATH.exists()):
         return False
-    return json.loads(CONTROLS_V2_PATH.read_text()).get("verdict") == "VALID"
+    controls = json.loads(CONTROLS_V2_PATH.read_text())
+    if controls.get("verdict") != "VALID":
+        return False
+    from quantumnematode.benchmark.measurement import file_sha256
+
+    return controls.get("bands_sha256") == file_sha256(BANDS_V2_PATH)
 
 
 CHEMOTAXIS_PROTOCOL = "chemotaxis_chen"
@@ -453,6 +462,7 @@ def grade_populations_v2(
     readings: dict[str, dict[str, g.Reading]] = {}
     sizes: dict[str, int] = {}
     presence: dict[str, Any] | None = None
+    reported: dict[str, float] | None = None
     for family, animals in populations.items():
         sizes[family] = len(animals)
         values = family_values(family, animals, clf)
@@ -461,11 +471,14 @@ def grade_populations_v2(
             presence = g.simulated_search_presence(animals)
         if family == "small_lawn":
             sizes["kinematics"] = len(animals)
+            kinematics = kinematic_values(animals, clf)
             readings["kinematics"] = g.grade(
-                kinematic_values(animals, clf),
+                kinematics,
                 family_bands_v2(bands, "kinematics", len(animals)),
                 bar,
             )
+            # Computed beside the graded kinematics and reported, never read on a band.
+            reported = {name: kinematics[name] for name in g.KINEMATIC_REPORTED}
     chemotaxis_presence: dict[str, Any] | None = None
     if chemotaxis is not None:
         field = chen_field()
@@ -504,6 +517,8 @@ def grade_populations_v2(
         },
         "family_passes": {f: all(r.passes for r in rs.values()) for f, rs in readings.items()},
     }
+    if reported is not None:
+        out["kinematics_reported"] = reported
     if presence is not None:
         out["local_search_presence"] = presence
         out["family_passes"]["local_search"] = bool(
@@ -564,7 +579,7 @@ def main(argv: list[str] | None = None) -> int:
             choices=("v1", "v2"),
             default=None,
             help="v2 (the default once its controls find it VALID): measured simulated tracks, "
-            "20 statistics; v1 is frozen for past verdicts",
+            "19 statistics; v1 is frozen for past verdicts",
         )
     args = parser.parse_args(argv)
     if args.bands is None:

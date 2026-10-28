@@ -248,7 +248,7 @@ def lawn_statistics(total: np.ndarray) -> dict[str, float]:
 
 
 # ---------------------------------------------------------------------------------------------
-# B v2: the kinematics family
+# The kinematics family
 # ---------------------------------------------------------------------------------------------
 
 # Log-spaced 10-s window speed bins (mm/s); slower or faster windows fall in the end bins.

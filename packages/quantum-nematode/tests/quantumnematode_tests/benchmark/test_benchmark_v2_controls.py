@@ -259,3 +259,44 @@ def test_the_reachability_gate_reads_each_speeds_mean_and_share(
     out = v2.reachability_gate(biased, fake)
     assert out["passes"] is False
     assert out["statistics"][v2.ORACLE_STATISTICS[-1]]["share_passing"] == 1.0
+
+
+def test_the_reversal_coupling_changes_only_the_reversal_hazard() -> None:
+    """Coupled and uncoupled worms on the same streams move alike; only reversal hazards differ."""
+    import torch
+    from quantumnematode.evaluation.controllers import BatchedStateHazards
+
+    kw = {
+        "transitions": np.array([[0.9, 0.1], [0.2, 0.8]]),
+        "speeds_mm_per_s": (0.02, 0.07),
+        "curvature_sd_deg_per_s": (60.0, 35.0),
+        "hazards_per_s": np.array([[0.09, 0.0001, 0.0001], [0.08, 0.001, 0.0001]]),
+        "window_steps": 10,
+        "speed_log_sd": (0.5, 0.5),
+    }
+    senses = type("Senses", (), {"concentration": np.zeros(3)})()
+
+    def run(worm: BatchedStateHazards) -> np.ndarray:
+        gens = [torch.Generator().manual_seed(k) for k in range(3)]
+        worm.reset(3)
+        return np.array([worm.act(senses, gens) for _ in range(25)])  # type: ignore[arg-type]
+
+    plain = run(BatchedStateHazards(**kw))
+    coupled = run(BatchedStateHazards(**kw, reversal_speed_coupling=2.0))
+    np.testing.assert_array_equal(plain[..., :2], coupled[..., :2])
+    np.testing.assert_array_equal(plain[..., 3:], coupled[..., 3:])
+    assert not np.array_equal(plain[..., 2], coupled[..., 2])
+
+
+def test_an_interrupted_read_is_not_repeated(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A read whose start was marked refuses to run again, though it wrote nothing."""
+    monkeypatch.setattr(v2, "_committed", lambda **_kwargs: True)
+    monkeypatch.setattr(v2, "READ_PATH", tmp_path / "read.json")
+    started = tmp_path / "read.started"
+    started.write_text("started\n")
+    monkeypatch.setattr(v2, "READ_STARTED", started)
+    assert v2.main(["read"]) == 1
+    assert not (tmp_path / "read.json").exists()

@@ -1,5 +1,6 @@
 {
   "description": "B v2's verdict: the measurement checks (amendment 2), reachability (amendment 3), the bands record, the read and the blind fit.",
+  "bands_sha256": "21f591b864d497ee3ee305c217e3c9e197a8bc466298219d46841819b875f438",
   "checks": {
     "round_trip": true,
     "reachability": true,

@@ -421,6 +421,7 @@ BANDS_V2_RECORD = SUPPORT / "bands_v2_record.json"
 ORACLE_PATH = SUPPORT / "oracle.json"
 ORACLE_AMENDED_PATH = SUPPORT / "oracle_amendment1.json"
 READ_PATH = SUPPORT / "read.json"
+READ_STARTED = _REPO / "build" / "benchmark-v2" / "read.started"
 BLIND_PATH = SUPPORT / "blind_v2.json"
 CONTROLS_PATH = SUPPORT / "controls_v2.json"
 BLIND_STATE = _REPO / "build" / "benchmark-v2" / "blind"
@@ -852,10 +853,9 @@ def _oracle_population(
     The worm is the two-state open-loop worm fitted through the measurement model; the worm
     matched on per-state mean speeds and hazards misses the kinematics with no noise at all.
     """
-    del path  # the bands are read where the worm was fitted, from the vendored file
     worm = json.loads(REACH_PATH.read_text())
     seeds = [base + ANIMALS * p + i for i in range(ANIMALS)]
-    return _measured_small_lawn(reach_controller(worm["states"]), seeds)
+    return _measured_small_lawn(reach_controller(worm["states"]), seeds, path)
 
 
 def reachability_gate(values: list[dict[str, float]], bands: dict[str, Any]) -> dict[str, Any]:
@@ -1273,10 +1273,16 @@ def _read(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    if READ_PATH.exists():
-        print(f"{READ_PATH} exists: the read is made once.", file=sys.stderr)
+    if READ_PATH.exists() or READ_STARTED.exists():
+        print(
+            f"{READ_PATH} or {READ_STARTED} exists: the read is made once, and a started read that "
+            "stopped is not repeated.",
+            file=sys.stderr,
+        )
         return 1
     bands = bg.load_bands_v2()
+    # Marked before any held-out animal is read, so an interrupted read cannot silently run again.
+    READ_STARTED.write_text("the held-out read started\n")
     n2 = n2_control(bands)
     record: dict[str, Any] = {
         "description": "B v2's read: fresh N2, the negatives, C.1's answer, W.",
@@ -1522,6 +1528,7 @@ def _verdict(_args: argparse.Namespace) -> int:
     out = {
         "description": "B v2's verdict: the measurement checks (amendment 2), reachability "
         "(amendment 3), the bands record, the read and the blind fit.",
+        "bands_sha256": mm.file_sha256(BANDS_V2_PATH),
         **verdict(*parts),
         "w_minimum": parts[2]["w_minimum"],
     }
@@ -1744,10 +1751,15 @@ def reach_controller(states: dict[str, dict[str, float]]) -> Any:  # noqa: ANN40
     )
 
 
-def _measured_small_lawn(controller: Any, seeds: list[int]) -> dict[str, float]:  # noqa: ANN401
+def _measured_small_lawn(
+    controller: Any,  # noqa: ANN401 - a batched controller
+    seeds: list[int],
+    path: Path = bg.BANDS_V2_PATH,
+) -> dict[str, float]:
+    """Return a controller's measured small-lawn kinematics, read on one bands file throughout."""
     from quantumnematode.evaluation.batched import BatchedEvaluator
 
-    bands = bg.load_bands_v2()
+    bands = bg.load_bands_v2(path)
     model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
     traj = BatchedEvaluator(nr._shared()["configs"]["small_lawn"], controller, seeds).run()
     assert traj.assay is not None  # noqa: S101 - an assay config records its timing

@@ -86,6 +86,9 @@ def fragment_measures(
         if present.sum() >= MIN_FRAGMENT_SAMPLES
         else np.array([])
     )
+    # The detector's onset at step o is the step that turns back. It is flagged on the step before,
+    # so the quintile ratio pairs each reversal with the dC/dt the worm met before it turned, not
+    # with the change its own turning back produced; an onset at step 0 has no step before it.
     for o in np.asarray(onsets, dtype=int):
         if 0 < o <= len(dx):
             onset[o - 1] = True
