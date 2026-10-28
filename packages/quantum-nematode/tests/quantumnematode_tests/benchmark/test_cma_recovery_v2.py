@@ -99,3 +99,18 @@ def test_the_registered_seed_ranges_are_disjoint() -> None:
         assert end <= start
     assert v2.REPEAT_K + cr.REPEATS * 43 <= v2.REFERENCE_K
     assert v2.REFERENCE_K + v2.REFERENCES <= v2.CENTRE_K
+
+
+def test_the_uncapped_objective_keeps_a_far_statistic_s_distance() -> None:
+    """Uncapped, a statistic 30 scales off still ranks above one 20 off; capped, both read 10."""
+    truth = {"statistics": {"a/x": 0.0, "a/y": 0.0, "b/z": 0.0}}
+    far = {"statistics": {"a/x": 30.0, "a/y": 0.0, "b/z": 0.0}}
+    nearer = {"statistics": {"a/x": 20.0, "a/y": 0.0, "b/z": 0.0}}
+    capped = [v2.predictive_distance_v2(truth, d, SCALES, FAMILIES) for d in (far, nearer)]
+    assert capped[0] == capped[1]
+    uncapped = [
+        v2.predictive_distance_v2(truth, d, SCALES, FAMILIES, capped=False) for d in (far, nearer)
+    ]
+    assert uncapped[0] > uncapped[1]
+    undefined = {"statistics": {"a/x": None, "a/y": 0.0, "b/z": 0.0}}
+    assert v2.predictive_distance_v2(truth, undefined, SCALES, FAMILIES, capped=False) == capped[1]

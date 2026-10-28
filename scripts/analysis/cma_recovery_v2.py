@@ -153,12 +153,18 @@ def predictive_distance_v2(
     draw: dict[str, Any],
     scales: dict[str, float],
     family_map: dict[str, tuple[str, ...]],
+    *,
+    capped: bool = True,
 ) -> float:
     """Return the distance between two v2 records' graded statistics on the bands' scales.
 
-    Families weigh equally, split equally within each; z is capped at 10. A statistic undefined in
-    both counts 0, and one undefined in only one counts the cap. A reported, ungraded statistic
-    takes no part, since only the family map's statistics are read.
+    Families weigh equally, split equally within each. A statistic undefined in both counts 0, and
+    one undefined in only one counts the cap of 10. A reported, ungraded statistic takes no part,
+    since only the family map's statistics are read.
+
+    With ``capped`` (the registered D) each z is capped at 10. Without it, as a fit's objective,
+    defined statistics keep their full z, so a statistic far from the truth still ranks candidates
+    by how far; an undefined one still counts the cap.
     """
     from quantumnematode.benchmark import grading as g
 
@@ -171,24 +177,36 @@ def predictive_distance_v2(
                 z = 0.0
             elif a is None or b is None:
                 z = g.Z_CAP
-            else:
+            elif capped:
                 z = g.z_score(float(b) - float(a), g.Band(0.0, scales[key]))
+            else:
+                z = (float(b) - float(a)) / scales[key]
             readings[family][s] = g.Reading(0.0, g.Band(0.0, scales[key]), z, passes=True)
     return g.distance(readings, list(family_map), family_map)
 
 
 class Objective:
-    """The distance from one observation to a simulation, picklable and with its scales loaded."""
+    """The distance from one observation to a simulation, picklable and with its scales loaded.
 
-    def __init__(self, observation: dict[str, Any]) -> None:
+    ``capped`` is the registered D; a fit ranks its candidates on the uncapped distance.
+    """
+
+    def __init__(self, observation: dict[str, Any], *, capped: bool = True) -> None:
         bands = _bands()
+        self.capped = capped
         self.observation = observation
         self.scales = band_scales_v2(bands)
         self.family_map = {f: tuple(st) for f, st in bands["families"].items()}
 
     def __call__(self, record: dict[str, Any]) -> float:
         """Return the distance from the observation to one simulation's record."""
-        return predictive_distance_v2(self.observation, record, self.scales, self.family_map)
+        return predictive_distance_v2(
+            self.observation,
+            record,
+            self.scales,
+            self.family_map,
+            capped=self.capped,
+        )
 
 
 def median_distance_v2(observation: dict[str, Any], records: list[dict[str, Any]]) -> float:
@@ -430,6 +448,53 @@ def _gate_probe(workers: int) -> int:
     return 1 if record["returns_to_maintainer"] else 0
 
 
+OBJECTIVE_PROBE_BASE = 99_900_000
+OBJECTIVE_PROBE_CMA_SEED = 5994
+OBJECTIVE_PROBE_GENERATIONS = 60
+
+
+def _objective_probe(workers: int) -> int:
+    """Fit the pilot truth for 60 generations on the uncapped objective; discarded seeds."""
+    preflight = json.loads(PREFLIGHT_PATH.read_text())
+    truth = preflight["pilot_truth"]
+    observation = observation_of(truth, BUILD / "candidates.jsonl")
+    state = BUILD / "objective_probe"
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = cr.run_fit(
+            observation,
+            fit=0,
+            cma_seed=OBJECTIVE_PROBE_CMA_SEED,
+            seed_base=OBJECTIVE_PROBE_BASE,
+            cap=OBJECTIVE_PROBE_GENERATIONS,
+            use_rule=False,
+            state_dir=state,
+            pool=pool,
+            scales={},
+            objective=Objective(observation, capped=False),
+            simulate=simulate_v2,
+            stop=guarded_stop,
+        )
+    runs = _resimulate(
+        history["answers"][-1],
+        [cr.ANSWER_OFFSET + q for q in range(cr.RESIMULATIONS)],
+        OBJECTIVE_PROBE_BASE,
+        state / "answers.jsonl",
+        workers,
+    )
+    d = median_distance_v2(observation, runs)
+    record = {
+        "description": "Description: the pilot truth fitted on the uncapped objective, discarded seeds.",
+        "generations": OBJECTIVE_PROBE_GENERATIONS,
+        "answer_capped_D": d,
+        "gain": cr._gain(truth["prior_D"], d, truth["floor"]),
+        "medians": history["medians"],
+        "sigmas": history["sigmas"],
+    }
+    _write(state / "probe.json", record)
+    print(json.dumps({k: record[k] for k in ("answer_capped_D", "gain")}, indent=2))
+    return 0
+
+
 def _preflight(workers: int) -> int:
     record = select_truths(CANDIDATE_BASE, BUILD / "candidates.jsonl", workers)
     _write(PREFLIGHT_PATH, record)
@@ -656,14 +721,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "stage",
-        choices=("gate-probe", "preflight", "pilot", "run", "read", "smoke"),
+        choices=("gate-probe", "objective-probe", "preflight", "pilot", "run", "read", "smoke"),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
-    if args.stage == "smoke":
-        return _smoke(args.workers)
-    if args.stage == "gate-probe":
-        return _gate_probe(args.workers)
+    unguarded = {"smoke": _smoke, "gate-probe": _gate_probe, "objective-probe": _objective_probe}
+    if args.stage in unguarded:
+        return unguarded[args.stage](args.workers)
     if args.stage in ("preflight", "pilot") and not cr.launch_committed(launch_path=LAUNCH_PATH):
         print(f"{LAUNCH_PATH} is not committed and clean; nothing is run.", file=sys.stderr)
         return 1
