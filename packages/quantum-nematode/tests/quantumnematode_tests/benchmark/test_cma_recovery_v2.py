@@ -90,6 +90,8 @@ def test_the_registered_seed_ranges_are_disjoint() -> None:
     ranges = [
         (v2.FIT_BASE, fit_max),
         (v2.PILOT_BASE, pilot_max),
+        (v2.PILOT_A1_BASE, v2.PILOT_A1_BASE + (pilot_max - v2.PILOT_BASE)),
+        (v2.OBJECTIVE_PROBE_BASE, v2.OBJECTIVE_PROBE_BASE + animals * (cr.ANSWER_OFFSET + 10)),
         (v2.CANDIDATE_BASE, v2.CANDIDATE_BASE + candidate_span),
         (v2.PROBE_BASE, v2.PROBE_BASE + candidate_span),
         (v2.SMOKE_BASE, v2.SMOKE_BASE + animals * 32),

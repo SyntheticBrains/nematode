@@ -136,6 +136,37 @@ Seen before this record was committed, all on discarded seeds:
 - `preflight` and `pilot` refuse unless this record is committed and unchanged;
 - `run` and `read` also require Part B, with `preflight.json` and `pilot.json` byte-identical to their versions in the commit that last touched this record.
 
+## Part A, amendment 1: the fit ranks on the uncapped distance (registered 2026-10-29)
+
+**What stopped the run.** The registered preflight passed (`preflight.json`):
+
+- 21 of 43 candidates were eligible;
+- the pilot truth is 4909, and truths 0–3 are 1164, 1354, 6985 and 9105;
+- the oracle's median gain was 1.009, and the unfitted start's 0.068.
+
+The registered pilot then stopped the run (`pilot.json`): its answer's gain at 300 was **0.511**, against the 0.75 stop (0.507 at the guarded plateau, generation 110). That verdict stands, and no registered fit has run.
+
+**The diagnosis** (description, on the pilot's committed answers):
+
+- **Roaming speed:** the answer's roaming speed median reads 0.061 against the truth's 0.090 mm/s. That is about 30 of kinematics' n = 200 band scales (0.00097), so it sits at the z cap of 10.
+- **γ:** the answer's γ is undefined (no decay; early/late 0.75 against 2.65), which also costs the cap.
+- **Why the fit stalled:** the capped distance is flat over every candidate that far off, so sep-CMA ranked none ahead of another on those statistics. The two together carry 14.0 of the answer's 14.8 weighted squared z.
+
+**The amendment** (decided by the maintainer):
+
+1. **A fit ranks its candidates on the uncapped distance:** `predictive_distance_v2(..., capped=False)`. Each defined statistic keeps its full z, and a statistic undefined in only one record still counts 10. sep-CMA uses only the ranking, so this changes which candidates it prefers and nothing else. The plateau rule reads the uncapped medians.
+2. **Everything read against a gate stays on the registered, capped D:** the floor, the oracle, the prior, the box centre, every gain, the cap rule's gains, and the gate. C.1b will fit the same way, ranking on the uncapped distance and graded on the capped D.
+3. **The pilot is re-run** under the amendment, on its own seeds: base **220,000,000** (evaluations at 16·(n − 1) + p, answers at 5,000, 5,100 and 5,200 + 0–9, spanning 220.0–221.05 M), CMA seed **5429**, writing `pilot_amendment1.json`. Its rules are Part A's: 300 generations, the guarded G_p, the cap rule, the 0.75 stop and the 30 h projection.
+4. **Unchanged:** the registered fits keep Part A's seeds (base 170,000,000, CMA 5420–5427), since none has run. So do the truths, the gates, the gate and the verdict map.
+
+**Disclosure: the objective probe** (description; discarded seeds, base 99,900,000, CMA seed 5994). The pilot truth was fitted for 60 generations on the uncapped objective:
+
+- the uncapped median fell from 74.6 to 1.6, with σ at 0.056;
+- the answer's capped D is 0.97 against the truth's floor of 0.53 and prior of 7.37;
+- that is **a gain of 0.935**, against the capped pilot's 0.511 at 300.
+
+`run` and `read` refuse unless this amendment is committed with `preflight.json`, `pilot.json` and `pilot_amendment1.json` bound.
+
 ## Part B
 
 *Appended after the preflight and the pilot, before the registered fits.*

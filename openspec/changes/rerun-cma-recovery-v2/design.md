@@ -118,6 +118,10 @@ The truths sit closer to the box centre in statistic space on v2 than on v1, so 
    - **pass:** F.0 stays cleared for C.1 on v2, and C.1b proceeds;
    - **fail:** C.1b does not run, and the failing truths' diagnosis (stuck, slow, or unreachable) goes to the maintainer.
 
+### Amendment 1 (2026-10-29): the fit ranks on the uncapped distance
+
+The registered pilot stopped the run, with a gain at 300 of 0.511 against 0.75. Two statistics sat at the z cap of 10, so the capped objective was flat over them: roaming speed's median (about 30 scales off on kinematics' tight n = 200 band) and an undefined γ. A fit now ranks on the uncapped distance, while the registered D, the gates and every gain stay capped. A 60-generation probe on discarded seeds reached a gain of 0.935. The pilot is re-run on new seeds (base 220 M, CMA 5429). C.1b fits the same way.
+
 ## Risks / Trade-offs
 
 - **[v2's truths sit further from the bands]** → C.1's model may not get as close to the v2 wild type as to v1's. The truths are the nearest the pool offers, and the gain is relative to each truth's own floor and prior, so distance alone does not fail the gate.

@@ -27,3 +27,12 @@ A recovery fit on v2 SHALL stop on the plateau rule only once its σ is at most 
 
 - **WHEN** the plateau rule holds at a generation where σ exceeds σ₀
 - **THEN** the fit SHALL continue
+
+### Requirement: A fit ranks on the uncapped distance
+
+A recovery fit on v2 SHALL rank its candidates on the v2 distance with each defined statistic's z uncapped (an undefined statistic in one record still counting the cap), so that a statistic far from the truth still orders candidates. Every quantity read against a gate SHALL use the registered, capped distance.
+
+#### Scenario: A statistic beyond the cap still ranks candidates
+
+- **WHEN** two candidates differ only in a statistic 30 and 20 band scales from the truth
+- **THEN** the fit's objective SHALL rank the nearer one first, while the capped D reads them equal

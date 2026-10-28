@@ -45,6 +45,8 @@ SUPPORT = _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "116-cma-
 LAUNCH_PATH = SUPPORT / "launch.md"
 PREFLIGHT_PATH = SUPPORT / "preflight.json"
 PILOT_PATH = SUPPORT / "pilot.json"
+# Amendment 1: the pilot re-run on the uncapped fit objective, on its own seeds and record.
+PILOT_A1_PATH = SUPPORT / "pilot_amendment1.json"
 RECOVERY_PATH = SUPPORT / "recovery.json"
 BUILD = _REPO / "build" / "cma-recovery-v2"
 PROBE_PATH = BUILD / "gate_probe.json"
@@ -56,6 +58,8 @@ PROBE_BASE = 99_400_000
 SMOKE_BASE = 99_300_000
 CMA_SEED = 5420
 PILOT_CMA_SEED = 5428
+PILOT_A1_BASE = 220_000_000
+PILOT_A1_CMA_SEED = 5429
 SMOKE_CMA_SEED = 5993
 
 # The candidate scheme's simulation indices, k, at a candidate base.
@@ -508,7 +512,11 @@ def _resimulate(z: list[float], ks: list[int], seed_base: int, path: Path, worke
 
 
 def _pilot(workers: int) -> int:
-    """Run the pilot fit to 300 generations; set the cap by the guarded rule and project the cost."""
+    """Run the pilot to 300 generations on the uncapped objective; set the cap and project the cost.
+
+    The registered pilot on the capped objective stopped the run (``pilot.json``); amendment 1's
+    pilot runs on its own seeds and writes its own record.
+    """
     preflight = json.loads(PREFLIGHT_PATH.read_text())
     if not preflight.get("passed"):
         print("the preflight did not pass; no pilot runs", file=sys.stderr)
@@ -519,14 +527,14 @@ def _pilot(workers: int) -> int:
         history = cr.run_fit(
             observation,
             fit=0,
-            cma_seed=PILOT_CMA_SEED,
-            seed_base=PILOT_BASE,
+            cma_seed=PILOT_A1_CMA_SEED,
+            seed_base=PILOT_A1_BASE,
             cap=cr.MAX_GENERATIONS,
             use_rule=False,
-            state_dir=BUILD / "pilot",
+            state_dir=BUILD / "pilot_amendment1",
             pool=pool,
             scales={},
-            objective=Objective(observation),
+            objective=Objective(observation, capped=False),
             simulate=simulate_v2,
             stop=guarded_stop,
         )
@@ -535,7 +543,7 @@ def _pilot(workers: int) -> int:
     if plateau is not None:
         at |= {"plateau": plateau, "cap": cr.candidate_cap(plateau)}
     gains: dict[str, float] = {}
-    path = BUILD / "pilot" / "answers.jsonl"
+    path = BUILD / "pilot_amendment1" / "answers.jsonl"
     for (name, generation), offset in zip(
         sorted(at.items(), key=lambda kv: kv[1]),
         cr.PILOT_ANSWER_OFFSETS,
@@ -544,7 +552,7 @@ def _pilot(workers: int) -> int:
         runs = _resimulate(
             history["answers"][generation - 1],
             [offset + q for q in range(cr.RESIMULATIONS)],
-            PILOT_BASE,
+            PILOT_A1_BASE,
             path,
             workers,
         )
@@ -572,7 +580,7 @@ def _pilot(workers: int) -> int:
         "medians": history["medians"],
         "sigmas": history["sigmas"],
     }
-    _write(PILOT_PATH, record)
+    _write(PILOT_A1_PATH, record)
     print(json.dumps({k: v for k, v in record.items() if k not in ("medians", "sigmas")}, indent=2))
     return 1 if record["stops"]["gain_at_300_below_bar"] else 0
 
@@ -580,7 +588,7 @@ def _pilot(workers: int) -> int:
 def _run(workers: int) -> int:
     """Run the registered fits to the registered cap, then re-simulate each answer."""
     preflight = json.loads(PREFLIGHT_PATH.read_text())
-    pilot = json.loads(PILOT_PATH.read_text())
+    pilot = json.loads(PILOT_A1_PATH.read_text())
     if not preflight.get("passed") or pilot["stops"]["gain_at_300_below_bar"]:
         print("the preflight or the pilot stopped the run; no registered fit runs", file=sys.stderr)
         return 1
@@ -599,7 +607,7 @@ def _run(workers: int) -> int:
                 state_dir=BUILD / "fits",
                 pool=pool,
                 scales={},
-                objective=Objective(observation),
+                objective=Objective(observation, capped=False),
                 simulate=simulate_v2,
                 stop=guarded_stop,
             )
@@ -704,7 +712,7 @@ def _smoke(workers: int) -> int:
                 state_dir=state,
                 pool=pool,
                 scales={},
-                objective=Objective(observation),
+                objective=Objective(observation, capped=False),
                 simulate=simulate_v2,
                 stop=guarded_stop,
             )
@@ -732,7 +740,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{LAUNCH_PATH} is not committed and clean; nothing is run.", file=sys.stderr)
         return 1
     if args.stage in ("run", "read") and not cr.launch_committed(
-        bound=(PREFLIGHT_PATH, PILOT_PATH),
+        bound=(PREFLIGHT_PATH, PILOT_PATH, PILOT_A1_PATH),
         launch_path=LAUNCH_PATH,
     ):
         print(
