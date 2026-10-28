@@ -169,4 +169,38 @@ The registered pilot then stopped the run (`pilot.json`): its answer's gain at 3
 
 ## Part B
 
-*Appended after the preflight and the pilot, before the registered fits.*
+**Appended 2026-10-29**, after the preflight and both pilots, and before any registered fit. It changes no gate or threshold. `preflight.json`, `pilot.json` and `pilot_amendment1.json` are bound to this commit.
+
+### The preflight (passed)
+
+21 of the 43 candidates were eligible on their registered v2 observations. Simulation 3525 was skipped because its γ flipped in a repeat.
+
+| Role | Simulation | v2 D | Floor | Prior D | Oracle gain | Box-centre gain |
+|---|---|---|---|---|---|---|
+| pilot truth | 4909 | | 0.53 | 7.37 | | |
+| truth 0 | 1164 | 5.17 | 2.29 | 6.98 | 1.042 | 0.097 |
+| truth 1 | 1354 | 5.35 | 0.89 | 7.04 | 0.996 | 0.039 |
+| truth 2 | 6985 | 5.57 | 2.95 | 7.05 | 1.013 | 0.192 |
+| truth 3 | 9105 | 5.67 | 0.93 | 7.16 | 1.005 | 0.019 |
+
+- **The oracle's median gain** is 1.009, against at least 0.85.
+- **The unfitted start's** is 0.068, against at most 0.25.
+
+### The pilots
+
+- **Part A's pilot** (capped objective) **stopped the run**: gain 0.511 at 300, below the 0.75 stop. Amendment 1 records the diagnosis and the amendment.
+- **Amendment 1's pilot** (uncapped fit objective, base 220 M, CMA 5429):
+
+| Measure | Value |
+|---|---|
+| G_p, the first generation the guarded rule holds | 181 |
+| gain at G_p | 0.982 |
+| gain at ⌈1.5·G_p⌉ = 272 | 0.971 |
+| gain at 300 | 0.980 |
+| sustained seconds per generation | 51.1 |
+
+The gain at 272 is within 0.05 of the gain at 300, so there is no fallback, and the gain at 300 clears the 0.75 stop.
+
+- **The registered cap is 272 generations.**
+- **Projected registered time:** at most **31.0 h**, which is 8 fits × (272 + 1) generations at the sustained rate. That is over the 30 h threshold.
+- **The maintainer's decision** (2026-10-29), as the rule requires: **launch as registered.** Fits that plateau stop sooner; the pilot plateaued at 181.

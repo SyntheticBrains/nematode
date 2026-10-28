@@ -18,7 +18,7 @@
 - [x] 3.1 `supporting/116-cma-recovery-v2/launch.md` Part A; committed.
 - [x] 3.2 The preflight (passes); the pilot (stops the run: gain 0.511 at 300).
 - [x] 3.2a Amendment 1: the fit ranks on the uncapped distance (the cap was flat on roaming speed and an undefined gamma); the objective probe (discarded seeds) reached gain 0.935; the pilot re-run on base 220 M, CMA 5429.
-- [ ] 3.2b The amended pilot; Part B with `preflight.json`, `pilot.json` and `pilot_amendment1.json`; committed.
+- [x] 3.2b The amended pilot (gain 0.980 at 300, cap 272, projection 31.0 h; the maintainer decided to launch as registered); Part B with `preflight.json`, `pilot.json` and `pilot_amendment1.json`; committed.
 - [ ] 3.3 The registered fits; `read`; `recovery.json`.
 
 ## 4. Close-out
