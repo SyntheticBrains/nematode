@@ -292,11 +292,22 @@ def test_an_interrupted_read_is_not_repeated(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A read whose start was marked refuses to run again, though it wrote nothing."""
+    """The read marks its start before any held-out animal; once interrupted, it never reruns."""
     monkeypatch.setattr(v2, "_committed", lambda **_kwargs: True)
     monkeypatch.setattr(v2, "READ_PATH", tmp_path / "read.json")
-    started = tmp_path / "read.started"
-    started.write_text("started\n")
+    started = tmp_path / "build" / "read.started"
     monkeypatch.setattr(v2, "READ_STARTED", started)
+    seen: list[bool] = []
+
+    def interrupted(_bands: object) -> None:
+        seen.append(started.exists())
+        msg = "interrupted during the held-out read"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(v2, "n2_control", interrupted)
+    with pytest.raises(RuntimeError, match="interrupted"):
+        v2.main(["read"])
+    assert seen == [True]
     assert v2.main(["read"]) == 1
+    assert seen == [True]
     assert not (tmp_path / "read.json").exists()
