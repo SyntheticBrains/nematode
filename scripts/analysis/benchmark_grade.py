@@ -296,13 +296,16 @@ CONTROLS_V2_PATH = (
 def v2_is_valid() -> bool:
     """Return whether B v2's controls found VALID the very bands file now vendored.
 
-    The verdict records the SHA-256 of the bands it validated; a bands file that differs from it,
-    or a verdict that records none, does not make v2 the default.
+    The verdict records the SHA-256 of the bands it validated; a bands file that differs from it, a
+    verdict that records none, or one that cannot be read, does not make v2 the default.
     """
     if not (BANDS_V2_PATH.exists() and CONTROLS_V2_PATH.exists()):
         return False
-    controls = json.loads(CONTROLS_V2_PATH.read_text())
-    if controls.get("verdict") != "VALID":
+    try:
+        controls = json.loads(CONTROLS_V2_PATH.read_text())
+    except (OSError, json.JSONDecodeError):
+        return False  # an unreadable verdict leaves the default at v1
+    if not isinstance(controls, dict) or controls.get("verdict") != "VALID":
         return False
     from quantumnematode.benchmark.measurement import file_sha256
 

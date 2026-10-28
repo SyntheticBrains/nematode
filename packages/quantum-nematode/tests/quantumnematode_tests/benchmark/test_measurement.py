@@ -164,3 +164,29 @@ def test_a_changed_library_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
         mm.measure(_steps(10), seed=1, model=model)
     unchecked = mm.TrackerModel(jitter_mm=0.0, noise_library="toy.npz")
     assert len(mm.measure(_steps(10), seed=1, model=unchecked)) == 10
+
+
+def test_a_rewritten_library_is_refused_without_clearing_a_cache(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A library rewritten on disk is seen at once: its digest no longer matches its model's."""
+    monkeypatch.setattr(mm, "BENCHMARK_DATA", tmp_path)
+    path = tmp_path / "lib.npz"
+    mm.save_noise_library(path, np.array([0.001, 0.002, 0.003]), np.zeros(3), np.array([3]))
+    model = mm.TrackerModel(
+        jitter_mm=0.0,
+        noise_library="lib.npz",
+        noise_sha256=mm.file_sha256(path),
+    )
+    assert len(mm.measure(_steps(10), seed=1, model=model)) == 10
+    # Rewritten behind the model's back, not through save_noise_library.
+    np.savez_compressed(
+        path,
+        x_um=np.array([5, 6, 7, 8], dtype=np.int32),
+        y_um=np.zeros(4, dtype=np.int32),
+        lengths=np.array([4], dtype=np.int32),
+    )
+    with pytest.raises(ValueError, match="digest"):
+        mm.measure(_steps(10), seed=1, model=model)
+    assert mm.load_noise_library("lib.npz").lengths.tolist() == [4]

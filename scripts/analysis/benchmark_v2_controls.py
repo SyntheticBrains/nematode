@@ -1273,16 +1273,23 @@ def _read(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    if READ_PATH.exists() or READ_STARTED.exists():
-        print(
-            f"{READ_PATH} or {READ_STARTED} exists: the read is made once, and a started read that "
-            "stopped is not repeated.",
-            file=sys.stderr,
-        )
+    refusal = (
+        f"{READ_PATH} or {READ_STARTED} exists: the read is made once, and a started read that "
+        "stopped is not repeated."
+    )
+    if READ_PATH.exists():
+        print(refusal, file=sys.stderr)
         return 1
     bands = bg.load_bands_v2()
-    # Marked before any held-out animal is read, so an interrupted read cannot silently run again.
-    READ_STARTED.write_text("the held-out read started\n")
+    # Marked, by exclusive creation, before any held-out animal is read: an interrupted read cannot
+    # silently run again, and of two concurrent reads only one proceeds.
+    READ_STARTED.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with READ_STARTED.open("x") as marker:
+            marker.write("the held-out read started\n")
+    except FileExistsError:
+        print(refusal, file=sys.stderr)
+        return 1
     n2 = n2_control(bands)
     record: dict[str, Any] = {
         "description": "B v2's read: fresh N2, the negatives, C.1's answer, W.",
@@ -1521,6 +1528,13 @@ def verdict(
 
 
 def _verdict(_args: argparse.Namespace) -> int:
+    if not _committed(bands=True):
+        print(
+            f"{LAUNCH_PATH} with Part B, and the bands it binds, are not committed and clean; no "
+            "verdict is recorded.",
+            file=sys.stderr,
+        )
+        return 1
     measurement = json.loads(ORACLE_AMENDED2_PATH.read_text())
     reach = json.loads(ORACLE_AMENDED3_PATH.read_text())
     oracle = {"round_trip": measurement["round_trip"], "reachability": reach["reachability"]}

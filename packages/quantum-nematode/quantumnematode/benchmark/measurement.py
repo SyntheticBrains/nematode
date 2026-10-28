@@ -95,24 +95,42 @@ class NoiseLibrary:
 
 
 def save_noise_library(path: Path, x_mm: np.ndarray, y_mm: np.ndarray, lengths: np.ndarray) -> None:
-    """Write a noise library, its offsets in whole micrometres as the Scheer store keeps them."""
+    """Write a noise library, its offsets in whole micrometres as the Scheer store keeps them.
+
+    The read caches are cleared, so a library regenerated in this process is read anew.
+    """
     np.savez_compressed(
         path,
         x_um=np.round(np.asarray(x_mm) * UM_PER_MM).astype(np.int32),
         y_um=np.round(np.asarray(y_mm) * UM_PER_MM).astype(np.int32),
         lengths=np.asarray(lengths, dtype=np.int32),
     )
+    _read_library.cache_clear()
+    _digest.cache_clear()
+
+
+def _stamp(path: Path) -> tuple[str, int, int]:
+    """Return a file's path, size and modification time: a rewritten file has a new stamp."""
+    status = path.stat()
+    return str(path), status.st_size, status.st_mtime_ns
 
 
 @functools.cache
-def load_noise_library(name: str) -> NoiseLibrary:
-    """Return a vendored noise library by its file name under the benchmark data."""
-    with np.load(BENCHMARK_DATA / name) as store:
+def _read_library(stamp: tuple[str, int, int]) -> NoiseLibrary:
+    with np.load(stamp[0]) as store:
         return NoiseLibrary(
             x_mm=store["x_um"].astype(float) / UM_PER_MM,
             y_mm=store["y_um"].astype(float) / UM_PER_MM,
             lengths=store["lengths"].astype(int),
         )
+
+
+def load_noise_library(name: str) -> NoiseLibrary:
+    """Return a vendored noise library by its file name under the benchmark data.
+
+    It is read once per version of the file: rewriting the file is seen within the same process.
+    """
+    return _read_library(_stamp(BENCHMARK_DATA / name))
 
 
 def file_sha256(path: Path) -> str:
@@ -121,8 +139,12 @@ def file_sha256(path: Path) -> str:
 
 
 @functools.cache
+def _digest(stamp: tuple[str, int, int]) -> str:
+    return file_sha256(Path(stamp[0]))
+
+
 def _library_sha256(name: str) -> str:
-    return file_sha256(BENCHMARK_DATA / name)
+    return _digest(_stamp(BENCHMARK_DATA / name))
 
 
 def checked_noise_library(model: TrackerModel) -> NoiseLibrary:
