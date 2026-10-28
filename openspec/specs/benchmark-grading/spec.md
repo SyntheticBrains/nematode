@@ -295,3 +295,96 @@ Presence SHALL not enter the distance.
 
 - **WHEN** the bands are built
 - **THEN** the record SHALL report each band batch's presence bound, and every one SHALL exceed 1
+
+### Requirement: Simulated tracks are measured as the real tracker measures
+
+Before windowing, every simulated track graded against a measured rig SHALL receive that rig's position noise (on Scheer's rig, resampled from the real tracker's readings of a still worm), and SHALL lose seconds at the tracker's measured rates, conditioned on whether the simulated primitive that second is an omega. Both SHALL be measured from band cohorts and recorded with the bands. Real and imported tracks SHALL NOT be altered. Checks SHALL show the model reproduces the tracker without a smoothed truth: real tracks with their gaps filled, passed through the model's losses, SHALL give every kinematics statistic within |z| ≤ 1 of the raw tracks' value; the model's jitter on a still worm SHALL reproduce the real tracker's readings on the authors' paused stretches to within one graded-size band scale of the statistics they bias; and Chen's smoothed fragments with the model's jitter SHALL give every chemotaxis statistic within |z| ≤ 1. Local search, graded against counts from a rig no track measures, SHALL stay exact.
+
+#### Scenario: An omega second can go missing
+
+- **WHEN** a simulated animal is in an omega bout for a second
+- **THEN** that second SHALL be missing with the measured omega-second probability, from the animal's own stream
+
+#### Scenario: Real tracks are untouched
+
+- **WHEN** imported or vendored real tracks are graded
+- **THEN** no noise SHALL be added and no sample SHALL be dropped
+
+### Requirement: The kinematics family
+
+B v2 SHALL grade a kinematics family on the small lawn: the median and 90th-percentile 10-s window speed in dwelling and in roaming windows, and Kaplan–Meier roaming-bout survival at 5 min. Detected reversal onsets per on-lawn minute SHALL be computed and reported beside the grade, not graded, since no open-loop point worm reaches it through the tracker. It SHALL be a family of equal weight in D, and part of D_fit for every controller.
+
+#### Scenario: A worm that roams too fast
+
+- **WHEN** a controller's roaming windows are much faster than the band cohorts'
+- **THEN** its roaming speed statistics SHALL fail, whatever its roaming fraction
+
+### Requirement: Versioned bands and bar
+
+B v1's bands and rule SHALL remain available for every past verdict. B v2's bands SHALL be built from band cohorts only, with the new statistics' generators after v1's, and its bar SHALL be Bonferroni over its 19 wild-type statistics.
+
+#### Scenario: A past verdict is reproduced
+
+- **WHEN** grading is asked for v1
+- **THEN** it SHALL reproduce v1's values exactly
+
+### Requirement: The chemotaxis family
+
+B v2 SHALL grade a chemotaxis family on a linear-gradient assay matched to Chen et al. 2025's naive N2 butanone plates, from positions and the known gradient alone, with bands from its six standard-protocol recordings validated leave-one-recording-out, registered before any statistic is computed. It SHALL be held out of D_fit (a prediction for C.2 and C.3) and fitted by C.1, and simulated tracks on that assay SHALL receive that tracker's measured jitter and fragmentation. The simulated arena SHALL be the full plate, with samples outside the imaged field missing, so no statistic reads a wall. Like local search, chemotaxis SHALL pass only where it is present: up-gradient drift and the log quintile ratio each above zero at the 2.5% quantile of 2,000 resamples of the population's units (animals for a simulated population, fragments for a real recording).
+
+#### Scenario: A worm that ignores the gradient
+
+- **WHEN** a controller's up-gradient drift and turning bias match a random walk's
+- **THEN** its chemotaxis statistics SHALL fail
+- **AND** this SHALL hold even where its values lie inside the bands, through the presence test
+
+### Requirement: The lawn rig's tracker noise is resampled real noise
+
+B v2's lawn measurement model SHALL draw each simulated track's position noise from a library of the real tracker's readings of a still worm: the offsets from their own mean of PD1074's paused stretches on half of its band dates. The draw SHALL splice stretches at the nearest stored offset (the best of 50 drawn stretches), from the animal's own stream, with no other transformation. The model SHALL pass the jitter check on the other half of the band dates, which the library never saw, before any further B v2 reading. The check's gate SHALL be calibrated on the tracker's own date-to-date variation.
+
+#### Scenario: A still simulated worm reads like a still real worm
+
+- **WHEN** a still point is measured through the lawn model and read on the check half's paused-stretch statistics
+- **THEN** each of its onsets per paused minute and its 10-s window speed's median and 90th percentile SHALL differ from the real values by no more than the central 95% of the differences between random halves of the real band dates
+
+#### Scenario: The library never sees the check
+
+- **WHEN** the library is built
+- **THEN** it SHALL hold stretches from the library half's dates only, and the jitter check SHALL read the check half's only
+
+#### Scenario: An animal is measured the same way alone or in a population
+
+- **WHEN** an animal with seed s is measured alone and within a population
+- **THEN** its noise track SHALL be identical, drawn from `default_rng([s, 2033])`
+
+### Requirement: The reachability oracle's worm can reach its bar
+
+The reachability oracle SHALL read an open-loop two-state worm whose per-state speeds, speed spreads (per 10-s window), curvature and hazards are fitted through the measurement model on discarded seeds. Before registration, the fitted worm SHALL reach the five gated statistics at a median RMS z of at most 1 on fresh discarded populations. If it does not, B v2 SHALL stop before registration, with the statistics it misses as the diagnosis.
+
+#### Scenario: The matched worm misses with no noise
+
+- **WHEN** B.4's matched worm reads outside the bands with no measurement noise
+- **THEN** it SHALL NOT be the reachability oracle's worm, and the fitted worm SHALL take its place
+
+#### Scenario: No open-loop worm reaches a statistic
+
+- **WHEN** the fitted worm's median RMS z on fresh populations exceeds 1
+- **THEN** the change SHALL stop before registration, and the statistic it misses SHALL be recorded as unreachable by an open-loop point worm
+
+### Requirement: The on-lawn reversal rate is reported above the tracker's noise, not graded
+
+The kinematics family's on-lawn reversal rate SHALL be read with the off-food detector at a step floor of 0.03 mm: the smallest 0.01-mm floor at which the real tracker's readings of a still worm, on the library half, detect reversals at under 1% of the real on-lawn rate. Because no open-loop point worm reaches it through the tracker, it SHALL be reported beside the grade and not graded, and B v2's bar SHALL be Bonferroni over 19 statistics. Off-food uses of the detector SHALL be unchanged.
+
+#### Scenario: Tracker noise does not read as reversals
+
+- **WHEN** a still worm's real readings are passed to the on-lawn reversal detector
+- **THEN** it SHALL detect reversals at under 1% of the real on-lawn rate
+
+### Requirement: Only Scheer's rig is measured by the lawn model
+
+The lawn measurement model SHALL apply to the families graded against Scheer's rig (the small lawn, the uniform well and kinematics). Simulated local-search tracks SHALL stay exact, since López-Cruz's reorientation counts come from a rig whose tracker no track measures.
+
+#### Scenario: Local search stays exact
+
+- **WHEN** a simulated local-search population is graded on v2
+- **THEN** its tracks SHALL NOT pass through the lawn model

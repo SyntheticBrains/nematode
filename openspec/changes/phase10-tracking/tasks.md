@@ -365,6 +365,30 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **Positioning** against Tierpsy and OWMD is in `data/benchmark/IMPORT.md`. **The B block is
     complete.**
 
+- [x] **B v2 The benchmark revised once** (change `revise-benchmark-v2`, with
+  `benchmark-v2-empirical-noise`), after C.1's v1 pass relied on ungraded routes.
+
+  *(Closed 2026-10-28: [Logbook 115](../../../docs/experiments/logbooks/115-benchmark-v2.md).)*
+  **B v2 is VALID**, and `benchmark_grade.py` defaults to it.
+
+  - **Added:**
+    - **a measurement model** for simulated tracks. On Scheer's rig it resamples real paused-worm
+      noise and draws losses as runs; on Chen's it adds jitter and cuts fragments. Local search
+      stays exact;
+    - **a kinematics family** (window speeds and roaming-bout survival);
+    - **a chemotaxis family** from Chen 2025, with presence required;
+    - **19 statistics,** z\* 3.0078.
+  - **Every registered check holds:** the measurement checks, reachability on the four speeds,
+    fresh N2 (0 of 4), the chemotaxis leave-one-out (0 of 6), B.4's negatives, the blind worm (fails
+    5 of 5) and C.1's v1 answer (fails 5 of 5).
+  - **Four registered stops before Part B** changed the denoiser test, the noise model, the
+    reversal floor and the reachability worm, each in a launch amendment.
+  - **Declared non-goals:**
+    - not graded: the on-lawn reversal rate (reported; no open-loop point worm reaches it), the
+      omega rate, and local search's rise;
+    - not modelled: the tracker's noise while the worm moves, and López-Cruz's tracker.
+  - **Next:** the F.0b-i re-run on v2, then C.1b on v2, each its own change.
+
 ## N — the neuromodulator layer from data (MUST)
 
 - [x] **N.1 Licences confirmed**: Bentley 2016 (CC BY, S1 Dataset) and Ripoll-Sánchez 2023 (unstated on
@@ -440,6 +464,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
       W's minimum of 1.42, so W's arms need several fits each.
     - **For C.1:** keep at least two restarts. The registered plateau rule carries over.
     - **Still open:** F.0b-ii, C.2's encoder and its recovery.
+
+  *(Added 2026-10-28, B v2.)* **F.0b-i is re-run in full on v2**, in its own change. F.0b-i was read
+  on v1. Its recovery has to hold under the benchmark C.1b and C.2 are fitted against: 19 statistics,
+  five families and the measurement model. C.1b follows it.
+
   - **C.1's note:** its real fit must simulate at the observation's size, or add between-date
     noise matched to the bands.
   - **Seeds:**
