@@ -190,3 +190,56 @@ def test_a_rewritten_library_is_refused_without_clearing_a_cache(
     with pytest.raises(ValueError, match="digest"):
         mm.measure(_steps(10), seed=1, model=model)
     assert mm.load_noise_library("lib.npz").lengths.tolist() == [4]
+
+
+def _measure_by_replace(steps: list[BehaviourStep], seed: int, model: mm.TrackerModel) -> list:
+    """Measure as first written, with dataclasses.replace: the parity reference."""
+    import dataclasses
+
+    rng = np.random.default_rng([seed, model.stream_key])
+    n = len(steps)
+    if model.noise_library is not None:
+        noise = mm.checked_noise_library(model).draw(n, rng)
+    else:
+        noise = rng.normal(0.0, model.jitter_mm, size=(n, 2))
+    lost = mm.lost_seconds([s.primitive for s in steps], model, rng)
+    if model.fragment_lengths_s is not None:
+        lost[mm.fragment_cuts(n, model.fragment_lengths_s, rng)] = True
+    return [
+        dataclasses.replace(s, x=math.nan, y=math.nan)
+        if lost[i]
+        else dataclasses.replace(s, x=s.x + noise[i, 0], y=s.y + noise[i, 1])
+        for i, s in enumerate(steps)
+    ]
+
+
+@pytest.mark.parametrize("vendored", [True, False])
+def test_measured_steps_are_unchanged_by_the_faster_construction(vendored: bool) -> None:  # noqa: FBT001
+    """Measured steps are equal field for field to the dataclasses.replace measurement."""
+    import json
+
+    from quantumnematode.benchmark import references as refs
+
+    if vendored:
+        bands = json.loads((refs.BENCHMARK_DATA / "bands_v2.json").read_text())
+        model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+    else:
+        model = mm.TrackerModel(jitter_mm=0.005, p_omega=0.3, runs_omega_s=(2, 5), p_other=0.01)
+    kinds = (["run"] * 40 + ["omega"] * 3) * 20
+    steps = _steps(len(kinds), kinds)
+    for seed in (1, 2, 3):
+        fast = mm.measure(steps, seed, model)
+        slow = _measure_by_replace(steps, seed, model)
+        assert len(fast) == len(slow)
+        for a, b in zip(fast, slow, strict=True):
+            assert type(a) is type(b)
+            for name in ("step", "x", "y", "on_lawn", "primitive", "phase", "heading_rad"):
+                va, vb = getattr(a, name), getattr(b, name)
+                assert va == vb or (isinstance(va, float) and math.isnan(va) and math.isnan(vb))
+
+
+def test_the_library_computes_its_offsets_once() -> None:
+    """A library's stretch offsets are computed once and reused at every splice."""
+    lib = _library()
+    assert lib.starts is lib.starts
+    assert lib.starts.tolist() == [0, 3]

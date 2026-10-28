@@ -1,9 +1,9 @@
 ## 1. The speed-up (behaviour-identical)
 
-- [ ] 1.1 `grade_populations_v2(presence=...)`; the fit's objective without presence.
-- [ ] 1.2 `NoiseLibrary`'s stretch offsets computed once; `measure` without per-step `dataclasses.replace`.
-- [ ] 1.3 Parity tests: measured steps field for field; statistics, D and D_fit with presence on and off; B v2's reachability reading on a discarded population unchanged.
-- [ ] 1.4 Re-time a v2 simulation (discarded seeds), keeping each speed-up only where it is faster and identical.
+- [x] 1.1 `grade_populations_v2(presence=...)`; the fit's objective without presence.
+- [x] 1.2 `NoiseLibrary`'s stretch offsets computed once; `measure` without per-step `dataclasses.replace`.
+- [x] 1.3 Parity tests: measured steps field for field; statistics, D and D_fit with presence on and off; B v2's reachability reading on a discarded population unchanged.
+- [x] 1.4 Re-time a v2 simulation (discarded seeds), keeping each speed-up only where it is faster and identical. (Identical end to end on a discarded population, 99.35 M: D 7.0375 both ways; 35.7 s to 20.2 s, 1.76x.)
 
 ## 2. The re-run's code
 

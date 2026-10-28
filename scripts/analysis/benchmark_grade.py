@@ -446,32 +446,62 @@ def simulate_v2(
     return populations, chemotaxis
 
 
-def grade_populations_v2(
-    populations: dict[str, list[list[BehaviourStep]]],
-    chemotaxis: list[list[BehaviourStep]] | None,
+def _chemotaxis_reading(
+    chemotaxis: list[list[BehaviourStep]],
     bands: dict[str, Any],
-) -> dict[str, Any]:
-    """Grade on B v2: v1's families, kinematics from the small lawn's animals, and chemotaxis.
-
-    Chemotaxis, like local search, passes only where it is present.
-    """
+    bar: float,
+    *,
+    presence: bool,
+) -> tuple[dict[str, g.Reading], dict[str, Any] | None]:
+    """Return the chemotaxis family's readings, and its presence test where asked for."""
     from quantumnematode.benchmark import chemotaxis as ch
     from quantumnematode.benchmark.references import sample_field
     from quantumnematode.evaluation.odour_field import chen_field
 
+    field = chen_field()
+
+    def concentration(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return sample_field(field.field, field.cell_mm, x, y)
+
+    # One group per animal: presence resamples animals, as local search's does.
+    groups = [
+        ch.fragment_samples(chemotaxis_fragments([animal], field), concentration)
+        for animal in chemotaxis
+    ]
+    readings = g.grade(
+        ch.pooled_statistics([sample for group in groups for sample in group]),
+        family_bands_v2(bands, "chemotaxis", len(chemotaxis)),
+        bar,
+    )
+    return readings, (ch.chemotaxis_presence(groups) if presence else None)
+
+
+def grade_populations_v2(
+    populations: dict[str, list[list[BehaviourStep]]],
+    chemotaxis: list[list[BehaviourStep]] | None,
+    bands: dict[str, Any],
+    *,
+    presence: bool = True,
+) -> dict[str, Any]:
+    """Grade on B v2: v1's families, kinematics from the small lawn's animals, and chemotaxis.
+
+    Chemotaxis, like local search, passes only where it is present. With ``presence=False``, as a
+    fit's objective reads only statistics and distances, the presence tests are skipped: every
+    statistic, D and D_fit are unchanged, and the passes, which need presence, are not given.
+    """
     clf = classifier(bands)
     bar = float(bands["bars"]["wild_type"])
     family_map = _v2_family_map(bands)
     readings: dict[str, dict[str, g.Reading]] = {}
     sizes: dict[str, int] = {}
-    presence: dict[str, Any] | None = None
+    search_presence: dict[str, Any] | None = None
     reported: dict[str, float] | None = None
     for family, animals in populations.items():
         sizes[family] = len(animals)
         values = family_values(family, animals, clf)
         readings[family] = g.grade(values, family_bands_v2(bands, family, len(animals)), bar)
-        if family == "local_search":
-            presence = g.simulated_search_presence(animals)
+        if family == "local_search" and presence:
+            search_presence = g.simulated_search_presence(animals)
         if family == "small_lawn":
             sizes["kinematics"] = len(animals)
             kinematics = kinematic_values(animals, clf)
@@ -484,23 +514,13 @@ def grade_populations_v2(
             reported = {name: kinematics[name] for name in g.KINEMATIC_REPORTED}
     chemotaxis_presence: dict[str, Any] | None = None
     if chemotaxis is not None:
-        field = chen_field()
-
-        def concentration(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-            return sample_field(field.field, field.cell_mm, x, y)
-
-        # One group per animal: presence resamples animals, as local search's does.
-        groups = [
-            ch.fragment_samples(chemotaxis_fragments([animal], field), concentration)
-            for animal in chemotaxis
-        ]
         sizes["chemotaxis"] = len(chemotaxis)
-        readings["chemotaxis"] = g.grade(
-            ch.pooled_statistics([sample for group in groups for sample in group]),
-            family_bands_v2(bands, "chemotaxis", len(chemotaxis)),
+        readings["chemotaxis"], chemotaxis_presence = _chemotaxis_reading(
+            chemotaxis,
+            bands,
             bar,
+            presence=presence,
         )
-        chemotaxis_presence = ch.chemotaxis_presence(groups)
     out: dict[str, Any] = {
         "version": 2,
         "n": sizes,
@@ -522,10 +542,10 @@ def grade_populations_v2(
     }
     if reported is not None:
         out["kinematics_reported"] = reported
-    if presence is not None:
-        out["local_search_presence"] = presence
+    if search_presence is not None:
+        out["local_search_presence"] = search_presence
         out["family_passes"]["local_search"] = bool(
-            out["family_passes"]["local_search"] and presence["present"],
+            out["family_passes"]["local_search"] and search_presence["present"],
         )
     if chemotaxis_presence is not None:
         # Chemotaxis passes only where it is present: drift and the log ratio above 0.
@@ -538,6 +558,11 @@ def grade_populations_v2(
     out["D"] = g.distance(readings, list(family_map), family_map) if complete else None
     fit = list(bands["fit_families"])
     out["D_fit"] = g.distance(readings, fit, family_map) if set(fit) <= set(readings) else None
+    if not presence:
+        # Passes need presence; a grading without it gives statistics and distances only.
+        out["family_passes"] = None
+        out["wild_type_passes"] = None
+        out["presence"] = None
     return out
 
 
