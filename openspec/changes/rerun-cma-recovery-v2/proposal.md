@@ -28,7 +28,7 @@ The maintainer's decisions of 2026-10-28:
 - **`cma_recovery_v2.py`** re-runs F.0b-i on v2, on F.0b-i's rules except where v2 requires otherwise:
 
   - the v2 simulator and its objective, the distance over v2's 19 statistics on its n = 200 band scales and five-family weights;
-  - truths re-selected on v2 from F.0a's prior simulations;
+  - truths re-selected on v2 from the 43 F.0a prior simulations F.0b-i's rule admits, with the gates' oracle read on discarded seeds before registration;
   - the pilot, the cap rule, the gates and the read, with new seeds;
   - the plateau stop as C.1b will use it, with the σ ≤ σ₀ guard B v2 adopted.
 

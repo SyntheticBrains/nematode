@@ -56,7 +56,7 @@ A v2 simulation of C.1's model, 200 animals on four assays, takes 36 s on one co
 
 3. **The truths, re-selected on v2** by F.0b-i's rule, with v2's statistics:
 
-   - **The pool:** F.0a's prior simulations 0–9,999 that F.0b-i's rule admits (every v1 statistic defined, local-search presence bound above 1.5, v1 D ≤ 5), in ascending v1 D, simulation 8,207 excluded. The **first 64** are simulated once on v2; that simulation is each candidate's v2 observation.
+   - **The pool:** F.0a's prior simulations 0–9,999 that F.0b-i's rule admits (every v1 statistic defined, local-search presence bound above 1.5, v1 D ≤ 5), in ascending v1 D, simulation 8,207 excluded. The rule admits **43**, and **all 43** are simulated once on v2; that simulation is each candidate's v2 observation, and eligibility is read on it alone.
    - **Eligible on v2:** every v2 statistic defined, local-search presence above 1.5 and chemotaxis present. The eligible candidates are ordered by ascending v2 D to the bands. There is no v2 D threshold, since the order already takes the nearest.
    - **The preflight:** in that order and in batches of 8, each candidate is re-simulated 20 times on v2:
      - floor = the median distance from its v2 observation to repeats 1–10;
@@ -64,7 +64,8 @@ A v2 simulation of C.1's model, 200 animals on four assays, takes 36 s on one co
      - prior = the median distance to F.0a's first 200 training simulations, each simulated once on v2 (others than itself).
    - **Kept** on F.0b-i's rules: no repeat 1–10 changes any statistic's definedness, and prior − floor ≥ 1.0.
    - **Order:** the first kept candidate is the pilot truth, and the next four are truths 0–3.
-   - **Stop:** if the 64 run out, the run returns to the maintainer.
+   - **Stop:** if the 43 run out, the run returns to the maintainer.
+   - **A planning probe** (description; discarded seeds 99,400,000): of the 43, simulated once on v2, **22 were eligible**. Seventeen lacked chemotaxis presence, four of them also local-search presence, and three had an undefined statistic. The eligible candidates' v2 D ran 4.66–6.84. Each candidate's registered observation is a fresh simulation, so its eligibility can differ from the probe's.
 
 4. **The gates and the pilot**, F.0b-i's:
 
@@ -79,7 +80,7 @@ A v2 simulation of C.1's model, 200 animals on four assays, takes 36 s on one co
 
 5. **The plateau stop gains B v2's σ guard.** A fit stops on the plateau rule only once σ ≤ σ₀ (0.2), and otherwise at the cap. C.1's v1 fit had two restarts stop at generations 40 and 43 on a false plateau (σ 0.27–0.36), and the tracker requires C.2's registration to guard against it. C.1b will use the guarded rule, so the method validated here is the method C.1b fits with. **The pilot's G_p is read with the guard**: the first generation at which the rule holds with σ ≤ σ₀.
 
-6. **sep-CMA's settings** are F.0b-i's: start at the box centre, σ₀ 0.2, population 16, bounds [0, 1], the answer `xfavorite`, and `es.stop()` never consulted. There are 4 truths × 2 restarts, with fit f = 2j + r on CMA seed **6410 + f**, and the pilot on **6418**.
+6. **sep-CMA's settings** are F.0b-i's: start at the box centre, σ₀ 0.2, population 16, bounds [0, 1], the answer `xfavorite`, and `es.stop()` never consulted. There are 4 truths × 2 restarts, with fit f = 2j + r on CMA seed **5420 + f**, and the pilot on **5428**, inside F.0's band (5401–5464), where F.0b-i used 5410–5418.
 
 7. **Seeds** (animals at `base + 200·k + i`, i < 200):
 
@@ -87,14 +88,22 @@ A v2 simulation of C.1's model, 200 animals on four assays, takes 36 s on one co
      - k = 10,000·f + 16·(n − 1) + p for fit f's generation n, member p;
      - 10,000·f + 5,000 to 5,009 for its answer, re-simulated;
    - **candidates and references, base 172,000,000:**
-     - k = c for candidate c's v2 observation (c < 64);
+     - k = c for candidate c's v2 observation (c < 43);
      - 1,000 + 20·c + q for its repeat q + 1;
      - 3,000 + i for the i-th prior reference (i < 201);
      - 4,000 to 4,009 for the box centre;
    - **the pilot,** base 171,000,000: evaluations at 16·(n − 1) + p, and its answers at 5,000, 5,100 and 5,200 (+ 0–9);
    - **the smoke:** CMA seed 5993, base 99,300,000, discarded.
 
-   All are disjoint from every band and earlier scheme. B v2 used 140–160.9 M and 199 M.
+   All are disjoint from every band and earlier scheme. B v2 used 140–160.9 M and 199 M, and the review's probe 99.4 M.
+
+7b. **The gates' oracle before registration** (description; discarded seeds 99,400,000 to 99,600,000). The oracle and the unfitted start are read on discarded seeds before Part A is committed:
+
+- the probe's eligible candidates, each re-simulated 20 times;
+- the box centre, simulated 10 times;
+- a reference prior of 200 F.0a simulations, each simulated once.
+
+The truths sit closer to the box centre in statistic space on v2 than on v1, so the unfitted start's gain may approach its 0.25 bar. **If any probe gain lies within 0.05 of its bar, or on its wrong side, the change returns to the maintainer before registering.** The probe's readings go into Part A's disclosures.
 
 8. **The registration**, as F.0b-i's:
 
@@ -113,3 +122,5 @@ A v2 simulation of C.1's model, 200 animals on four assays, takes 36 s on one co
 - **[The guard lengthens fits]** → restarts that would have stopped on a false plateau run to the cap. The pilot's projection shows the cost, and the 30 h threshold bounds it.
 - **[Chemotaxis noise]** → the chemotaxis statistics on 200 animals are noisy (drift's floor is part of each truth's floor). The floor and the oracle absorb it, as they did v1's local search.
 - **[The speed-up hides a change]** → only behaviour-identical changes are allowed, each pinned by a parity test before any registered simulation.
+- **[The unfitted start is close to the truths]** → v2 compresses the distances between C.1-model worms, so the start gate's margin is smaller than v1's (0.03 against 0.25). Decision 7b reads it on discarded seeds first.
+- **[Cost]** → v1's 11-s simulation ran at about 30 s per generation on 16 workers. At about 20 s optimised, v2 gives about 55 s per generation: about 4.6 h for the pilot, and up to about 26 h for the registered fits at a 210 cap.

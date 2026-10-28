@@ -9,6 +9,11 @@ Before C.1 is refitted on B v2, sep-CMA's recovery of C.1's model SHALL be re-ru
 - **WHEN** a fit's candidate is scored
 - **THEN** the score SHALL be the v2 distance over 19 statistics, and the on-lawn reversal rate, which v2 reports and does not grade, SHALL take no part
 
+#### Scenario: The gates are read before they are registered
+
+- **WHEN** the oracle's or the unfitted start's gain, read on discarded seeds before registration, lies within 0.05 of its bar or on its wrong side
+- **THEN** the change SHALL return to the maintainer before Part A is committed
+
 #### Scenario: A truth on v2 is stable and near the wild type
 
 - **WHEN** a candidate's v2 repeats change any statistic's definedness, or its prior distance exceeds its floor by less than 1.0
