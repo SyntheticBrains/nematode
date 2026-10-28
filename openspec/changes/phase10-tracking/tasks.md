@@ -27,7 +27,7 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 
 ## H — housekeeping (MUST, first)
 
-- [ ] **H.1 The literature watch re-aimed** at Phase 10's questions (`context.md`, `seeds.toml`; lands with
+- [x] **H.1 The literature watch re-aimed** at Phase 10's questions (`context.md`, `seeds.toml`; lands with
   this tracker's PR). The item closes when the first digest has run against the new brief.
 
   *(2026-10-24: the brief and seeds were re-aimed in PR #470. The last digest, on 2026-10-19, ran
@@ -35,6 +35,10 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   brief with H.3 and H.4: locomotor kinematics on food against off food, raised by B.1's kinematics
   check, and differences between the N2 and PD1074 wild-type strains, since tph-1's batch-matched
   control is N2.)*
+
+  *(Closed 2026-10-28: digest #498, the first run against the new brief, ran 2026-10-26. It raised Yad &
+  Nabila 2026's reconstruction-sensitivity result, acted on in W.1 and W.2 below. B v2 adds one topic:
+  public chemotaxis track datasets.)*
 
 - [x] **H.2 The research question re-framed** (D33) in AGENTS.md, the README and the roadmap (lands with
   this tracker's PR; closes on merge). *(Closed 2026-10-23: PR #470 merged.)*
@@ -361,6 +365,30 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **Positioning** against Tierpsy and OWMD is in `data/benchmark/IMPORT.md`. **The B block is
     complete.**
 
+- [x] **B v2 The benchmark revised once** (change `revise-benchmark-v2`, with
+  `benchmark-v2-empirical-noise`), after C.1's v1 pass relied on ungraded routes.
+
+  *(Closed 2026-10-28: [Logbook 115](../../../docs/experiments/logbooks/115-benchmark-v2.md).)*
+  **B v2 is VALID**, and `benchmark_grade.py` defaults to it.
+
+  - **Added:**
+    - **a measurement model** for simulated tracks. On Scheer's rig it resamples real paused-worm
+      noise and draws losses as runs; on Chen's it adds jitter and cuts fragments. Local search
+      stays exact;
+    - **a kinematics family** (window speeds and roaming-bout survival);
+    - **a chemotaxis family** from Chen 2025, with presence required;
+    - **19 statistics,** z\* 3.0078.
+  - **Every registered check holds:** the measurement checks, reachability on the four speeds,
+    fresh N2 (0 of 4), the chemotaxis leave-one-out (0 of 6), B.4's negatives, the blind worm (fails
+    5 of 5) and C.1's v1 answer (fails 5 of 5).
+  - **Four registered stops before Part B** changed the denoiser test, the noise model, the
+    reversal floor and the reachability worm, each in a launch amendment.
+  - **Declared non-goals:**
+    - not graded: the on-lawn reversal rate (reported; no open-loop point worm reaches it), the
+      omega rate, and local search's rise;
+    - not modelled: the tracker's noise while the worm moves, and López-Cruz's tracker.
+  - **Next:** the F.0b-i re-run on v2, then C.1b on v2, each its own change.
+
 ## N — the neuromodulator layer from data (MUST)
 
 - [x] **N.1 Licences confirmed**: Bentley 2016 (CC BY, S1 Dataset) and Ripoll-Sánchez 2023 (unstated on
@@ -436,6 +464,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
       W's minimum of 1.42, so W's arms need several fits each.
     - **For C.1:** keep at least two restarts. The registered plateau rule carries over.
     - **Still open:** F.0b-ii, C.2's encoder and its recovery.
+
+  *(Added 2026-10-28, B v2.)* **F.0b-i is re-run in full on v2**, in its own change. F.0b-i was read
+  on v1. Its recovery has to hold under the benchmark C.1b and C.2 are fitted against: 19 statistics,
+  five families and the measurement model. C.1b follows it.
+
   - **C.1's note:** its real fit must simulate at the observation's size, or add between-date
     noise matched to the bands.
   - **Seeds:**
@@ -463,6 +496,10 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - Weathervane steering is strong and toward food (κ_w −47.3 °/s), and the search time is 8.0 min.
   - **The observation-size note is resolved:** the bands' n = 200 scales already carry the
     between-date spread.
+
+  *(Added 2026-10-28, B v2.)* **C.1's v1 answer fails B v2** on all five populations (D 6.1–6.2),
+  failing the small lawn, the uniform well, kinematics and chemotaxis. Its v1 pass relied on
+  routes that v2 grades, so C.1 is refitted on v2 as C.1b, after the F.0b-i re-run on v2.
 
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
@@ -504,6 +541,12 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   class-preserving left–right-symmetric; and N.3's receptor-placement nulls. Each has a fresh rewiring
   draw per fit, with parameters counted per arm.
 
+  *(Added 2026-10-28, B v2, from digest #498: Yad & Nabila 2026.)* **Two robustness checks.**
+
+  - **The reconstruction:** the wild type is also fitted on Witvliet 2021's adult dataset 8 beside
+    Cook 2019, since connectome conclusions can depend on the reconstruction.
+  - **The weights:** the fitted C.2 is re-graded under 1% weight noise.
+
 - [ ] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
   both directions. Draws per arm are sized from F.0 and the cost pilot. Every outcome is named,
   including "the nulls pass too" and "a null beats the wild type".
@@ -512,6 +555,14 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   converged restarts) and 1.12 on F.0b-i's synthetic truths, against W's minimum of 1.42. A single fit
   per arm would read fitting noise of about the minimum, so W's arms need several fits each, sized
   from C.2's own spread.
+
+  *(Added 2026-10-28, B v2.)* **W's minimum is recorded on both family sets.**
+
+  - **The fitted families** (small lawn and kinematics): 2.97, between halves of N2's unread dates.
+  - **The held-out families** (local search and chemotaxis): 2.02.
+
+  W's registration reads its arms on the same family set as the minimum it cites, and carries the
+  reconstruction and weight-noise checks above.
 
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 

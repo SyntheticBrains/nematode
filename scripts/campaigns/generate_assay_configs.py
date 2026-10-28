@@ -100,6 +100,18 @@ PROTOCOLS: dict[str, dict[str, Any]] = {
         ],
         "analysis_from_s": 120.0,
     },
+    "chemotaxis_chen": {
+        "reference": "Chen et al. 2025, PLoS Biology 10.1371/journal.pbio.3003005 (naive N2, butanone)",
+        "world_size_mm": 100.0,
+        "arena_shape": "square",
+        "lawn_radius_mm": 25.0,
+        "start_clearance_mm": 2.0,
+        "phases": [
+            {"name": "fed", "duration_s": 2700.0, "food": "lawns", "place": "lawn_centre"},
+            {"name": "assay", "duration_s": 1800.0, "food": "none", "place": "arena_centre"},
+        ],
+        "analysis_from_s": 0.0,
+    },
     "uniform_lawn_flavell": {
         "reference": "Flavell et al. 2013, Cell 10.1016/j.cell.2013.08.001",
         "world_size_mm": 35.0,
@@ -171,6 +183,13 @@ def derive(arm: str, protocol: str) -> tuple[Path, str]:
         + (
             "# Calhoun's worms fed overnight; the 45-min fed phase approximates that.\n"
             if protocol == "food_removal_calhoun"
+            else ""
+        )
+        + (
+            "# The odour is Chen's measured butanone field, which the batched evaluator reads\n"
+            "# off food (quantumnematode.evaluation.odour_field); the assay phase starts each\n"
+            "# worm at a real worm's start. The fed phase approximates the naive worms' feeding.\n"
+            if protocol == "chemotaxis_chen"
             else ""
         )
         + (

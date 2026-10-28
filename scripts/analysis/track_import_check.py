@@ -5,7 +5,8 @@
   uniform-well arm (split side ``bands`` only), each written as a CSV with its sidecar and as WCON,
   with its own lawn boundary, re-imported and cut by ``track_import.import_population``. Every
   animal's tally, and the population's statistics, must equal the native path's
-  (``real_on_lawn`` and ``animal_windows`` on the same positions).
+  (``real_on_lawn`` and ``animal_windows`` on the same positions). Each animal's kinematic tally,
+  the input of B v2's kinematics family, must equal the native path's too.
 - **Local search:** Roberts 2016's off-food tracks from the detector's calibration cohorts, written
   and re-imported the same way. Each worm's detector onsets and valid seconds must equal the native
   path's. Roberts' tracks are 10 min, shorter than the local-search window, so the comparison is at
@@ -125,11 +126,15 @@ def lawn_round_trip(
     refuse_held_out(tracks, rows)
     uniform = family == "uniform_lawn"
     native = []
+    native_kin = []
     imported: dict[str, list[np.ndarray]] = {fmt: [] for fmt in FORMATS}
+    imported_kin: dict[str, list[np.ndarray]] = {fmt: [] for fmt in FORMATS}
     t = np.arange(tracks.x.shape[1], dtype=float)
     for i in rows:
         lawn = g.real_on_lawn(tracks.x[i], tracks.y[i], tracks.boundary_radius[i], uniform=uniform)
-        native.append(g.tally(g.animal_windows(tracks.x[i], tracks.y[i], lawn, clf)))
+        windows = g.animal_windows(tracks.x[i], tracks.y[i], lawn, clf)
+        native.append(g.tally(windows))
+        native_kin.append(g.kinematic_tally(windows, tracks.x[i], tracks.y[i], lawn))
         metadata = _lawn_metadata(family, tracks.boundary_radius[i])
         for fmt in FORMATS:
             path = write_track(
@@ -144,7 +149,16 @@ def lawn_round_trip(
             found, animals = ti.import_population(path)
             assert found == family  # noqa: S101 - the file was written with this family
             steps = animals[0]
-            imported[fmt].append(g.tally(g.simulated_windows(steps, clf, uniform=uniform)))
+            imported_windows = g.simulated_windows(steps, clf, uniform=uniform)
+            imported[fmt].append(g.tally(imported_windows))
+            x = np.array([s.x for s in steps], dtype=float)
+            y = np.array([s.y for s in steps], dtype=float)
+            on = (
+                np.ones(len(steps), dtype=bool)
+                if uniform
+                else np.array([bool(s.on_lawn) for s in steps])
+            )
+            imported_kin[fmt].append(g.kinematic_tally(imported_windows, x, y, on))
     native_total = np.sum(native, axis=0)
     result: dict[str, Any] = {
         "arm": arm,
@@ -165,6 +179,13 @@ def lawn_round_trip(
             "statistics": statistics,
             "tallies_equal": same_tallies,
             "statistics_equal": same_statistics,
+            # B v2's kinematics: every animal's kinematic tally, through the importer, as native.
+            "kinematic_tallies_equal": bool(
+                np.array_equal(np.vstack(imported_kin[fmt]), np.vstack(native_kin)),
+            ),
+            "kinematic_statistics": g.kinematic_statistics(
+                np.vstack(imported_kin[fmt]).sum(axis=0),
+            ),
         }
     return result
 
@@ -240,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
             "local_search": search_round_trip(directory),
         }
     passed = all(
-        r[fmt]["tallies_equal"] and r[fmt]["statistics_equal"]
+        r[fmt]["tallies_equal"] and r[fmt]["statistics_equal"] and r[fmt]["kinematic_tallies_equal"]
         for r in record["lawn"].values()
         for fmt in FORMATS
     ) and all(record["local_search"][fmt]["equal"] for fmt in FORMATS)

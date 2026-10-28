@@ -133,6 +133,7 @@ class AnimalWindows:
     on: np.ndarray
     off: np.ndarray
     valid: np.ndarray
+    speed: np.ndarray | None = None
 
 
 @dataclass(frozen=True)
@@ -181,7 +182,7 @@ def animal_windows(
     """Cut positions sampled each second into classified 10-s windows, as :func:`window_inputs`."""
     w = window_inputs(x, y, on_lawn)
     states = classifier.states(w.speed, w.angular, w.on)
-    return AnimalWindows(states=states, on=w.on, off=w.off, valid=w.valid)
+    return AnimalWindows(states=states, on=w.on, off=w.off, valid=w.valid, speed=w.speed)
 
 
 def _bouts(states: np.ndarray, state: int) -> tuple[float, int]:
@@ -243,6 +244,148 @@ def lawn_statistics(total: np.ndarray) -> dict[str, float]:
         "exits_per_on_lawn_hour": _ratio(t["exits"], t["on_windows"] * WINDOW_S / 3600.0),
         "pre_exit_enrichment": band - roaming,
         "time_on_lawn": _ratio(t["on_windows"], t["windows"]),
+    }
+
+
+# ---------------------------------------------------------------------------------------------
+# The kinematics family
+# ---------------------------------------------------------------------------------------------
+
+# Log-spaced 10-s window speed bins (mm/s); slower or faster windows fall in the end bins.
+SPEED_BINS_MM_S = np.logspace(-4.0, 0.0, 81)
+# Roaming-bout survival is read at 5 min, 30 windows.
+SURVIVAL_WINDOWS = 30
+# The on-lawn reversal detector's step floor: the smallest 0.01-mm floor at which the real
+# tracker's readings of a still worm detect reversals at under 1% of the real on-lawn rate.
+ON_LAWN_REVERSAL_FLOOR_MM = 0.03
+# The graded kinematics. The on-lawn reversal rate is computed and reported beside them, not
+# graded: no open-loop point worm reaches it through the tracker, since the detector sees a
+# reversal only after forward motion above its step floor.
+KINEMATIC_STATISTICS = (
+    "dwelling_speed_median",
+    "dwelling_speed_p90",
+    "roaming_speed_median",
+    "roaming_speed_p90",
+    "roaming_survival_5min",
+)
+KINEMATIC_REPORTED = ("reversals_per_on_lawn_min",)
+_SPEED_BINS = len(SPEED_BINS_MM_S) - 1
+_K_DWELL = slice(0, _SPEED_BINS)
+_K_ROAM = slice(_SPEED_BINS, 2 * _SPEED_BINS)
+_K_ONSETS = 2 * _SPEED_BINS
+_K_SECONDS = _K_ONSETS + 1
+_K_COMPLETED = slice(_K_SECONDS + 1, _K_SECONDS + 1 + SURVIVAL_WINDOWS)
+_K_CENSORED = slice(_K_COMPLETED.stop, _K_COMPLETED.stop + SURVIVAL_WINDOWS)
+_K_LONGER = _K_CENSORED.stop
+KINEMATIC_FIELDS = _K_LONGER + 1
+
+
+def _speed_histogram(speed: np.ndarray) -> np.ndarray:
+    idx = np.clip(np.searchsorted(SPEED_BINS_MM_S, speed, side="right") - 1, 0, _SPEED_BINS - 1)
+    return np.bincount(idx, minlength=_SPEED_BINS).astype(float)
+
+
+def _roaming_bouts(states: np.ndarray) -> list[tuple[int, bool]]:
+    """Return each roaming bout's length in windows and whether it completed, as :func:`_bouts`."""
+    out = []
+    for start, stop in rd.on_food_runs(states != rd.OFF_FOOD):
+        run = states[start:stop]
+        edges = np.flatnonzero(np.diff(run)) + 1
+        bounds = np.concatenate(([0], edges, [len(run)]))
+        for a, b in itertools.pairwise(bounds):
+            if run[a] == rd.ROAMING:
+                out.append((int(b - a), bool(b < len(run))))
+    return out
+
+
+def on_lawn_reversals(x: np.ndarray, y: np.ndarray, on_lawn: np.ndarray) -> tuple[int, int]:
+    """Return reversal onsets detected on the lawn and the valid on-lawn seconds, from positions.
+
+    The off-food detector is applied to the whole track with its step floor raised to
+    :data:`ON_LAWN_REVERSAL_FLOOR_MM`, so the tracker's noise on a slow worm cannot read as
+    reversals; an onset counts when its sample is on the lawn, and a second is valid when both its
+    samples are present and on the lawn.
+    """
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    on = np.asarray(on_lawn, dtype=bool)
+    onsets = reversal_onsets(x, y, OFF_FOOD_DETECTOR, floor=ON_LAWN_REVERSAL_FLOOR_MM)
+    valid = np.isfinite(np.diff(x)) & np.isfinite(np.diff(y)) & on[1:] & on[:-1]
+    kept = sum(1 for o in onsets if int(o) < len(on) and on[int(o)])
+    return kept, int(valid.sum())
+
+
+def kinematic_tally(
+    windows: AnimalWindows,
+    x: np.ndarray,
+    y: np.ndarray,
+    on_lawn: np.ndarray,
+) -> np.ndarray:
+    """Return one animal's kinematic tally: per-state speed histograms, reversals and bouts.
+
+    The speed histograms count on-lawn classified windows by their 10-s speed; the reversal fields
+    are :func:`on_lawn_reversals`'; the bout fields count roaming bouts completed and censored at
+    each length up to :data:`SURVIVAL_WINDOWS`, and those lasting longer.
+    """
+    if windows.speed is None:
+        msg = "kinematic tallies need the windows' speeds"
+        raise ValueError(msg)
+    out = np.zeros(KINEMATIC_FIELDS)
+    states, speed = windows.states, windows.speed
+    for state, part in ((rd.DWELLING, _K_DWELL), (rd.ROAMING, _K_ROAM)):
+        keep = (states == state) & windows.on & np.isfinite(speed)
+        out[part] = _speed_histogram(speed[keep])
+    out[_K_ONSETS], out[_K_SECONDS] = on_lawn_reversals(x, y, on_lawn)
+    for length, completed in _roaming_bouts(states):
+        if length > SURVIVAL_WINDOWS:
+            out[_K_LONGER] += 1
+        elif completed:
+            out[_K_COMPLETED.start + length - 1] += 1
+        else:
+            out[_K_CENSORED.start + length - 1] += 1
+    return out
+
+
+def _histogram_quantile(counts: np.ndarray, q: float) -> float:
+    """Return a quantile of a binned speed, interpolated log-linearly within its bin."""
+    total = counts.sum()
+    if total <= 0:
+        return math.nan
+    cumulative = np.cumsum(counts) / total
+    k = int(np.searchsorted(cumulative, q, side="left"))
+    below = cumulative[k - 1] if k > 0 else 0.0
+    fraction = (q - below) / counts[k] * total if counts[k] > 0 else 0.0
+    lo, hi = np.log(SPEED_BINS_MM_S[k]), np.log(SPEED_BINS_MM_S[k + 1])
+    return float(np.exp(lo + fraction * (hi - lo)))
+
+
+def roaming_survival(completed: np.ndarray, censored: np.ndarray, longer: float) -> float:
+    """Return the Kaplan-Meier probability that a roaming bout outlasts :data:`SURVIVAL_WINDOWS`.
+
+    ``completed[k]`` and ``censored[k]`` count bouts ending, observed or censored, at ``k + 1``
+    windows, and ``longer`` those outlasting the horizon; at length ``k + 1`` every bout of that
+    length or more is at risk.
+    """
+    at_risk = np.cumsum((completed + censored)[::-1])[::-1] + longer
+    if at_risk[0] <= 0:
+        return math.nan
+    with np.errstate(invalid="ignore", divide="ignore"):
+        hazard = np.where(at_risk > 0, completed / at_risk, 0.0)
+    return float(np.prod(1.0 - hazard))
+
+
+def kinematic_statistics(total: np.ndarray) -> dict[str, float]:
+    """Return the kinematics family's statistics from a population's summed kinematic tally."""
+    return {
+        "dwelling_speed_median": _histogram_quantile(total[_K_DWELL], 0.5),
+        "dwelling_speed_p90": _histogram_quantile(total[_K_DWELL], 0.9),
+        "roaming_speed_median": _histogram_quantile(total[_K_ROAM], 0.5),
+        "roaming_speed_p90": _histogram_quantile(total[_K_ROAM], 0.9),
+        "reversals_per_on_lawn_min": _ratio(60.0 * total[_K_ONSETS], total[_K_SECONDS]),
+        "roaming_survival_5min": roaming_survival(
+            total[_K_COMPLETED],
+            total[_K_CENSORED],
+            float(total[_K_LONGER]),
+        ),
     }
 
 
@@ -496,7 +639,7 @@ def cluster_bootstrap(
     for _ in range(resamples):
         total = sum(
             (_subset(per_date[d], take, rng) for d, take in _draw(sizes, n, rng)),
-            start=np.zeros(len(TALLY_FIELDS)),
+            start=np.zeros(per_date[0].shape[1]),
         )
         for name, value in statistic(total).items():
             out.setdefault(name, []).append(value)
@@ -519,8 +662,8 @@ def paired_bootstrap(
     sizes = np.array([len(m) for m, _ in pairs])
     out: dict[str, list[float]] = {}
     for _ in range(resamples):
-        mutant = np.zeros(len(TALLY_FIELDS))
-        wild = np.zeros(len(TALLY_FIELDS))
+        mutant = np.zeros(pairs[0][0].shape[1])
+        wild = np.zeros(pairs[0][1].shape[1])
         for d, take in _draw(sizes, n, rng):
             mutant += _subset(pairs[d][0], take, rng)
             wild += pairs[d][1].sum(axis=0)
@@ -583,17 +726,28 @@ def grade(
     return out
 
 
-def weights(families: Sequence[str]) -> dict[tuple[str, str], float]:
-    """Return each (family, statistic)'s weight: families equal, split equally within each."""
+def weights(
+    families: Sequence[str],
+    family_map: Mapping[str, tuple[str, ...]] | None = None,
+) -> dict[tuple[str, str], float]:
+    """Return each (family, statistic)'s weight: families equal, split equally within each.
+
+    ``family_map`` names each family's statistics; v1's :data:`FAMILIES` by default.
+    """
+    stats = FAMILIES if family_map is None else family_map
     return {
-        (family, statistic): 1.0 / (len(families) * len(FAMILIES[family]))
+        (family, statistic): 1.0 / (len(families) * len(stats[family]))
         for family in families
-        for statistic in FAMILIES[family]
+        for statistic in stats[family]
     }
 
 
-def distance(readings: Mapping[str, Mapping[str, Reading]], families: Sequence[str]) -> float:
+def distance(
+    readings: Mapping[str, Mapping[str, Reading]],
+    families: Sequence[str],
+    family_map: Mapping[str, tuple[str, ...]] | None = None,
+) -> float:
     """Return the weighted RMS of the capped z's over ``families``."""
-    w = weights(families)
+    w = weights(families, family_map)
     total = sum(w.values())
     return math.sqrt(sum(wt * readings[f][s].z ** 2 for (f, s), wt in w.items()) / total)

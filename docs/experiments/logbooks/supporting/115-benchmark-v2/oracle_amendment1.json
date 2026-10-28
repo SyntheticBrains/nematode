@@ -1,0 +1,127 @@
+{
+  "description": "B v2's oracles as amended: the losses, the jitter, Chen's round trip, then reachability.",
+  "round_trip": {
+    "lawn_losses": {
+      "animals": 1013,
+      "applied": "the losses alone, on gap-filled tracks",
+      "kinematics": {
+        "dwelling_speed_median": {
+          "raw": 0.012838345155748037,
+          "round_trip": 0.012796833167933754,
+          "scale": 0.0004269456605953285,
+          "z": -0.09723014342480704,
+          "passes": true
+        },
+        "dwelling_speed_p90": {
+          "raw": 0.028228348042629806,
+          "round_trip": 0.02823911850871136,
+          "scale": 0.0006806277497227299,
+          "z": 0.0158243123145356,
+          "passes": true
+        },
+        "roaming_speed_median": {
+          "raw": 0.037258195394971876,
+          "round_trip": 0.037264833746525325,
+          "scale": 0.0005408007119883247,
+          "z": 0.012275042185211924,
+          "passes": true
+        },
+        "roaming_speed_p90": {
+          "raw": 0.07326134970632286,
+          "round_trip": 0.07331914490602326,
+          "scale": 0.00241407185984869,
+          "z": 0.023940960773229422,
+          "passes": true
+        },
+        "reversals_per_on_lawn_min": {
+          "raw": 4.065549279868045,
+          "round_trip": 4.041762756990504,
+          "scale": 0.0827934466925661,
+          "z": -0.287299585024722,
+          "passes": true
+        },
+        "roaming_survival_5min": {
+          "raw": 0.19388298312439115,
+          "round_trip": 0.1902763068620974,
+          "scale": 0.024651758585168843,
+          "z": -0.1463050293078733,
+          "passes": true
+        }
+      },
+      "passes": true
+    },
+    "lawn_jitter": {
+      "stretches": 13227,
+      "paused_seconds": 199047,
+      "minimum_stretch_s": 10,
+      "scale_n": 200,
+      "readings": {
+        "step_median_mm": {
+          "real": 0.005385164807134509,
+          "model": 0.007798824801340014
+        },
+        "step_p90_mm": {
+          "real": 0.015811388300841875,
+          "model": 0.014198738175370805
+        },
+        "onsets_per_paused_min": {
+          "real": 2.1369066838876334,
+          "model": 3.8734258960284147,
+          "scale_of": "reversals_per_on_lawn_min",
+          "scale": 0.14378416684943465,
+          "z": 12.07726309642423,
+          "passes": false
+        },
+        "paused_window_speed_median": {
+          "real": 0.003833137463310719,
+          "model": 0.0015818058195106002,
+          "scale_of": "dwelling_speed_median",
+          "scale": 0.000726916195981823,
+          "z": -3.0970993028423526,
+          "passes": false
+        },
+        "paused_window_speed_p90": {
+          "real": 0.00719422174571863,
+          "model": 0.0025728738509403965,
+          "scale_of": "dwelling_speed_p90",
+          "scale": 0.0011552565033903397,
+          "z": -4.000278623159385,
+          "passes": false
+        }
+      },
+      "passes": false
+    },
+    "chemotaxis": {
+      "fragments": 4809,
+      "denoiser": "the authors' SmoothX/SmoothY, resampled to 1 s as the raw paths are",
+      "applied": "jitter only; the fragments are the real ones",
+      "chemotaxis": {
+        "drift_mm_s": {
+          "raw": 0.024224619888602073,
+          "round_trip": 0.024211498240416525,
+          "scale": 0.01607959636210519,
+          "z": -0.0008160433813172118,
+          "passes": true
+        },
+        "log_quintile_ratio": {
+          "raw": 1.140419019850904,
+          "round_trip": 1.175444720711398,
+          "scale": 0.7638468482245655,
+          "z": 0.04585435017753276,
+          "passes": true
+        },
+        "weathervane_deg_s": {
+          "raw": 0.3514905343773446,
+          "round_trip": 0.45021233972814373,
+          "scale": 0.8773919711653813,
+          "z": 0.11251733386581315,
+          "passes": true
+        }
+      },
+      "passes": true
+    },
+    "passes": false
+  },
+  "reachability": "not run: the round trip failed, so the measurement model is wrong",
+  "passes": false
+}

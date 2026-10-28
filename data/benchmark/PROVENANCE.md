@@ -191,6 +191,57 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
 - **Described beside it:** starting one bin earlier gives gamma 0.087, one bin later 0.138; pdfr-1
   (row 91) gives 0.143 against 0.184 for its same-dates wild type (row 90).
 
+## `chen2025_tracks.npz`
+
+- **Citation:** Chen, K. S., et al. (2025). Navigation strategies in *Caenorhabditis elegans* are
+  differentially altered by learning. *PLoS Biology*, doi:10.1371/journal.pbio.3003005.
+
+- **Deposit:** figshare article 24764403, doi:10.6084/m9.figshare.24764403. **Licence:** CC BY 4.0.
+
+- **Download:** 2026-10-27, by browser (figshare refuses scripted downloads), as the article bundle
+  `24764403.zip` (3,495,605,829 bytes), SHA-256
+  `94b59ead0f2a1ef3807f5e5c883c48db4ae30f5dfec8e2b126ccd080543572da`. It contains:
+
+  - `Chen_learning_2024.zip`, 3,495,425,046 bytes, SHA-256
+    `6fee42b5c4a616f342b94d5fa40f2d598badcc650f8a2ee8cc9ee788d29fe363`;
+  - `S1_Data.xlsx`, 180,465 bytes, SHA-256
+    `e0894b03c2a314048cccf8e75ddc8c914f967be228b53abc934123500895b51d`.
+
+- **Assay** (the paper's methods): butanone in linear gradients on 10 cm square plates, off food,
+  30 min at 14 frames/s, 50–100 worms per plate. The naive condition is vendored; the learned
+  conditions and the mutants are not.
+
+- **What was read** (MATLAB files inside `Chen_learning_2024.zip`, read with `scipy.io.loadmat`):
+
+  - `temp/data4plots/track_learn_all.mat`: tracks by condition and recording, condition 1 naive, in
+    the order of `temp/data4plots/learn_folders4.mat`'s `folder_nai`. That gives 8 naive N2 recordings
+    on 8 dates. Six are on the standard protocol (`Data_learn/N2/*_11mM_35_400*`: 2022-08-30, 09-13,
+    09-22, 11-08, 2023-06-09, 06-13). Two were run on another flow rig (`Data_odor_flow_equ`:
+    2022-08-04 "biased", 2022-02-03 "6_32ml_400air") and are labelled `off_protocol`;
+  - `temp/track_data/rawTracks_N2nai.mat`: read only to measure the pixel scale, the median ratio of
+    the authors' `SmoothSpeed` (mm/s) to the same smoothed track's speed in pixels per second, over
+    5,898 tracks: **0.03009 mm per pixel** (IQR 0.02979–0.03021), an imaged field of about 90 × 75 mm;
+  - `temp/data4plots/Landscape_low_0623_2.mat`: `vq1`, the measured odour landscape, 2500 × 3000
+    pixels, in the authors' concentration units. It is **stored rotated by 180°**: sampled at
+    `(W − 1 − x, H − 1 − y)`, it reproduces the concentration the authors record along their tracks
+    (`temp/data4plots/Data_nai_test2.mat`'s `dc`), correlation 1.0000. The vendored field is rotated
+    back and kept every 5 pixels (0.150 mm cells). Sampled bilinearly, it still reproduces the
+    recorded concentrations (correlation 1.0000, median absolute difference 0.042).
+
+- **Contents:**
+
+  - 10,717 track fragments, 568,834 s in all, each resampled to whole seconds by linear interpolation
+    of the 14-frame/s `Path`, in µm (`x_um`, `y_um`, int32);
+  - each fragment's recording, first second and length;
+  - each recording's date, protocol and folder;
+  - the field (`field`, float32, indexed `[y, x]`, `field_cell_mm`).
+
+  Tracks are fragments: they break when worms collide or leave the field.
+
+- **Checksum:** SHA-256 `9320d320ffca780aa7f7ae56abf0c8b0cb7993fbbcd58d990f6765b4500b91c4` as written.
+
+- **Command:** `extract_benchmark_references.py chen --archive <Chen_learning_2024.zip> --out data/benchmark/chen2025_tracks.npz`.
+
 ## `classifier.json`
 
 - **Derived by** `scripts/analysis/benchmark_classifier.py` from `scheer2023_tracks.npz`, on band
@@ -228,3 +279,22 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
 - **Licence:** CC0-1.0 for the parts from Scheer & Bargmann, and CC BY 4.0 for the parts from
   López-Cruz et al.
 - **Checksum:** SHA-256 `44122f9077b5911e1c5519ded43b558ffad2433e7b1315334aa41e02c3cb64a0` as written.
+
+## `scheer_tracker_noise.npz`
+
+- **Derived by** `scripts/analysis/benchmark_v2_controls.py noise-library` from `scheer2023_tracks.npz`. It is the real tracker's readings of a still worm, which B v2's lawn measurement model resamples as simulated tracks' position noise.
+  - **The stretches:** PD1074's band dates are split by `default_rng(2043).permutation` into a library half (21 dates) and a check half (20). The library holds the library half's paused stretches: runs of at least 10 s whose seconds have all three frames flagged `pause` and a position.
+  - **What is stored:** 6,213 stretches, 93,248 s. Each holds its offsets from its own mean position, x and y, in whole micrometres (`x_um`, `y_um`, int32), stored consecutively with their `lengths`.
+- **Licence:** CC0-1.0, as Scheer & Bargmann's deposit.
+- **Checksum:** SHA-256 `328bfbcece5c8ba21b7fe23c183d4a6efe14f9c88f56d46e0d555e36007ee1f4` as written.
+
+## `bands_v2.json`
+
+- **Derived by** `scripts/analysis/benchmark_bands.py --version v2` from the files above, on band cohorts only. It holds:
+  - v1's bands;
+  - the kinematics bands (five graded statistics, generator `default_rng([2030, 5, n])`) and the chemotaxis bands (Chen's six standard recordings);
+  - the measurement models: the lawn model names `scheer_tracker_noise.npz` and its checksum, and Chen's rig keeps its Gaussian jitter;
+  - the five families, the 19-statistic bar (z\* 3.0078) and the weights.
+- **The record:** κ, the rule checks and the chemotaxis leave-one-out are in `docs/experiments/logbooks/supporting/115-benchmark-v2/bands_v2_record.json`.
+- **Licence:** CC0-1.0 for the parts from Scheer & Bargmann, and CC BY 4.0 for the parts from López-Cruz et al. and Chen et al.
+- **Checksum:** SHA-256 `21f591b864d497ee3ee305c217e3c9e197a8bc466298219d46841819b875f438` as written.

@@ -1,0 +1,297 @@
+{
+  "description": "B v2's bands record: calibration, the rule's checks and the chemotaxis validation, from band cohorts and Chen's standard-protocol recordings only.",
+  "bar": 3.0077865564732633,
+  "statistics": 19,
+  "kinematics_calibration": {
+    "seed": 2039,
+    "splits": 200,
+    "size": 200,
+    "z_sd": {
+      "dwelling_speed_median": 1.2689742696574353,
+      "dwelling_speed_p90": 1.2625853154994922,
+      "roaming_speed_median": 1.328419684798103,
+      "roaming_speed_p90": 1.4373275581150167,
+      "roaming_survival_5min": 1.2209875958227272
+    },
+    "kappa": {
+      "dwelling_speed_median": 1.2689742696574353,
+      "dwelling_speed_p90": 1.2625853154994922,
+      "roaming_speed_median": 1.328419684798103,
+      "roaming_speed_p90": 1.4373275581150167,
+      "roaming_survival_5min": 1.2209875958227272
+    }
+  },
+  "checks": {
+    "small_lawn": {
+      "seed": 2040,
+      "splits": 200,
+      "size": 200,
+      "bar": 3.0077865564732633,
+      "joint_pass_rate": 0.94,
+      "failures_by_statistic": {
+        "roaming_fraction": 0,
+        "roaming_bout_s": 0,
+        "dwelling_bout_s": 5,
+        "exits_per_on_lawn_hour": 2,
+        "pre_exit_enrichment": 3,
+        "time_on_lawn": 2
+      },
+      "gate": 0.9,
+      "passes": true
+    },
+    "kinematics": {
+      "seed": 2040,
+      "splits": 200,
+      "size": 200,
+      "bar": 3.0077865564732633,
+      "joint_pass_rate": 0.96,
+      "failures_by_statistic": {
+        "dwelling_speed_median": 2,
+        "dwelling_speed_p90": 4,
+        "roaming_speed_median": 2,
+        "roaming_speed_p90": 1,
+        "roaming_survival_5min": 1
+      },
+      "gate": 0.9,
+      "passes": true
+    }
+  },
+  "chemotaxis_recordings": {
+    "20220804": {
+      "protocol": "off_protocol",
+      "fragments": 1080,
+      "statistics": {
+        "drift_mm_s": 0.028788967756751365,
+        "log_quintile_ratio": 1.1113513144455394,
+        "weathervane_deg_s": 0.782108278942795
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.02425682456394966,
+          "log_quintile_ratio": 0.7953221065833618
+        },
+        "present": true
+      }
+    },
+    "20220830": {
+      "protocol": "standard",
+      "fragments": 671,
+      "statistics": {
+        "drift_mm_s": 0.022827165511122762,
+        "log_quintile_ratio": 1.2390641241372062,
+        "weathervane_deg_s": 1.072599094728924
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.01841455001725634,
+          "log_quintile_ratio": 0.8628583180688072
+        },
+        "present": true
+      }
+    },
+    "20220913": {
+      "protocol": "standard",
+      "fragments": 1019,
+      "statistics": {
+        "drift_mm_s": 0.02309176437031309,
+        "log_quintile_ratio": 1.3188530803243579,
+        "weathervane_deg_s": 0.10549833696126955
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.01775281614797458,
+          "log_quintile_ratio": 0.8777184570879155
+        },
+        "present": true
+      }
+    },
+    "20220922": {
+      "protocol": "standard",
+      "fragments": 875,
+      "statistics": {
+        "drift_mm_s": 0.023620734106042915,
+        "log_quintile_ratio": 1.1141768052092214,
+        "weathervane_deg_s": 0.49223250439079375
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.019176584333530346,
+          "log_quintile_ratio": 0.8411463503586296
+        },
+        "present": true
+      }
+    },
+    "20221108": {
+      "protocol": "standard",
+      "fragments": 1087,
+      "statistics": {
+        "drift_mm_s": 0.017121707229427425,
+        "log_quintile_ratio": 0.9923900754128022,
+        "weathervane_deg_s": 0.46928028428389046
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.012729445598765937,
+          "log_quintile_ratio": 0.6540040920913527
+        },
+        "present": true
+      }
+    },
+    "20230609": {
+      "protocol": "standard",
+      "fragments": 811,
+      "statistics": {
+        "drift_mm_s": 0.02801120193600388,
+        "log_quintile_ratio": 1.9588135538912212,
+        "weathervane_deg_s": -0.2323938231350843
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.01922086616531957,
+          "log_quintile_ratio": 1.488077055429833
+        },
+        "present": true
+      }
+    },
+    "20220203": {
+      "protocol": "off_protocol",
+      "fragments": 4828,
+      "statistics": {
+        "drift_mm_s": 0.011229328733683232,
+        "log_quintile_ratio": 0.125163142954006,
+        "weathervane_deg_s": 1.1732379332852096
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.008385221853337671,
+          "log_quintile_ratio": 0.0
+        },
+        "present": false
+      }
+    },
+    "20230613": {
+      "protocol": "standard",
+      "fragments": 346,
+      "statistics": {
+        "drift_mm_s": 0.040680340071501155,
+        "log_quintile_ratio": 1.7676619176489945,
+        "weathervane_deg_s": 0.27424984515190853
+      },
+      "presence": {
+        "lower_bounds": {
+          "drift_mm_s": 0.027805950237657636,
+          "log_quintile_ratio": 1.0459685551826878
+        },
+        "present": true
+      }
+    }
+  },
+  "chemotaxis_prediction_factor": 1.9891956853881438,
+  "chemotaxis_leave_one_out": {
+    "recordings": {
+      "20220830": {
+        "z": {
+          "drift_mm_s": -0.17175199592313212,
+          "log_quintile_ratio": -0.18874721284190185,
+          "weathervane_deg_s": 1.1731835865974356
+        },
+        "present": true,
+        "passes": true
+      },
+      "20220913": {
+        "z": {
+          "drift_mm_s": -0.15645730495642393,
+          "log_quintile_ratio": -0.09277499405956684,
+          "weathervane_deg_s": -0.27192775931381674
+        },
+        "present": true,
+        "passes": true
+      },
+      "20220922": {
+        "z": {
+          "drift_mm_s": -0.1262563619894161,
+          "log_quintile_ratio": -0.35390020932581,
+          "weathervane_deg_s": 0.13115756598656983
+        },
+        "present": true,
+        "passes": true
+      },
+      "20221108": {
+        "z": {
+          "drift_mm_s": -0.5714603088085591,
+          "log_quintile_ratio": -0.5515275528848274,
+          "weathervane_deg_s": 0.10739089396731866
+        },
+        "present": true,
+        "passes": true
+      },
+      "20230609": {
+        "z": {
+          "drift_mm_s": 0.11763781047915996,
+          "log_quintile_ratio": 0.9349465607477292,
+          "weathervane_deg_s": -0.8062526147835284
+        },
+        "present": true,
+        "passes": true
+      },
+      "20230613": {
+        "z": {
+          "drift_mm_s": 1.8862576255205261,
+          "log_quintile_ratio": 0.4858603253251325,
+          "weathervane_deg_s": -0.09057152114302355
+        },
+        "present": true,
+        "passes": true
+      }
+    },
+    "unit_rate": 0.007873979443067558,
+    "allowance": 1,
+    "tail_at_allowance": 0.0009106382083276027,
+    "failures": 0,
+    "passes": true
+  },
+  "reported": {
+    "uniform_lawn_kinematics": {
+      "dwelling_speed_median": 0.01158374319407272,
+      "dwelling_speed_p90": 0.026870327466911516,
+      "roaming_speed_median": 0.04618279340267344,
+      "roaming_speed_p90": 0.11006105294801538,
+      "reversals_per_on_lawn_min": 1.5493235300113481,
+      "roaming_survival_5min": 0.34687086526067823
+    },
+    "off_protocol_chemotaxis": {
+      "20220804": {
+        "protocol": "off_protocol",
+        "fragments": 1080,
+        "statistics": {
+          "drift_mm_s": 0.028788967756751365,
+          "log_quintile_ratio": 1.1113513144455394,
+          "weathervane_deg_s": 0.782108278942795
+        },
+        "presence": {
+          "lower_bounds": {
+            "drift_mm_s": 0.02425682456394966,
+            "log_quintile_ratio": 0.7953221065833618
+          },
+          "present": true
+        }
+      },
+      "20220203": {
+        "protocol": "off_protocol",
+        "fragments": 4828,
+        "statistics": {
+          "drift_mm_s": 0.011229328733683232,
+          "log_quintile_ratio": 0.125163142954006,
+          "weathervane_deg_s": 1.1732379332852096
+        },
+        "presence": {
+          "lower_bounds": {
+            "drift_mm_s": 0.008385221853337671,
+            "log_quintile_ratio": 0.0
+          },
+          "present": false
+        }
+      }
+    }
+  }
+}

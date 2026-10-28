@@ -323,21 +323,38 @@ class BatchedStateHazards:
     animal runs at that state's speed, with curvature drawn each second from a normal of that
     state's SD, and starts bouts at that state's hazards. Every draw comes from the animal's own
     generator.
+
+    With ``speed_log_sd``, the speed varies within a state: at the first step and at every window
+    boundary each animal draws a standard normal z, and runs until the next boundary at its state's
+    speed times ``exp(speed_log_sd[state] * z)``, so the state's speed is the median. Without it,
+    no draw is made and each state runs at its speed. With ``reversal_speed_coupling`` (beta, and
+    a spread), that window's reversal hazard is the state's times ``exp(beta * z)``, so reversals
+    come more often out of faster movement.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - the chain, three per-state kinematics, the window, the spread
         self,
         transitions: np.ndarray,
         speeds_mm_per_s: tuple[float, float],
         curvature_sd_deg_per_s: tuple[float, float],
         hazards_per_s: np.ndarray,
         window_steps: int,
+        speed_log_sd: tuple[float, float] | None = None,
+        reversal_speed_coupling: float | None = None,
     ) -> None:
         self.transitions = np.asarray(transitions, dtype=np.float64)
         self.speeds = np.asarray(speeds_mm_per_s, dtype=np.float64)
         self.curvature_sd = np.asarray(curvature_sd_deg_per_s, dtype=np.float64)
         self.hazards = np.asarray(hazards_per_s, dtype=np.float64)
         self.window_steps = window_steps
+        self.speed_log_sd = (
+            None if speed_log_sd is None else np.asarray(speed_log_sd, dtype=np.float64)
+        )
+        self.speed_z: np.ndarray | None = None
+        self.reversal_speed_coupling = reversal_speed_coupling
+        if reversal_speed_coupling is not None and speed_log_sd is None:
+            msg = "a reversal-speed coupling needs a speed spread to couple to"
+            raise ValueError(msg)
         up, down = self.transitions[0, 1], self.transitions[1, 0]
         self.stationary_second = up / (up + down)
         self.state: np.ndarray | None = None
@@ -347,23 +364,34 @@ class BatchedStateHazards:
         """Forget every animal's state; it is drawn on the first step."""
         del n
         self.state = None
+        self.speed_z = None
         self.steps = 0
 
     def act(self, senses: BatchedSenses, noise: list[torch.Generator] | None) -> np.ndarray:
         """Step each animal's chain on its window's boundary, then act in its state."""
         gens = _require_noise(noise)
         n = len(senses.concentration)
+        boundary = self.state is None or self.steps % self.window_steps == 0
         if self.state is None:
             self.state = (_uniforms(gens)[:, 0] < self.stationary_second).astype(np.int64)
         elif self.steps % self.window_steps == 0:
             stay = self.transitions[self.state, self.state]
             self.state = np.where(_uniforms(gens)[:, 0] < stay, self.state, 1 - self.state)
+        if self.speed_log_sd is not None and boundary:
+            self.speed_z = _normals(gens)
         self.steps += 1
         curvature = _normals(gens) * self.curvature_sd[self.state]
+        speeds = self.speeds[self.state]
+        if self.speed_log_sd is not None and self.speed_z is not None:
+            speeds = speeds * np.exp(self.speed_log_sd[self.state] * self.speed_z)
         raw = np.zeros((n, 5))
-        raw[:, 0] = [_raw_speed(float(s)) for s in self.speeds[self.state]]
+        raw[:, 0] = [_raw_speed(float(s)) for s in speeds]
         raw[:, 1] = _raw_curvature(curvature)
-        raw[:, 2:] = _raw_hazards(self.hazards[self.state])
+        hazards = self.hazards[self.state]
+        if self.reversal_speed_coupling is not None and self.speed_z is not None:
+            hazards = hazards.copy()
+            hazards[:, 0] = hazards[:, 0] * np.exp(self.reversal_speed_coupling * self.speed_z)
+        raw[:, 2:] = _raw_hazards(hazards)
         return raw
 
 

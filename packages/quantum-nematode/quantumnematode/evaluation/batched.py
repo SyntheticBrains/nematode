@@ -74,6 +74,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from quantumnematode.evaluation.controllers import BatchedController
+    from quantumnematode.evaluation.odour_field import OdourField
     from quantumnematode.utils.config_loader import SimulationConfig
 
 # Codes for the primitive running on a step, in the primitives' own order.
@@ -302,7 +303,7 @@ class BatchedEvaluator:
         fitting has no need of it.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - keyword-only options after the three inputs
         self,
         config: SimulationConfig,
         controller: BatchedController,
@@ -310,6 +311,8 @@ class BatchedEvaluator:
         *,
         mean_action: bool = False,
         record_gradient: bool = False,
+        odour_field: OdourField | None = None,
+        field_starts: np.ndarray | None = None,
     ) -> None:
         check_surface(config)
         if not seeds:
@@ -320,6 +323,10 @@ class BatchedEvaluator:
         self.seeds = [int(s) for s in seeds]
         self.mean_action = mean_action
         self.record_gradient = record_gradient
+        # A measured odour field, read wherever no lawn is out, and where each animal starts the
+        # first phase without food; both absent for every lawn assay.
+        self.odour_field = odour_field
+        self.field_starts = None if field_starts is None else np.asarray(field_starts, dtype=float)
         self.environment_config = configure_environment(config)
         self.satiety_config = configure_satiety(config)
         sensing = self.environment_config.get_sensing_config()
@@ -426,10 +433,23 @@ class BatchedEvaluator:
                 state.heading_rad = float(self.heading[i])
                 env.assay_phase_index = self.phase_index - 1
                 env._begin_assay_phase(self.phase_index)  # noqa: SLF001
+                if self._starts_on_field():
+                    assert self.field_starts is not None  # noqa: S101
+                    state.pos_continuous = (
+                        float(self.field_starts[i, 0]),
+                        float(self.field_starts[i, 1]),
+                    )
                 self.pos[i] = state.pos_continuous
                 self.heading[i] = state.heading_rad
             self.lawn_on[:] = False
             self._sync_lawns()
+
+    def _starts_on_field(self) -> bool:
+        """Return whether the phase just begun places animals on the odour field's starts."""
+        if self.odour_field is None or self.field_starts is None or self.assay is None:
+            return False
+        assert self.phase_index is not None  # noqa: S101
+        return self.assay.phases[self.phase_index].food == "none"
 
     # ----- the odour, separable over the lawn's cell grid -----
 
@@ -437,6 +457,8 @@ class BatchedEvaluator:
         """Return the tanh'd lawn odour at one point per animal: 0 where no lawn is out."""
         n = len(points)
         out = np.zeros(n)
+        if self.odour_field is not None and not self.lawn_on.any():
+            return self.odour_field.odour(points)
         if self.grid is None or not self.lawn_on.any():
             return np.tanh(out)
         grid = self.grid
@@ -456,6 +478,8 @@ class BatchedEvaluator:
         the lawn and the kernel at its distance. The direction is 0 where the pull is zero.
         """
         n = len(points)
+        if self.odour_field is not None and not self.lawn_on.any():
+            return self.odour_field.gradient(points)
         vx, vy = np.zeros(n), np.zeros(n)
         if self.grid is not None and self.lawn_on.any():
             grid = self.grid
