@@ -87,17 +87,19 @@ A v2 simulation of C.1's model, 200 animals on four assays, takes 36 s on one co
    - **registered fits, base 170,000,000:**
      - k = 10,000·f + 16·(n − 1) + p for fit f's generation n, member p;
      - 10,000·f + 5,000 to 5,009 for its answer, re-simulated;
-   - **candidates and references, base 172,000,000:**
+     - this spans 170,000,000 to 185,001,800;
+   - **the pilot, base 200,000,000:** evaluations at 16·(n − 1) + p, and its answers at 5,000, 5,100 and 5,200 (+ 0–9);
+   - **candidates, references and the box centre, base 210,000,000:**
      - k = c for candidate c's v2 observation (c < 43);
      - 1,000 + 20·c + q for its repeat q + 1;
-     - 3,000 + i for the i-th prior reference (i < 201);
-     - 4,000 to 4,009 for the box centre;
-   - **the pilot,** base 171,000,000: evaluations at 16·(n − 1) + p, and its answers at 5,000, 5,100 and 5,200 (+ 0–9);
+     - 2,000 + i for the i-th prior reference (i < 201);
+     - 2,300 to 2,309 for the box centre;
+   - **the gates' probe (decision 7b):** the same candidate scheme at base 99,400,000, which spans 99,400,000 to 99,862,000;
    - **the smoke:** CMA seed 5993, base 99,300,000, discarded.
 
-   All are disjoint from every band and earlier scheme. B v2 used 140–160.9 M and 199 M, and the review's probe 99.4 M.
+   The three registered bases are spaced so that no k reaches another's range. A first draft put the candidates at 172,000,000, inside the fits' range, and this was corrected before registration. All the ranges are disjoint from every band and earlier scheme: B v2 used 140–160.9 M and 199 M, C.1 110–126 M, and the earlier smokes 99.0–99.2 M.
 
-7b. **The gates' oracle before registration** (description; discarded seeds 99,400,000 to 99,600,000). The oracle and the unfitted start are read on discarded seeds before Part A is committed:
+7b. **The gates' oracle before registration** (description; discarded seeds from 99,400,000, decision 7's candidate scheme). The oracle and the unfitted start are read on discarded seeds before Part A is committed:
 
 - the probe's eligible candidates, each re-simulated 20 times;
 - the box centre, simulated 10 times;

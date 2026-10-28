@@ -357,10 +357,14 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
     pool: ProcessPoolExecutor,
     scales: dict[str, float],
     objective: Callable[[dict[str, Any]], float] | None = None,
+    simulate: Callable[[int, list[float], int], dict[str, Any]] | None = None,
+    stop: Callable[[list[float], float], bool] | None = None,
 ) -> dict[str, Any]:
     """Run, or resume, one fit; return its history. State is saved after every generation.
 
     The objective scores one graded simulation; by default it is the distance to ``observation``.
+    ``simulate`` runs one simulation, ``npe_recovery.simulate`` by default; ``stop`` decides the
+    plateau from the medians and sigma, the unguarded plateau rule by default.
 
     The strategy's checkpoint and the history each carry the last completed generation; a resume
     whose two markers differ is refused rather than continued from mismatched state.
@@ -398,7 +402,7 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
         population = strategy.ask()
         ks = [fit_k(fit, generation, member) for member in range(POPSIZE)]
         points = [list(map(float, x)) for x in population]
-        records = list(pool.map(nr.simulate, ks, points, [seed_base] * POPSIZE))
+        records = list(pool.map(simulate or nr.simulate, ks, points, [seed_base] * POPSIZE))
         scored = [
             nr.predictive_distance(observation, nr._finite(r), scales)
             if objective is None
@@ -410,7 +414,12 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
         history["sigmas"].append(float(strategy.sigma))
         history["answers"].append(answer(strategy).tolist())
         history["seconds"].append(time.perf_counter() - start)
-        if use_rule and plateau_reached(history["medians"]):
+        reached = (
+            plateau_reached(history["medians"])
+            if stop is None
+            else stop(history["medians"], float(strategy.sigma))
+        )
+        if use_rule and reached:
             history["stop"] = {"generation": generation, "by": "plateau"}
         elif generation >= cap:
             history["stop"] = {"generation": generation, "by": "cap"}

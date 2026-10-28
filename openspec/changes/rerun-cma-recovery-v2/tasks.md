@@ -7,10 +7,10 @@
 
 ## 2. The re-run's code
 
-- [ ] 2.1 `cma_recovery.run_fit`: optional simulator and plateau guard, defaults unchanged.
-- [ ] 2.2 `scripts/analysis/cma_recovery_v2.py`: `simulate_v2`, `predictive_distance_v2`, the truth selection, `preflight`, `pilot`, `run`, `read`, `smoke`; the launch guard.
-- [ ] 2.3 Tests: the distance (weights, undefined statistics, the reported statistic excluded); the guarded plateau; the seeds' disjointness; the candidate order and keep rules on toy records.
-- [ ] 2.4 The smoke (CMA 5993, base 99.3 M, discarded).
+- [x] 2.1 `cma_recovery.run_fit`: optional simulator and plateau guard, defaults unchanged.
+- [x] 2.2 `scripts/analysis/cma_recovery_v2.py`: `simulate_v2`, `predictive_distance_v2`, the truth selection, `preflight`, `pilot`, `run`, `read`, `smoke`; the launch guard.
+- [x] 2.3 Tests: the distance (weights, undefined statistics, the reported statistic excluded); the guarded plateau; the seeds' disjointness; the candidate order and keep rules on toy records.
+- [x] 2.4 The smoke (CMA 5993, base 99.3 M, discarded): two generations and a resume, about 40 s per generation on 16 workers.
 - [ ] 2.5 The gates' oracle on discarded seeds (99.4–99.6 M): the oracle and unfitted-start gains on the probe's eligible candidates; return to the maintainer if any is within 0.05 of its bar.
 
 ## 3. Registration and the runs
