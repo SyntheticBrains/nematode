@@ -1,0 +1,40 @@
+{
+  "description": "B v2's verdict: the measurement checks (amendment 2), reachability (amendment 3), the bands record, the read and the blind fit.",
+  "checks": {
+    "round_trip": true,
+    "reachability": true,
+    "n2_control": true,
+    "chemotaxis_leave_one_out": true,
+    "negatives_fail_wild_type": true,
+    "open_loop_fail_chemotaxis": true,
+    "blind_worm_fails": true,
+    "c1_answer_fails": true
+  },
+  "verdict": "VALID",
+  "w_minimum": {
+    "fitted": {
+      "families": [
+        "small_lawn",
+        "kinematics"
+      ],
+      "source": "halves of N2's 26 unread held-out dates, on PD1074's v2 band scales",
+      "splits": 1000,
+      "seed": 2034,
+      "median": 1.5034151814561396,
+      "minimum_95th": 2.9666951987001497
+    },
+    "held_out": {
+      "families": [
+        "local_search",
+        "chemotaxis"
+      ],
+      "source": "halves of L\u00f3pez-Cruz's 17 band batches (1000 splits) crossed with every 3-against-3 split of Chen's 6 recordings (10)",
+      "seed": 2036,
+      "pairs": 10000,
+      "median": 1.3247563096023889,
+      "minimum_95th": 2.0149311864213315,
+      "reported_local_search_95th": 2.2678540945547336,
+      "reported_chemotaxis_95th": 2.14329983507982
+    }
+  }
+}
