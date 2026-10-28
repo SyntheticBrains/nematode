@@ -11,11 +11,11 @@
 - [x] 2.2 `scripts/analysis/cma_recovery_v2.py`: `simulate_v2`, `predictive_distance_v2`, the truth selection, `preflight`, `pilot`, `run`, `read`, `smoke`; the launch guard.
 - [x] 2.3 Tests: the distance (weights, undefined statistics, the reported statistic excluded); the guarded plateau; the seeds' disjointness; the candidate order and keep rules on toy records.
 - [x] 2.4 The smoke (CMA 5993, base 99.3 M, discarded): two generations and a resume, about 40 s per generation on 16 workers.
-- [ ] 2.5 The gates' oracle on discarded seeds (99.4–99.6 M): the oracle and unfitted-start gains on the probe's eligible candidates; return to the maintainer if any is within 0.05 of its bar.
+- [x] 2.5 The gates' oracle on discarded seeds (99.4–99.6 M): the oracle and unfitted-start gains on the probe's eligible candidates; return to the maintainer if any is within 0.05 of its bar. (Oracle 1.027, start 0.047: far from both.)
 
 ## 3. Registration and the runs
 
-- [ ] 3.1 `supporting/116-cma-recovery-v2/launch.md` Part A; committed.
+- [x] 3.1 `supporting/116-cma-recovery-v2/launch.md` Part A; committed.
 - [ ] 3.2 The preflight; the pilot; Part B with `preflight.json` and `pilot.json`; committed.
 - [ ] 3.3 The registered fits; `read`; `recovery.json`.
 
