@@ -357,17 +357,31 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
     pool: ProcessPoolExecutor,
     scales: dict[str, float],
     objective: Callable[[dict[str, Any]], float] | None = None,
+    simulate: Callable[[int, list[float], int], dict[str, Any]] | None = None,
+    stop: Callable[[list[float], float], bool] | None = None,
 ) -> dict[str, Any]:
     """Run, or resume, one fit; return its history. State is saved after every generation.
 
     The objective scores one graded simulation; by default it is the distance to ``observation``.
+    ``simulate`` runs one simulation, ``npe_recovery.simulate`` by default; ``stop`` decides the
+    plateau from the medians and sigma, the unguarded plateau rule by default.
 
     The strategy's checkpoint and the history each carry the last completed generation; a resume
     whose two markers differ is refused rather than continued from mismatched state.
     """
     state_path = state_dir / f"fit{fit}.pkl"
     history_path = state_dir / f"fit{fit}.json"
+    identity = {
+        "simulate": _identity(simulate or nr.simulate),
+        "stop_rule": _identity(stop or plateau_reached),
+    }
     saved = json.loads(history_path.read_text()) if history_path.exists() else None
+    if saved is not None:
+        for key, value in identity.items():
+            # Histories written before identities were recorded carry none and are not checked.
+            if key in saved and saved[key] != value:
+                message = f"fit {fit}: saved with {key} {saved[key]}, asked for {value}"
+                raise RuntimeError(message)
     if saved is not None and saved["stop"] is not None:
         return saved
     if saved is not None and state_path.exists():
@@ -385,6 +399,7 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
         history = {
             "fit": fit,
             "cma_seed": cma_seed,
+            **identity,
             "generation": 0,
             "medians": [],
             "sigmas": [],
@@ -398,7 +413,7 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
         population = strategy.ask()
         ks = [fit_k(fit, generation, member) for member in range(POPSIZE)]
         points = [list(map(float, x)) for x in population]
-        records = list(pool.map(nr.simulate, ks, points, [seed_base] * POPSIZE))
+        records = list(pool.map(simulate or nr.simulate, ks, points, [seed_base] * POPSIZE))
         scored = [
             nr.predictive_distance(observation, nr._finite(r), scales)
             if objective is None
@@ -410,7 +425,12 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
         history["sigmas"].append(float(strategy.sigma))
         history["answers"].append(answer(strategy).tolist())
         history["seconds"].append(time.perf_counter() - start)
-        if use_rule and plateau_reached(history["medians"]):
+        reached = (
+            plateau_reached(history["medians"])
+            if stop is None
+            else stop(history["medians"], float(strategy.sigma))
+        )
+        if use_rule and reached:
             history["stop"] = {"generation": generation, "by": "plateau"}
         elif generation >= cap:
             history["stop"] = {"generation": generation, "by": "cap"}
@@ -423,6 +443,11 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
             flush=True,
         )
     return history
+
+
+def _identity(function: Callable[..., Any]) -> str:
+    """Return a callback's identity as recorded with a fit: its module and qualified name."""
+    return f"{getattr(function, '__module__', '?')}.{getattr(function, '__qualname__', repr(function))}"
 
 
 def _gain(prior: float, d: float, floor: float) -> float:

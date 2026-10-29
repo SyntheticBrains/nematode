@@ -61,9 +61,9 @@ class NoiseLibrary:
     y_mm: np.ndarray
     lengths: np.ndarray
 
-    @property
+    @functools.cached_property
     def starts(self) -> np.ndarray:
-        """Return each stretch's first index into the offsets."""
+        """Return each stretch's first index into the offsets, computed once."""
         return np.concatenate(([0], np.cumsum(self.lengths)[:-1]))
 
     def _splice(self, x: float, y: float, rng: np.random.Generator) -> tuple[int, int]:
@@ -255,13 +255,28 @@ def measure(
     lost = lost_seconds([s.primitive for s in steps], model, rng)
     if model.fragment_lengths_s is not None:
         lost[fragment_cuts(n, model.fragment_lengths_s, rng)] = True
+    if not steps:
+        return []
+    # Each measured step is rebuilt by its constructor, positionally: the same fields and the same
+    # __init__ as dataclasses.replace, at about half the cost per step.
+    cls = type(steps[0])
+    names = _init_fields(cls)
+    ix, iy = names.index("x"), names.index("y")
     out = []
     for i, s in enumerate(steps):
+        values = [getattr(s, name) for name in names]
         if lost[i]:
-            out.append(dataclasses.replace(s, x=math.nan, y=math.nan))
+            values[ix], values[iy] = math.nan, math.nan
         else:
-            out.append(dataclasses.replace(s, x=s.x + noise[i, 0], y=s.y + noise[i, 1]))
+            values[ix], values[iy] = s.x + noise[i, 0], s.y + noise[i, 1]
+        out.append(cls(*values))
     return out
+
+
+@functools.cache
+def _init_fields(cls: type) -> list[str]:
+    """Return a dataclass's constructor fields, in order."""
+    return [f.name for f in dataclasses.fields(cls) if f.init]
 
 
 def jitter_from_steps(step_mm: np.ndarray) -> float:

@@ -1,0 +1,259 @@
+{
+  "description": "Parameter recovery for C.1's model by sep-CMA, re-read on benchmark v2.",
+  "base": 210000000,
+  "pool": 43,
+  "eligible": 21,
+  "ineligible": [
+    {
+      "candidate": 2,
+      "training_simulation": 5340
+    },
+    {
+      "candidate": 4,
+      "training_simulation": 2324
+    },
+    {
+      "candidate": 5,
+      "training_simulation": 4938
+    },
+    {
+      "candidate": 6,
+      "training_simulation": 808
+    },
+    {
+      "candidate": 7,
+      "training_simulation": 5098
+    },
+    {
+      "candidate": 8,
+      "training_simulation": 8254
+    },
+    {
+      "candidate": 9,
+      "training_simulation": 7723
+    },
+    {
+      "candidate": 13,
+      "training_simulation": 1275
+    },
+    {
+      "candidate": 14,
+      "training_simulation": 3364
+    },
+    {
+      "candidate": 18,
+      "training_simulation": 1431
+    },
+    {
+      "candidate": 20,
+      "training_simulation": 1571
+    },
+    {
+      "candidate": 27,
+      "training_simulation": 4294
+    },
+    {
+      "candidate": 29,
+      "training_simulation": 875
+    },
+    {
+      "candidate": 31,
+      "training_simulation": 4966
+    },
+    {
+      "candidate": 32,
+      "training_simulation": 6119
+    },
+    {
+      "candidate": 34,
+      "training_simulation": 8588
+    },
+    {
+      "candidate": 35,
+      "training_simulation": 4582
+    },
+    {
+      "candidate": 36,
+      "training_simulation": 2481
+    },
+    {
+      "candidate": 38,
+      "training_simulation": 538
+    },
+    {
+      "candidate": 39,
+      "training_simulation": 4099
+    },
+    {
+      "candidate": 40,
+      "training_simulation": 7488
+    },
+    {
+      "candidate": 42,
+      "training_simulation": 5689
+    }
+  ],
+  "candidates": [
+    {
+      "candidate": 0,
+      "training_simulation": 4909,
+      "v2_D": 5.046888181145072,
+      "floor": 0.529057812674075,
+      "oracle_D": 0.44576845230301193,
+      "prior_D": 7.370230173149676,
+      "kept": true,
+      "reason": ""
+    },
+    {
+      "candidate": 41,
+      "training_simulation": 1164,
+      "v2_D": 5.166294416052736,
+      "floor": 2.29262708478706,
+      "oracle_D": 2.0949314343675836,
+      "prior_D": 6.978330248464884,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 1.0421912450519604,
+      "centre_D": 6.525406150418643,
+      "centre_gain": 0.09666086011533416
+    },
+    {
+      "candidate": 11,
+      "training_simulation": 3525,
+      "v2_D": 5.331460030087286,
+      "floor": 0.7679156170726041,
+      "oracle_D": 0.8195504173884931,
+      "prior_D": 7.5459661787883165,
+      "kept": false,
+      "reason": "flips: local_search/gamma_per_min"
+    },
+    {
+      "candidate": 19,
+      "training_simulation": 1354,
+      "v2_D": 5.348899468322477,
+      "floor": 0.8885708794720203,
+      "oracle_D": 0.9134506294385911,
+      "prior_D": 7.038490506128417,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 0.9959544593300486,
+      "centre_D": 6.796661811134216,
+      "centre_gain": 0.03932225291953593
+    },
+    {
+      "candidate": 16,
+      "training_simulation": 6985,
+      "v2_D": 5.574292293074425,
+      "floor": 2.9522282835745175,
+      "oracle_D": 2.89985549818264,
+      "prior_D": 7.047193712073785,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 1.0127895549562846,
+      "centre_D": 6.26024929209703,
+      "centre_gain": 0.19217364193112518
+    },
+    {
+      "candidate": 3,
+      "training_simulation": 9105,
+      "v2_D": 5.66963939730818,
+      "floor": 0.9275530032136001,
+      "oracle_D": 0.8975504561825005,
+      "prior_D": 7.163321909143126,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 1.0048113628782123,
+      "centre_D": 7.0435741084922805,
+      "centre_gain": 0.019203373706966363
+    },
+    {
+      "candidate": 12,
+      "training_simulation": 4709,
+      "v2_D": 5.67028318767844,
+      "floor": 1.9057471719612877,
+      "oracle_D": 2.343844818512461,
+      "prior_D": 7.082587667962107,
+      "kept": true,
+      "reason": ""
+    },
+    {
+      "candidate": 21,
+      "training_simulation": 4984,
+      "v2_D": 5.739430412539968,
+      "floor": 0.3132849620127999,
+      "oracle_D": 0.3813698709745045,
+      "prior_D": 7.350561066782555,
+      "kept": true,
+      "reason": ""
+    }
+  ],
+  "pilot_truth": {
+    "candidate": 0,
+    "training_simulation": 4909,
+    "v2_D": 5.046888181145072,
+    "floor": 0.529057812674075,
+    "oracle_D": 0.44576845230301193,
+    "prior_D": 7.370230173149676,
+    "kept": true,
+    "reason": ""
+  },
+  "truths": [
+    {
+      "candidate": 41,
+      "training_simulation": 1164,
+      "v2_D": 5.166294416052736,
+      "floor": 2.29262708478706,
+      "oracle_D": 2.0949314343675836,
+      "prior_D": 6.978330248464884,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 1.0421912450519604,
+      "centre_D": 6.525406150418643,
+      "centre_gain": 0.09666086011533416
+    },
+    {
+      "candidate": 19,
+      "training_simulation": 1354,
+      "v2_D": 5.348899468322477,
+      "floor": 0.8885708794720203,
+      "oracle_D": 0.9134506294385911,
+      "prior_D": 7.038490506128417,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 0.9959544593300486,
+      "centre_D": 6.796661811134216,
+      "centre_gain": 0.03932225291953593
+    },
+    {
+      "candidate": 16,
+      "training_simulation": 6985,
+      "v2_D": 5.574292293074425,
+      "floor": 2.9522282835745175,
+      "oracle_D": 2.89985549818264,
+      "prior_D": 7.047193712073785,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 1.0127895549562846,
+      "centre_D": 6.26024929209703,
+      "centre_gain": 0.19217364193112518
+    },
+    {
+      "candidate": 3,
+      "training_simulation": 9105,
+      "v2_D": 5.66963939730818,
+      "floor": 0.9275530032136001,
+      "oracle_D": 0.8975504561825005,
+      "prior_D": 7.163321909143126,
+      "kept": true,
+      "reason": "",
+      "oracle_gain": 1.0048113628782123,
+      "centre_D": 7.0435741084922805,
+      "centre_gain": 0.019203373706966363
+    }
+  ],
+  "oracle_median_gain": 1.0088004589172486,
+  "centre_median_gain": 0.06799155651743505,
+  "oracle_passes": true,
+  "centre_fails": true,
+  "passed": true
+}

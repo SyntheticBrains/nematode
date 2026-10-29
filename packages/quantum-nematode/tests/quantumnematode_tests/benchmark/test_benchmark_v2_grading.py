@@ -309,3 +309,32 @@ def test_local_search_tracks_stay_exact(tmp_path: Path) -> None:
     model = mm.TrackerModel(jitter_mm=0.01, p_other=0.01, runs_other_s=(5,))
     animal = bg.capture_populations(manifest, model)["local_search"][0]
     assert [s.x for s in animal] == [s.x for s in _steps(g.SEARCH_SAMPLES)]
+
+
+def test_grading_without_presence_changes_no_statistic(tmp_path: Path) -> None:
+    """Covers "Presence off changes no number": statistics, D and D_fit match; passes are absent."""
+    bands = bg.load_bands_v2()
+    rng = np.random.default_rng(3)
+
+    def walk(n: int, x0: float, y0: float) -> list[BehaviourStep]:
+        xy = np.cumsum(rng.normal(0.0, 0.05, size=(n, 2)), axis=0) + np.array([x0, y0])
+        return [
+            dataclasses.replace(s, x=float(px), y=float(py))
+            for s, (px, py) in zip(_steps(n), xy, strict=True)
+        ]
+
+    populations = {
+        "small_lawn": [walk(g.LAWN_SAMPLES, 0.0, 0.0) for _ in range(64)],
+        "local_search": [walk(g.SEARCH_SAMPLES, 0.0, 0.0) for _ in range(64)],
+    }
+    field = chen_field()
+    cx, cy = field.origin_mm[0] + 30.0, field.origin_mm[1] + 30.0
+    chemotaxis = [walk(600, cx, cy) for _ in range(16)]
+    on = bg.grade_populations_v2(populations, chemotaxis, bands)
+    off = bg.grade_populations_v2(populations, chemotaxis, bands, presence=False)
+    # Undefined statistics are NaN in both; _finite maps them to None so equality reads them.
+    for key in ("families", "D", "D_fit", "kinematics_reported"):
+        assert bg._finite(off[key]) == bg._finite(on[key])
+    assert off["family_passes"] is None
+    assert "chemotaxis_presence" in on
+    assert "chemotaxis_presence" not in off
