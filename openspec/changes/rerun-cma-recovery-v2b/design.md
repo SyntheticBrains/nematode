@@ -29,25 +29,23 @@ The re-investigation (description, on stored simulations):
 
 ## Decisions
 
-1. **The ranking objective,** `predictive_distance_v2(..., compressed=True)`:
+1. **The ranking objective,** `ranking_score(observation, record)`, lexicographic in definedness (revised at the spec review):
 
-   - **A defined statistic:** with z = Δ / scale uncapped, the term is 10·asinh(z/10). It is about z near the truth (8.8 at z = 10) and grows slowly far from it (18.2 at 30, 30.0 at 100, 58.3 at 1,700).
-   - **Undefined in only one record:** 100, more than any defined term below about 110,000 scales.
-   - **Undefined in both:** 0.
-   - **Weights:** B v2's five families equal, split equally within each.
+   - **score = 1,000 × u + D_c.** u counts the graded statistics undefined in exactly one of the two records. D_c is the weighted RMS, B v2's five families equal and split equally within each, of 10·asinh(z/10) over the statistics defined in both, with z = Δ / scale uncapped. A statistic undefined in both counts 0.
+   - **Why lexicographic:** with a penalty inside the RMS, one undefined small-lawn statistic (D 18.2) would rank ahead of a fully defined candidate with three local-search or chemotaxis terms 1,700 scales off (D 31.9), the escape again in another form. With u first, fewer undefined statistics always rank ahead. D_c stays below 1,000 for every physically possible worm: 10·asinh(z/10) reaches 1,000 only at about 10^44 scales.
+   - **Near the truth:** the compressed term is within 1.5% of z for |z| ≤ 3 (2.957 at 3) and 8.8 at 10. It grows slowly beyond that: 18.2 at 30, 30.0 at 100, 58.3 at 1,700.
+   - **Where it is used:** for every attempt-2 fit, through `run_fit`'s objective, so the medians and the plateau rule see these finite scores. The registered D, the floor, the oracle, the prior, every gain and the gate stay on the capped distance.
 
-   This replaces amendment 1's uncapped objective for every attempt-2 fit. The registered D, the floor, the oracle, the prior, every gain and the gate stay on the capped distance.
+2. **The truths are reused:** attempt 1's registered four (1164, 1354, 6985, 9105), with their v2 observations (base 210 M), floors and priors (`preflight.json`, bound). The only change is the objective, so the result isolates it. The observations live off-repo in `build/cma-recovery-v2/candidates.jsonl`, so **its SHA-256 is registered in Part A**, and every attempt-2 stage refuses if the file differs.
 
-2. **The truths are reused:** attempt 1's registered four (1164, 1354, 6985, 9105), with their committed v2 observations (base 210 M), floors and priors (`preflight.json`, bound). The only change is the objective, so the result isolates it.
-
-3. **The cap is 272,** amendment 1's pilot cap. Every attempt-1 fit plateaued well before it (generations 71–179), and the guarded plateau rule stops fits sooner. There is no re-pilot.
+3. **The cap is 272,** amendment 1's pilot cap, set under the uncapped objective. Near the truth the ranking score matches it closely (decision 1), every attempt-1 fit plateaued well before it (generations 71–179), and the guarded plateau rule stops fits sooner. There is no re-pilot, and Part A says so.
 
 4. **The probe** (description; discarded seeds), registered as the gates' oracle before Part A:
 
    - truths 1164 and 6985, each one fit to the guarded plateau with a cap of 200;
    - truth 9105, one fit for 80 generations;
    - each answer re-simulated 10 times, with its gain read on the capped D;
-   - **if any of the three gains is below 0.75, the change returns to the maintainer before registering**;
+   - **if any of the three gains is below 0.80 (the bar plus attempt 1's 0.05 margin), the change returns to the maintainer before registering**;
    - seeds: base 300,000,000 with attempt 1's fit scheme (k = 10,000·f + 16·(n − 1) + p, answers at 10,000·f + 5,000 + q), for f = 0–2, on CMA seeds 5995–5997.
 
 5. **The registered fits:**
@@ -64,6 +62,6 @@ The re-investigation (description, on stored simulations):
 ## Risks / Trade-offs
 
 - **[The noisy truths stay hard]** → their observations carry noise of 13–15 scales on exits that no fit can remove, though the floor normalises the gain for it. The probe shows whether the fix suffices, and if not, the fallback is registered as the next step.
-- **[A large penalty dominates early]** → undefined γ (weight 0.1) at 100 swamps the rest until γ is defined. That is intended, since recovery needs it, and the box centre starts with γ defined.
+- **[Definedness dominates early]** → while any statistic the truth defines is undefined, the 1,000-per-statistic term outranks all distance. That is intended, since recovery needs every statistic defined, and the box centre starts with all 19 defined.
 - **[Reusing truths after seeing them fail]** → this tests the objective on exactly the cases that broke it. The truths were fixed by attempt 1's registered rule, not chosen after the fact.
 - **[Cost]** → about 4–6 h for the probe and about 15 h for the fits.

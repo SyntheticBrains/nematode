@@ -13,15 +13,15 @@ A re-investigation (2026-10-29, on the stored simulations) bears on the fix:
 
 The maintainer's decisions of 2026-10-29:
 
-- the objective is 10·asinh(z/10), with an undefined statistic costing 100;
+- the objective is 10·asinh(z/10), with undefined statistics ranked behind defined ones (made lexicographic at the spec review);
 - the registered four truths are reused;
 - the cap of 272 is kept;
 - a pre-registration probe on discarded seeds fits the two failed truths and one stable one.
 
 ## What Changes
 
-- **The fit's ranking objective.** Each defined statistic contributes 10·asinh(z/10): linear near the truth, slowly growing far from it. A statistic undefined in only one record contributes 100, more than any plausible defined term, since reaching 100 takes about 110,000 band scales. The registered D, the gates and the gains stay capped.
-- **The probe, before registration.** Truths 1164 and 6985 are fitted to the guarded plateau (cap 200), and 9105 for 80 generations, on discarded seeds. Each must reach a gain of at least 0.75, or the change returns to the maintainer.
+- **The fit's ranking objective,** lexicographic in definedness: 1,000 × (the statistics undefined in only one record) + the weighted RMS of 10·asinh(z/10) over the defined ones. Fewer undefined statistics always rank ahead, and near the truth each term is z to within 1.5%. The registered D, the gates and the gains stay capped.
+- **The probe, before registration.** Truths 1164 and 6985 are fitted to the guarded plateau (cap 200), and 9105 for 80 generations, on discarded seeds. Each must reach a gain of at least 0.80 (the bar plus a 0.05 margin), or the change returns to the maintainer. The reused observations' file is pinned by its SHA-256 in Part A.
 - **The registered re-run:**
   - the four registered truths and their committed observations, floors and priors;
   - 4 × 2 fits on new seeds, at the cap of 272, with the guarded plateau;
