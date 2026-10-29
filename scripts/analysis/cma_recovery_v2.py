@@ -1071,6 +1071,46 @@ def _read_b() -> int:
     )
 
 
+PROBE_B_DIAGNOSIS_PATH = SUPPORT_B / "probe_diagnosis.json"
+
+
+def _diagnose_b() -> int:
+    """Record each probed truth's per-statistic decomposition: its own repeats against its answer."""
+    preflight = json.loads(PREFLIGHT_PATH.read_text())
+    stored = read_records(CANDIDATES_PATH)
+    answers = read_records(BUILD_B / "probe" / "answers.jsonl")
+    truths = []
+    for fit, (simulation, _, _) in enumerate(PROBE_B_TRUTHS):
+        truth = _truth(preflight, simulation)
+        c = truth["candidate"]
+        truths.append(
+            {
+                "truth": simulation,
+                "floor": truth["floor"],
+                "statistics": _decompose(
+                    stored[OBSERVATION_K + c],
+                    {
+                        "own_repeats": [
+                            stored[REPEAT_K + cr.REPEATS * c + q]
+                            for q in range(cr.STABILITY_REPEATS)
+                        ],
+                        "probe_answer": [
+                            answers[cr.answer_k(fit, q)] for q in range(cr.RESIMULATIONS)
+                        ],
+                    },
+                ),
+            },
+        )
+    record = {
+        "description": "Description: the probe's per-statistic decompositions, uncapped z on v2's "
+        "n = 200 scales.",
+        "truths": truths,
+    }
+    _write(PROBE_B_DIAGNOSIS_PATH, record)
+    print(f"wrote {PROBE_B_DIAGNOSIS_PATH}")
+    return 0
+
+
 def attempt_b(stage: str, workers: int) -> int:
     """Run an attempt-2 stage behind its guards: the pinned observations, then the launch record."""
     if not candidates_pinned():
@@ -1081,6 +1121,8 @@ def attempt_b(stage: str, workers: int) -> int:
         return 1
     if stage == "probe-b":
         return _probe_b(workers)
+    if stage == "diagnose-b":
+        return _diagnose_b()
     if not probe_cleared():
         print(f"{PROBE_B_PATH} is missing or holds a gain below the bar.", file=sys.stderr)
         return 1
@@ -1116,13 +1158,14 @@ def main(argv: list[str] | None = None) -> int:
             "diagnose",
             "smoke",
             "probe-b",
+            "diagnose-b",
             "run-b",
             "read-b",
         ),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
-    if args.stage in ("probe-b", "run-b", "read-b"):
+    if args.stage in ("probe-b", "diagnose-b", "run-b", "read-b"):
         return attempt_b(args.stage, args.workers)
     unguarded = {"smoke": _smoke, "gate-probe": _gate_probe, "objective-probe": _objective_probe}
     if args.stage in unguarded:
