@@ -116,3 +116,57 @@ def test_the_uncapped_objective_keeps_a_far_statistic_s_distance() -> None:
     assert uncapped[0] > uncapped[1]
     undefined = {"statistics": {"a/x": None, "a/y": 0.0, "b/z": 0.0}}
     assert v2.predictive_distance_v2(truth, undefined, SCALES, FAMILIES, capped=False) == capped[1]
+
+
+def test_a_torn_last_line_is_ignored_and_rerun(tmp_path: Path) -> None:
+    """A store's unterminated last line is not read, so its job stays eligible to run."""
+    path = tmp_path / "store.jsonl"
+    path.write_text('{"k": 1, "z": [0.5]}\n{"k": 2, "z": [0.')
+    assert list(v2.read_records(path)) == [1]
+    v2._drop_torn_line(path)
+    assert path.read_text() == '{"k": 1, "z": [0.5]}\n'
+
+
+def test_a_stored_record_is_reused_only_for_its_own_inputs(tmp_path: Path) -> None:
+    """A stored k with other parameters, or another seed base, is refused rather than reused."""
+    path = tmp_path / "store.jsonl"
+    path.write_text('{"k": 1, "z": [0.5], "seed_base": 100}\n')
+    assert v2.run_jobs([(1, [0.5])], 100, path, workers=1)[1]["z"] == [0.5]
+    with pytest.raises(ValueError, match="other parameters"):
+        v2.run_jobs([(1, [0.6])], 100, path, workers=1)
+    with pytest.raises(ValueError, match="seed base"):
+        v2.run_jobs([(1, [0.5])], 200, path, workers=1)
+
+
+def test_a_fit_saved_with_other_callbacks_is_refused(tmp_path: Path) -> None:
+    """A saved fit is neither returned nor resumed under another simulator or stop rule."""
+    import json
+
+    saved = {
+        "fit": 0,
+        "simulate": cr._identity(v2.simulate_v2),
+        "stop_rule": cr._identity(v2.guarded_stop),
+        "generation": 1,
+        "medians": [1.0],
+        "sigmas": [0.2],
+        "answers": [[0.5] * 20],
+        "seconds": [1.0],
+        "stop": {"generation": 1, "by": "cap"},
+    }
+    (tmp_path / "fit0.json").write_text(json.dumps(saved))
+    common = {
+        "fit": 0,
+        "cma_seed": 1,
+        "seed_base": 0,
+        "cap": 1,
+        "use_rule": True,
+        "state_dir": tmp_path,
+        "pool": None,
+        "scales": {},
+    }
+    same = cr.run_fit({}, **common, simulate=v2.simulate_v2, stop=v2.guarded_stop)
+    assert same["stop"] == saved["stop"]
+    with pytest.raises(RuntimeError, match="stop_rule"):
+        cr.run_fit({}, **common, simulate=v2.simulate_v2)
+    with pytest.raises(RuntimeError, match="simulate"):
+        cr.run_fit({}, **common, stop=v2.guarded_stop)
