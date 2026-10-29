@@ -1072,6 +1072,62 @@ def _read_b() -> int:
 
 
 PROBE_B_DIAGNOSIS_PATH = SUPPORT_B / "probe_diagnosis.json"
+PROBE_B2_PATH = SUPPORT_B / "probe_restart.json"
+# The second restart of the truth the first probe left short, on the probe's discarded seeds.
+PROBE_B2_TRUTH = 1164
+PROBE_B2_FIT = len(PROBE_B_TRUTHS)
+
+
+def _probe_b2(workers: int) -> int:
+    """Fit a second restart of the short truth and read the better restart as the gate selects it."""
+    preflight = json.loads(PREFLIGHT_PATH.read_text())
+    probe = json.loads(PROBE_B_PATH.read_text())
+    first = next(r for r in probe["truths"] if r["truth"] == PROBE_B2_TRUTH)
+    _, cap, use_rule = next(t for t in PROBE_B_TRUTHS if t[0] == PROBE_B2_TRUTH)
+    truth = _truth(preflight, PROBE_B2_TRUTH)
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = _fit_b(
+            truth,
+            fit=PROBE_B2_FIT,
+            cma_seed=PROBE_B_CMA_SEED + PROBE_B2_FIT,
+            seed_base=PROBE_B_BASE,
+            cap=cap,
+            use_rule=use_rule,
+            state_dir=BUILD_B / "probe",
+            pool=pool,
+        )
+    d, gain = _answer_gain(
+        truth,
+        history,
+        PROBE_B2_FIT,
+        PROBE_B_BASE,
+        BUILD_B / "probe" / "answers.jsonl",
+        workers,
+    )
+    restarts = [
+        {"fit": 0, "gain": first["gain"], "stop": first["stop"], "medians": first["medians"]},
+        {"fit": PROBE_B2_FIT, "gain": gain, "stop": history["stop"], "medians": history["medians"]},
+    ]
+    best = cr.best_restart([r["medians"] for r in restarts])
+    record = {
+        "description": "Description: a second restart of the probe's short truth, on discarded "
+        "seeds, with the better restart selected by its final objective as the gate selects it.",
+        "truth": PROBE_B2_TRUTH,
+        "bar": PROBE_B_BAR,
+        "second_restart": {"answer_D": d, "gain": gain, "sigmas": history["sigmas"]}
+        | {k: restarts[1][k] for k in ("stop", "medians")},
+        "final_objectives": [cr.final_objective(r["medians"]) for r in restarts],
+        "selected_restart": restarts[best]["fit"],
+        "selected_gain": restarts[best]["gain"],
+        "returns_to_maintainer": restarts[best]["gain"] < PROBE_B_BAR,
+    }
+    _write(PROBE_B2_PATH, record)
+    print(
+        f"second restart: gain {gain:.3f}, stop {history['stop']}; "
+        f"selected fit {record['selected_restart']}, gain {record['selected_gain']:.3f}",
+        flush=True,
+    )
+    return 1 if record["returns_to_maintainer"] else 0
 
 
 def _diagnose_b() -> int:
@@ -1119,15 +1175,14 @@ def attempt_b(stage: str, workers: int) -> int:
             file=sys.stderr,
         )
         return 1
-    if stage == "probe-b":
-        return _probe_b(workers)
-    if stage == "diagnose-b":
-        return _diagnose_b()
+    probes = {"probe-b": _probe_b, "diagnose-b": lambda _: _diagnose_b(), "probe-b2": _probe_b2}
+    if stage in probes:
+        return probes[stage](workers)
     if not probe_cleared():
         print(f"{PROBE_B_PATH} is missing or holds a gain below the bar.", file=sys.stderr)
         return 1
     if not cr.launch_committed(
-        bound=(PREFLIGHT_PATH, PILOT_A1_PATH, PROBE_B_PATH),
+        bound=(PREFLIGHT_PATH, PILOT_A1_PATH, PROBE_B_PATH, PROBE_B2_PATH),
         launch_path=LAUNCH_B_PATH,
     ):
         print(f"{LAUNCH_B_PATH} is not committed and clean; nothing runs.", file=sys.stderr)
@@ -1136,11 +1191,17 @@ def attempt_b(stage: str, workers: int) -> int:
 
 
 def probe_cleared() -> bool:
-    """Return whether the probe ran and every probed truth reached the bar."""
+    """Return whether the probe ran and every probed truth reached the bar.
+
+    Where the short truth's second restart has run, that truth reads the restart the gate would
+    select, and the probe clears only if that one reaches the bar.
+    """
     if not PROBE_B_PATH.exists():
         return False
-    probe = json.loads(PROBE_B_PATH.read_text())
-    return all(r["gain"] >= PROBE_B_BAR for r in probe["truths"])
+    gains = {r["truth"]: r["gain"] for r in json.loads(PROBE_B_PATH.read_text())["truths"]}
+    if PROBE_B2_PATH.exists():
+        gains[PROBE_B2_TRUTH] = json.loads(PROBE_B2_PATH.read_text())["selected_gain"]
+    return all(g >= PROBE_B_BAR for g in gains.values())
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1159,13 +1220,14 @@ def main(argv: list[str] | None = None) -> int:
             "smoke",
             "probe-b",
             "diagnose-b",
+            "probe-b2",
             "run-b",
             "read-b",
         ),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
-    if args.stage in ("probe-b", "diagnose-b", "run-b", "read-b"):
+    if args.stage in ("probe-b", "diagnose-b", "probe-b2", "run-b", "read-b"):
         return attempt_b(args.stage, args.workers)
     unguarded = {"smoke": _smoke, "gate-probe": _gate_probe, "objective-probe": _objective_probe}
     if args.stage in unguarded:

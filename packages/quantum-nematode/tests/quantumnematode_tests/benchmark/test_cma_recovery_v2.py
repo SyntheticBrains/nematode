@@ -99,7 +99,7 @@ def test_the_registered_seed_ranges_are_disjoint() -> None:
         (
             v2.PROBE_B_BASE,
             v2.PROBE_B_BASE
-            + animals * (cr.FIT_BLOCK * (len(v2.PROBE_B_TRUTHS) - 1) + cr.ANSWER_OFFSET + 9)
+            + animals * (cr.FIT_BLOCK * v2.PROBE_B2_FIT + cr.ANSWER_OFFSET + 9)
             + animals,
         ),
     ]
@@ -256,6 +256,7 @@ def test_a_failed_probe_truth_holds_the_registered_fits(
 
     probe = tmp_path / "probe.json"
     monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", tmp_path / "probe_restart.json")
     monkeypatch.setattr(v2, "candidates_pinned", lambda: True)
 
     def ran(*_: object) -> int:
@@ -265,9 +266,52 @@ def test_a_failed_probe_truth_holds_the_registered_fits(
     monkeypatch.setattr(v2, "_read_b", ran)
     assert {1164, 6985} <= {simulation for simulation, _, _ in v2.PROBE_B_TRUTHS}
     assert not v2.probe_cleared()
-    probe.write_text(json.dumps({"truths": [{"gain": 0.95}, {"gain": 0.79}, {"gain": 1.0}]}))
+    probe.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"truth": 1, "gain": 0.95},
+                    {"truth": 2, "gain": 0.79},
+                    {"truth": 3, "gain": 1.0},
+                ],
+            },
+        ),
+    )
     assert not v2.probe_cleared()
     for stage in ("run-b", "read-b"):
         assert v2.main([stage]) == 1
-    probe.write_text(json.dumps({"truths": [{"gain": 0.95}, {"gain": 0.80}, {"gain": 1.0}]}))
+    probe.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"truth": 1, "gain": 0.95},
+                    {"truth": 2, "gain": 0.80},
+                    {"truth": 3, "gain": 1.0},
+                ],
+            },
+        ),
+    )
     assert v2.probe_cleared()
+
+
+def test_the_short_truth_reads_the_restart_the_gate_selects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A second restart clears the short truth only if the selected restart reaches the bar."""
+    import json
+
+    probe, restart = tmp_path / "probe.json", tmp_path / "probe_restart.json"
+    monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", restart)
+    probe.write_text(
+        json.dumps(
+            {"truths": [{"truth": v2.PROBE_B2_TRUTH, "gain": 0.79}, {"truth": 1, "gain": 1}]},
+        ),
+    )
+    assert not v2.probe_cleared()
+    restart.write_text(json.dumps({"selected_gain": 0.85}))
+    assert v2.probe_cleared()
+    restart.write_text(json.dumps({"selected_gain": 0.79}))
+    assert not v2.probe_cleared()
+    assert v2.PROBE_B2_FIT not in range(len(v2.PROBE_B_TRUTHS))
