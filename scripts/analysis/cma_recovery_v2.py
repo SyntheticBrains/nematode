@@ -31,9 +31,12 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cma_recovery as cr
@@ -50,6 +53,7 @@ PILOT_A1_PATH = SUPPORT / "pilot_amendment1.json"
 RECOVERY_PATH = SUPPORT / "recovery.json"
 BUILD = _REPO / "build" / "cma-recovery-v2"
 PROBE_PATH = BUILD / "gate_probe.json"
+CANDIDATES_PATH = BUILD / "candidates.jsonl"
 
 FIT_BASE = 170_000_000
 PILOT_BASE = 200_000_000
@@ -189,21 +193,71 @@ def predictive_distance_v2(
     return g.distance(readings, list(family_map), family_map)
 
 
+UNDEFINED_RANK = 1_000.0
+COMPRESSION = 10.0
+
+
+def ranking_score(
+    truth: dict[str, Any],
+    draw: dict[str, Any],
+    scales: dict[str, float],
+    family_map: dict[str, tuple[str, ...]],
+) -> float:
+    """Return a fit's ranking score: definedness first, then a compressed distance.
+
+    The score is 1,000 x u + D_c. u counts the graded statistics undefined in exactly one of the two
+    records; D_c is the weighted RMS (families equal, split equally within each) of
+    10·asinh(z/10) over the statistics defined in both, for z uncapped on the bands' scales, a
+    statistic undefined in both counting 0. D_c stays below 1,000 for any physically possible
+    record, so fewer undefined statistics always rank ahead; near the truth each term is z to
+    within 1.5% for |z| <= 3.
+    """
+    from quantumnematode.benchmark import grading as g
+
+    readings: dict[str, dict[str, Any]] = {f: {} for f in family_map}
+    undefined = 0
+    for family, stats in family_map.items():
+        for s in stats:
+            key = f"{family}/{s}"
+            a, b = truth["statistics"].get(key), draw["statistics"].get(key)
+            if (a is None) != (b is None):
+                undefined += 1
+                term = 0.0
+            elif a is None:
+                term = 0.0
+            else:
+                term = COMPRESSION * float(
+                    np.arcsinh((float(b) - float(a)) / scales[key] / COMPRESSION),
+                )
+            readings[family][s] = g.Reading(0.0, g.Band(0.0, scales[key]), term, passes=True)
+    return UNDEFINED_RANK * undefined + g.distance(readings, list(family_map), family_map)
+
+
 class Objective:
     """The distance from one observation to a simulation, picklable and with its scales loaded.
 
-    ``capped`` is the registered D; a fit ranks its candidates on the uncapped distance.
+    ``capped`` is the registered D. A fit ranks its candidates on the uncapped distance, or with
+    ``ranking`` on :func:`ranking_score`.
     """
 
-    def __init__(self, observation: dict[str, Any], *, capped: bool = True) -> None:
+    def __init__(
+        self,
+        observation: dict[str, Any],
+        *,
+        capped: bool = True,
+        ranking: bool = False,
+    ) -> None:
         bands = _bands()
         self.capped = capped
+        self.ranking = ranking
         self.observation = observation
         self.scales = band_scales_v2(bands)
         self.family_map = {f: tuple(st) for f, st in bands["families"].items()}
 
     def __call__(self, record: dict[str, Any]) -> float:
         """Return the distance from the observation to one simulation's record."""
+        if self.ranking:
+            return ranking_score(self.observation, record, self.scales, self.family_map)
         return predictive_distance_v2(
             self.observation,
             record,
@@ -631,50 +685,80 @@ def _run(workers: int) -> int:
     if not preflight.get("passed") or pilot["stops"]["gain_at_300_below_bar"]:
         print("the preflight or the pilot stopped the run; no registered fit runs", file=sys.stderr)
         return 1
-    cap = int(pilot["registered_cap"])
+    _run_fits(
+        preflight,
+        cap=int(pilot["registered_cap"]),
+        cma_seed=CMA_SEED,
+        seed_base=FIT_BASE,
+        build=BUILD,
+        objective=lambda observation: Objective(observation, capped=False),
+        workers=workers,
+    )
+    return 0
+
+
+def _run_fits(  # noqa: PLR0913 - keyword-only: one attempt's registered settings
+    preflight: dict[str, Any],
+    *,
+    cap: int,
+    cma_seed: int,
+    seed_base: int,
+    build: Path,
+    objective: Callable[[dict[str, Any]], Objective],
+    workers: int,
+) -> None:
+    """Run 4 truths x 2 restarts to the guarded plateau or ``cap``, then re-simulate each answer.
+
+    The fits' state goes to ``build/fits`` and the answers' simulations to
+    ``build/answers.jsonl``; ``objective`` builds the ranking objective from an observation.
+    """
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
         for fit in range(cr.TRUTHS * cr.RESTARTS):
             truth = preflight["truths"][fit // cr.RESTARTS]
-            observation = observation_of(truth, BUILD / "candidates.jsonl")
+            observation = observation_of(truth, CANDIDATES_PATH)
             cr.run_fit(
                 observation,
                 fit=fit,
-                cma_seed=CMA_SEED + fit,
-                seed_base=FIT_BASE,
+                cma_seed=cma_seed + fit,
+                seed_base=seed_base,
                 cap=cap,
                 use_rule=True,
-                state_dir=BUILD / "fits",
+                state_dir=build / "fits",
                 pool=pool,
                 scales={},
-                objective=Objective(observation, capped=False),
+                objective=objective(observation),
                 simulate=simulate_v2,
                 stop=guarded_stop,
             )
     for fit in range(cr.TRUTHS * cr.RESTARTS):
-        history = json.loads((BUILD / "fits" / f"fit{fit}.json").read_text())
+        history = json.loads((build / "fits" / f"fit{fit}.json").read_text())
         _resimulate(
             history["answers"][-1],
             [cr.answer_k(fit, q) for q in range(cr.RESIMULATIONS)],
-            FIT_BASE,
-            BUILD / "answers.jsonl",
+            seed_base,
+            build / "answers.jsonl",
             workers,
         )
-    return 0
 
 
 def _read() -> int:
     """Read the gate and the reported measures into the recovery record."""
+    return _read_fits(BUILD, RECOVERY_PATH, DESCRIPTION)
+
+
+def _read_fits(build: Path, out: Path, description: str) -> int:
+    """Read the gate on the registered, capped D from one attempt's fits into ``out``."""
     preflight = json.loads(PREFLIGHT_PATH.read_text())
-    stored = read_records(BUILD / "answers.jsonl")
+    stored = read_records(build / "answers.jsonl")
     sims = nr.load_simulations()
     rows = []
     for j, truth in enumerate(preflight["truths"]):
-        observation = observation_of(truth, BUILD / "candidates.jsonl")
+        observation = observation_of(truth, CANDIDATES_PATH)
         objective = Objective(observation)
         fits = []
         for r in range(cr.RESTARTS):
             fit = cr.RESTARTS * j + r
-            history = json.loads((BUILD / "fits" / f"fit{fit}.json").read_text())
+            history = json.loads((build / "fits" / f"fit{fit}.json").read_text())
             runs = [stored[cr.answer_k(fit, q)] for q in range(cr.RESIMULATIONS)]
             d = float(np.median([objective(x) for x in runs]))
             truth_z = np.asarray(sims[truth["training_simulation"]]["z"])
@@ -718,13 +802,13 @@ def _read() -> int:
         )
     median_gain = float(np.median([r["gain"] for r in rows]))
     record = {
-        "description": DESCRIPTION,
+        "description": description,
         "median_gain": median_gain,
         "gate": cr.GAIN_GATE,
         "passes": median_gain >= cr.GAIN_GATE,
         "truths": rows,
     }
-    _write(RECOVERY_PATH, record)
+    _write(out, record)
     print(json.dumps({"median_gain": median_gain, "passes": record["passes"]}, indent=2))
     return 0
 
@@ -838,6 +922,185 @@ def _smoke(workers: int) -> int:
     return 0 if ok else 1
 
 
+# ---------------------------------------------------------------------------------------------
+# Attempt 2: the ranking score on the registered truths
+# ---------------------------------------------------------------------------------------------
+
+SUPPORT_B = _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "117-cma-recovery-v2b"
+LAUNCH_B_PATH = SUPPORT_B / "launch.md"
+PROBE_B_PATH = SUPPORT_B / "probe.json"
+RECOVERY_B_PATH = SUPPORT_B / "recovery.json"
+BUILD_B = BUILD / "attempt2"
+# The reused truths' observations live off-repo; their file is pinned by this digest.
+CANDIDATES_SHA256 = "7728d7f0e7c950be49103adf41cd281a95ad8846011c30ac2b92b6a0ecbc7c2e"
+PROBE_B_BASE = 300_000_000
+PROBE_B_CMA_SEED = 5995
+PROBE_B_TRUTHS = ((1164, 200, True), (6985, 200, True), (9105, 80, False))
+PROBE_B_BAR = 0.80
+FIT_B_BASE = 230_000_000
+CMA_B_SEED = 5430
+CAP_B = 272
+
+
+def candidates_pinned() -> bool:
+    """Return whether the reused observations' file still matches its registered digest."""
+    from quantumnematode.benchmark.measurement import file_sha256
+
+    return CANDIDATES_PATH.exists() and file_sha256(CANDIDATES_PATH) == CANDIDATES_SHA256
+
+
+def _truth(preflight: dict[str, Any], simulation: int) -> dict[str, Any]:
+    return next(t for t in preflight["truths"] if t["training_simulation"] == simulation)
+
+
+def _fit_b(  # noqa: PLR0913 - one attempt-2 fit's settings
+    truth: dict[str, Any],
+    *,
+    fit: int,
+    cma_seed: int,
+    seed_base: int,
+    cap: int,
+    use_rule: bool,
+    state_dir: Path,
+    pool: Any,  # noqa: ANN401 - a pool
+) -> dict[str, Any]:
+    observation = observation_of(truth, CANDIDATES_PATH)
+    return cr.run_fit(
+        observation,
+        fit=fit,
+        cma_seed=cma_seed,
+        seed_base=seed_base,
+        cap=cap,
+        use_rule=use_rule,
+        state_dir=state_dir,
+        pool=pool,
+        scales={},
+        objective=Objective(observation, ranking=True),
+        simulate=simulate_v2,
+        stop=guarded_stop,
+    )
+
+
+def _answer_gain(  # noqa: PLR0913 - one answer's re-simulation settings
+    truth: dict[str, Any],
+    history: dict[str, Any],
+    fit: int,
+    base: int,
+    path: Path,
+    workers: int,
+) -> tuple[float, float]:
+    runs = _resimulate(
+        history["answers"][-1],
+        [cr.answer_k(fit, q) for q in range(cr.RESIMULATIONS)],
+        base,
+        path,
+        workers,
+    )
+    d = median_distance_v2(observation_of(truth, CANDIDATES_PATH), runs)
+    return d, cr._gain(truth["prior_D"], d, truth["floor"])
+
+
+def _probe_b(workers: int) -> int:
+    """Fit the failed truths and one recovered on the ranking score; discarded seeds."""
+    preflight = json.loads(PREFLIGHT_PATH.read_text())
+    rows = []
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        for fit, (simulation, cap, use_rule) in enumerate(PROBE_B_TRUTHS):
+            truth = _truth(preflight, simulation)
+            history = _fit_b(
+                truth,
+                fit=fit,
+                cma_seed=PROBE_B_CMA_SEED + fit,
+                seed_base=PROBE_B_BASE,
+                cap=cap,
+                use_rule=use_rule,
+                state_dir=BUILD_B / "probe",
+                pool=pool,
+            )
+            d, gain = _answer_gain(
+                truth,
+                history,
+                fit,
+                PROBE_B_BASE,
+                BUILD_B / "probe" / "answers.jsonl",
+                workers,
+            )
+            rows.append(
+                {
+                    "truth": simulation,
+                    "floor": truth["floor"],
+                    "prior_D": truth["prior_D"],
+                    "stop": history["stop"],
+                    "answer_D": d,
+                    "gain": gain,
+                    "medians": history["medians"],
+                    "sigmas": history["sigmas"],
+                },
+            )
+            print(f"probe truth {simulation}: gain {gain:.3f}, stop {history['stop']}", flush=True)
+    record = {
+        "description": "Description: the ranking score on discarded seeds, before registration.",
+        "bar": PROBE_B_BAR,
+        "truths": rows,
+        "returns_to_maintainer": any(r["gain"] < PROBE_B_BAR for r in rows),
+    }
+    _write(PROBE_B_PATH, record)
+    return 1 if record["returns_to_maintainer"] else 0
+
+
+def _run_b(workers: int) -> int:
+    """Run attempt 2's registered fits on the ranking score, then re-simulate each answer."""
+    _run_fits(
+        json.loads(PREFLIGHT_PATH.read_text()),
+        cap=CAP_B,
+        cma_seed=CMA_B_SEED,
+        seed_base=FIT_B_BASE,
+        build=BUILD_B,
+        objective=lambda observation: Objective(observation, ranking=True),
+        workers=workers,
+    )
+    return 0
+
+
+def _read_b() -> int:
+    """Read attempt 2's gate, on the registered capped D, into its recovery record."""
+    return _read_fits(
+        BUILD_B,
+        RECOVERY_B_PATH,
+        "Attempt 2: sep-CMA ranking on definedness then the compressed z, on attempt 1's truths.",
+    )
+
+
+def attempt_b(stage: str, workers: int) -> int:
+    """Run an attempt-2 stage behind its guards: the pinned observations, then the launch record."""
+    if not candidates_pinned():
+        print(
+            f"{CANDIDATES_PATH} does not match its registered SHA-256; nothing runs.",
+            file=sys.stderr,
+        )
+        return 1
+    if stage == "probe-b":
+        return _probe_b(workers)
+    if not probe_cleared():
+        print(f"{PROBE_B_PATH} is missing or holds a gain below the bar.", file=sys.stderr)
+        return 1
+    if not cr.launch_committed(
+        bound=(PREFLIGHT_PATH, PILOT_A1_PATH, PROBE_B_PATH),
+        launch_path=LAUNCH_B_PATH,
+    ):
+        print(f"{LAUNCH_B_PATH} is not committed and clean; nothing runs.", file=sys.stderr)
+        return 1
+    return _run_b(workers) if stage == "run-b" else _read_b()
+
+
+def probe_cleared() -> bool:
+    """Return whether the probe ran and every probed truth reached the bar."""
+    if not PROBE_B_PATH.exists():
+        return False
+    probe = json.loads(PROBE_B_PATH.read_text())
+    return all(r["gain"] >= PROBE_B_BAR for r in probe["truths"])
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: the gates' probe, the preflight, the pilot, the fits, the reading and a smoke."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -852,10 +1115,15 @@ def main(argv: list[str] | None = None) -> int:
             "read",
             "diagnose",
             "smoke",
+            "probe-b",
+            "run-b",
+            "read-b",
         ),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
+    if args.stage in ("probe-b", "run-b", "read-b"):
+        return attempt_b(args.stage, args.workers)
     unguarded = {"smoke": _smoke, "gate-probe": _gate_probe, "objective-probe": _objective_probe}
     if args.stage in unguarded:
         return unguarded[args.stage](args.workers)
@@ -871,11 +1139,13 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 1
-    stages = {"preflight": _preflight, "pilot": _pilot, "run": _run}
-    if args.stage == "read":
-        return _read()
-    if args.stage == "diagnose":
-        return _diagnose()
+    stages = {
+        "preflight": _preflight,
+        "pilot": _pilot,
+        "run": _run,
+        "read": lambda _: _read(),
+        "diagnose": lambda _: _diagnose(),
+    }
     return stages[args.stage](args.workers)
 
 

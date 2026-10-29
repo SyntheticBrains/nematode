@@ -1,7 +1,7 @@
 ## 1. The objective
 
-- [ ] 1.1 `ranking_score` (1,000 × u + D_c) and `Objective(ranking=True)`. Tests: undefined never ahead of defined (the review's case); near the truth within 1.5%; the capped D unchanged; u counts only one-sided undefinedness.
-- [ ] 1.2 The observations' digest: `candidates_digest()`, and a refusal in `probe-b`, `run-b` and `read-b`; a test.
+- [x] 1.1 `ranking_score` (1,000 × u + D_c) and `Objective(ranking=True)`. Tests: undefined never ahead of defined (the review's case); near the truth within 1.5%; the capped D unchanged; u counts only one-sided undefinedness.
+- [x] 1.2 The observations' digest: `candidates_digest()`, and a refusal in `probe-b`, `run-b` and `read-b`; a test.
 
 ## 2. The probe
 
