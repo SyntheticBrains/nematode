@@ -16,6 +16,10 @@
           "probe_answer": {
             "median_abs_z": 2.7883173230999496,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 9.161444870394497,
+            "undefined": 0
           }
         },
         {
@@ -28,6 +32,10 @@
           },
           "probe_answer": {
             "median_abs_z": 1.5434125054462045,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 6.170103050217185,
             "undefined": 0
           }
         },
@@ -42,6 +50,10 @@
           "probe_answer": {
             "median_abs_z": 1.2837476311037577,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 4.4646598174472825,
+            "undefined": 0
           }
         },
         {
@@ -54,6 +66,10 @@
           },
           "probe_answer": {
             "median_abs_z": 4.780281496357958,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 6.831834103543779,
             "undefined": 0
           }
         },
@@ -68,6 +84,10 @@
           "probe_answer": {
             "median_abs_z": 0.4252094889127565,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 0.7370180071710113,
+            "undefined": 0
           }
         },
         {
@@ -80,6 +100,10 @@
           },
           "probe_answer": {
             "median_abs_z": 5.016521479276262,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 6.907439350505314,
             "undefined": 0
           }
         },
@@ -94,6 +118,10 @@
           "probe_answer": {
             "median_abs_z": 1.760288785479922,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 4.1054611253095405,
+            "undefined": 0
           }
         },
         {
@@ -106,6 +134,10 @@
           },
           "probe_answer": {
             "median_abs_z": 1.5209633135007565,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 2.325011083401126,
             "undefined": 0
           }
         },
@@ -120,6 +152,10 @@
           "probe_answer": {
             "median_abs_z": 0.37613782021020686,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 1.134872697045805,
+            "undefined": 0
           }
         },
         {
@@ -132,6 +168,10 @@
           },
           "probe_answer": {
             "median_abs_z": 0.31584666968783964,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 0.24285037134173926,
             "undefined": 0
           }
         },
@@ -146,6 +186,10 @@
           "probe_answer": {
             "median_abs_z": 0.5009546250540602,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 0.6602183070343619,
+            "undefined": 0
           }
         },
         {
@@ -158,6 +202,10 @@
           },
           "probe_answer": {
             "median_abs_z": 9.65420405823451,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 9.289664889830096,
             "undefined": 0
           }
         },
@@ -172,6 +220,10 @@
           "probe_answer": {
             "median_abs_z": 0.24130639602417592,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 12.20653165503457,
+            "undefined": 0
           }
         },
         {
@@ -184,6 +236,10 @@
           },
           "probe_answer": {
             "median_abs_z": 20.83798428161024,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 3.631378866091973,
             "undefined": 0
           }
         },
@@ -198,6 +254,10 @@
           "probe_answer": {
             "median_abs_z": 0.4390101937567338,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 6.535119600006154,
+            "undefined": 0
           }
         },
         {
@@ -210,6 +270,10 @@
           },
           "probe_answer": {
             "median_abs_z": 2.567425188085344,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 3.7571107435030475,
             "undefined": 0
           }
         },
@@ -224,6 +288,10 @@
           "probe_answer": {
             "median_abs_z": 0.3880899929822312,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 0.03838238704467093,
+            "undefined": 0
           }
         },
         {
@@ -237,6 +305,10 @@
           "probe_answer": {
             "median_abs_z": 0.017501382567300123,
             "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 0.21229590055248976,
+            "undefined": 0
           }
         },
         {
@@ -249,6 +321,10 @@
           },
           "probe_answer": {
             "median_abs_z": 0.9350731957150391,
+            "undefined": 0
+          },
+          "second_restart": {
+            "median_abs_z": 0.23284429343840155,
             "undefined": 0
           }
         }

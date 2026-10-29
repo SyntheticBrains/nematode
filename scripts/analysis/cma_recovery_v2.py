@@ -1157,6 +1157,19 @@ def _diagnose_b() -> int:
                 ),
             },
         )
+    if PROBE_B2_PATH.exists():
+        row = next(t for t in truths if t["truth"] == PROBE_B2_TRUTH)
+        c = _truth(preflight, PROBE_B2_TRUTH)["candidate"]
+        second = _decompose(
+            stored[OBSERVATION_K + c],
+            {
+                "second_restart": [
+                    answers[cr.answer_k(PROBE_B2_FIT, q)] for q in range(cr.RESIMULATIONS)
+                ],
+            },
+        )
+        for statistic, extra in zip(row["statistics"], second, strict=True):
+            statistic["second_restart"] = extra["second_restart"]
     record = {
         "description": "Description: the probe's per-statistic decompositions, uncapped z on v2's "
         "n = 200 scales.",
