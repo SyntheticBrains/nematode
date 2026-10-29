@@ -237,6 +237,29 @@ def guarded_plateau_generation(medians: list[float], sigmas: list[float]) -> int
 # ---------------------------------------------------------------------------------------------
 
 
+def read_records(path: Path) -> dict[int, dict[str, Any]]:
+    """Return a JSONL store's complete records by k; an unterminated last line is ignored.
+
+    A line is complete when it ends in a newline. A run killed mid-write leaves its last line torn,
+    and that job stays eligible to run again.
+    """
+    if not path.exists():
+        return {}
+    text = path.read_text()
+    lines = text.split("\n")
+    complete = lines[:-1]  # the piece after the last newline is empty, or a torn line
+    return {r["k"]: r for r in (json.loads(line) for line in complete if line)}
+
+
+def _drop_torn_line(path: Path) -> None:
+    """Truncate a store to its last complete line, so appended records start on a fresh line."""
+    if not path.exists():
+        return
+    text = path.read_text()
+    if text and not text.endswith("\n"):
+        path.write_text(text[: text.rfind("\n") + 1])
+
+
 def run_jobs(
     jobs: list[tuple[int, list[float]]],
     seed_base: int,
@@ -245,26 +268,43 @@ def run_jobs(
     *,
     presence: bool = False,
 ) -> dict[int, dict[str, Any]]:
-    """Run the jobs not yet stored at ``path`` (one JSON line each); return every stored record."""
-    done = (
-        {json.loads(line)["k"] for line in path.read_text().splitlines()}
-        if path.exists()
-        else set()
-    )
-    todo = [(k, z) for k, z in jobs if k not in done]
+    """Run the jobs not yet stored at ``path`` (one JSON line each); return every stored record.
+
+    A stored record is reused only for the same parameters and, where it records one, the same
+    seed base; any other match on k is refused, so a store is never silently mixed.
+
+    Raises
+    ------
+    ValueError
+        If a stored record for a requested k has other parameters or another seed base.
+    """
+    _drop_torn_line(path)
+    stored = read_records(path)
+    for k, z in jobs:
+        record = stored.get(k)
+        if record is None:
+            continue
+        if list(map(float, record["z"])) != list(map(float, z)):
+            msg = f"{path}: stored k = {k} has other parameters than requested"
+            raise ValueError(msg)
+        if record.get("seed_base", seed_base) != seed_base:
+            msg = f"{path}: stored k = {k} was run on seed base {record['seed_base']}, not {seed_base}"
+            raise ValueError(msg)
+    todo = [(k, z) for k, z in jobs if k not in stored]
     path.parent.mkdir(parents=True, exist_ok=True)
     entry = simulate_v2_presence if presence else simulate_v2
     if todo:
-        print(f"{len(done)} stored, {len(todo)} to run on {workers} workers", flush=True)
+        print(f"{len(stored)} stored, {len(todo)} to run on {workers} workers", flush=True)
         with (
             ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool,
             path.open("a") as out,
         ):
             futures = [pool.submit(entry, k, z, seed_base) for k, z in todo]
             for future in as_completed(futures):
-                out.write(json.dumps(future.result(), allow_nan=False) + "\n")
+                record = {**future.result(), "seed_base": seed_base}
+                out.write(json.dumps(record, allow_nan=False) + "\n")
                 out.flush()
-    return {r["k"]: r for r in (json.loads(line) for line in path.read_text().splitlines())}
+    return read_records(path)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -423,8 +463,7 @@ def select_truths(base: int, path: Path, workers: int) -> dict[str, Any]:
 
 def observation_of(row: dict[str, Any], path: Path) -> dict[str, Any]:
     """Return a truth's stored v2 observation from the candidates' simulations."""
-    stored = {r["k"]: r for r in (json.loads(line) for line in path.read_text().splitlines())}
-    return stored[OBSERVATION_K + row["candidate"]]
+    return read_records(path)[OBSERVATION_K + row["candidate"]]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -626,10 +665,7 @@ def _run(workers: int) -> int:
 def _read() -> int:
     """Read the gate and the reported measures into the recovery record."""
     preflight = json.loads(PREFLIGHT_PATH.read_text())
-    stored = {
-        r["k"]: r
-        for r in (json.loads(x) for x in (BUILD / "answers.jsonl").read_text().splitlines())
-    }
+    stored = read_records(BUILD / "answers.jsonl")
     sims = nr.load_simulations()
     rows = []
     for j, truth in enumerate(preflight["truths"]):
@@ -731,18 +767,9 @@ def _decompose(
 def _diagnose() -> int:
     """Record the per-statistic decompositions behind the pilot's and the failed truths' readings."""
     preflight = json.loads(PREFLIGHT_PATH.read_text())
-    candidates = BUILD / "candidates.jsonl"
-    stored = {r["k"]: r for r in (json.loads(x) for x in candidates.read_text().splitlines())}
-    pilot_answers = {
-        r["k"]: r
-        for r in (
-            json.loads(x) for x in (BUILD / "pilot" / "answers.jsonl").read_text().splitlines()
-        )
-    }
-    answers = {
-        r["k"]: r
-        for r in (json.loads(x) for x in (BUILD / "answers.jsonl").read_text().splitlines())
-    }
+    stored = read_records(BUILD / "candidates.jsonl")
+    pilot_answers = read_records(BUILD / "pilot" / "answers.jsonl")
+    answers = read_records(BUILD / "answers.jsonl")
 
     def repeats(row: dict[str, Any]) -> list[dict[str, Any]]:
         c = row["candidate"]

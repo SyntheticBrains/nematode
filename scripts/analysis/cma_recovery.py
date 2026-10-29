@@ -371,7 +371,17 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
     """
     state_path = state_dir / f"fit{fit}.pkl"
     history_path = state_dir / f"fit{fit}.json"
+    identity = {
+        "simulate": _identity(simulate or nr.simulate),
+        "stop_rule": _identity(stop or plateau_reached),
+    }
     saved = json.loads(history_path.read_text()) if history_path.exists() else None
+    if saved is not None:
+        for key, value in identity.items():
+            # Histories written before identities were recorded carry none and are not checked.
+            if key in saved and saved[key] != value:
+                message = f"fit {fit}: saved with {key} {saved[key]}, asked for {value}"
+                raise RuntimeError(message)
     if saved is not None and saved["stop"] is not None:
         return saved
     if saved is not None and state_path.exists():
@@ -389,6 +399,7 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
         history = {
             "fit": fit,
             "cma_seed": cma_seed,
+            **identity,
             "generation": 0,
             "medians": [],
             "sigmas": [],
@@ -432,6 +443,11 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
             flush=True,
         )
     return history
+
+
+def _identity(function: Callable[..., Any]) -> str:
+    """Return a callback's identity as recorded with a fit: its module and qualified name."""
+    return f"{getattr(function, '__module__', '?')}.{getattr(function, '__qualname__', repr(function))}"
 
 
 def _gain(prior: float, d: float, floor: float) -> float:

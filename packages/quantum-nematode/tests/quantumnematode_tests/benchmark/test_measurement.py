@@ -225,15 +225,33 @@ def test_measured_steps_are_unchanged_by_the_faster_construction(vendored: bool)
         model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
     else:
         model = mm.TrackerModel(jitter_mm=0.005, p_omega=0.3, runs_omega_s=(2, 5), p_other=0.01)
+    import dataclasses
+
     kinds = (["run"] * 40 + ["omega"] * 3) * 20
-    steps = _steps(len(kinds), kinds)
+    # Every field carries a value of its own, so a regression dropping or swapping any shows.
+    steps = [
+        dataclasses.replace(
+            s,
+            heading_rad=0.1 * i,
+            concentration=0.5 + 0.001 * i,
+            dc_dt=-0.002 * i,
+            grad_dir=0.3,
+            grad_strength=0.7,
+            speed_signed=0.05,
+            satiety=0.9 - 0.0001 * i,
+            intake=0.01,
+            phase="assay",
+        )
+        for i, s in enumerate(_steps(len(kinds), kinds))
+    ]
+    names = [f.name for f in dataclasses.fields(BehaviourStep) if f.init]
     for seed in (1, 2, 3):
         fast = mm.measure(steps, seed, model)
         slow = _measure_by_replace(steps, seed, model)
         assert len(fast) == len(slow)
         for a, b in zip(fast, slow, strict=True):
             assert type(a) is type(b)
-            for name in ("step", "x", "y", "on_lawn", "primitive", "phase", "heading_rad"):
+            for name in names:
                 va, vb = getattr(a, name), getattr(b, name)
                 assert va == vb or (isinstance(va, float) and math.isnan(va) and math.isnan(vb))
 
