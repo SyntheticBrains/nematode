@@ -23,5 +23,5 @@
 
 ## 4. Close-out
 
-- [ ] 4.1 Logbook 116; the tracker (F.0, C.1b next); AGENTS.md; the CHANGELOG.
-- [ ] 4.2 Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.
+- [x] 4.1 Logbook 116; the tracker (F.0, C.1b next); AGENTS.md; the CHANGELOG.
+- [x] 4.2 Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.

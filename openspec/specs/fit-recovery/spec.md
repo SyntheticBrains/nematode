@@ -113,3 +113,40 @@ Each of the 4 truths SHALL be fitted twice by sep-CMA from the box centre (σ₀
 
 - **WHEN** the pilot's answer gains more than 0.05 between ⌈1.5·G_p⌉ and generation 300
 - **THEN** the registered cap SHALL be 300
+
+### Requirement: sep-CMA's recovery is re-read on benchmark v2
+
+Before C.1 is refitted on B v2, sep-CMA's recovery of C.1's model SHALL be re-run under v2's objective: the distance over v2's 19 graded statistics on its n = 200 band scales with its five-family weights, between records of simulations passed through v2's measurement models. Truths SHALL be re-selected on v2 by F.0b-i's rule, the cap SHALL be set again by a 300-generation pilot, and the gate SHALL be F.0b-i's: the median of the four truths' best-restart gains at least 0.75.
+
+#### Scenario: The objective is the one C.1b fits
+
+- **WHEN** a fit's candidate is scored
+- **THEN** the score SHALL be the v2 distance over 19 statistics, and the on-lawn reversal rate, which v2 reports and does not grade, SHALL take no part
+
+#### Scenario: The gates are read before they are registered
+
+- **WHEN** the oracle's or the unfitted start's gain, read on discarded seeds before registration, lies within 0.05 of its bar or on its wrong side
+- **THEN** the change SHALL return to the maintainer before Part A is committed
+
+#### Scenario: A truth on v2 is stable and near the wild type
+
+- **WHEN** a candidate's v2 repeats change any statistic's definedness, or its prior distance exceeds its floor by less than 1.0
+- **THEN** it SHALL be skipped and recorded with the reason
+
+### Requirement: The plateau stop is guarded by sigma
+
+A recovery fit on v2 SHALL stop on the plateau rule only once its σ is at most σ₀, and otherwise at its cap, as C.1b will.
+
+#### Scenario: A false plateau at wide sigma
+
+- **WHEN** the plateau rule holds at a generation where σ exceeds σ₀
+- **THEN** the fit SHALL continue
+
+### Requirement: A fit ranks on the uncapped distance
+
+A recovery fit on v2 SHALL rank its candidates on the v2 distance with each defined statistic's z uncapped (an undefined statistic in one record still counting the cap), so that a statistic far from the truth still orders candidates. Every quantity read against a gate SHALL use the registered, capped distance.
+
+#### Scenario: A statistic beyond the cap still ranks candidates
+
+- **WHEN** two candidates differ only in a statistic 30 and 20 band scales from the truth
+- **THEN** the fit's objective SHALL rank the nearer one first, while the capped D reads them equal

@@ -1,0 +1,1573 @@
+{
+  "description": "Description: per-statistic decompositions, uncapped z on v2's n = 200 scales.",
+  "capped_pilot": {
+    "truth": 4909,
+    "statistics": [
+      {
+        "statistic": "small_lawn/roaming_fraction",
+        "weight": 0.03333333333333333,
+        "observation": 0.3241609936701302,
+        "own_repeats": {
+          "median_abs_z": 0.1911514203966394,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.4577090872146272,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "small_lawn/roaming_bout_s",
+        "weight": 0.03333333333333333,
+        "observation": 450.86378737541526,
+        "own_repeats": {
+          "median_abs_z": 1.1041690644353204,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 1.2849779541279889,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "small_lawn/dwelling_bout_s",
+        "weight": 0.03333333333333333,
+        "observation": 975.6551724137931,
+        "own_repeats": {
+          "median_abs_z": 0.2601096225381309,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.4182616521269664,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "small_lawn/exits_per_on_lawn_hour",
+        "weight": 0.03333333333333333,
+        "observation": 0.9029021855965603,
+        "own_repeats": {
+          "median_abs_z": 1.0003002801765906,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.6471651675000152,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "small_lawn/pre_exit_enrichment",
+        "weight": 0.03333333333333333,
+        "observation": 0.43234742899449463,
+        "own_repeats": {
+          "median_abs_z": 0.8537152530699652,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.5391452702739227,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "small_lawn/time_on_lawn",
+        "weight": 0.03333333333333333,
+        "observation": 0.9666805209199224,
+        "own_repeats": {
+          "median_abs_z": 0.7038000202331689,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 1.251108541823156,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "uniform_lawn/roaming_fraction",
+        "weight": 0.06666666666666667,
+        "observation": 0.3457956787008578,
+        "own_repeats": {
+          "median_abs_z": 0.17998976405205852,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.14449130870109494,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "uniform_lawn/roaming_bout_s",
+        "weight": 0.06666666666666667,
+        "observation": 446.03550295857985,
+        "own_repeats": {
+          "median_abs_z": 1.0098280962197324,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.9233197427370444,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "uniform_lawn/dwelling_bout_s",
+        "weight": 0.06666666666666667,
+        "observation": 883.0340557275542,
+        "own_repeats": {
+          "median_abs_z": 0.07489843719264756,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.16305500611325738,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "local_search/gamma_per_min",
+        "weight": 0.1,
+        "observation": 0.06753869487041927,
+        "own_repeats": {
+          "median_abs_z": 0.3165387183049363,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": null,
+          "undefined": 10
+        }
+      },
+      {
+        "statistic": "local_search/early_late_ratio",
+        "weight": 0.1,
+        "observation": 2.646536412078153,
+        "own_repeats": {
+          "median_abs_z": 0.0463370831803903,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 1.1558676108939192,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "kinematics/dwelling_speed_median",
+        "weight": 0.04,
+        "observation": 0.008088052040009433,
+        "own_repeats": {
+          "median_abs_z": 0.024997431507396452,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 2.6839989786678724,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "kinematics/dwelling_speed_p90",
+        "weight": 0.04,
+        "observation": 0.013886932829433008,
+        "own_repeats": {
+          "median_abs_z": 0.08366303946584497,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.18200007947827804,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "kinematics/roaming_speed_median",
+        "weight": 0.04,
+        "observation": 0.09014571726946038,
+        "own_repeats": {
+          "median_abs_z": 0.03889530323209372,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 30.141959679911402,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "kinematics/roaming_speed_p90",
+        "weight": 0.04,
+        "observation": 0.09957202349316241,
+        "own_repeats": {
+          "median_abs_z": 0.0217316493763275,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.6733620332351447,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "kinematics/roaming_survival_5min",
+        "weight": 0.04,
+        "observation": 0.4793739301243615,
+        "own_repeats": {
+          "median_abs_z": 0.759342695771532,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.7882094006652488,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "chemotaxis/drift_mm_s",
+        "weight": 0.06666666666666667,
+        "observation": 0.027090048588119392,
+        "own_repeats": {
+          "median_abs_z": 0.027300203836406155,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.9740095268285942,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "chemotaxis/log_quintile_ratio",
+        "weight": 0.06666666666666667,
+        "observation": 0.7524422560392332,
+        "own_repeats": {
+          "median_abs_z": 0.030420411920607696,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.3455228687330803,
+          "undefined": 0
+        }
+      },
+      {
+        "statistic": "chemotaxis/weathervane_deg_s",
+        "weight": 0.06666666666666667,
+        "observation": 15.000694070342021,
+        "own_repeats": {
+          "median_abs_z": 0.8663542769853434,
+          "undefined": 0
+        },
+        "answer_at_300": {
+          "median_abs_z": 0.4317952591490018,
+          "undefined": 0
+        }
+      }
+    ]
+  },
+  "truths": [
+    {
+      "truth": 1164,
+      "floor": 2.29262708478706,
+      "statistics": [
+        {
+          "statistic": "small_lawn/roaming_fraction",
+          "weight": 0.03333333333333333,
+          "observation": 0.533905686201319,
+          "own_repeats": {
+            "median_abs_z": 0.23955948944553332,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 9.451075553119207,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 0.9362217046982414,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "small_lawn/roaming_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 433.4343434343434,
+          "own_repeats": {
+            "median_abs_z": 2.33862327795204,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 1.6863380635380554,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "small_lawn/dwelling_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 275.44117647058823,
+          "own_repeats": {
+            "median_abs_z": 0.07716799448545293,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 6.606966267509442,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "small_lawn/exits_per_on_lawn_hour",
+          "weight": 0.03333333333333333,
+          "observation": 30.32474804031355,
+          "own_repeats": {
+            "median_abs_z": 12.964053665153187,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 6.62864201786857,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 756.6971716383239,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "small_lawn/pre_exit_enrichment",
+          "weight": 0.03333333333333333,
+          "observation": 0.03469752764293321,
+          "own_repeats": {
+            "median_abs_z": 0.2828052369378788,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 0.3537826864196459,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 6.674103784791919,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "small_lawn/time_on_lawn",
+          "weight": 0.03333333333333333,
+          "observation": 0.32849668928308673,
+          "own_repeats": {
+            "median_abs_z": 4.232513782359785,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 2.623664755473178,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 53.22670834764028,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_fraction",
+          "weight": 0.06666666666666667,
+          "observation": 0.6307958574100438,
+          "own_repeats": {
+            "median_abs_z": 0.06381188188497897,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 4.669029511671219,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 1.8987203443086145,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 325.136690647482,
+          "own_repeats": {
+            "median_abs_z": 0.26565164665193075,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 0.21120120982293422,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 0.6591608408872294,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/dwelling_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 160.5097087378641,
+          "own_repeats": {
+            "median_abs_z": 0.00781342346876032,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 2.465550626264471,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 0.42739469161976745,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "local_search/gamma_per_min",
+          "weight": 0.1,
+          "observation": 0.10081505636918695,
+          "own_repeats": {
+            "median_abs_z": 0.8523550852597366,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 1.6440151776598497,
+            "undefined": 5
+          },
+          "fit_1": {
+            "median_abs_z": 2.0803331205373827,
+            "undefined": 2
+          }
+        },
+        {
+          "statistic": "local_search/early_late_ratio",
+          "weight": 0.1,
+          "observation": 2.0489296636085625,
+          "own_repeats": {
+            "median_abs_z": 0.12408676049871925,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 0.5501712337677627,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 0.25556513826877525,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_median",
+          "weight": 0.04,
+          "observation": 0.01246545555250677,
+          "own_repeats": {
+            "median_abs_z": 0.15926868978283265,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 8.03846353524805,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 16.11679779310801,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_p90",
+          "weight": 0.04,
+          "observation": 0.04035292312023409,
+          "own_repeats": {
+            "median_abs_z": 1.0985238521962999,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 2.008774359174928,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 34.25013178415741,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_median",
+          "weight": 0.04,
+          "observation": 0.05409388185365897,
+          "own_repeats": {
+            "median_abs_z": 0.21578661317089765,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 17.223219367109735,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 81.98646408566094,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_p90",
+          "weight": 0.04,
+          "observation": 0.0642655611068249,
+          "own_repeats": {
+            "median_abs_z": 0.03562412006738251,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 0.3091403714732508,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 18.583536051917395,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_survival_5min",
+          "weight": 0.04,
+          "observation": 0.5269682258991465,
+          "own_repeats": {
+            "median_abs_z": 3.859622481793301,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 4.349903249806559,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 10.751355554149875,
+            "undefined": 9
+          }
+        },
+        {
+          "statistic": "chemotaxis/drift_mm_s",
+          "weight": 0.06666666666666667,
+          "observation": 0.001549962094479473,
+          "own_repeats": {
+            "median_abs_z": 0.006571536540948583,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 0.02272072022756664,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 0.15751610002420036,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/log_quintile_ratio",
+          "weight": 0.06666666666666667,
+          "observation": 0.2510367507737768,
+          "own_repeats": {
+            "median_abs_z": 0.04060809670144529,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 0.12052073812903952,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 0.3193612466003532,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/weathervane_deg_s",
+          "weight": 0.06666666666666667,
+          "observation": 1.4169582985834739,
+          "own_repeats": {
+            "median_abs_z": 0.12208972686390604,
+            "undefined": 0
+          },
+          "fit_0": {
+            "median_abs_z": 3.4631471774176648,
+            "undefined": 0
+          },
+          "fit_1": {
+            "median_abs_z": 5.615412691988086,
+            "undefined": 0
+          }
+        }
+      ]
+    },
+    {
+      "truth": 1354,
+      "floor": 0.8885708794720203,
+      "statistics": [
+        {
+          "statistic": "small_lawn/roaming_fraction",
+          "weight": 0.03333333333333333,
+          "observation": 0.5214242607121303,
+          "own_repeats": {
+            "median_abs_z": 0.3384779564171333,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 2.5384513082325855,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 2.0655590930632988,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/roaming_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 404.0287769784173,
+          "own_repeats": {
+            "median_abs_z": 0.5549273526597922,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 1.1765583991427044,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 1.4819474466795746,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/dwelling_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 398.03088803088804,
+          "own_repeats": {
+            "median_abs_z": 0.08638492319864016,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 0.8246327697832567,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.7846627482390811,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/exits_per_on_lawn_hour",
+          "weight": 0.03333333333333333,
+          "observation": 2.423285827027529,
+          "own_repeats": {
+            "median_abs_z": 1.3165277662257482,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 3.255254067928236,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 1.0336835534826283,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/pre_exit_enrichment",
+          "weight": 0.03333333333333333,
+          "observation": 0.08803103219639996,
+          "own_repeats": {
+            "median_abs_z": 0.2154678243955654,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 1.2476314122996466,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.8671419073716397,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/time_on_lawn",
+          "weight": 0.03333333333333333,
+          "observation": 0.9356295878035008,
+          "own_repeats": {
+            "median_abs_z": 1.5694557195512893,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 2.3480554798677904,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 1.3689049622160172,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_fraction",
+          "weight": 0.06666666666666667,
+          "observation": 0.5395730850316234,
+          "own_repeats": {
+            "median_abs_z": 0.08270497451060796,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 1.1246845912353225,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.9012807320872089,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 432.57042253521126,
+          "own_repeats": {
+            "median_abs_z": 0.6579319238140975,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 1.2047608654013857,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.41811695100296775,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/dwelling_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 398.5931558935361,
+          "own_repeats": {
+            "median_abs_z": 0.03066846229763908,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 0.24281290503355923,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.20308144759446228,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "local_search/gamma_per_min",
+          "weight": 0.1,
+          "observation": 0.10732035698177386,
+          "own_repeats": {
+            "median_abs_z": 0.1664578425808207,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 0.9745446374725115,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.47079876587579306,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "local_search/early_late_ratio",
+          "weight": 0.1,
+          "observation": 1.9329896907216493,
+          "own_repeats": {
+            "median_abs_z": 0.05453541744935631,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 0.30918318480079643,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.1746492441414936,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_median",
+          "weight": 0.04,
+          "observation": 0.020459333085167838,
+          "own_repeats": {
+            "median_abs_z": 0.08813043856018639,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 1.3728309053434709,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 1.1798391201616032,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_p90",
+          "weight": 0.04,
+          "observation": 0.0477859253151547,
+          "own_repeats": {
+            "median_abs_z": 0.5796682483496296,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 4.383763550274827,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 3.766845532412396,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_median",
+          "weight": 0.04,
+          "observation": 0.04403355851094024,
+          "own_repeats": {
+            "median_abs_z": 0.29530117500565783,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 2.472996731462888,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 1.423438133129887,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_p90",
+          "weight": 0.04,
+          "observation": 0.07276283378213118,
+          "own_repeats": {
+            "median_abs_z": 0.12043047167079986,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 1.5444287116864657,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.8244920461866765,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_survival_5min",
+          "weight": 0.04,
+          "observation": 0.5188171886868238,
+          "own_repeats": {
+            "median_abs_z": 2.9128931021625144,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 5.26613482351595,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 2.7534929161004458,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/drift_mm_s",
+          "weight": 0.06666666666666667,
+          "observation": 0.0101772398130166,
+          "own_repeats": {
+            "median_abs_z": 0.017408079998962017,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 0.5459786236014462,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.5859093861107378,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/log_quintile_ratio",
+          "weight": 0.06666666666666667,
+          "observation": 0.21550112920777037,
+          "own_repeats": {
+            "median_abs_z": 0.039261903830770606,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 0.2855972855564548,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 0.2743782271614412,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/weathervane_deg_s",
+          "weight": 0.06666666666666667,
+          "observation": 7.17124111586126,
+          "own_repeats": {
+            "median_abs_z": 0.23570855372921073,
+            "undefined": 0
+          },
+          "fit_2": {
+            "median_abs_z": 1.8003448536050701,
+            "undefined": 0
+          },
+          "fit_3": {
+            "median_abs_z": 2.3556823781876366,
+            "undefined": 0
+          }
+        }
+      ]
+    },
+    {
+      "truth": 6985,
+      "floor": 2.9522282835745175,
+      "statistics": [
+        {
+          "statistic": "small_lawn/roaming_fraction",
+          "weight": 0.03333333333333333,
+          "observation": 0.42594956910309606,
+          "own_repeats": {
+            "median_abs_z": 0.9338125739675729,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 15.850983513678383,
+            "undefined": 8
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "small_lawn/roaming_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 1482.7777777777778,
+          "own_repeats": {
+            "median_abs_z": 6.0764061346959,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": null,
+            "undefined": 10
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "small_lawn/dwelling_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 1893.157894736842,
+          "own_repeats": {
+            "median_abs_z": 1.6250401901170024,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": null,
+            "undefined": 10
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "small_lawn/exits_per_on_lawn_hour",
+          "weight": 0.03333333333333333,
+          "observation": 24.015320778806256,
+          "own_repeats": {
+            "median_abs_z": 15.064046347687253,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 1698.6018273011725,
+            "undefined": 8
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "small_lawn/pre_exit_enrichment",
+          "weight": 0.03333333333333333,
+          "observation": 0.10070484266160978,
+          "own_repeats": {
+            "median_abs_z": 0.23007104524627786,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": null,
+            "undefined": 10
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "small_lawn/time_on_lawn",
+          "weight": 0.03333333333333333,
+          "observation": 0.21896075759164133,
+          "own_repeats": {
+            "median_abs_z": 3.7722481071347795,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 35.478471364030014,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 35.478471364030014,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_fraction",
+          "weight": 0.06666666666666667,
+          "observation": 0.513070144099083,
+          "own_repeats": {
+            "median_abs_z": 0.30840223705728825,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 4.6793773059211645,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 4.285557452580449,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 1196.736111111111,
+          "own_repeats": {
+            "median_abs_z": 2.466766393674382,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 1.880460556430522,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 2.6271989429559524,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/dwelling_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 1159.9290780141844,
+          "own_repeats": {
+            "median_abs_z": 0.1760221591841617,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 1.947957314007378,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 1.8465830453842693,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "local_search/gamma_per_min",
+          "weight": 0.1,
+          "observation": 0.15110597535799286,
+          "own_repeats": {
+            "median_abs_z": 0.5842009427490811,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 0.7769190621455679,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 1.0724034394798847,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "local_search/early_late_ratio",
+          "weight": 0.1,
+          "observation": 1.9314641744548284,
+          "own_repeats": {
+            "median_abs_z": 0.15797515376358368,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 0.39560575874229004,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 0.43728021943178574,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_median",
+          "weight": 0.04,
+          "observation": 0.02330973377744869,
+          "own_repeats": {
+            "median_abs_z": 0.6574107858974798,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": null,
+            "undefined": 10
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_p90",
+          "weight": 0.04,
+          "observation": 0.03306373045932168,
+          "own_repeats": {
+            "median_abs_z": 0.09709143021161347,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": null,
+            "undefined": 10
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_median",
+          "weight": 0.04,
+          "observation": 0.03287975489761783,
+          "own_repeats": {
+            "median_abs_z": 1.9219309739504409,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 150.2424055160356,
+            "undefined": 8
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_p90",
+          "weight": 0.04,
+          "observation": 0.09457697043398323,
+          "own_repeats": {
+            "median_abs_z": 0.1550485667492595,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 22.668805250055346,
+            "undefined": 8
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_survival_5min",
+          "weight": 0.04,
+          "observation": 0.6576419135667331,
+          "own_repeats": {
+            "median_abs_z": 1.594580936573084,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 7.781324037014167,
+            "undefined": 8
+          },
+          "fit_5": {
+            "median_abs_z": null,
+            "undefined": 10
+          }
+        },
+        {
+          "statistic": "chemotaxis/drift_mm_s",
+          "weight": 0.06666666666666667,
+          "observation": 0.000595461674993587,
+          "own_repeats": {
+            "median_abs_z": 0.014206470882151679,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 1.0047523158750353,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 1.3715076423047954,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/log_quintile_ratio",
+          "weight": 0.06666666666666667,
+          "observation": 0.13914566379774534,
+          "own_repeats": {
+            "median_abs_z": 0.05908181494057735,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 0.03035049793795497,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 0.05021357518459482,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/weathervane_deg_s",
+          "weight": 0.06666666666666667,
+          "observation": 0.2565598740571429,
+          "own_repeats": {
+            "median_abs_z": 0.20938113981358886,
+            "undefined": 0
+          },
+          "fit_4": {
+            "median_abs_z": 6.646447165777456,
+            "undefined": 0
+          },
+          "fit_5": {
+            "median_abs_z": 7.528545002589278,
+            "undefined": 0
+          }
+        }
+      ]
+    },
+    {
+      "truth": 9105,
+      "floor": 0.9275530032136001,
+      "statistics": [
+        {
+          "statistic": "small_lawn/roaming_fraction",
+          "weight": 0.03333333333333333,
+          "observation": 0.6591821238746068,
+          "own_repeats": {
+            "median_abs_z": 0.3759451559417546,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.9572587187345254,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.20977901028411383,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/roaming_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 618.0,
+          "own_repeats": {
+            "median_abs_z": 2.2594964751076465,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.44316645896339135,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 1.2975367136831966,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/dwelling_bout_s",
+          "weight": 0.03333333333333333,
+          "observation": 335.44483985765123,
+          "own_repeats": {
+            "median_abs_z": 0.09190555787632704,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.2723842290439046,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.13537255559730998,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/exits_per_on_lawn_hour",
+          "weight": 0.03333333333333333,
+          "observation": 0.48161405792385287,
+          "own_repeats": {
+            "median_abs_z": 0.1254559636504663,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.2956902032236185,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.4871202391516998,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/pre_exit_enrichment",
+          "weight": 0.03333333333333333,
+          "observation": 0.012754635018673799,
+          "own_repeats": {
+            "median_abs_z": 0.7646113432622892,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.6474405541744988,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.7485680609697501,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "small_lawn/time_on_lawn",
+          "weight": 0.03333333333333333,
+          "observation": 0.9909706546275395,
+          "own_repeats": {
+            "median_abs_z": 0.07360404197230806,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.1382929744069204,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.802959828519779,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_fraction",
+          "weight": 0.06666666666666667,
+          "observation": 0.6680823726756844,
+          "own_repeats": {
+            "median_abs_z": 0.0692196196545187,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.46233988902018974,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.11294303310432421,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/roaming_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 572.4464831804281,
+          "own_repeats": {
+            "median_abs_z": 2.4150998937752934,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 2.062882860892561,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 1.2377300232826838,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "uniform_lawn/dwelling_bout_s",
+          "weight": 0.06666666666666667,
+          "observation": 350.9433962264151,
+          "own_repeats": {
+            "median_abs_z": 0.04180295577203654,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.09213061776920212,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.02317001953086862,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "local_search/gamma_per_min",
+          "weight": 0.1,
+          "observation": 0.0860294959414162,
+          "own_repeats": {
+            "median_abs_z": 0.23304093572524825,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.32884250766952144,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.4491200146665296,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "local_search/early_late_ratio",
+          "weight": 0.1,
+          "observation": 3.4989959839357425,
+          "own_repeats": {
+            "median_abs_z": 0.1555470882554058,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.15146436627644044,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 1.2946557601289954,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_median",
+          "weight": 0.04,
+          "observation": 0.022411089137815015,
+          "own_repeats": {
+            "median_abs_z": 0.3718788653442333,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.5919901532553786,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.2652933016459378,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/dwelling_speed_p90",
+          "weight": 0.04,
+          "observation": 0.046125090632441926,
+          "own_repeats": {
+            "median_abs_z": 0.024737391457921188,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 1.043294631541671,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.472642351433464,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_median",
+          "weight": 0.04,
+          "observation": 0.039477576365901434,
+          "own_repeats": {
+            "median_abs_z": 0.12280052429647324,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.5047212072786949,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.8444852071177436,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_speed_p90",
+          "weight": 0.04,
+          "observation": 0.0537914547933487,
+          "own_repeats": {
+            "median_abs_z": 0.019432519531287516,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.17917311863910257,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.04949832553773134,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "kinematics/roaming_survival_5min",
+          "weight": 0.04,
+          "observation": 0.5069687533705273,
+          "own_repeats": {
+            "median_abs_z": 1.0712839462766723,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 1.1371329176604268,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 2.276803686944844,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/drift_mm_s",
+          "weight": 0.06666666666666667,
+          "observation": 0.025668561720544755,
+          "own_repeats": {
+            "median_abs_z": 0.033572716550870144,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.6708485571892607,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 1.2877551199022776,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/log_quintile_ratio",
+          "weight": 0.06666666666666667,
+          "observation": 1.2579084379915744,
+          "own_repeats": {
+            "median_abs_z": 0.04759079777804149,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.1931424220784466,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.9426934093180912,
+            "undefined": 0
+          }
+        },
+        {
+          "statistic": "chemotaxis/weathervane_deg_s",
+          "weight": 0.06666666666666667,
+          "observation": 13.983974660802879,
+          "own_repeats": {
+            "median_abs_z": 0.19471016518661097,
+            "undefined": 0
+          },
+          "fit_6": {
+            "median_abs_z": 0.3188417582515102,
+            "undefined": 0
+          },
+          "fit_7": {
+            "median_abs_z": 0.49812183692496137,
+            "undefined": 0
+          }
+        }
+      ]
+    }
+  ]
+}

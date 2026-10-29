@@ -693,6 +693,93 @@ def _read() -> int:
     return 0
 
 
+DIAGNOSIS_PATH = SUPPORT / "diagnosis.json"
+
+
+def _decompose(
+    observation: dict[str, Any],
+    groups: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    """Return each graded statistic's weight, the observation's value, and each group's median |z|.
+
+    z is uncapped; a statistic defined in the observation and undefined in a record reads None, and
+    each group also reports how many of its records leave the statistic undefined.
+    """
+    from quantumnematode.benchmark import grading as g
+
+    bands = _bands()
+    scales = band_scales_v2(bands)
+    family_map = {f: tuple(st) for f, st in bands["families"].items()}
+    weights = g.weights(list(family_map), family_map)
+    rows = []
+    for (family, stat), weight in weights.items():
+        key = f"{family}/{stat}"
+        a = observation["statistics"].get(key)
+        row: dict[str, Any] = {"statistic": key, "weight": weight, "observation": a}
+        for name, records in groups.items():
+            values = [r["statistics"].get(key) for r in records]
+            undefined = sum(v is None for v in values)
+            defined = [abs(v - a) / scales[key] for v in values if v is not None and a is not None]
+            row[name] = {
+                "median_abs_z": float(np.median(defined)) if defined else None,
+                "undefined": undefined,
+            }
+        rows.append(row)
+    return rows
+
+
+def _diagnose() -> int:
+    """Record the per-statistic decompositions behind the pilot's and the failed truths' readings."""
+    preflight = json.loads(PREFLIGHT_PATH.read_text())
+    candidates = BUILD / "candidates.jsonl"
+    stored = {r["k"]: r for r in (json.loads(x) for x in candidates.read_text().splitlines())}
+    pilot_answers = {
+        r["k"]: r
+        for r in (
+            json.loads(x) for x in (BUILD / "pilot" / "answers.jsonl").read_text().splitlines()
+        )
+    }
+    answers = {
+        r["k"]: r
+        for r in (json.loads(x) for x in (BUILD / "answers.jsonl").read_text().splitlines())
+    }
+
+    def repeats(row: dict[str, Any]) -> list[dict[str, Any]]:
+        c = row["candidate"]
+        return [stored[REPEAT_K + cr.REPEATS * c + q] for q in range(cr.STABILITY_REPEATS)]
+
+    pilot_truth = preflight["pilot_truth"]
+    record: dict[str, Any] = {
+        "description": "Description: per-statistic decompositions, uncapped z on v2's n = 200 scales.",
+        "capped_pilot": {
+            "truth": pilot_truth["training_simulation"],
+            "statistics": _decompose(
+                stored[OBSERVATION_K + pilot_truth["candidate"]],
+                {
+                    "own_repeats": repeats(pilot_truth),
+                    "answer_at_300": [pilot_answers[5_200 + q] for q in range(cr.RESIMULATIONS)],
+                },
+            ),
+        },
+        "truths": [],
+    }
+    for j, truth in enumerate(preflight["truths"]):
+        groups = {"own_repeats": repeats(truth)}
+        for r in range(cr.RESTARTS):
+            fit = cr.RESTARTS * j + r
+            groups[f"fit_{fit}"] = [answers[cr.answer_k(fit, q)] for q in range(cr.RESIMULATIONS)]
+        record["truths"].append(
+            {
+                "truth": truth["training_simulation"],
+                "floor": truth["floor"],
+                "statistics": _decompose(stored[OBSERVATION_K + truth["candidate"]], groups),
+            },
+        )
+    _write(DIAGNOSIS_PATH, record)
+    print(f"wrote {DIAGNOSIS_PATH}")
+    return 0
+
+
 def _smoke(workers: int) -> int:
     """Run two generations of one fit and a resume, on discarded seeds."""
     sims = nr.load_simulations()
@@ -729,7 +816,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "stage",
-        choices=("gate-probe", "objective-probe", "preflight", "pilot", "run", "read", "smoke"),
+        choices=(
+            "gate-probe",
+            "objective-probe",
+            "preflight",
+            "pilot",
+            "run",
+            "read",
+            "diagnose",
+            "smoke",
+        ),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
@@ -751,6 +847,8 @@ def main(argv: list[str] | None = None) -> int:
     stages = {"preflight": _preflight, "pilot": _pilot, "run": _run}
     if args.stage == "read":
         return _read()
+    if args.stage == "diagnose":
+        return _diagnose()
     return stages[args.stage](args.workers)
 
 

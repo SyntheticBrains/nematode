@@ -465,6 +465,19 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - **For C.1:** keep at least two restarts. The registered plateau rule carries over.
     - **Still open:** F.0b-ii, C.2's encoder and its recovery.
 
+  *(2026-10-29: change `rerun-cma-recovery-v2`; [Logbook 116](../../../docs/experiments/logbooks/116-cma-recovery-v2.md).)*
+  **F.0b-i on v2 fails its gate**, with a median gain of 0.690 against 0.75. sep-CMA recovers the two
+  truths with stable statistics (0.914, 1.007) but not the two noisy ones far from the wild type
+  (0.466, 0.056).
+
+  - **The cause is the fit's objective.** The capped distance is flat beyond the cap, so the first
+    pilot stopped at 0.511. Uncapped (amendment 1), an undefined statistic's flat 10 undercut far
+    defined ones, so those fits escaped into undefined families.
+  - **Next:** a new recovery change. It ranks on a slowly growing uncapped z (for example
+    10·asinh(|z|/10)), makes an undefined statistic cost more than any defined one, is checked on
+    the two failed truths with discarded seeds, and re-runs. C.1b waits for it.
+  - **The 1.76× speed-up of a v2 simulation** (identical output) carries to every later fit.
+
   *(Added 2026-10-28, B v2.)* **F.0b-i is re-run in full on v2**, in its own change. F.0b-i was read
   on v1. Its recovery has to hold under the benchmark C.1b and C.2 are fitted against: 19 statistics,
   five families and the measurement model. C.1b follows it.
