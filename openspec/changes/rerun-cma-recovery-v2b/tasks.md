@@ -12,7 +12,7 @@
 
 ## 3. Registration and the fits
 
-- [ ] 3.1 `supporting/117-cma-recovery-v2b/launch.md` Part A: the ranking score, the reused truths and the observations' SHA-256, the cap's provenance, both probe rounds and the maintainer's decision disclosed; committed.
+- [x] 3.1 `supporting/117-cma-recovery-v2b/launch.md` Part A: the ranking score, the reused truths and the observations' SHA-256, the cap's provenance, both probe rounds and the maintainer's decision disclosed; committed.
 - [ ] 3.2 `run-b`: 16 fits (4 truths × 4 restarts), base 230 M, CMA 5430–5445, cap 272; `read-b`: `recovery.json`.
 
 ## 4. Close-out
