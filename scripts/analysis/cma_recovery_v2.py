@@ -706,15 +706,17 @@ def _run_fits(  # noqa: PLR0913 - keyword-only: one attempt's registered setting
     build: Path,
     objective: Callable[[dict[str, Any]], Objective],
     workers: int,
+    restarts: int = cr.RESTARTS,
 ) -> None:
-    """Run 4 truths x 2 restarts to the guarded plateau or ``cap``, then re-simulate each answer.
+    """Run 4 truths x ``restarts`` to the guarded plateau or ``cap``, then re-simulate each answer.
 
-    The fits' state goes to ``build/fits`` and the answers' simulations to
-    ``build/answers.jsonl``; ``objective`` builds the ranking objective from an observation.
+    Fit f = restarts·j + r is truth j's restart r. The fits' state goes to ``build/fits`` and the
+    answers' simulations to ``build/answers.jsonl``; ``objective`` builds the ranking objective
+    from an observation.
     """
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
-        for fit in range(cr.TRUTHS * cr.RESTARTS):
-            truth = preflight["truths"][fit // cr.RESTARTS]
+        for fit in range(cr.TRUTHS * restarts):
+            truth = preflight["truths"][fit // restarts]
             observation = observation_of(truth, CANDIDATES_PATH)
             cr.run_fit(
                 observation,
@@ -730,7 +732,7 @@ def _run_fits(  # noqa: PLR0913 - keyword-only: one attempt's registered setting
                 simulate=simulate_v2,
                 stop=guarded_stop,
             )
-    for fit in range(cr.TRUTHS * cr.RESTARTS):
+    for fit in range(cr.TRUTHS * restarts):
         history = json.loads((build / "fits" / f"fit{fit}.json").read_text())
         _resimulate(
             history["answers"][-1],
@@ -746,8 +748,12 @@ def _read() -> int:
     return _read_fits(BUILD, RECOVERY_PATH, DESCRIPTION)
 
 
-def _read_fits(build: Path, out: Path, description: str) -> int:
-    """Read the gate on the registered, capped D from one attempt's fits into ``out``."""
+def _read_fits(build: Path, out: Path, description: str, restarts: int = cr.RESTARTS) -> int:
+    """Read the gate on the registered, capped D from one attempt's fits into ``out``.
+
+    Each truth's best restart has the lowest final objective. The other gain and the restarts'
+    spread are the runner-up's, and with more than two restarts every restart's gain is reported.
+    """
     preflight = json.loads(PREFLIGHT_PATH.read_text())
     stored = read_records(build / "answers.jsonl")
     sims = nr.load_simulations()
@@ -756,8 +762,8 @@ def _read_fits(build: Path, out: Path, description: str) -> int:
         observation = observation_of(truth, CANDIDATES_PATH)
         objective = Objective(observation)
         fits = []
-        for r in range(cr.RESTARTS):
-            fit = cr.RESTARTS * j + r
+        for r in range(restarts):
+            fit = restarts * j + r
             history = json.loads((build / "fits" / f"fit{fit}.json").read_text())
             runs = [stored[cr.answer_k(fit, q)] for q in range(cr.RESIMULATIONS)]
             d = float(np.median([objective(x) for x in runs]))
@@ -778,28 +784,31 @@ def _read_fits(build: Path, out: Path, description: str) -> int:
                 },
             )
         best = cr.best_restart([f["medians"] for f in fits])
+        order = sorted(range(restarts), key=lambda r: (r != best, fits[r]["final_objective"], r))
+        first, second = sorted(order[:2])
         spread = float(
             np.median(
                 [
                     predictive_distance_v2(a, b, objective.scales, objective.family_map)
-                    for a, b in zip(fits[0]["runs"], fits[1]["runs"], strict=True)
+                    for a, b in zip(fits[first]["runs"], fits[second]["runs"], strict=True)
                 ],
             ),
         )
         for f in fits:
             del f["runs"]
-        rows.append(
-            {
-                "truth": truth["training_simulation"],
-                "floor": truth["floor"],
-                "prior_D": truth["prior_D"],
-                "best_restart": best,
-                "gain": fits[best]["gain"],
-                "other_gain": fits[1 - best]["gain"],
-                "restart_spread_D": spread,
-                "fits": fits,
-            },
-        )
+        row = {
+            "truth": truth["training_simulation"],
+            "floor": truth["floor"],
+            "prior_D": truth["prior_D"],
+            "best_restart": best,
+            "gain": fits[best]["gain"],
+            "other_gain": fits[order[1]]["gain"],
+            "restart_spread_D": spread,
+            "fits": fits,
+        }
+        if restarts > cr.RESTARTS:
+            row = {**row, "restart_gains": [f["gain"] for f in fits]}
+        rows.append(row)
     median_gain = float(np.median([r["gain"] for r in rows]))
     record = {
         "description": description,
@@ -940,6 +949,10 @@ PROBE_B_BAR = 0.80
 FIT_B_BASE = 230_000_000
 CMA_B_SEED = 5430
 CAP_B = 272
+RESTARTS_B = 4
+# The maintainer's decision, registered with the launch record, to proceed with these probed
+# truths below the probe's bar and to fit every truth with RESTARTS_B restarts.
+PROBE_B_ACCEPTED = frozenset({1164})
 
 
 def candidates_pinned() -> bool:
@@ -1058,6 +1071,7 @@ def _run_b(workers: int) -> int:
         build=BUILD_B,
         objective=lambda observation: Objective(observation, ranking=True),
         workers=workers,
+        restarts=RESTARTS_B,
     )
     return 0
 
@@ -1068,6 +1082,7 @@ def _read_b() -> int:
         BUILD_B,
         RECOVERY_B_PATH,
         "Attempt 2: sep-CMA ranking on definedness then the compressed z, on attempt 1's truths.",
+        RESTARTS_B,
     )
 
 
@@ -1204,7 +1219,7 @@ def attempt_b(stage: str, workers: int) -> int:
 
 
 def probe_cleared() -> bool:
-    """Return whether the probe ran and every probed truth reached the bar.
+    """Return whether the probe ran and every probed truth reached the bar or was accepted below it.
 
     Where the short truth's second restart has run, that truth reads the restart the gate would
     select, and the probe clears only if that one reaches the bar.
@@ -1214,7 +1229,7 @@ def probe_cleared() -> bool:
     gains = {r["truth"]: r["gain"] for r in json.loads(PROBE_B_PATH.read_text())["truths"]}
     if PROBE_B2_PATH.exists():
         gains[PROBE_B2_TRUTH] = json.loads(PROBE_B2_PATH.read_text())["selected_gain"]
-    return all(g >= PROBE_B_BAR for g in gains.values())
+    return all(g >= PROBE_B_BAR for t, g in gains.items() if t not in PROBE_B_ACCEPTED)
 
 
 def main(argv: list[str] | None = None) -> int:

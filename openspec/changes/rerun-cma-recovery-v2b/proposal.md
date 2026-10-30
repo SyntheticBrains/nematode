@@ -24,9 +24,20 @@ The maintainer's decisions of 2026-10-29:
 - **The probe, before registration.** Truths 1164 and 6985 are fitted to the guarded plateau (cap 200), and 9105 for 80 generations, on discarded seeds. Each must reach a gain of at least 0.80 (the bar plus a 0.05 margin), or the change returns to the maintainer. The reused observations' file is pinned by its SHA-256 in Part A.
 - **The registered re-run:**
   - the four registered truths and their committed observations, floors and priors;
-  - 4 × 2 fits on new seeds, at the cap of 272, with the guarded plateau;
+  - 4 × 4 fits on new seeds (revised after the probe; see below), at the cap of 272, with the guarded plateau;
   - the same gate, a median best-restart gain of at least 0.75, and the same verdict map.
 - **Launch record 117** and **Logbook 117**.
+
+## Revision after the probe (2026-10-30)
+
+The probe returned to the maintainer. On discarded seeds the ranking score recovered 6985 (gain 0.981; attempt 1 reached 0.056) and 9105 (1.000), and left no statistic undefined in any answer. Truth 1164 reached 0.787, under the 0.80 bar. The maintainer then had a second restart of 1164 fitted on the probe's seeds (`probe-b2`, CMA seed 5998). It gained 0.523 in a different wrong basin, and the gate's selection keeps the first restart, at 0.787.
+
+The diagnosis (`probe_diagnosis.json`): 1164's answers sit 21 and 10 band scales off on the speed medians (first restart) and across the small lawn and kinematics (second). Its own repeats sit at 0.2 on those statistics. So the shortfall is restart-to-restart variance, not the objective, the truth's noise or the box's bounds (every truth has 1–3 parameters within 0.05 of a bound).
+
+The maintainer's decisions of 2026-10-30:
+
+- **1164 is accepted below the probe's bar.** The probe was the go/no-go for spending the registered run, and the registered gate is unchanged.
+- **Each truth is fitted with 4 restarts instead of 2.** The gate's selection already follows the final objective (4.06 → 0.787, 5.00 → 0.523), so more restarts reduce the chance that a truth loses every restart. Four is also closer to the 8 restarts C.1b fits with, and the run measures the per-restart success rate C.1b's restart count needs.
 
 ## Capabilities
 
@@ -40,6 +51,6 @@ None.
 
 ## Impact
 
-- `scripts/analysis/cma_recovery_v2.py`: a `compressed` objective and the attempt-2 stages (`probe-b`, `run-b`, `read-b`), on attempt 1's records and code.
+- `scripts/analysis/cma_recovery_v2.py`: the ranking score and the attempt-2 stages (`probe-b`, `diagnose-b`, `probe-b2`, `run-b`, `read-b`), on attempt 1's records and code.
 - `docs/experiments/logbooks/supporting/117-cma-recovery-v2b/`; Logbook 117; the tracker.
-- **Cost:** the probe takes about 4–6 h, and the registered fits about 15 h (attempt 1's ran 15.3 h).
+- **Cost:** the probe took about 4 h and the second restart about 1.5 h. The 16 registered fits take about 26 h at the probe's 54 s per generation and plateaus near 110 generations, and at most about 65 h if every fit reaches the cap.

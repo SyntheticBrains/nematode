@@ -48,20 +48,24 @@ The re-investigation (description, on stored simulations):
    - **if any of the three gains is below 0.80 (the bar plus attempt 1's 0.05 margin), the change returns to the maintainer before registering**;
    - seeds: base 300,000,000 with attempt 1's fit scheme (k = 10,000·f + 16·(n − 1) + p, answers at 10,000·f + 5,000 + q), for f = 0–2, on CMA seeds 5995–5997.
 
-5. **The registered fits:**
+5. **The registered fits** (revised after the probe, decision 8):
 
-   - 4 truths × 2 restarts, with fit f = 2j + r;
-   - CMA seeds 5430 + f, inside F.0's band;
-   - animals at base 230,000,000 on attempt 1's fit scheme (spanning 230.0–245.0 M);
-   - the guarded plateau, the cap of 272, and each answer re-simulated 10 times.
+   - 4 truths × 4 restarts, with fit f = 4j + r;
+   - CMA seeds 5430 + f (5430–5445), inside F.0's band and used by no other scheme;
+   - animals at base 230,000,000 on attempt 1's fit scheme (spanning 230.0–261.0 M);
+   - the guarded plateau, the cap of 272, and each answer re-simulated 10 times;
+   - each truth's best restart has the lowest final objective. The runner-up's gain and every restart's gain are reported, not gated.
 
 6. **The gate and the verdict map are attempt 1's.** The median best-restart gain must be at least 0.75. On a pass, F.0 is cleared for C.1 on v2 and C.1b proceeds, fitting with the same objective. On a fail, C.1b does not run, and the fallback (truths at floor ≤ 1) goes to the maintainer.
 
-7. **The registration:** launch record 117, Part A committed after the probe and before any registered fit. It binds attempt 1's `preflight.json` and `pilot_amendment1.json`. There is no Part B, because nothing between the probe and the fits changes a rule.
+7. **The registration:** launch record 117, Part A committed after the probe and before any registered fit. It binds attempt 1's `preflight.json` and `pilot_amendment1.json`, and the probe's `probe.json` and `probe_restart.json`. There is no Part B, because nothing between the probe and the fits changes a rule.
+
+8. **After the probe** (the maintainer, 2026-10-30): the probe returned with 1164 at 0.787. A second restart on the probe's seeds (`probe-b2`: fit index 3, CMA seed 5998, cap 200, the guarded rule) gained 0.523, and the gate's selection keeps 0.787. The maintainer accepted 1164 below the probe's bar and raised the restarts to 4 per truth (decision 5). `run-b` clears the probe only for the truths that reached the bar or that the maintainer accepted below it, and Part A discloses both rounds.
 
 ## Risks / Trade-offs
 
 - **[The noisy truths stay hard]** → their observations carry noise of 13–15 scales on exits that no fit can remove, though the floor normalises the gain for it. The probe shows whether the fix suffices, and if not, the fallback is registered as the next step.
 - **[Definedness dominates early]** → while any statistic the truth defines is undefined, the 1,000-per-statistic term outranks all distance. That is intended, since recovery needs every statistic defined, and the box centre starts with all 19 defined.
 - **[Reusing truths after seeing them fail]** → this tests the objective on exactly the cases that broke it. The truths were fixed by attempt 1's registered rule, not chosen after the fact.
-- **[Cost]** → about 4–6 h for the probe and about 15 h for the fits.
+- **[Cost]** → the probe took about 5.5 h in all. The 16 fits take about 26 h, and at most about 65 h if every fit runs to the cap.
+- **[Restarts after seeing the probe]** → the restart count changed after the probe, on fresh seeds, with the gate and verdict map untouched. Part A discloses it.

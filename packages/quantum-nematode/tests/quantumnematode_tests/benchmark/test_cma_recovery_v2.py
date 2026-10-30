@@ -95,7 +95,12 @@ def test_the_registered_seed_ranges_are_disjoint() -> None:
         (v2.CANDIDATE_BASE, v2.CANDIDATE_BASE + candidate_span),
         (v2.PROBE_BASE, v2.PROBE_BASE + candidate_span),
         (v2.SMOKE_BASE, v2.SMOKE_BASE + animals * 32),
-        (v2.FIT_B_BASE, v2.FIT_B_BASE + (fit_max - v2.FIT_BASE)),
+        (
+            v2.FIT_B_BASE,
+            v2.FIT_B_BASE
+            + animals * (cr.FIT_BLOCK * (cr.TRUTHS * v2.RESTARTS_B - 1) + cr.ANSWER_OFFSET + 9)
+            + animals,
+        ),
         (
             v2.PROBE_B_BASE,
             v2.PROBE_B_BASE
@@ -304,6 +309,7 @@ def test_the_short_truth_reads_the_restart_the_gate_selects(
     probe, restart = tmp_path / "probe.json", tmp_path / "probe_restart.json"
     monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
     monkeypatch.setattr(v2, "PROBE_B2_PATH", restart)
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset())
     probe.write_text(
         json.dumps(
             {"truths": [{"truth": v2.PROBE_B2_TRUTH, "gain": 0.79}, {"truth": 1, "gain": 1}]},
@@ -315,3 +321,93 @@ def test_the_short_truth_reads_the_restart_the_gate_selects(
     restart.write_text(json.dumps({"selected_gain": 0.79}))
     assert not v2.probe_cleared()
     assert v2.PROBE_B2_FIT not in range(len(v2.PROBE_B_TRUTHS))
+
+
+def test_a_truth_the_maintainer_accepted_below_the_bar_does_not_hold_the_fits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers "A failed truth still fails": only the maintainer's registered decision lifts it."""
+    import json
+
+    probe = tmp_path / "probe.json"
+    monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", tmp_path / "probe_restart.json")
+    probe.write_text(
+        json.dumps(
+            {"truths": [{"truth": 1164, "gain": 0.787}, {"truth": 6985, "gain": 0.981}]},
+        ),
+    )
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset({1164}))
+    assert v2.probe_cleared()
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset({6985}))
+    assert not v2.probe_cleared()
+
+
+def test_four_restarts_read_the_best_and_the_runner_up(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With four restarts the gate reads the lowest final objective and reports every gain."""
+    import json
+
+    restarts, truths = 4, cr.TRUTHS
+    preflight = tmp_path / "preflight.json"
+    preflight.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"training_simulation": j, "candidate": j, "floor": 0.0, "prior_D": 10.0}
+                    for j in range(truths)
+                ],
+            },
+        ),
+    )
+    (tmp_path / "fits").mkdir()
+    lines = []
+    for fit in range(truths * restarts):
+        final = [4.0, 1.0, 3.0, 2.0][fit % restarts]
+        (tmp_path / "fits" / f"fit{fit}.json").write_text(
+            json.dumps(
+                {
+                    "medians": [final] * 20,
+                    "sigmas": [0.1] * 20,
+                    "answers": [[0.5] * 20],
+                    "stop": {"generation": 20, "by": "plateau"},
+                },
+            ),
+        )
+        lines += [
+            json.dumps({"k": cr.answer_k(fit, q), "D": float(fit % restarts)})
+            for q in range(cr.RESIMULATIONS)
+        ]
+    (tmp_path / "answers.jsonl").write_text("\n".join(lines) + "\n")
+
+    class Distance:
+        scales: dict[str, float] = {}  # noqa: RUF012 - a stub
+        family_map: dict[str, tuple[str, ...]] = {}  # noqa: RUF012 - a stub
+
+        def __init__(self, observation: dict[str, object]) -> None:
+            del observation
+
+        def __call__(self, record: dict[str, float]) -> float:
+            return record["D"]
+
+    monkeypatch.setattr(v2, "PREFLIGHT_PATH", preflight)
+    monkeypatch.setattr(v2, "observation_of", lambda row, path: {})
+    monkeypatch.setattr(v2, "Objective", Distance)
+    monkeypatch.setattr(v2, "predictive_distance_v2", lambda a, b, *_: abs(a["D"] - b["D"]))
+    monkeypatch.setattr(
+        v2.nr,
+        "load_simulations",
+        lambda: {j: {"z": [0.5] * 20} for j in range(truths)},
+    )
+    out = tmp_path / "recovery.json"
+    v2._read_fits(tmp_path, out, "test", restarts)
+    row = json.loads(out.read_text())["truths"][0]
+    # Restart 1 has the lowest final objective (1.0), restart 3 is the runner-up (2.0).
+    assert row["best_restart"] == 1
+    assert row["gain"] == pytest.approx(0.9)
+    assert row["other_gain"] == pytest.approx(0.7)
+    assert row["restart_spread_D"] == pytest.approx(2.0)
+    assert row["restart_gains"] == pytest.approx([1.0, 0.9, 0.8, 0.7])

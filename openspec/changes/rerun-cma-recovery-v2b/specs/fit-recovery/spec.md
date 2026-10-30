@@ -16,12 +16,26 @@ A recovery fit on v2 SHALL rank its candidates by a score of 1,000 × u + D_c. H
 
 ### Requirement: The objective is probed on the truths that failed, on pinned observations
 
-Before registration, the ranking score SHALL be fitted on discarded seeds to the two truths attempt 1 failed and to one it recovered. If any of their gains is below 0.80, the change SHALL return to the maintainer before registering. The reused observations' file SHALL be pinned by its SHA-256, and every attempt-2 stage SHALL refuse a file that differs.
+Before registration, the ranking score SHALL be fitted on discarded seeds to the two truths attempt 1 failed and to one it recovered. If any of their gains is below 0.80, the change SHALL return to the maintainer before registering, and no registered fit SHALL run for a truth below the bar unless the maintainer's decision to accept it is registered. The reused observations' file SHALL be pinned by its SHA-256, and every attempt-2 stage SHALL refuse a file that differs.
 
 #### Scenario: A failed truth still fails
 
-- **WHEN** truth 1164's or 6985's probe gain is below 0.80
+- **WHEN** truth 1164's or 6985's probe gain is below 0.80, and the maintainer has not accepted that truth below the bar
 - **THEN** no registered fit SHALL run
+
+#### Scenario: A truth accepted below the bar
+
+- **WHEN** the maintainer accepts a probed truth below 0.80, and the decision is registered with the launch record
+- **THEN** the registered fits MAY run, and the launch record SHALL disclose the truth's probe gains
+
+### Requirement: Each truth is fitted with four restarts
+
+The registered re-run SHALL fit each of the four truths with 4 restarts of sep-CMA from the box centre. Each truth's best restart SHALL be the one with the lowest final objective, and the gate SHALL read its gain. Every restart's gain SHALL be reported.
+
+#### Scenario: The best of four restarts
+
+- **WHEN** a truth's four restarts end with different final objectives
+- **THEN** the gate SHALL read the gain of the restart with the lowest final objective, and the record SHALL report the runner-up's gain and every restart's gain
 
 #### Scenario: The observations changed
 
