@@ -23,7 +23,7 @@ The re-investigation (description, on stored simulations):
 
 **Non-Goals:**
 
-- re-selecting truths, or restricting them to low floors. That is held as the fallback if this objective fails the noisy truths;
+- re-selecting truths, or restricting them to low floors. The probe showed the floor is not what holds a truth back (6985, the highest at 2.95, recovered), so that is one option among several on a fail (decision 6);
 - noise-aware (heteroscedastic) scales, which would change what recovery means: C.1b's target is graded on the band scales;
 - presence in the objective. Recovery's gain is on D, and C.1b's plan must handle presence, since its wild-type pass needs it.
 
@@ -36,7 +36,7 @@ The re-investigation (description, on stored simulations):
    - **Near the truth:** the compressed term is within 1.5% of z for |z| ≤ 3 (2.957 at 3) and 8.8 at 10. It grows slowly beyond that: 18.2 at 30, 30.0 at 100, 58.3 at 1,700.
    - **Where it is used:** for every attempt-2 fit, through `run_fit`'s objective, so the medians and the plateau rule see these finite scores. The registered D, the floor, the oracle, the prior, every gain and the gate stay on the capped distance.
 
-2. **The truths are reused:** attempt 1's registered four (1164, 1354, 6985, 9105), with their v2 observations (base 210 M), floors and priors (`preflight.json`, bound). The only change is the objective, so the result isolates it. The observations live off-repo in `build/cma-recovery-v2/candidates.jsonl`, so **its SHA-256 is registered in Part A**, and every attempt-2 stage refuses if the file differs.
+2. **The truths are reused:** attempt 1's registered four (1164, 1354, 6985, 9105), with their v2 observations (base 210 M), floors and priors (`preflight.json`, bound). Two things change against attempt 1, the objective and (decision 8) the restart count. So `read-b` also reports, as description, each truth's gain from its first two restarts alone, picked by final objective as the gate picks, which is comparable with attempt 1's two-restart reading. The observations live off-repo in `build/cma-recovery-v2/candidates.jsonl`, so **its SHA-256 is registered in Part A**, and every attempt-2 stage refuses if the file differs.
 
 3. **The cap is 272,** amendment 1's pilot cap, set under the uncapped objective. Near the truth the ranking score matches it closely (decision 1), every attempt-1 fit plateaued well before it (generations 71–179), and the guarded plateau rule stops fits sooner. There is no re-pilot, and Part A says so.
 
@@ -56,15 +56,15 @@ The re-investigation (description, on stored simulations):
    - the guarded plateau, the cap of 272, and each answer re-simulated 10 times;
    - each truth's best restart has the lowest final objective. The runner-up's gain and every restart's gain are reported, not gated.
 
-6. **The gate and the verdict map are attempt 1's.** The median best-restart gain must be at least 0.75. On a pass, F.0 is cleared for C.1 on v2 and C.1b proceeds, fitting with the same objective. On a fail, C.1b does not run, and the fallback (truths at floor ≤ 1) goes to the maintainer.
+6. **The gate is attempt 1's.** The median best-restart gain must be at least 0.75. On a pass, F.0 is cleared for C.1 on v2 and C.1b proceeds, fitting with the same objective. On a fail, C.1b does not run, and the per-restart gains and each failing truth's basin (its per-statistic decomposition) go to the maintainer, with more restarts and truths at floor ≤ 1 as the options.
 
-7. **The registration:** launch record 117, Part A committed after the probe and before any registered fit. It binds attempt 1's `preflight.json` and `pilot_amendment1.json`, and the probe's `probe.json` and `probe_restart.json`. There is no Part B, because nothing between the probe and the fits changes a rule.
+7. **The registration:** launch record 117, Part A committed after the probe and before any registered fit. It binds attempt 1's `preflight.json` and `pilot_amendment1.json`, and the probe's `probe.json`, `probe_restart.json` and `probe_diagnosis.json`. There is no Part B, because nothing between the probe and the fits changes a rule.
 
 8. **After the probe** (the maintainer, 2026-10-30): the probe returned with 1164 at 0.787. A second restart on the probe's seeds (`probe-b2`: fit index 3, CMA seed 5998, cap 200, the guarded rule) gained 0.523, and the gate's selection keeps 0.787. The maintainer accepted 1164 below the probe's bar and raised the restarts to 4 per truth (decision 5). `run-b` clears the probe only for the truths that reached the bar or that the maintainer accepted below it, and Part A discloses both rounds.
 
 ## Risks / Trade-offs
 
-- **[The noisy truths stay hard]** → their observations carry noise of 13–15 scales on exits that no fit can remove, though the floor normalises the gain for it. The probe shows whether the fix suffices, and if not, the fallback is registered as the next step.
+- **[Restart variance]** → a restart can settle in a wrong basin whatever the truth: 1164's two probe restarts reached 0.787 and 0.523 in different basins. Four restarts per truth reduce the chance a truth loses every one. They are not independent draws, since all start from the box centre at σ 0.2 and differ only in their CMA seed. The noisy truths' exits noise (13–15 scales) is normalised by their floors, and 6985 recovered despite it.
 - **[Definedness dominates early]** → while any statistic the truth defines is undefined, the 1,000-per-statistic term outranks all distance. That is intended, since recovery needs every statistic defined, and the box centre starts with all 19 defined.
 - **[Reusing truths after seeing them fail]** → this tests the objective on exactly the cases that broke it. The truths were fixed by attempt 1's registered rule, not chosen after the fact.
 - **[Cost]** → the probe took about 5.5 h in all. The 16 fits take about 26 h, and at most about 65 h if every fit runs to the cap.

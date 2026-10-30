@@ -411,3 +411,6 @@ def test_four_restarts_read_the_best_and_the_runner_up(
     assert row["other_gain"] == pytest.approx(0.7)
     assert row["restart_spread_D"] == pytest.approx(2.0)
     assert row["restart_gains"] == pytest.approx([1.0, 0.9, 0.8, 0.7])
+    # Of the first two alone, restart 1 (1.0) beats restart 0 (4.0).
+    assert row["first_two_best_restart"] == 1
+    assert row["first_two_gain"] == pytest.approx(0.9)

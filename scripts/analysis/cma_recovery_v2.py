@@ -752,7 +752,8 @@ def _read_fits(build: Path, out: Path, description: str, restarts: int = cr.REST
     """Read the gate on the registered, capped D from one attempt's fits into ``out``.
 
     Each truth's best restart has the lowest final objective. The other gain and the restarts'
-    spread are the runner-up's, and with more than two restarts every restart's gain is reported.
+    spread are the runner-up's. With more than two restarts every restart's gain is reported, and
+    so is the gain of the better of the first two alone, comparable with a two-restart reading.
     """
     preflight = json.loads(PREFLIGHT_PATH.read_text())
     stored = read_records(build / "answers.jsonl")
@@ -807,7 +808,13 @@ def _read_fits(build: Path, out: Path, description: str, restarts: int = cr.REST
             "fits": fits,
         }
         if restarts > cr.RESTARTS:
-            row = {**row, "restart_gains": [f["gain"] for f in fits]}
+            pair = cr.best_restart([f["medians"] for f in fits[: cr.RESTARTS]])
+            row = {
+                **row,
+                "restart_gains": [f["gain"] for f in fits],
+                "first_two_best_restart": pair,
+                "first_two_gain": fits[pair]["gain"],
+            }
         rows.append(row)
     median_gain = float(np.median([r["gain"] for r in rows]))
     record = {
@@ -1210,7 +1217,7 @@ def attempt_b(stage: str, workers: int) -> int:
         print(f"{PROBE_B_PATH} is missing or holds a gain below the bar.", file=sys.stderr)
         return 1
     if not cr.launch_committed(
-        bound=(PREFLIGHT_PATH, PILOT_A1_PATH, PROBE_B_PATH, PROBE_B2_PATH),
+        bound=(PREFLIGHT_PATH, PILOT_A1_PATH, PROBE_B_PATH, PROBE_B2_PATH, PROBE_B_DIAGNOSIS_PATH),
         launch_path=LAUNCH_B_PATH,
     ):
         print(f"{LAUNCH_B_PATH} is not committed and clean; nothing runs.", file=sys.stderr)

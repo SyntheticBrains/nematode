@@ -25,7 +25,7 @@ The maintainer's decisions of 2026-10-29:
 - **The registered re-run:**
   - the four registered truths and their committed observations, floors and priors;
   - 4 × 4 fits on new seeds (revised after the probe; see below), at the cap of 272, with the guarded plateau;
-  - the same gate, a median best-restart gain of at least 0.75, and the same verdict map.
+  - the same gate, a median best-restart gain of at least 0.75; on a fail, the per-restart diagnosis goes to the maintainer.
 - **Launch record 117** and **Logbook 117**.
 
 ## Revision after the probe (2026-10-30)
@@ -47,7 +47,7 @@ None.
 
 ### Modified Capabilities
 
-- `fit-recovery`: the fit ranks on a compressed, uncapped distance, with undefined statistics costed above every defined term.
+- `fit-recovery`: the fit ranks definedness first, then on a compressed, uncapped distance, replacing the uncapped ranking attempt 1's gate failed on. The probe may accept a truth below its bar only by the maintainer's registered decision, and each truth is fitted with four restarts.
 
 ## Impact
 

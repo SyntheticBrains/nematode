@@ -28,6 +28,11 @@ Before registration, the ranking score SHALL be fitted on discarded seeds to the
 - **WHEN** the maintainer accepts a probed truth below 0.80, and the decision is registered with the launch record
 - **THEN** the registered fits MAY run, and the launch record SHALL disclose the truth's probe gains
 
+#### Scenario: The observations changed
+
+- **WHEN** `candidates.jsonl` no longer matches its registered SHA-256
+- **THEN** every attempt-2 stage SHALL refuse to run
+
 ### Requirement: Each truth is fitted with four restarts
 
 The registered re-run SHALL fit each of the four truths with 4 restarts of sep-CMA from the box centre. Each truth's best restart SHALL be the one with the lowest final objective, and the gate SHALL read its gain. Every restart's gain SHALL be reported.
@@ -35,9 +40,12 @@ The registered re-run SHALL fit each of the four truths with 4 restarts of sep-C
 #### Scenario: The best of four restarts
 
 - **WHEN** a truth's four restarts end with different final objectives
-- **THEN** the gate SHALL read the gain of the restart with the lowest final objective, and the record SHALL report the runner-up's gain and every restart's gain
+- **THEN** the gate SHALL read the gain of the restart with the lowest final objective, and the record SHALL report the runner-up's gain, every restart's gain, and, as description, the gain of the better of the first two restarts alone
 
-#### Scenario: The observations changed
+## REMOVED Requirements
 
-- **WHEN** `candidates.jsonl` no longer matches its registered SHA-256
-- **THEN** every attempt-2 stage SHALL refuse to run
+### Requirement: A fit ranks on the uncapped distance
+
+**Reason**: attempt 1's registered gate failed on this objective (median gain 0.690): a statistic undefined in only one record counted a flat 10, less than a defined statistic far from the truth, so fits escaped into parameters that leave statistics undefined.
+
+**Migration**: recovery fits on v2 rank on the definedness-first score of "A fit ranks definedness first, then a compressed distance". Attempt 1's records keep their objective and are read as registered.
