@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import math
 import shutil
 import sys
 from concurrent.futures import ProcessPoolExecutor
@@ -78,6 +79,37 @@ PROJECTION_HOURS = 20.0
 # not reach the wild type.
 REACHABILITY_ACCEPTED = False
 RECOVERED = ("kappa_weathervane", "search_tau_s")
+# The widened-box probe: two parameters the pilot pinned at F.0a's upper bounds, with their upper
+# bounds raised; neither range uses search data.
+WIDE_UPPER = {"edge": 10.0, "a_intake": 10.0}
+PROBE_WIDE_PATH = SUPPORT / "probe_wide.json"
+PROBE_WIDE_BASE = 440_000_000
+PROBE_WIDE_GRADE_BASE = 442_000_000
+
+
+def parameters_from_box(z: np.ndarray, upper: dict[str, float] | None = None) -> dict[str, float]:
+    """Map a point of the unit box to C.1's parameters, with some upper bounds replaced."""
+    from quantumnematode.evaluation.controllers import MECHANISTIC_PARAMETERS
+
+    out = {}
+    for value, name in zip(np.asarray(z, dtype=float), MECHANISTIC_PARAMETERS, strict=True):
+        kind, low, high = nr.PRIOR[name]
+        high = (upper or {}).get(name, high)
+        if kind == "log":
+            out[name] = float(math.exp(math.log(low) + value * (math.log(high) - math.log(low))))
+        else:
+            out[name] = float(low + value * (high - low))
+    return out
+
+
+def simulate_wide(k: int, z: list[float], seed_base: int) -> dict[str, Any]:
+    """Run simulation k at z on v2, z mapped through the widened box."""
+    return v2.simulate_v2(
+        k,
+        z,
+        seed_base,
+        parameters=parameters_from_box(np.asarray(z), WIDE_UPPER),
+    )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -188,14 +220,17 @@ def failing(grades: list[dict[str, Any]]) -> list[str]:
 # ---------------------------------------------------------------------------------------------
 
 
-def grade_answer(k: int, z: list[float], base: int) -> dict[str, Any]:
-    """Grade an answer on population k at a base, with presence: every family and the pass."""
+def grade_answer(k: int, z: list[float], base: int, wide: bool = False) -> dict[str, Any]:  # noqa: FBT001, FBT002 - a pool's positional argument
+    """Grade an answer on population k at a base, with presence: every family and the pass.
+
+    With ``wide``, z is mapped through the widened box.
+    """
     import benchmark_grade as bg
     from quantumnematode.evaluation.controllers import BatchedMechanistic
 
     bands = v2._bands()
     seeds = [base + nr.ANIMALS * k + i for i in range(nr.ANIMALS)]
-    params = nr.parameters_from_unit(np.asarray(z))
+    params = parameters_from_box(np.asarray(z), WIDE_UPPER if wide else None)
     populations, chemotaxis = bg.simulate_v2(
         "mlp",
         lambda _path: BatchedMechanistic(params),
@@ -224,7 +259,7 @@ def grade_answer(k: int, z: list[float], base: int) -> dict[str, Any]:
     )
 
 
-def _grade_all(jobs: list[tuple[int, list[float], int]], workers: int) -> list[dict[str, Any]]:
+def _grade_all(jobs: list[tuple[Any, ...]], workers: int) -> list[dict[str, Any]]:
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
         return list(pool.map(grade_answer, *zip(*jobs, strict=True)))
 
@@ -238,6 +273,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
     use_rule: bool,
     state_dir: Path,
     pool: Any,  # noqa: ANN401 - a pool
+    simulate: Any = None,  # noqa: ANN401 - a picklable simulator
 ) -> dict[str, Any]:
     return cr.run_fit(
         {},
@@ -250,13 +286,30 @@ def _fit(  # noqa: PLR0913 - one restart's settings
         pool=pool,
         scales={},
         objective=BandObjective(),
-        simulate=v2.simulate_v2,
+        simulate=simulate or v2.simulate_v2,
         stop=defined_stop,
     )
 
 
-def _median_answer_d(z: list[float], ks: list[int], base: int, path: Path, workers: int) -> float:
-    return _median_d(v2._resimulate(z, ks, base, path, workers))
+def _median_answer_d(  # noqa: PLR0913 - one answer's re-simulation settings
+    z: list[float],
+    ks: list[int],
+    base: int,
+    path: Path,
+    workers: int,
+    simulate: Any = None,  # noqa: ANN401 - a picklable simulator
+) -> float:
+    if simulate is None:
+        return _median_d(v2._resimulate(z, ks, base, path, workers))
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        stored = v2.read_records(path)
+        todo = [k for k in ks if k not in stored]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a") as out:
+            for record in pool.map(simulate, todo, [z] * len(todo), [base] * len(todo)):
+                out.write(json.dumps({**record, "seed_base": base}, allow_nan=False) + "\n")
+    stored = v2.read_records(path)
+    return _median_d([stored[k] for k in ks])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -266,16 +319,29 @@ def _median_answer_d(z: list[float], ks: list[int], base: int, path: Path, worke
 
 def _pilot(workers: int) -> int:
     """Run one restart 300 generations on discarded seeds: the cap, the cost, reachability."""
-    state = BUILD / "pilot"
+    return _pilot_run(workers, wide=False)
+
+
+def _probe_wide(workers: int) -> int:
+    """Run the pilot again on the widened box, on its own discarded seeds; description only."""
+    return _pilot_run(workers, wide=True)
+
+
+def _pilot_run(workers: int, *, wide: bool) -> int:
+    state = BUILD / ("probe_wide" if wide else "pilot")
+    base = PROBE_WIDE_BASE if wide else PILOT_BASE
+    grade_base = PROBE_WIDE_GRADE_BASE if wide else PILOT_GRADE_BASE
+    simulate = simulate_wide if wide else None
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
         history = _fit(
             0,
             cma_seed=PILOT_CMA_SEED,
-            seed_base=PILOT_BASE,
+            seed_base=base,
             cap=cr.MAX_GENERATIONS,
             use_rule=False,
             state_dir=state,
             pool=pool,
+            simulate=simulate,
         )
     plateau = defined_plateau_generation(history["medians"], history["sigmas"])
     at = {"end": cr.MAX_GENERATIONS}
@@ -290,9 +356,10 @@ def _pilot(workers: int) -> int:
         d[name] = _median_answer_d(
             history["answers"][generation - 1],
             [offset + q for q in range(RESIMULATIONS)],
-            PILOT_BASE,
+            base,
             state / "answers.jsonl",
             workers,
+            simulate,
         )
     cap = pilot_cap(plateau, d.get("cap"), d["end"])
     seconds = history["seconds"]
@@ -300,12 +367,13 @@ def _pilot(workers: int) -> int:
         float(np.median(seconds[100:])) if len(seconds) > 100 else float(np.median(seconds))
     )
     hours = RESTARTS * (cap + 1) * per_generation / 3600.0
+    answer = history["answers"][-1]
     grades = _grade_all(
-        [(g, history["answers"][-1], PILOT_GRADE_BASE) for g in range(GRADE_POPULATIONS)],
+        [(g, answer, grade_base, wide) for g in range(GRADE_POPULATIONS)],
         workers,
     )
     passing = sum(g["wild_type_passes"] for g in grades)
-    record = {
+    record: dict[str, Any] = {
         "description": "The reachability pilot on discarded seeds: the cap, the cost and whether "
         "its answer reaches the wild type.",
         "plateau_generation": plateau,
@@ -324,7 +392,15 @@ def _pilot(workers: int) -> int:
         "medians": history["medians"],
         "sigmas": history["sigmas"],
     }
-    cr._write_json(PILOT_PATH, record)
+    if wide:
+        record["description"] = (
+            "Description: the pilot re-run on a box with edge's and a_intake's upper bounds "
+            "raised to 10, on its own discarded seeds, before any registered fit."
+        )
+        record["upper_bounds"] = WIDE_UPPER
+        record["parameters"] = parameters_from_box(np.asarray(answer), WIDE_UPPER)
+        record["answer"] = answer
+    cr._write_json(PROBE_WIDE_PATH if wide else PILOT_PATH, record)
     summary = {
         k: record[k]
         for k in ("plateau_generation", "median_D", "registered_cap", "projected_hours")
@@ -519,11 +595,16 @@ def _guarded(stage: str) -> bool:
 def main(argv: list[str] | None = None) -> int:
     """CLI: the pilot, the fits, selection, grading, the reading and a smoke."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument("stage", choices=("pilot", "run", "select", "grade", "read", "smoke"))
+    parser.add_argument(
+        "stage",
+        choices=("pilot", "probe-wide", "run", "select", "grade", "read", "smoke"),
+    )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
     if args.stage == "smoke":
         return _smoke(args.workers)
+    if args.stage == "probe-wide":
+        return _probe_wide(args.workers)
     if not _guarded(args.stage):
         print(
             "the launch record, its records or the encoding table is uncommitted or changed",
