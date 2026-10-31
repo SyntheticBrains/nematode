@@ -11,5 +11,5 @@
 
 #### Scenario: Stored simulations re-simulate exactly
 
-- **WHEN** stored v2 simulations are re-run after the change
-- **THEN** every graded statistic and D SHALL equal the stored record exactly
+- **WHEN** stored or baseline simulations are re-run after the change: v2 with and without presence, and v1
+- **THEN** every graded statistic, D and presence reading SHALL equal the stored record exactly

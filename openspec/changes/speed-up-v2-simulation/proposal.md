@@ -21,7 +21,7 @@ The maintainer's decisions of 2026-10-31:
 - **C.1's uniforms** are drawn in blocks per animal and consumed in order. One `torch.rand(k)` call yields the same numbers, and leaves the generator in the same state, as k one-at-a-time draws (checked on torch 2.14.1), and a test pins it.
 - **Byte-identity checks:**
   - tests comparing each new path with the old one on fixed inputs;
-  - a one-off check that re-simulates stored records (attempt 2's discarded probe simulations and the throughput bench's 32 records) and compares every statistic and D exactly.
+  - a one-off check in two stages. `baseline` runs on `main`'s code before any edit, and records v2 simulations with and without presence and v1 simulations, on discarded seeds. `check` runs after the change, and compares every statistic and D exactly against that baseline and against stored records: attempt 2's probe answers, observations graded with presence from `candidates.jsonl`, and F.0a's v1 simulations.
 - **The compute plan** goes into the Phase 10 tracker: whole-generation batching before C.2's cost pilot; sequential stopping of W's null draws in W's design; surrogate-assisted CMA dropped.
 
 ## Capabilities
@@ -38,5 +38,6 @@ None.
 ## Impact
 
 - `quantumnematode/evaluation/batched.py` (`to_behaviour_steps`), `quantumnematode/evaluation/controllers.py` (`BatchedMechanistic`'s draws), `quantumnematode/benchmark/measurement.py` (`measure`, `NoiseLibrary.draw` and `_splice`).
-- Tests beside each, and `scripts/analysis/speedup_identity_check.py` for the one-off check.
+- **Every caller of the changed code**, v1 as well as v2: `cma_recovery_v2`, `npe_recovery.simulate` (F.0a, F.0b-i on v1), `c1_fit`, `cma_recovery`, `benchmark_grade`, `benchmark_controls` and `benchmark_v2_controls`. So identity is checked on both benchmarks.
+- Tests beside each, and `scripts/analysis/speedup_identity_check.py baseline|check` for the one-off check.
 - **No registered result changes.** Expected about 26 s → 14–16 s per simulation on one core (1.6–1.8×), re-timed with the same 32-simulation bench.

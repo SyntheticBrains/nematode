@@ -28,13 +28,19 @@ The earlier 1.76× speed-up (Logbook 116) set the bar: identical output, shown o
    - `BatchedMechanistic` keeps a per-animal buffer of uniforms, refilled by one `torch.rand(3·B, dtype=float64)` per animal when empty, with B = 4,096 steps, and consumed three per step in order.
    - The buffer is tied to the identity of the generator list it was filled from. A new list starts a new buffer, and `reset` does not discard it, so no draw is skipped or repeated.
    - Draws left in the buffer at the end of a run advance the generators past what was used. Nothing reads them afterwards: `_build_animals` builds fresh generators every run, and the controller is their only consumer.
-   - Only `BatchedMechanistic` changes. It is the only consumer of its torch generators, and it draws only uniforms.
+   - Only `BatchedMechanistic` changes. It is the only consumer of its torch generators, and it draws only uniforms. Its docstring says the numbers drawn are the same as one call per second, now taken in blocks.
 4. **The identity checks.**
    - **In the suite:** each new path is compared, field by field and exactly, with a reference copy of the old code kept in the test, on a short evaluator run (Scheer's small lawn and Chen's chemotaxis), on measured tracks with splices and lost seconds, and on uniform draws across a run boundary. The torch property (block equals sequence, and the same generator state after) is its own test.
-   - **Once, before the change is merged:** `scripts/analysis/speedup_identity_check.py` re-simulates stored records whose inputs are on disk and compares every statistic and D exactly. These are attempt 2's probe answers (`build/cma-recovery-v2/attempt2/probe/answers.jsonl`, discarded seeds) and the 32-simulation bench. Its summary is committed.
+   - **Once, before the change is merged**, `scripts/analysis/speedup_identity_check.py`, in two stages:
+     - `baseline`, run on `main`'s code before any edit, writes `build/v2-speedup/baseline.jsonl`. It holds v2 simulations without presence and with presence, and v1 simulations (`npe_recovery.simulate`), all at the box centre and at two F.0a parameter vectors, on discarded seeds (base 99,700,000).
+     - `check`, run after the change, re-simulates the baseline's jobs and these stored records, and compares every statistic and D exactly:
+       - attempt 2's probe answers (`build/cma-recovery-v2/attempt2/probe/answers.jsonl`);
+       - three observations graded with presence from `build/cma-recovery-v2/candidates.jsonl`, with their presence readings;
+       - three of F.0a's stored v1 simulations (`npe_recovery.load_simulations`).
+     - Its summary is committed as `supporting/118-v2-speedup/identity.json`.
 
 ## Risks / Trade-offs
 
-- **[A torch upgrade changes block draws]** → the property test fails first, and the buffer falls back to per-step draws.
+- **[A torch upgrade changes block draws]** → the property test fails in CI, and the block draw is reverted to one draw per step before any further simulation.
 - **[A floating-point reordering slips into the measurement model]** → the exact field-by-field tests and the stored-record check catch it before merge.
 - **[Gains smaller than expected, or less on 16 workers]** → re-timed with the same bench on 16 workers in High Power mode, reported as measured.
