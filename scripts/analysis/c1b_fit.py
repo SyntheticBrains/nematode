@@ -17,7 +17,8 @@ presence: it passes the wild type when at least 3 pass. Every restart is graded 
 project the cost, and grade its answer's reachability on 5 discarded populations.
 
 Subcommands (``pilot`` refuses until Part A of the launch record is committed and unchanged; the
-rest also need Part B and the pilot's record; each binds the mutant encoding table)::
+rest also need Part B, the pilot's record and the widened-box probe's; each binds the mutant
+encoding table; ``probe-wide`` and ``smoke`` are unguarded and discarded)::
 
     uv run python scripts/analysis/c1b_fit.py pilot
     uv run python scripts/analysis/c1b_fit.py run
@@ -76,8 +77,8 @@ RESIMULATIONS = 10
 CAP_TOLERANCE_D = 0.27
 PROJECTION_HOURS = 20.0
 # Set only by a maintainer's decision registered in Part B: run although the pilot's answer did
-# not reach the wild type.
-REACHABILITY_ACCEPTED = False
+# not reach the wild type. Set by the decision of 2026-11-01, registered in Part B.
+REACHABILITY_ACCEPTED = True
 RECOVERED = ("kappa_weathervane", "search_tau_s")
 # The widened-box probe: two parameters the pilot pinned at F.0a's upper bounds, with their upper
 # bounds raised; neither range uses search data.
@@ -588,7 +589,10 @@ def _smoke(workers: int) -> int:
 
 
 def _guarded(stage: str) -> bool:
-    bound = (ENCODINGS_PATH,) if stage == "pilot" else (ENCODINGS_PATH, PILOT_PATH)
+    if stage == "pilot":
+        bound: tuple[Path, ...] = (ENCODINGS_PATH,)
+    else:
+        bound = (ENCODINGS_PATH, PILOT_PATH, PROBE_WIDE_PATH)
     return cr.launch_committed(bound, launch_path=LAUNCH_PATH)
 
 

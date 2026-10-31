@@ -121,11 +121,19 @@ def test_the_pilot_cannot_reach_the_wild_type_stops_the_fits(
     pilot.write_text(json.dumps({"reachability": {"reaches": False}, "registered_cap": 200}))
     monkeypatch.setattr(fit, "PILOT_PATH", pilot)
 
+    class RanError(Exception):
+        pass
+
     def ran(*_: object, **__: object) -> dict[str, object]:
-        raise AssertionError
+        raise RanError
 
     monkeypatch.setattr(fit, "_fit", ran)
+    monkeypatch.setattr(fit, "REACHABILITY_ACCEPTED", False)
     assert fit._run(1) == 1
+    # Only the maintainer's registered acceptance lets the fits run after a failed pilot.
+    monkeypatch.setattr(fit, "REACHABILITY_ACCEPTED", True)
+    with pytest.raises(RanError):
+        fit._run(1)
 
 
 def test_failing_names_statistics_and_presence() -> None:

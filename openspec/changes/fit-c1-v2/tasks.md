@@ -12,8 +12,8 @@
 ## 3. Registration and the pilot
 
 - [x] 3.1 Launch record 119, Part A, committed.
-- [ ] 3.2 `pilot`: G_p, D at G_p, at ⌈1.5·G_p⌉ and at 300, the cap, the projection, and reachability on 5 discarded populations. Return to the maintainer if it passes fewer than 3, or if the projection is over 20 h.
-- [ ] 3.3 Part B: the cap, the projection and the pilot's reachability, committed.
+- [x] 3.2 `pilot`: G_p, D at G_p, at ⌈1.5·G_p⌉ and at 300, the cap, the projection, and reachability on 5 discarded populations. Return to the maintainer if it passes fewer than 3, or if the projection is over 20 h.
+- [x] 3.3 Part B: the cap, the projection and the pilot's reachability, committed.
 
 ## 4. The fits and the verdict
 

@@ -102,3 +102,53 @@ Seen before this record was committed:
 
 - `pilot` refuses unless this record is committed and unchanged, with `113-c1-fit/encodings.md` byte-identical;
 - `run`, `select`, `grade` and `read` also require Part B, with `pilot.json` byte-identical to its version in the commit that last touched this record.
+
+## Part B
+
+**Appended 2026-11-01**, after the pilot and before any registered fit. It records the pilot's cap, projection and reachability, discloses the widened-box probe, and registers the maintainer's decision to run. It changes no gate, threshold or verdict. `pilot.json` and `probe_wide.json` are bound to this commit.
+
+### The pilot (`pilot.json`)
+
+| Measure | Value |
+|---|---|
+| G_p, the first generation the doubly guarded rule holds | 165 |
+| median D at G_p | 2.636 |
+| median D at ⌈1.5·G_p⌉ = 248 | 2.426 |
+| median D at 300 | 2.309 |
+| sustained seconds per generation | 31.9 |
+
+- **The cap is 248 generations.** D at 248 is 0.117 above D at 300, within the 0.27 tolerance, so there is no fallback.
+
+- **The projection** is at most **17.7 h** (8 × 249 generations at 31.9 s), under the 20 h threshold.
+
+- **Reachability fails.** The answer at 300 passes **0 of 5** discarded populations. Both presence tests hold in every population. It fails these statistics:
+
+  | Statistic | z | Populations failing |
+  |---|---|---|
+  | the uniform well's roaming bout length | −4.5 to −5.5 | 5 of 5 |
+  | the dwelling speed median | +4.3 to +4.4 | 5 of 5 |
+  | the weathervane slope | +4.1 to +4.4 | 5 of 5 |
+  | pre-exit roaming | −3.1 to −3.8 | 4 of 5 |
+
+  The answer pins `edge` and `a_intake` at the box's upper bounds. By the rule, the change returned to the maintainer.
+
+### Disclosure: the widened-box probe (`probe_wide.json`; description, discarded seeds)
+
+By the maintainer's decision on the pilot, the pilot was re-run on a box with `edge`'s and `a_intake`'s upper bounds raised from 5 to 10. Everything else was the same: CMA seed 5740, 300 generations, animals at 440,000,000 and grading at 442,000,000.
+
+- Both parameters settled inside the wider box, at 0.71 and 0.75 of it.
+- The answer still passes **0 of 5** populations, with a median D of 2.79, worse than the pilot's 2.31.
+- It fails the same statistics:
+  - the weathervane slope (z +5.0 to +5.4);
+  - the dwelling speed median (+5.4 to +5.9);
+  - pre-exit roaming (−3.2 to −4.2);
+  - the uniform well's roaming bouts, in 3 of 5;
+  - and now the roaming speed median too.
+- **So the box was not the limit.**
+- In both runs the two states' speeds swapped: the slow state is the one labelled roaming, and it is still too fast for real dwelling.
+
+This probe changes nothing registered. The fits keep F.0a's box.
+
+### The maintainer's decision (2026-11-01)
+
+**Accept the reachability fail and run the registered fits as registered,** on F.0a's box, with the cap of 248. Selection may still find a basin the pilot's single restart did not, and either way C.4 gets a registered verdict for C.1 on v2. The verdict and the verdict map are unchanged. `c1b_fit.REACHABILITY_ACCEPTED` records this decision.
