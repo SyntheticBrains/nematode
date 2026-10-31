@@ -607,15 +607,27 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 
   *(Added 2026-10-31; [Logbook 118](../../../docs/experiments/logbooks/118-v2-speedup.md).)*
   **The compute plan.** T.1 sized W at 1,210–2,390 core-hours at v1's 27 s per connectome
-  evaluation. On this machine 16 workers deliver about 6 cores' worth of work, so that is about
-  200–400 h, too long to run as sized. The levers, each keeping every output identical unless
+  evaluation. At the 6 cores' worth then measured for 16 workers, that was about 200–400 h, too
+  long to run as sized (about 9.2 cores' worth after the levers below). The levers, each keeping every output identical unless
   stated:
 
   - **done:** the High Power energy mode (1.35×) and the v2 speed-up of Logbook 118 (1.54× on one
     core, 1.35× on 16 workers);
-  - **before C.2's cost pilot:** a whole generation (16 candidates × 200 animals) in one evaluator
-    call, with a GPU check at that size, since the earlier MPS check found its gain only at
-    4,000 or more animals per call;
+  - ~~**before C.2's cost pilot:** a whole generation (16 candidates × 200 animals) in one evaluator
+    call~~ *(corrected 2026-10-31, measured: `supporting/118-v2-speedup/scaling.json`)*. Batching
+    is exact (an animal's trajectory is byte-identical at 200, 800 and 3,200 animals per call),
+    but the evaluator is bound by computation, not per-step overhead. Time per animal falls only
+    about 30% from 200 to 800 animals and is flat beyond (Scheer's lawn 6.6 → 4.7 ms, chemotaxis
+    13.1 → 11.0 ms), so batching would gain at most about 1.3× on the evaluator while giving up
+    parallel workers. Not planned on the CPU. A GPU path would break byte-identity, so it is
+    W's option only, with a statistical parity standard of its own;
+  - **parallel use is near its best:** 16 workers deliver 1,968 simulations an hour, about 9.2
+    one-core equivalents (213 an hour), against 1,697 at 12 and 1,891 at 18, so 16 workers (a fit's
+    population) is the right size and running restarts side by side adds nothing. The earlier
+    "about 6 cores' worth" was measured before High Power and the speed-up;
+  - **small and exact, not yet taken:** converting and measuring only each family's analysis
+    window (about 7%), and per-function work on the evaluator's kernels (perhaps 10–15% of their
+    time);
   - **in W's registration:** a registered sequential stopping rule for the null draws, and W's
     cost re-sized from v2 timings rather than v1's;
   - **dropped:** surrogate-assisted CMA. The objective is noisy, and it would need its own
