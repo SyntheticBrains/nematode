@@ -49,7 +49,7 @@
    - the chosen restart passes the most of them, ties go to the lower median D over the three, and then to the lower r;
    - a restart stopped by the cap cannot be chosen, as in C.1 (D38). If none plateaus, no verdict is read, and the run returns to the maintainer.
 6. **The verdict:**
-   - every plateaued restart is graded with presence on the 5 registered populations, `420_000_000 + 200·g + i` for g < 5;
+   - every restart, plateaued or stopped by the cap, is graded with presence on the 5 registered populations, `420_000_000 + 200·g + i` for g < 5. C.1's v1 fit graded every restart, and the encoding table's `unidentified` rule reads every restart that passes the wild type;
    - a population passes when every family passes: each statistic at |z| ≤ z\* = 3.0078, and local search and chemotaxis only where present;
    - **the chosen restart passes the wild type when at least 3 of its 5 populations pass;**
    - the other restarts' grades are reported, and feed C.4's `unidentified` rule.
@@ -64,15 +64,16 @@
    - `to_behaviour_steps(animal, start, stop)` builds only steps start to stop, each with its step index and its signed speed from the previous step;
    - `measure_window(steps, first, primitives, seed, model)` draws the noise, lost seconds and fragment cuts over the whole episode, exactly as `measure` does, and applies them only to the window's steps;
    - `benchmark_grade.simulate_v2` builds and measures each lawn family's window, and local search's window unmeasured, with `analysis_steps`'s length check kept. Chemotaxis already measures only its window, and now builds only it;
-   - **identity:** `speedup_identity_check.py baseline` on `main` before the edit, then `check` after. The `--out` lets this change write its own `119-c1b-fit/identity.json`, so Logbook 118's record stays as it is.
+   - **identity:** `speedup_identity_check.py baseline` on `main` before the edit, then `check` after. `--build build/c1b-fit/identity` and `--out supporting/119-c1b-fit/identity.json` keep this change's baseline and record apart from Logbook 118's.
 9. **The registration:** launch record 119.
    - **Part A** fixes everything above, and is committed before the pilot.
    - **Part B**, after the pilot and before any fit, records the cap, the projection and the pilot's reachability, and changes no rule.
-   - **The smoke:** CMA seed 5999, animals at 99,050,000, discarded.
+   - **The guard:** `pilot` refuses unless Part A is committed and unchanged, and every other registered stage also needs Part B. Each binds the registered mutant encoding table, `113-c1-fit/encodings.md`, byte-identical, as C.1's guard did, since C.4 grades C.1b's mutant predictions under it.
+   - **The smoke:** CMA seed 5999, animals at 99,050,000, its grading at 99,060,000, all discarded, so it never touches a registered population.
 
 ## Risks / Trade-offs
 
 - **[The model cannot reach v2's wild type]** → the pilot shows it first, on discarded seeds. A pass at its single restart is not required for the fits to be worth running, but a fail goes to the maintainer.
-- **[Selection populations cost a little]** → 3 per plateaued restart, at most 24 simulations, about a minute on 16 workers.
+- **[Grading costs a little]** → 3 selection populations per plateaued restart (at most 24 simulations) and 5 registered populations per restart (40), about 3 minutes on 16 workers.
 - **[The doubly guarded rule never holds on real data]** → fits run to the cap, cannot be chosen, and no verdict is read. The pilot shows whether the rule holds before registration.
 - **[The cap tolerance is borrowed]** → 0.27 is F.0b-i's gain tolerance put on a D scale from committed truths. It decides only between the cap and 300.

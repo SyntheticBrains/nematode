@@ -22,9 +22,9 @@ The maintainer's decisions of 2026-10-31:
   - a pilot, a run, selection, grading, a reading and a smoke.
 - **The reachability pilot** (discarded seeds), before registration Part B. It sets the cap by F.0b-i's rule, projects the cost, and grades its answer on 5 discarded populations. It returns to the maintainer if that answer does not pass 3 of 5.
 - **Selection:** every plateaued restart is graded with presence on 3 selection populations. The restart passing most is chosen, with ties broken by the lower median D.
-- **The verdict:** the chosen restart passes the wild type on at least 3 of 5 fresh registered populations, graded with presence. v2's 3-of-5 oracle for a faithful controller is 0.955. Every plateaued restart is graded on those populations too, for C.4's `unidentified` rule.
+- **The verdict:** the chosen restart passes the wild type on at least 3 of 5 fresh registered populations, graded with presence. v2's 3-of-5 oracle for a faithful controller is 0.955. Every restart, plateaued or not, is graded on those populations too, for C.4's `unidentified` rule, as C.1's v1 fit graded every restart.
 - **The window restriction** (`BatchedTrajectories.to_behaviour_steps(animal, start, stop)`, `measurement.measure_window`, used by `benchmark_grade.simulate_v2`), byte-identical, and checked with `speedup_identity_check.py` against a baseline from `main`.
-- **Launch record 119** (Part A before the pilot, Part B after it) and **Logbook 119**.
+- **Launch record 119** (Part A before the pilot, Part B after it), binding the registered mutant encoding table (`113-c1-fit/encodings.md`) that C.4 grades C.1b's predictions under, and **Logbook 119**.
 
 ## Capabilities
 
@@ -39,7 +39,7 @@ None.
 
 ## Impact
 
-- `scripts/analysis/c1b_fit.py` (new); `scripts/analysis/benchmark_grade.py` (`simulate_v2`); `quantumnematode/evaluation/batched.py` (`to_behaviour_steps`); `quantumnematode/benchmark/measurement.py` (`measure_window`); `scripts/analysis/speedup_identity_check.py` (an `--out` for this change's record).
+- `scripts/analysis/c1b_fit.py` (new); `scripts/analysis/benchmark_grade.py` (`simulate_v2`); `quantumnematode/evaluation/batched.py` (`to_behaviour_steps`); `quantumnematode/benchmark/measurement.py` (`measure_window`); `scripts/analysis/speedup_identity_check.py` (`--build` and `--out`, so each change keeps its own baseline and record).
 - `docs/experiments/logbooks/supporting/119-c1b-fit/`; Logbook 119; the tracker (C.1, C.4, the seed table).
 - **Cost:**
   - the pilot: about 2.4 h at about 29 s per generation;

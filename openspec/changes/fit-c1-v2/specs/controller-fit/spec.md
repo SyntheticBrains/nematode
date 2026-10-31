@@ -40,3 +40,28 @@ Before Part B, one restart SHALL run 300 generations on discarded seeds to set t
 
 - **WHEN** the pilot's answer passes 2 of its 5 discarded populations
 - **THEN** no registered fit SHALL run until the maintainer decides
+
+## MODIFIED Requirements
+
+### Requirement: C.1 is fitted to the wild type by sep-CMA
+
+On benchmark v1 (Logbook 113), C.1 SHALL be fitted by sep-CMA with 8 restarts from the box centre (σ₀ 0.2, population 16, bounds [0, 1]). The objective SHALL be the benchmark's D on the 11 wild-type statistics against the band cohorts at n = 200, for 200 fresh animals per evaluation. Each restart SHALL stop at the plateau rule or at 210 generations. A restart stopped by the cap SHALL NOT be chosen. The chosen restart SHALL be the plateaued restart with the lowest mean median objective over its last 20 generations. C.1's refit on benchmark v2 follows "C.1 is refitted on benchmark v2".
+
+#### Scenario: No restart plateaus
+
+- **WHEN** every restart stops at the cap
+- **THEN** no verdict SHALL be read, and the run SHALL return to the maintainer
+
+### Requirement: The wild-type verdict is the benchmark's rule
+
+Every restart's answer SHALL be graded on five registered populations of 200 animals. On benchmark v1, a population SHALL pass when every family passes: each statistic at |z| ≤ 2.84, and local search only where its presence test holds. On benchmark v2, a population SHALL pass when every family passes: each statistic at |z| ≤ 3.0078, and local search and chemotaxis only where present. The chosen restart SHALL pass the wild type when at least 3 of its 5 populations pass. Every restart's verdict and D, the restart spread and the parameters SHALL be reported beside the verdict.
+
+#### Scenario: C.1 fails the wild type
+
+- **WHEN** fewer than 3 of the chosen restart's 5 populations pass
+- **THEN** the failing statistics SHALL be recorded as the diagnosis, and the roadmap's pivot SHALL go to the maintainer before C.2
+
+#### Scenario: One unlucky population does not fail a faithful controller
+
+- **WHEN** one of five populations fails a family and the other four pass
+- **THEN** the chosen restart SHALL pass the wild type
