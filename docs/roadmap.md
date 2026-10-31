@@ -1795,9 +1795,11 @@ authoritative plan; amendments are dated in both places.
 
 | Claim | Nearest precedent (2026-10) | Payoff if positive |
 |---|---|---|
-| **A graded benchmark of standard on-lawn assays for simulated worms**, with real-track positive controls and matched negatives | none found; Tierpsy/OWMD feature sets describe real worms, not simulated ones | a field resource, citable alone |
-| **A closed-loop connectome controller with neuromodulatory state, graded on held-out lawn assays and mutant phenotypes against equal-budget nulls**, including a neuromodulator-layer null | BAAIWorm (nulls, no behavioural grading); Roberts 2016 (graded, no loop, no null); WormWars (nulls, task fitness) | the first test of what the wiring, synaptic and neuromodulatory, contributes to behavioural fidelity |
+| **A graded benchmark of standard on-lawn assays for simulated worms**, with real-track positive controls and matched negatives | none found for the worm; Tierpsy/OWMD feature sets describe real worms, not simulated ones. *(2026-10-30 search.)* The nearest design is flybench (Cho 2026): fly whole-brain models on 37 pre-registered tasks, mostly with convention thresholds, rather than population statistics against real-track bands and held-out cohorts. OpenWorm plans a kinematics-only check at ±15%, not yet built | a field resource, citable alone |
+| **A closed-loop connectome controller with neuromodulatory state, graded on held-out lawn assays and mutant phenotypes against equal-budget nulls**, including a neuromodulator-layer null | BAAIWorm (nulls, no behavioural grading); Roberts 2016 (graded, no loop, no null); WormWars (nulls, task fitness). *(2026-10-30 search.)* flybench (fly; shuffled wiring on every task, not fitted at equal budget); OpenWorm's planned Ripoll-Sánchez neuropeptide layer in c302 (dwelling and roaming named, no behavioural fitting, no nulls; the nearest planned overlap). The digital sphinx (eLife 2026) and Reimers et al. 2026 argue that random wiring does as well | the first test of what the wiring, synaptic and neuromodulatory, contributes to behavioural fidelity |
 | **The pdfr-1 and tax-4 dissociation** reproduced by a simulated worm. *(Narrowed 2026-10-24: the benchmark grades tax-4's lower roaming with its leaving inside its band, and pdfr-1 by magnitude only; Logbook 109.)* | none found | a mechanistic account of how roaming and leaving come apart |
+
+The 2026-10-30 search and its sources: [`research/novelty-and-external-models-2026-10-30.md`](research/novelty-and-external-models-2026-10-30.md).
 
 #### Go/No-Go Decision
 
