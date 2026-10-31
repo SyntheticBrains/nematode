@@ -418,14 +418,20 @@ def simulate_v2(
         config = load_simulation_config(str(path))
         trajectories = BatchedEvaluator(config, controller(path), seeds).run()
         analysis = tuple(trajectories.assay["analysis_steps"])  # type: ignore[index]
+        # Only each family's window is built. A lawn family's noise and losses are drawn over the
+        # whole track, so its window equals the whole track measured and then windowed.
+        samples = g.SEARCH_SAMPLES if family == "local_search" else g.LAWN_SAMPLES
+        first, end = g.analysis_bounds(analysis, samples, trajectories.x.shape[1])  # type: ignore[arg-type]
         populations[family] = [
-            window(
-                family,
-                mm.measure(trajectories.to_behaviour_steps(i), seed, lawn_model)
-                if family in LAWN_MEASURED
-                else trajectories.to_behaviour_steps(i),
-                analysis,  # type: ignore[arg-type]
+            mm.measure_window(
+                trajectories.to_behaviour_steps(i, first, end),
+                first,
+                trajectories.primitive_kinds(i),
+                seed,
+                lawn_model,
             )
+            if family in LAWN_MEASURED
+            else trajectories.to_behaviour_steps(i, first, end)
             for i, seed in enumerate(seeds)
         ]
     path = FORAGING / f"{ARMS[arm]}_assay_{CHEMOTAXIS_PROTOCOL}.yml"
@@ -440,7 +446,7 @@ def simulate_v2(
     ).run()
     first, stop = trajectories.assay["analysis_steps"]  # type: ignore[index]
     chemotaxis = [
-        mm.measure(trajectories.to_behaviour_steps(i)[first:stop], seed, chem_model)
+        mm.measure(trajectories.to_behaviour_steps(i, first, stop), seed, chem_model)
         for i, seed in enumerate(seeds)
     ]
     return populations, chemotaxis

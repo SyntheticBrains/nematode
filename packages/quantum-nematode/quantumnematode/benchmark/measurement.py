@@ -251,13 +251,29 @@ def measure(
     (lawn contact, primitive, phase) is kept, since those are the simulator's ground truth that the
     benchmark reads only where real tracks give the same.
     """
+    return measure_window(steps, 0, [s.primitive for s in steps], seed, model)
+
+
+def measure_window(
+    steps: Sequence[BehaviourStep],
+    first: int,
+    primitives: Sequence[str | None],
+    seed: int,
+    model: TrackerModel,
+) -> list[BehaviourStep]:
+    """Return steps ``first`` onward of an animal's track as the tracker would report them.
+
+    ``primitives`` is the primitive at every step of the whole track. The noise, lost seconds and
+    fragment cuts are drawn over the whole track, exactly as :func:`measure` draws them, and only
+    the given steps are rebuilt, so the result equals the whole track measured and then sliced.
+    """
     rng = np.random.default_rng([seed, model.stream_key])
-    n = len(steps)
+    n = len(primitives)
     if model.noise_library is not None:
         noise = checked_noise_library(model).draw(n, rng)
     else:
         noise = rng.normal(0.0, model.jitter_mm, size=(n, 2))
-    lost = lost_seconds([s.primitive for s in steps], model, rng)
+    lost = lost_seconds(primitives, model, rng)
     if model.fragment_lengths_s is not None:
         lost[fragment_cuts(n, model.fragment_lengths_s, rng)] = True
     if not steps:
@@ -265,14 +281,15 @@ def measure(
     # Each measured step is rebuilt by its constructor, positionally: the same fields and the same
     # __init__ as dataclasses.replace. The noisy positions are added as arrays, element for
     # element the same sums, and iterate as the same numpy floats.
+    window = slice(first, first + len(steps))
     cls = type(steps[0])
     names = _init_fields(cls)
     ix, iy = names.index("x"), names.index("y")
     fields = operator.attrgetter(*names)
-    xs = np.array([s.x for s in steps]) + noise[:, 0]
-    ys = np.array([s.y for s in steps]) + noise[:, 1]
+    xs = np.array([s.x for s in steps]) + noise[window, 0]
+    ys = np.array([s.y for s in steps]) + noise[window, 1]
     out = []
-    for s, gone, x, y in zip(steps, lost.tolist(), xs, ys, strict=True):
+    for s, gone, x, y in zip(steps, lost[window].tolist(), xs, ys, strict=True):
         values = list(fields(s))
         if gone:
             values[ix], values[iy] = math.nan, math.nan

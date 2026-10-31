@@ -1,8 +1,8 @@
 ## 1. The window restriction (before anything else edits the simulation path)
 
-- [ ] 1.1 Give `speedup_identity_check.py` `--build` and `--out`, then record a baseline with `baseline --build build/c1b-fit/identity` on `main`'s code, before any edit to the simulation path.
-- [ ] 1.2 `to_behaviour_steps(animal, start, stop)`, `measurement.measure_window`, and `benchmark_grade.simulate_v2` using them, with `analysis_steps`'s length check kept. Tests: a windowed animal equals the whole episode windowed, field by field and type by type.
-- [ ] 1.3 `speedup_identity_check.py check --build build/c1b-fit/identity --out docs/experiments/logbooks/supporting/119-c1b-fit/identity.json`: every job identical.
+- [x] 1.1 Give `speedup_identity_check.py` `--build` and `--out`, then record a baseline with `baseline --build build/c1b-fit/identity` on `main`'s code, before any edit to the simulation path.
+- [x] 1.2 `to_behaviour_steps(animal, start, stop)`, `measurement.measure_window`, and `benchmark_grade.simulate_v2` using them, with `analysis_steps`'s length check kept. Tests: a windowed animal equals the whole episode windowed, field by field and type by type.
+- [x] 1.3 `speedup_identity_check.py check --build build/c1b-fit/identity --out docs/experiments/logbooks/supporting/119-c1b-fit/identity.json`: every job identical.
 
 ## 2. The fit
 
