@@ -25,6 +25,7 @@ import dataclasses
 import functools
 import hashlib
 import math
+import operator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -67,16 +68,20 @@ class NoiseLibrary:
         return np.concatenate(([0], np.cumsum(self.lengths)[:-1]))
 
     def _splice(self, x: float, y: float, rng: np.random.Generator) -> tuple[int, int]:
-        """Return the index to continue from and its stretch's end, nearest the offset (x, y)."""
+        """Return the index to continue from and its stretch's end, nearest the offset (x, y).
+
+        A stretch's usable offsets are all but its last. They are laid end to end in the order the
+        candidates were drawn, so the first minimum is the first in candidate-then-offset order.
+        """
         ks = rng.integers(len(self.lengths), size=SPLICE_CANDIDATES)
         starts, lengths = self.starts[ks], self.lengths[ks]
-        width = int(lengths.max()) - 1
-        index = starts[:, None] + np.arange(width)[None, :]
-        usable = np.arange(width)[None, :] < (lengths - 1)[:, None]
-        index = np.where(usable, index, 0)
-        distance = np.where(usable, np.hypot(self.x_mm[index] - x, self.y_mm[index] - y), np.inf)
-        row, column = np.unravel_index(int(np.argmin(distance)), distance.shape)
-        return int(index[row, column]) + 1, int(starts[row] + lengths[row])
+        usable = lengths - 1
+        ends = np.cumsum(usable)
+        index = np.arange(int(ends[-1])) + np.repeat(starts - (ends - usable), usable)
+        distance = np.hypot(self.x_mm[index] - x, self.y_mm[index] - y)
+        best = int(np.argmin(distance))
+        row = int(np.searchsorted(ends, best, side="right"))
+        return int(index[best]) + 1, int(starts[row] + lengths[row])
 
     def draw(self, n: int, rng: np.random.Generator) -> np.ndarray:
         """Return an ``(n, 2)`` noise track drawn from ``rng``."""
@@ -258,17 +263,21 @@ def measure(
     if not steps:
         return []
     # Each measured step is rebuilt by its constructor, positionally: the same fields and the same
-    # __init__ as dataclasses.replace, at about half the cost per step.
+    # __init__ as dataclasses.replace. The noisy positions are added as arrays, element for
+    # element the same sums, and iterate as the same numpy floats.
     cls = type(steps[0])
     names = _init_fields(cls)
     ix, iy = names.index("x"), names.index("y")
+    fields = operator.attrgetter(*names)
+    xs = np.array([s.x for s in steps]) + noise[:, 0]
+    ys = np.array([s.y for s in steps]) + noise[:, 1]
     out = []
-    for i, s in enumerate(steps):
-        values = [getattr(s, name) for name in names]
-        if lost[i]:
+    for s, gone, x, y in zip(steps, lost.tolist(), xs, ys, strict=True):
+        values = list(fields(s))
+        if gone:
             values[ix], values[iy] = math.nan, math.nan
         else:
-            values[ix], values[iy] = s.x + noise[i, 0], s.y + noise[i, 1]
+            values[ix], values[iy] = x, y
         out.append(cls(*values))
     return out
 

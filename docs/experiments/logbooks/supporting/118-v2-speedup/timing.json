@@ -1,0 +1,7 @@
+{
+  "description": "Description: C.1's v2 simulation timed before and after the speed-up, alternating old and new code in one session (2026-10-31), High Power energy mode, on an Apple M5 Max. One simulation is one call of cma_recovery_v2.simulate_v2 on one core at the box centre (base 99,600,000); the bench is 32 such simulations (base 99,500,000) on 16 workers. Every bench record was identical between old and new code.",
+  "one_simulation_seconds": {"old": [27.4, 27.4], "new": [17.9, 17.7]},
+  "bench_32_on_16_workers_seconds": {"old": [79.4, 75.6], "new": [57.9, 56.6]},
+  "one_core_speedup": 1.54,
+  "sixteen_worker_speedup": 1.35
+}

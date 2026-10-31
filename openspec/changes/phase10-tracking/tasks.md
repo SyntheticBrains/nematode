@@ -605,6 +605,22 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   W's registration reads its arms on the same family set as the minimum it cites, and carries the
   reconstruction and weight-noise checks above.
 
+  *(Added 2026-10-31; [Logbook 118](../../../docs/experiments/logbooks/118-v2-speedup.md).)*
+  **The compute plan.** T.1 sized W at 1,210–2,390 core-hours at v1's 27 s per connectome
+  evaluation. On this machine 16 workers deliver about 6 cores' worth of work, so that is about
+  200–400 h, too long to run as sized. The levers, each keeping every output identical unless
+  stated:
+
+  - **done:** the High Power energy mode (1.35×) and the v2 speed-up of Logbook 118 (1.54× on one
+    core, 1.35× on 16 workers);
+  - **before C.2's cost pilot:** a whole generation (16 candidates × 200 animals) in one evaluator
+    call, with a GPU check at that size, since the earlier MPS check found its gain only at
+    4,000 or more animals per call;
+  - **in W's registration:** a registered sequential stopping rule for the null draws, and W's
+    cost re-sized from v2 timings rather than v1's;
+  - **dropped:** surrogate-assisted CMA. The objective is noisy, and it would need its own
+    recovery control.
+
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 
 ## The synthesis (MUST)

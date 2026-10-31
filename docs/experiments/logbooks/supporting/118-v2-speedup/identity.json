@@ -1,0 +1,283 @@
+{
+  "description": "Description: every statistic, D and presence reading re-simulated after the speed-up, against the baseline from the code before it and against stored records.",
+  "jobs": 55,
+  "identical": 55,
+  "all_identical": true,
+  "rows": [
+    {
+      "name": "v2/centre",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "v2_presence/centre",
+      "path": "v2_presence",
+      "identical": true
+    },
+    {
+      "name": "v1/centre",
+      "path": "v1",
+      "identical": true
+    },
+    {
+      "name": "v2/f0a_0",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "v2_presence/f0a_0",
+      "path": "v2_presence",
+      "identical": true
+    },
+    {
+      "name": "v1/f0a_0",
+      "path": "v1",
+      "identical": true
+    },
+    {
+      "name": "v2/f0a_1",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "v2_presence/f0a_1",
+      "path": "v2_presence",
+      "identical": true
+    },
+    {
+      "name": "v1/f0a_1",
+      "path": "v1",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5000",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5001",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5002",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5003",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5004",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5005",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5006",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5007",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5008",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/5009",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15000",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15001",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15002",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15003",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15004",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15005",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15006",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15007",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15008",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/15009",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25000",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25001",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25002",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25003",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25004",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25005",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25006",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25007",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25008",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/25009",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35000",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35001",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35002",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35003",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35004",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35005",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35006",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35007",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35008",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "probe_answer/35009",
+      "path": "v2",
+      "identical": true
+    },
+    {
+      "name": "candidate_observation/0",
+      "path": "v2_presence",
+      "identical": true
+    },
+    {
+      "name": "candidate_observation/1",
+      "path": "v2_presence",
+      "identical": true
+    },
+    {
+      "name": "candidate_observation/2",
+      "path": "v2_presence",
+      "identical": true
+    },
+    {
+      "name": "f0a_v1/0",
+      "path": "v1",
+      "identical": true
+    },
+    {
+      "name": "f0a_v1/1",
+      "path": "v1",
+      "identical": true
+    },
+    {
+      "name": "f0a_v1/2",
+      "path": "v1",
+      "identical": true
+    }
+  ]
+}

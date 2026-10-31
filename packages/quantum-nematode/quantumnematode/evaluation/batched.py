@@ -147,47 +147,42 @@ class BatchedTrajectories:
         """Return one animal's record as the per-step runner's ``BehaviourStep`` series.
 
         The live food-gradient fields are the recorded ones, or 0 when the run did not record them.
+        Each column is read once as Python floats, the values ``float`` gives element by element,
+        and the signed speed is computed on those floats with ``math``'s cosine and sine.
         """
-        steps: list[BehaviourStep] = []
-        previous: tuple[float, float] | None = None
-        for t in range(self.x.shape[1]):
-            x, y, heading = (
-                float(self.x[animal, t]),
-                float(self.y[animal, t]),
-                float(self.heading[animal, t]),
-            )
-            if previous is None:
-                signed = 0.0
-            else:
-                signed = (x - previous[0]) * math.cos(heading) + (y - previous[1]) * math.sin(
-                    heading,
-                )
-            previous = (x, y)
-            steps.append(
-                BehaviourStep(
-                    step=t,
-                    x=x,
-                    y=y,
-                    heading_rad=heading,
-                    concentration=float(self.concentration[animal, t]),
-                    dc_dt=float(self.derivative[animal, t]),
-                    grad_dir=0.0 if self.grad_dir is None else float(self.grad_dir[animal, t]),
-                    grad_strength=(
-                        0.0 if self.grad_strength is None else float(self.grad_strength[animal, t])
-                    ),
-                    speed_signed=signed,
-                    satiety=float(self.satiety[animal, t]),
-                    intake=float(self.intake[animal, t]),
-                    on_lawn=bool(self.on_lawn[animal, t]),
-                    primitive=PRIMITIVE_KINDS[int(self.primitive[animal, t])],
-                    phase=(
-                        None
-                        if self.phase_names is None
-                        else self.phase_names[int(self.phase[animal, t])]
-                    ),
-                ),
-            )
-        return steps
+        n = self.x.shape[1]
+        xs = self.x[animal].tolist()
+        ys = self.y[animal].tolist()
+        headings = self.heading[animal].tolist()
+        zeros = [0.0] * n
+        grad_dir = zeros if self.grad_dir is None else self.grad_dir[animal].tolist()
+        grad_strength = zeros if self.grad_strength is None else self.grad_strength[animal].tolist()
+        signed = [0.0] * n
+        for t in range(1, n):
+            h = headings[t]
+            signed[t] = (xs[t] - xs[t - 1]) * math.cos(h) + (ys[t] - ys[t - 1]) * math.sin(h)
+        kinds = [PRIMITIVE_KINDS[p] for p in self.primitive[animal].tolist()]
+        names = self.phase_names
+        phases = [None] * n if names is None else [names[p] for p in self.phase[animal].tolist()]
+        return list(
+            map(
+                BehaviourStep,
+                range(n),
+                xs,
+                ys,
+                headings,
+                self.concentration[animal].tolist(),
+                self.derivative[animal].tolist(),
+                grad_dir,
+                grad_strength,
+                signed,
+                self.satiety[animal].tolist(),
+                self.intake[animal].tolist(),
+                [bool(v) for v in self.on_lawn[animal].tolist()],
+                kinds,
+                phases,
+            ),
+        )
 
 
 def _refuse(reason: str) -> None:

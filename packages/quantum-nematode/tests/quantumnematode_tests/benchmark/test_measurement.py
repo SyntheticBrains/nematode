@@ -253,7 +253,76 @@ def test_measured_steps_are_unchanged_by_the_faster_construction(vendored: bool)
             assert type(a) is type(b)
             for name in names:
                 va, vb = getattr(a, name), getattr(b, name)
+                assert type(va) is type(vb), name
                 assert va == vb or (isinstance(va, float) and math.isnan(va) and math.isnan(vb))
+
+
+def _reference_splice(
+    lib: mm.NoiseLibrary,
+    x: float,
+    y: float,
+    rng: np.random.Generator,
+) -> tuple[int, int]:
+    """Return a splice by the padded grid the end-to-end splice replaced."""
+    ks = rng.integers(len(lib.lengths), size=mm.SPLICE_CANDIDATES)
+    starts, lengths = lib.starts[ks], lib.lengths[ks]
+    width = int(lengths.max()) - 1
+    index = starts[:, None] + np.arange(width)[None, :]
+    usable = np.arange(width)[None, :] < (lengths - 1)[:, None]
+    index = np.where(usable, index, 0)
+    distance = np.where(usable, np.hypot(lib.x_mm[index] - x, lib.y_mm[index] - y), np.inf)
+    row, column = np.unravel_index(int(np.argmin(distance)), distance.shape)
+    return int(index[row, column]) + 1, int(starts[row] + lengths[row])
+
+
+@pytest.mark.parametrize("vendored", [True, False])
+def test_a_splice_continues_where_the_padded_grid_did(vendored: bool) -> None:  # noqa: FBT001
+    """Covers "A measured track is the same": each splice makes the same draws and choice.
+
+    The synthetic library has ties and one-offset stretches, so the first-minimum rule and the
+    stretches with no usable offset are exercised.
+    """
+    import json
+
+    from quantumnematode.benchmark import references as refs
+
+    if vendored:
+        bands = json.loads((refs.BENCHMARK_DATA / "bands_v2.json").read_text())
+        lib = mm.checked_noise_library(mm.TrackerModel.from_dict(bands["measurement"]["lawn"]))
+    else:
+        lib = mm.NoiseLibrary(
+            x_mm=np.array([0.0, 1.0, 1.0, 5.0, 1.0, 2.0, 1.0, 3.0, 0.0]),
+            y_mm=np.zeros(9),
+            lengths=np.array([3, 1, 2, 1, 2]),
+        )
+    assert lib is not None
+    probe = np.random.default_rng(0)
+    for seed in range(200):
+        x, y = probe.normal(0.0, 0.01 if vendored else 2.0, size=2)
+        fast = lib._splice(float(x), float(y), np.random.default_rng(seed))
+        slow = _reference_splice(lib, float(x), float(y), np.random.default_rng(seed))
+        assert fast == slow
+    for seed in range(20):
+        np.testing.assert_array_equal(
+            lib.draw(500, np.random.default_rng(seed)),
+            _reference_draw(lib, 500, np.random.default_rng(seed)),
+        )
+
+
+def _reference_draw(lib: mm.NoiseLibrary, n: int, rng: np.random.Generator) -> np.ndarray:
+    """Return a noise track drawn as before, splicing by the padded grid."""
+    out = np.empty((n, 2))
+    k = int(rng.integers(len(lib.lengths)))
+    j, end = int(lib.starts[k]), int(lib.starts[k] + lib.lengths[k])
+    t = 0
+    while t < n:
+        take = min(end - j, n - t)
+        out[t : t + take, 0] = lib.x_mm[j : j + take]
+        out[t : t + take, 1] = lib.y_mm[j : j + take]
+        t += take
+        if t < n:
+            j, end = _reference_splice(lib, out[t - 1, 0], out[t - 1, 1], rng)
+    return out
 
 
 def test_the_library_computes_its_offsets_once() -> None:
