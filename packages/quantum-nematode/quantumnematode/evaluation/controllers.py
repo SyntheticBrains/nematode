@@ -478,6 +478,11 @@ omega hazards and their klinokinesis gain; and the search amplitude and decay ti
 _NEVER_ON_FOOD_S = 1e9
 
 
+# The seconds of uniforms the mechanistic worm draws per animal at a time.
+UNIFORM_BLOCK_STEPS = 4_096
+_UNIFORMS_PER_STEP = 3
+
+
 class BatchedMechanistic:
     """A closed-loop roaming/dwelling worm with klinokinesis, weathervane, an edge and search terms.
 
@@ -497,8 +502,10 @@ class BatchedMechanistic:
     - **search:** off food, ``search = 1 + search_amplitude exp(-t_off / search_tau_s)``, with
       ``t_off`` the seconds since food contact; on food it is 1.
 
-    The rates are per second at a 1-second step. One call to each animal's own generator per second
-    draws every random number that second needs.
+    The rates are per second at a 1-second step. Each second takes three uniforms from each
+    animal's own generator: the same numbers, in the same order, as one draw of three per second.
+    They are drawn in blocks of :data:`UNIFORM_BLOCK_STEPS` seconds, since one draw of 3k uniforms
+    from a generator gives the numbers k draws of three would, and leaves it in the same state.
     """
 
     def __init__(self, params: dict[str, float]) -> None:
@@ -510,6 +517,21 @@ class BatchedMechanistic:
         self.state: np.ndarray | None = None
         self.previous_contact: np.ndarray | None = None
         self.t_off: np.ndarray | None = None
+        # The uniforms drawn ahead, tied to the generators they came from; a new list of
+        # generators starts a new block, and resetting keeps the block, so no draw is lost.
+        self._block_owner: list[torch.Generator] | None = None
+        self._block = np.zeros((0, 0))
+        self._block_used = 0
+
+    def _uniforms(self, gens: list[torch.Generator]) -> np.ndarray:
+        """Return this second's three uniforms per animal, from each animal's generator in order."""
+        if gens is not self._block_owner or self._block_used == self._block.shape[1]:
+            self._block = _uniforms(gens, _UNIFORMS_PER_STEP * UNIFORM_BLOCK_STEPS)
+            self._block_owner = gens
+            self._block_used = 0
+        used = self._block_used
+        self._block_used = used + _UNIFORMS_PER_STEP
+        return self._block[:, used : used + _UNIFORMS_PER_STEP].copy()
 
     @classmethod
     def from_vector(cls, theta: np.ndarray) -> BatchedMechanistic:
@@ -540,7 +562,7 @@ class BatchedMechanistic:
         gens = _require_noise(noise)
         p = self.p
         n = len(senses.concentration)
-        u = _uniforms(gens, 3)
+        u = self._uniforms(gens)
         contact = np.asarray(senses.food_contact, dtype=np.float64)
         up, down = self._switch_rates(senses)
         if self.state is None:
