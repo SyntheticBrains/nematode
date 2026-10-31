@@ -6,12 +6,12 @@
 
 ## 2. The fit
 
-- [ ] 2.1 `scripts/analysis/c1b_fit.py`: `BandObjective`, `defined_stop`, the seed scheme, `pilot`, `run`, `select`, `grade`, `read` and `smoke`, guarded by the launch record (Part A for `pilot`, Part B for the rest) with `113-c1-fit/encodings.md` bound. Tests: the objective's scenario, the guard, the selection rules and ties, disjoint populations.
-- [ ] 2.2 The smoke (CMA 5999, animals 99,050,000, grading 99,060,000).
+- [x] 2.1 `scripts/analysis/c1b_fit.py`: `BandObjective`, `defined_stop`, the seed scheme, `pilot`, `run`, `select`, `grade`, `read` and `smoke`, guarded by the launch record (Part A for `pilot`, Part B for the rest) with `113-c1-fit/encodings.md` bound. Tests: the objective's scenario, the guard, the selection rules and ties, disjoint populations.
+- [x] 2.2 The smoke (CMA 5999, animals 99,050,000, grading 99,060,000).
 
 ## 3. Registration and the pilot
 
-- [ ] 3.1 Launch record 119, Part A, committed.
+- [x] 3.1 Launch record 119, Part A, committed.
 - [ ] 3.2 `pilot`: G_p, D at G_p, at ⌈1.5·G_p⌉ and at 300, the cap, the projection, and reachability on 5 discarded populations. Return to the maintainer if it passes fewer than 3, or if the projection is over 20 h.
 - [ ] 3.3 Part B: the cap, the projection and the pilot's reachability, committed.
 
