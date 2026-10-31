@@ -95,6 +95,18 @@ def test_the_registered_seed_ranges_are_disjoint() -> None:
         (v2.CANDIDATE_BASE, v2.CANDIDATE_BASE + candidate_span),
         (v2.PROBE_BASE, v2.PROBE_BASE + candidate_span),
         (v2.SMOKE_BASE, v2.SMOKE_BASE + animals * 32),
+        (
+            v2.FIT_B_BASE,
+            v2.FIT_B_BASE
+            + animals * (cr.FIT_BLOCK * (cr.TRUTHS * v2.RESTARTS_B - 1) + cr.ANSWER_OFFSET + 9)
+            + animals,
+        ),
+        (
+            v2.PROBE_B_BASE,
+            v2.PROBE_B_BASE
+            + animals * (cr.FIT_BLOCK * v2.PROBE_B2_FIT + cr.ANSWER_OFFSET + 9)
+            + animals,
+        ),
     ]
     ranges.sort()
     for (_, end), (start, _) in itertools.pairwise(ranges):
@@ -170,3 +182,267 @@ def test_a_fit_saved_with_other_callbacks_is_refused(tmp_path: Path) -> None:
         cr.run_fit({}, **common, simulate=v2.simulate_v2)
     with pytest.raises(RuntimeError, match="simulate"):
         cr.run_fit({}, **common, stop=v2.guarded_stop)
+
+
+def test_undefined_never_ranks_ahead_of_defined() -> None:
+    """Covers "Undefined never ranks ahead of defined": one undefined loses to three far terms."""
+    truth = {"statistics": {"a/x": 0.0, "a/y": 0.0, "b/z": 0.0}}
+    undefined = {"statistics": {"a/x": None, "a/y": 0.0, "b/z": 0.0}}
+    far = {"statistics": {"a/x": 1700.0, "a/y": 1700.0, "b/z": 3400.0}}
+    score = [v2.ranking_score(truth, d, SCALES, FAMILIES) for d in (undefined, far)]
+    assert score[1] < score[0]
+    assert score[0] == pytest.approx(v2.UNDEFINED_RANK)
+
+
+def test_undefined_never_ranks_ahead_on_the_registered_bands() -> None:
+    """Covers "Undefined never ranks ahead of defined" on v2's own 19 statistics and scales."""
+    objective = v2.Objective({"statistics": {}}, ranking=True)
+    keys = [f"{f}/{s}" for f, stats in objective.family_map.items() for s in stats]
+    truth = {"statistics": dict.fromkeys(keys, 0.0)}
+    objective.observation = truth
+    undefined = {"statistics": {**truth["statistics"], keys[0]: None}}
+    far = {
+        "statistics": {
+            **truth["statistics"],
+            **{k: 1700.0 * objective.scales[k] for k in keys[:3]},
+        },
+    }
+    assert objective(far) < objective(undefined)
+
+
+def test_near_the_truth_the_terms_are_the_registered_ones() -> None:
+    """Covers "Near the truth the terms are the registered ones": within 1.5% of z for |z| <= 3."""
+    truth = {"statistics": {"a/x": 0.0, "a/y": 0.0, "b/z": 0.0}}
+    for z in (0.5, 1.0, 2.0, 3.0, -3.0):
+        draw = {"statistics": {"a/x": z, "a/y": 0.0, "b/z": 0.0}}
+        ranked = v2.ranking_score(truth, draw, SCALES, FAMILIES)
+        capped = v2.predictive_distance_v2(truth, draw, SCALES, FAMILIES)
+        assert ranked == pytest.approx(capped, rel=0.015)
+        assert ranked < capped
+
+
+def test_the_ranking_counts_only_one_sided_undefinedness() -> None:
+    """Undefined in both records costs nothing; the registered capped D is unchanged."""
+    both = {"statistics": {"a/x": None, "a/y": 0.0, "b/z": 0.0}}
+    assert v2.ranking_score(both, both, SCALES, FAMILIES) == 0.0
+    truth = {"statistics": {"a/x": 0.0, "a/y": 0.0, "b/z": 0.0}}
+    one = {"statistics": {"a/x": None, "a/y": None, "b/z": 0.0}}
+    assert v2.ranking_score(truth, one, SCALES, FAMILIES) == pytest.approx(2 * v2.UNDEFINED_RANK)
+    capped = v2.Objective(truth)
+    assert not capped.ranking
+    assert capped.capped
+
+
+def test_every_attempt_two_stage_refuses_changed_observations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers "The observations changed": no attempt-2 stage runs on an altered file."""
+    changed = tmp_path / "candidates.jsonl"
+    changed.write_text('{"k": 0}\n')
+    monkeypatch.setattr(v2, "CANDIDATES_PATH", changed)
+    assert not v2.candidates_pinned()
+
+    def ran(*_: object) -> int:
+        raise AssertionError
+
+    for name in ("_probe_b", "_run_b", "_read_b"):
+        monkeypatch.setattr(v2, name, ran)
+    for stage in ("probe-b", "run-b", "read-b"):
+        assert v2.main([stage]) == 1
+
+
+def test_a_failed_probe_truth_holds_the_registered_fits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers "A failed truth still fails": a gain below 0.80 refuses every registered stage."""
+    import json
+
+    probe = tmp_path / "probe.json"
+    monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", tmp_path / "probe_restart.json")
+    monkeypatch.setattr(v2, "candidates_pinned", lambda: True)
+
+    def ran(*_: object) -> int:
+        raise AssertionError
+
+    monkeypatch.setattr(v2, "_run_b", ran)
+    monkeypatch.setattr(v2, "_read_b", ran)
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset())
+    assert {1164, 6985} <= {simulation for simulation, _, _ in v2.PROBE_B_TRUTHS}
+    assert not v2.probe_cleared()
+    probe.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"truth": 1164, "gain": 0.95},
+                    {"truth": 6985, "gain": 0.79},
+                    {"truth": 9105, "gain": 1.0},
+                ],
+            },
+        ),
+    )
+    assert not v2.probe_cleared()
+    for stage in ("run-b", "read-b"):
+        assert v2.main([stage]) == 1
+    probe.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"truth": 1164, "gain": 0.95},
+                    {"truth": 6985, "gain": 0.80},
+                    {"truth": 9105, "gain": 1.0},
+                ],
+            },
+        ),
+    )
+    assert v2.probe_cleared()
+
+
+def test_the_short_truth_reads_the_restart_the_gate_selects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A second restart clears the short truth only if the selected restart reaches the bar."""
+    import json
+
+    probe, restart = tmp_path / "probe.json", tmp_path / "probe_restart.json"
+    monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", restart)
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset())
+    probe.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"truth": v2.PROBE_B2_TRUTH, "gain": 0.79},
+                    {"truth": 6985, "gain": 1},
+                    {"truth": 9105, "gain": 1},
+                ],
+            },
+        ),
+    )
+    assert not v2.probe_cleared()
+    restart.write_text(json.dumps({"selected_gain": 0.85}))
+    assert v2.probe_cleared()
+    restart.write_text(json.dumps({"selected_gain": 0.79}))
+    assert not v2.probe_cleared()
+    assert v2.PROBE_B2_FIT not in range(len(v2.PROBE_B_TRUTHS))
+
+
+def test_a_truth_the_maintainer_accepted_below_the_bar_does_not_hold_the_fits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers "A failed truth still fails": only the maintainer's registered decision lifts it."""
+    import json
+
+    probe = tmp_path / "probe.json"
+    monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", tmp_path / "probe_restart.json")
+    probe.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"truth": 1164, "gain": 0.787},
+                    {"truth": 6985, "gain": 0.981},
+                    {"truth": 9105, "gain": 1.0},
+                ],
+            },
+        ),
+    )
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset({1164}))
+    assert v2.probe_cleared()
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset({6985}))
+    assert not v2.probe_cleared()
+
+
+def test_a_probe_record_without_exactly_the_probed_truths_does_not_clear(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A probe record missing a probed truth, or holding another, never clears the fits."""
+    import json
+
+    probe = tmp_path / "probe.json"
+    monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", tmp_path / "probe_restart.json")
+    full = [{"truth": t, "gain": 1.0} for t, _, _ in v2.PROBE_B_TRUTHS]
+    probe.write_text(json.dumps({"truths": full}))
+    assert v2.probe_cleared()
+    probe.write_text(json.dumps({"truths": full[:-1]}))
+    assert not v2.probe_cleared()
+    probe.write_text(json.dumps({"truths": [*full, {"truth": 1, "gain": 1.0}]}))
+    assert not v2.probe_cleared()
+
+
+def test_four_restarts_read_the_best_and_the_runner_up(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With four restarts the gate reads the lowest final objective and reports every gain."""
+    import json
+
+    restarts, truths = 4, cr.TRUTHS
+    preflight = tmp_path / "preflight.json"
+    preflight.write_text(
+        json.dumps(
+            {
+                "truths": [
+                    {"training_simulation": j, "candidate": j, "floor": 0.0, "prior_D": 10.0}
+                    for j in range(truths)
+                ],
+            },
+        ),
+    )
+    (tmp_path / "fits").mkdir()
+    lines = []
+    for fit in range(truths * restarts):
+        final = [4.0, 1.0, 3.0, 2.0][fit % restarts]
+        (tmp_path / "fits" / f"fit{fit}.json").write_text(
+            json.dumps(
+                {
+                    "medians": [final] * 20,
+                    "sigmas": [0.1] * 20,
+                    "answers": [[0.5] * 20],
+                    "stop": {"generation": 20, "by": "plateau"},
+                },
+            ),
+        )
+        lines += [
+            json.dumps({"k": cr.answer_k(fit, q), "D": float(fit % restarts)})
+            for q in range(cr.RESIMULATIONS)
+        ]
+    (tmp_path / "answers.jsonl").write_text("\n".join(lines) + "\n")
+
+    class Distance:
+        scales: dict[str, float] = {}  # noqa: RUF012 - a stub
+        family_map: dict[str, tuple[str, ...]] = {}  # noqa: RUF012 - a stub
+
+        def __init__(self, observation: dict[str, object]) -> None:
+            del observation
+
+        def __call__(self, record: dict[str, float]) -> float:
+            return record["D"]
+
+    monkeypatch.setattr(v2, "PREFLIGHT_PATH", preflight)
+    monkeypatch.setattr(v2, "observation_of", lambda row, path: {})
+    monkeypatch.setattr(v2, "Objective", Distance)
+    monkeypatch.setattr(v2, "predictive_distance_v2", lambda a, b, *_: abs(a["D"] - b["D"]))
+    monkeypatch.setattr(
+        v2.nr,
+        "load_simulations",
+        lambda: {j: {"z": [0.5] * 20} for j in range(truths)},
+    )
+    out = tmp_path / "recovery.json"
+    v2._read_fits(tmp_path, out, "test", restarts)
+    row = json.loads(out.read_text())["truths"][0]
+    # Restart 1 has the lowest final objective (1.0), restart 3 is the runner-up (2.0).
+    assert row["best_restart"] == 1
+    assert row["gain"] == pytest.approx(0.9)
+    assert row["other_gain"] == pytest.approx(0.7)
+    assert row["restart_spread_D"] == pytest.approx(2.0)
+    assert row["restart_gains"] == pytest.approx([1.0, 0.9, 0.8, 0.7])
+    # Of the first two alone, restart 1 (1.0) beats restart 0 (4.0).
+    assert row["first_two_best_restart"] == 1
+    assert row["first_two_gain"] == pytest.approx(0.9)
