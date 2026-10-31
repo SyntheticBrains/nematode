@@ -1228,12 +1228,15 @@ def attempt_b(stage: str, workers: int) -> int:
 def probe_cleared() -> bool:
     """Return whether the probe ran and every probed truth reached the bar or was accepted below it.
 
-    Where the short truth's second restart has run, that truth reads the restart the gate would
-    select, and the probe clears only if that one reaches the bar.
+    The probe's record must hold exactly the probed truths, none missing and none extra. Where the
+    short truth's second restart has run, that truth reads the restart the gate would select, and
+    the probe clears only if that one reaches the bar.
     """
     if not PROBE_B_PATH.exists():
         return False
     gains = {r["truth"]: r["gain"] for r in json.loads(PROBE_B_PATH.read_text())["truths"]}
+    if set(gains) != {simulation for simulation, _, _ in PROBE_B_TRUTHS}:
+        return False
     if PROBE_B2_PATH.exists():
         gains[PROBE_B2_TRUTH] = json.loads(PROBE_B2_PATH.read_text())["selected_gain"]
     return all(g >= PROBE_B_BAR for t, g in gains.items() if t not in PROBE_B_ACCEPTED)

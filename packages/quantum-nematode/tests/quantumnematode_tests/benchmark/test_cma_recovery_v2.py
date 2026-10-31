@@ -269,15 +269,16 @@ def test_a_failed_probe_truth_holds_the_registered_fits(
 
     monkeypatch.setattr(v2, "_run_b", ran)
     monkeypatch.setattr(v2, "_read_b", ran)
+    monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset())
     assert {1164, 6985} <= {simulation for simulation, _, _ in v2.PROBE_B_TRUTHS}
     assert not v2.probe_cleared()
     probe.write_text(
         json.dumps(
             {
                 "truths": [
-                    {"truth": 1, "gain": 0.95},
-                    {"truth": 2, "gain": 0.79},
-                    {"truth": 3, "gain": 1.0},
+                    {"truth": 1164, "gain": 0.95},
+                    {"truth": 6985, "gain": 0.79},
+                    {"truth": 9105, "gain": 1.0},
                 ],
             },
         ),
@@ -289,9 +290,9 @@ def test_a_failed_probe_truth_holds_the_registered_fits(
         json.dumps(
             {
                 "truths": [
-                    {"truth": 1, "gain": 0.95},
-                    {"truth": 2, "gain": 0.80},
-                    {"truth": 3, "gain": 1.0},
+                    {"truth": 1164, "gain": 0.95},
+                    {"truth": 6985, "gain": 0.80},
+                    {"truth": 9105, "gain": 1.0},
                 ],
             },
         ),
@@ -312,7 +313,13 @@ def test_the_short_truth_reads_the_restart_the_gate_selects(
     monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset())
     probe.write_text(
         json.dumps(
-            {"truths": [{"truth": v2.PROBE_B2_TRUTH, "gain": 0.79}, {"truth": 1, "gain": 1}]},
+            {
+                "truths": [
+                    {"truth": v2.PROBE_B2_TRUTH, "gain": 0.79},
+                    {"truth": 6985, "gain": 1},
+                    {"truth": 9105, "gain": 1},
+                ],
+            },
         ),
     )
     assert not v2.probe_cleared()
@@ -335,12 +342,37 @@ def test_a_truth_the_maintainer_accepted_below_the_bar_does_not_hold_the_fits(
     monkeypatch.setattr(v2, "PROBE_B2_PATH", tmp_path / "probe_restart.json")
     probe.write_text(
         json.dumps(
-            {"truths": [{"truth": 1164, "gain": 0.787}, {"truth": 6985, "gain": 0.981}]},
+            {
+                "truths": [
+                    {"truth": 1164, "gain": 0.787},
+                    {"truth": 6985, "gain": 0.981},
+                    {"truth": 9105, "gain": 1.0},
+                ],
+            },
         ),
     )
     monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset({1164}))
     assert v2.probe_cleared()
     monkeypatch.setattr(v2, "PROBE_B_ACCEPTED", frozenset({6985}))
+    assert not v2.probe_cleared()
+
+
+def test_a_probe_record_without_exactly_the_probed_truths_does_not_clear(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A probe record missing a probed truth, or holding another, never clears the fits."""
+    import json
+
+    probe = tmp_path / "probe.json"
+    monkeypatch.setattr(v2, "PROBE_B_PATH", probe)
+    monkeypatch.setattr(v2, "PROBE_B2_PATH", tmp_path / "probe_restart.json")
+    full = [{"truth": t, "gain": 1.0} for t, _, _ in v2.PROBE_B_TRUTHS]
+    probe.write_text(json.dumps({"truths": full}))
+    assert v2.probe_cleared()
+    probe.write_text(json.dumps({"truths": full[:-1]}))
+    assert not v2.probe_cleared()
+    probe.write_text(json.dumps({"truths": [*full, {"truth": 1, "gain": 1.0}]}))
     assert not v2.probe_cleared()
 
 
