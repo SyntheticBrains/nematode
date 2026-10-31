@@ -1,5 +1,21 @@
 {
   "description": "Description: every statistic, D and presence reading re-simulated after the speed-up, against the baseline from the code before it and against stored records.",
+  "inputs": {
+    "baseline_jobs": [
+      "v2/centre",
+      "v2_presence/centre",
+      "v1/centre",
+      "v2/f0a_0",
+      "v2_presence/f0a_0",
+      "v1/f0a_0",
+      "v2/f0a_1",
+      "v2_presence/f0a_1",
+      "v1/f0a_1"
+    ],
+    "probe_answers": 40,
+    "candidate_observations": 3,
+    "f0a_v1": 3
+  },
   "jobs": 55,
   "identical": 55,
   "all_identical": true,

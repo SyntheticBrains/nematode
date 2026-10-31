@@ -55,6 +55,8 @@ It covers every path the changed code serves:
 | observations from `candidates.jsonl`, with their presence readings | v2, with presence | 3 of 3 |
 | F.0a's stored simulations ([Logbook 111](111-npe-recovery.md)) | v1 | 3 of 3 |
 
+The baseline is recorded once and never overwritten. On its jobs, NaN, +inf and −inf stay distinct. The check fails if any input differs from what the baseline recorded: its jobs, the 40 probe answers, the 3 observations or the 3 F.0a records. The figures above are from the baseline re-recorded on the code before the change under these rules, after the PR's review.
+
 The check also ran once before any edit, so that a stored record which no longer reproduced would not be blamed on the change. All 55 reproduced.
 
 The suite compares each new path, field by field and type by type, with a reference copy of the code it replaced:
