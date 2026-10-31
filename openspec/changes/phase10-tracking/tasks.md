@@ -478,6 +478,20 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     the two failed truths with discarded seeds, and re-runs. C.1b waits for it.
   - **The 1.76× speed-up of a v2 simulation** (identical output) carries to every later fit.
 
+  *(2026-10-31: change `rerun-cma-recovery-v2b`; [Logbook 117](../../../docs/experiments/logbooks/117-cma-recovery-v2b.md).)*
+  **F.0b-i on v2 passes on its second attempt**, with a median gain of 0.873 against 0.75, and F.0
+  clears for C.1 on v2.
+
+  - **The fix:** fits rank on 1,000 × (statistics undefined in one record) + the weighted RMS of
+    10·asinh(z/10), and every gain stays on the capped D. Attempt 1's truths and observations are
+    reused, the latter pinned by SHA-256.
+  - **The probe** (discarded seeds) fixed the escape (6985 0.056 → 0.981), but 1164 reached 0.787,
+    under its 0.80 bar. The maintainer accepted it and raised the restarts to 4 per truth.
+  - **The fits:** best restarts 0.773, 0.968, 0.778 and 1.040. Selection by final objective picked
+    the highest-gain restart for every truth. With 2 restarts alone the median would have been 0.822.
+    9 of 16 restarts reach 0.75. Parameters are not recovered (median errors 0.13–0.23).
+  - **For C.1b**, listed under C.1b below.
+
   *(Added 2026-10-28, B v2.)* **F.0b-i is re-run in full on v2**, in its own change. F.0b-i was read
   on v1. Its recovery has to hold under the benchmark C.1b and C.2 are fitted against: 19 statistics,
   five families and the measurement model. C.1b follows it.
@@ -513,6 +527,20 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   *(Added 2026-10-28, B v2.)* **C.1's v1 answer fails B v2** on all five populations (D 6.1–6.2),
   failing the small lawn, the uniform well, kinematics and chemotaxis. Its v1 pass relied on
   routes that v2 grades, so C.1 is refitted on v2 as C.1b, after the F.0b-i re-run on v2.
+
+  *(Added 2026-10-31, F.0b-i on v2; [Logbook 117](../../../docs/experiments/logbooks/117-cma-recovery-v2b.md).)*
+  **C.1b may now run**, as its own change. Its plan carries five points from the recovery:
+
+  - **the objective:** fit with the ranking score (definedness first, then 10·asinh(z/10)), and
+    grade on the capped D;
+  - **the plateau guard:** two of 16 recovery restarts stopped at generations 47 and 52 while their
+    window still held medians with an undefined statistic, since a rise in S reads as a plateau. The
+    rule must not stop a restart until its window has none;
+  - **presence:** the ranking score leaves it out, and the wild-type pass needs it, so restarts are
+    chosen on the registered grade with presence;
+  - **reachability first:** a short pilot fit on the real bands, on discarded seeds, before
+    registration. Both of 1164's probe misses were on the kinematics speed medians;
+  - **the restarts:** keep 8. Per restart, 9 of 16 recovered, and 6985's first two reached at best 0.360.
 
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by

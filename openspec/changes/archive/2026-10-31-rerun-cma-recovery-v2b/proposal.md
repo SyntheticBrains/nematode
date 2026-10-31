@@ -1,6 +1,6 @@
 ## Why
 
-F.0b-i on B v2 ([Logbook 116](../../../docs/experiments/logbooks/116-cma-recovery-v2.md)) failed its gate: the median gain was 0.690 against 0.75, so C.1b may not run. sep-CMA recovered the two truths whose statistics are stable on v2's scales (gains 0.914 and 1.007) but not the two noisy ones far from the wild type (0.466 and 0.056). The failure belongs to the fit's objective, which had two defects:
+F.0b-i on B v2 ([Logbook 116](../../../../docs/experiments/logbooks/116-cma-recovery-v2.md)) failed its gate: the median gain was 0.690 against 0.75, so C.1b may not run. sep-CMA recovered the two truths whose statistics are stable on v2's scales (gains 0.914 and 1.007) but not the two noisy ones far from the wild type (0.466 and 0.056). The failure belongs to the fit's objective, which had two defects:
 
 - **capped**, it is flat beyond the cap: the first pilot stopped at 0.511;
 - **uncapped** (amendment 1), an undefined statistic's flat 10 undercut a far defined one, so the noisy truths' fits escaped into undefined families.
