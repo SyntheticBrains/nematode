@@ -11,7 +11,7 @@
 
 ## 3. Registration, the oracle and the controls
 
-- [ ] 3.0 Preflights on discarded seeds: the adversary gate (99,950,000) and one oracle restart for 60 generations (99,960,000, CMA 9423). Return to the maintainer if an adversary escapes in 3 of 5, or the oracle cannot bring a new statistic within the bar. Commit `probe.json`, `preflight.json` and the brief's summary in `supporting/120-benchmark-v3/`.
+- [x] 3.0 Preflights on discarded seeds: the adversary gate (99,950,000) and one oracle restart for 60 generations (99,960,000, CMA 9423). Return to the maintainer if an adversary escapes in 3 of 5, or the oracle cannot bring a new statistic within the bar. Commit `probe.json`, `preflight.json` and the brief's summary in `supporting/120-benchmark-v3/`.
 - [ ] 3.1 Launch record 120, Part A (rules, seeds, the validity map, the disclosure), committed.
 - [ ] 3.2 Bands built; the round trip; the oracle's fit (CMA 9421–9422, cap 100).
 - [ ] 3.3 Part B: the oracle's answer, committed. The oracle's 40 populations; held-out López-Cruz; Chen leave-one-out; adversaries; negatives; W's minimum and the 3-of-5 probability; `controls_v3.json`.

@@ -1,0 +1,210 @@
+"""Discriminability probe for benchmark v3 candidates: real worms against C.1b's fitted answers.
+
+Description only, discarded seeds (animals at 99,940,000). Candidates:
+  - log early/late on local search, against López-Cruz batch bands;
+  - Chen onset rate per minute, against Chen's 6 standard recordings;
+  - direction-flip fraction (consecutive 1-s steps turning > 135 deg, both above a floor), on
+    Chen's fragments and on Roberts' off-food tracks;
+  - reversal share of time (labels for simulated, tracker state for Roberts), for scale.
+"""
+
+import json
+import math
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_bands as bb
+import benchmark_grade as bg
+import c1b_fit as fit
+import cma_recovery_v2 as v2
+import npe_recovery as nr
+from quantumnematode.benchmark import chemotaxis as ch
+from quantumnematode.benchmark import grading as g
+from quantumnematode.benchmark import references as refs
+
+BASE = 99_940_000
+FLOORS = (0.02, 0.03, 0.05)
+COS_FLIP = math.cos(math.radians(135.0))
+OUT = Path("build/benchmark-v3/probe.json")
+
+
+def flips(fragments, floor):
+    """Return (flips, valid pairs) over fragments of 1-s positions."""
+    n_flip = n_valid = 0
+    for x, y in fragments:
+        d = np.stack([np.diff(x), np.diff(y)], axis=1)
+        length = np.hypot(d[:, 0], d[:, 1])
+        ok = np.isfinite(length) & (length >= floor)
+        a, b = d[:-1], d[1:]
+        both = ok[:-1] & ok[1:]
+        cos = (a[:, 0] * b[:, 0] + a[:, 1] * b[:, 1]) / (length[:-1] * length[1:] + 1e-300)
+        n_valid += int(both.sum())
+        n_flip += int((both & (cos < COS_FLIP)).sum())
+    return n_flip, n_valid
+
+
+def onset_rate(samples):
+    onsets = np.concatenate([s["onset"] for s in samples]) if samples else np.zeros(0)
+    return float(60.0 * onsets.mean()) if len(onsets) else math.nan
+
+
+def simulate(item):
+    name, params, k = item
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    from quantumnematode.evaluation.odour_field import chen_field
+
+    bands = v2._bands()
+    seeds = [BASE + nr.ANIMALS * k + i for i in range(nr.ANIMALS)]
+    populations, chem = bg.simulate_v2("mlp", lambda _p: BatchedMechanistic(params), seeds, bands)
+    field = chen_field()
+    frags = bg.chemotaxis_fragments(chem, field)
+    samples = ch.fragment_samples(
+        frags,
+        lambda x, y: refs.sample_field(field.field, field.cell_mm, x, y),
+    )
+    search = g.simulated_search(populations["local_search"])
+    search_frags = [
+        (np.array([s.x for s in a]), np.array([s.y for s in a]))
+        for a in populations["local_search"]
+    ]
+    rev = lambda animals: float(np.mean([s.primitive == "reversal" for a in animals for s in a]))
+    return name, {
+        "log_early_late": math.log(search["early_late_ratio"])
+        if search["early_late_ratio"] and search["early_late_ratio"] > 0
+        else None,
+        "chen_onset_per_min": onset_rate(samples),
+        "chen_flip": {str(f): flips(frags, f) for f in FLOORS},
+        "search_flip": {str(f): flips(search_frags, f) for f in FLOORS},
+        "reversal_share_chen": rev(chem),
+        "reversal_share_search": rev(populations["local_search"]),
+    }
+
+
+def band(values):
+    values = np.asarray([v for v in values if v is not None and np.isfinite(v)], dtype=float)
+    return float(values.mean()), float(g.scale_of(values) * bb.prediction_factor_v2(len(values)))
+
+
+def main():
+    record = json.loads(fit.FIT_PATH.read_text())
+    answers = {
+        f"restart {r['restart']}": nr.parameters_from_unit(np.asarray(r["answer"]))
+        for r in record["restarts"]
+    }
+    kappa = json.loads(fit.PROBE_KAPPA_PATH.read_text())
+    answers["kappa probe"] = fit.parameters_kappa(np.asarray(kappa["answer"]))
+    with ProcessPoolExecutor(9, initializer=nr._worker_setup) as pool:
+        sims = dict(pool.map(simulate, [(n, p, k) for k, (n, p) in enumerate(answers.items())]))
+
+    # Real: López-Cruz batches, log early/late.
+    data = json.loads((refs.BENCHMARK_DATA / "lopezcruz2019_reorientations.json").read_text())
+    split = json.loads((refs.BENCHMARK_DATA / "lopezcruz2019_split.json").read_text())["sides"]
+    batches = bb.lopezcruz_batches(data)
+    log_el = {
+        b: math.log(bb.search_statistics(row)["early_late_ratio"]) for b, row in batches.items()
+    }
+    lc_centre, lc_scale = band([log_el[b] for b in batches if split[b] == "bands"])
+    lc_held = {b: (log_el[b] - lc_centre) / lc_scale for b in batches if split[b] == "held_out"}
+
+    # Real: Chen's recordings.
+    chen = refs.load_chen_tracks()
+    frs = chen.fragments()
+    rec = {}
+    for r, (date, protocol) in enumerate(
+        zip(chen.recording_date, chen.recording_protocol, strict=True),
+    ):
+        mine = [(x, y) for rr, _, x, y in frs if rr == r]
+        samples = ch.fragment_samples(mine, chen.concentration)
+        rec[date] = {
+            "protocol": protocol,
+            "onset": onset_rate(samples),
+            "flip": {str(f): flips(mine, f) for f in FLOORS},
+        }
+    standard = [d for d in rec if rec[d]["protocol"] == "standard"]
+
+    def chen_stat(d, key, floor=None):
+        if key == "onset":
+            return rec[d]["onset"]
+        f, v = rec[d]["flip"][floor]
+        return f / v if v else math.nan
+
+    chen_bands, chen_loo = {}, {}
+    keys = [("onset", None)] + [("flip", str(f)) for f in FLOORS]
+    for key, floor in keys:
+        label = key if floor is None else f"flip@{floor}"
+        values = [chen_stat(d, key, floor) for d in standard]
+        chen_bands[label] = band(values)
+        loo = []
+        for i, d in enumerate(standard):
+            c, s = band([v for j, v in enumerate(values) if j != i])
+            loo.append((values[i] - c) / s)
+        chen_loo[label] = loo
+
+    # Real: Roberts off food, flips and reversal share by tracker state.
+    rob = refs.load_search_tracks("roberts2016")
+    reverse = rob.state_names.index("R") if "R" in rob.state_names else None
+    rob_frags = []
+    for i in range(rob.x.shape[0]):
+        ok = np.isfinite(rob.x[i])
+        if ok.sum() > 10:
+            rob_frags.append((rob.x[i][ok], rob.y[i][ok]))
+    rob_flip = {str(f): flips(rob_frags, f) for f in FLOORS}
+    state = rob.state
+    rob_rev = float(np.mean(state[state >= 0] == reverse)) if reverse is not None else None
+
+    out = {
+        "description": "Description: discriminability probe for benchmark v3 candidates; discarded seeds.",
+        "simulated": sims,
+        "real": {
+            "lopezcruz_log_early_late_band": [lc_centre, lc_scale],
+            "lopezcruz_held_out_z": lc_held,
+            "chen_recordings": rec,
+            "chen_bands": chen_bands,
+            "chen_leave_one_out_z": chen_loo,
+            "roberts_flip": rob_flip,
+            "roberts_reversal_share": rob_rev,
+            "roberts_state_names": list(rob.state_names),
+        },
+    }
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(out, indent=2, default=float) + "\n")
+
+    # Summary.
+    print(
+        f"LC log early/late band {lc_centre:.3f} +- {lc_scale:.3f}; held-out z {min(lc_held.values()):+.2f}..{max(lc_held.values()):+.2f}",
+    )
+    for label, (c, s) in chen_bands.items():
+        print(
+            f"Chen {label:10s} band {c:.4f} +- {s:.4f}; LOO z {min(chen_loo[label]):+.2f}..{max(chen_loo[label]):+.2f}",
+        )
+    print(
+        "Roberts flip:",
+        {f: round(a / b, 4) for f, (a, b) in rob_flip.items()},
+        "reversal share",
+        rob_rev,
+    )
+    print()
+    for name, s in sims.items():
+        le = s["log_early_late"]
+        z_le = (le - lc_centre) / lc_scale if le is not None else None
+        z_on = (s["chen_onset_per_min"] - chen_bands["onset"][0]) / chen_bands["onset"][1]
+        zf = {
+            f: ((s["chen_flip"][f][0] / s["chen_flip"][f][1]) - chen_bands[f"flip@{f}"][0])
+            / chen_bands[f"flip@{f}"][1]
+            for f in map(str, FLOORS)
+        }
+        sf = {
+            f: round(s["search_flip"][f][0] / max(s["search_flip"][f][1], 1), 4)
+            for f in map(str, FLOORS)
+        }
+        print(
+            f"{name:12s} logEL z {z_le if z_le is None else round(z_le, 2)} | onset {s['chen_onset_per_min']:.2f}/min z {z_on:+.2f} | chen flip z {', '.join(f'{f}:{z:+.1f}' for f, z in zf.items())} | search flip {sf} | rev chen {s['reversal_share_chen']:.2f} search {s['reversal_share_search']:.2f}",
+        )
+
+
+if __name__ == "__main__":
+    main()
