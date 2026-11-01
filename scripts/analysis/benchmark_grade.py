@@ -426,12 +426,15 @@ def simulate_v2(
     controller: Callable[[Path], Any],
     seeds: list[int],
     bands: dict[str, Any],
+    assays: tuple[str, ...] | None = None,
 ) -> tuple[dict[str, list[list[BehaviourStep]]], list[list[BehaviourStep]]]:
     """Run a controller on the v2 assays; measure each rig's tracks before they are windowed.
 
     Returns the lawn families' windowed, measured animals and the chemotaxis assay's measured
     animals over its analysis window. ``controller`` builds a fresh
-    controller for each assay from that assay's config path.
+    controller for each assay from that assay's config path. ``assays`` names the families to run
+    (``chemotaxis`` among them), all by default; each assay is its own run on the animals' own
+    streams, so a subset gives those families' animals exactly as the full run does.
     """
     from quantumnematode.benchmark import measurement as mm
     from quantumnematode.evaluation.odour_field import chen_field, chen_starts
@@ -441,6 +444,8 @@ def simulate_v2(
     populations: dict[str, list[list[BehaviourStep]]] = {}
 
     for family, protocol in PROTOCOLS.items():
+        if assays is not None and family not in assays:
+            continue
         path = FORAGING / f"{ARMS[arm]}_assay_{protocol}.yml"
         config = load_simulation_config(str(path))
         trajectories = BatchedEvaluator(config, controller(path), seeds).run()
@@ -461,6 +466,8 @@ def simulate_v2(
             else trajectories.to_behaviour_steps(i, first, end)
             for i, seed in enumerate(seeds)
         ]
+    if assays is not None and "chemotaxis" not in assays:
+        return populations, []
     path = FORAGING / f"{ARMS[arm]}_assay_{CHEMOTAXIS_PROTOCOL}.yml"
     config = load_simulation_config(str(path))
     field = chen_field()

@@ -97,7 +97,7 @@
    **The verdict map:**
 
    - **VALID:** v3 becomes the default;
-   - **VOID:** v2 stays the default, and the failing item and its diagnosis go to the maintainer. If the oracle fails, the run stops before Part B.
+   - **VOID:** v2 stays the default, and the failing item and its diagnosis go to the maintainer. If the oracle's 40 populations fail, the read stops there, before any other control is read.
 
 8. **The registration** (launch record 120):
 

@@ -21,7 +21,7 @@ Otherwise it SHALL be VOID, and v2 SHALL stay the default.
 #### Scenario: The new statistics are unreachable
 
 - **WHEN** the oracle's fitted worm fails a new statistic's mean-z or 90% rule on its 40 populations
-- **THEN** the run SHALL stop before Part B, and return to the maintainer
+- **THEN** the read SHALL stop before any other control is read, and return to the maintainer
 
 #### Scenario: v3 becomes the default
 
