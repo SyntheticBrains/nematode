@@ -41,7 +41,7 @@
    - Local search's ratio is graded as log(early/late), over the same bins (early 8–14 min, late 34–44 min after removal).
    - The band: the 17 López-Cruz band batches' mean of log(early/late), and their SD × v3's prediction factor for one new batch at m = 21.
    - Local search's presence test (ratio above 1 at its lower bound) is unchanged.
-   - γ is unchanged, on v2's band.
+   - γ is graded as in v2, with its band rebuilt from the same 17 batches at m = 21. v2 kept v1's factor at m = 11, so the scale grows by about 2%.
 
 2. **The Chen onset rate:** 60 × the mean of the per-second onset flags the chemotaxis samples already carry (`fragment_samples`). It is pooled over a population's kept seconds, as the other chemotaxis statistics are, by the same off-food detector.
 
@@ -57,7 +57,8 @@
 4. **The bar:** 21 graded statistics, z\* = 3.0381.
 
    - The families stay equal, split equally within each, so chemotaxis's five statistics weigh 1/25 each.
-   - v3's prediction factors use m = 21 throughout, the local-search bands' included.
+   - v3's prediction factors use m = 21 for every band built from a prediction interval: both local-search statistics and the five chemotaxis statistics.
+   - **The lawn and kinematics bands are v2's, byte-identical.** They are cluster bootstraps over dates, scaled by κ, and do not depend on m. But κ and their rule checks were read at v2's bar, so at v3's slightly more lenient bar they are slightly loose. Their rule checks are re-run at v3's bar and reported.
    - v2's module tuples are untouched; v3 has its own (`V3_STATISTICS`, `CHEMOTAXIS_STATISTICS_V3`, `LOCAL_SEARCH_STATISTICS_V3`).
 
 5. **The reported reversal share:**
@@ -89,7 +90,9 @@
       - v2's blind-worm answer;
       - C.1's v1 answer.
    7. **The lawn N2 control is carried from v2,** since the lawn families and kinematics are unchanged and v3's bar is more lenient. It is recorded as carried, not re-read.
-   8. **Recomputed and reported:** W's minimum on both family sets, and the 3-of-5 probability for a faithful controller.
+   8. **Recomputed and reported:** W's minimum on both family sets, and the 3-of-5 probability for a faithful controller. That probability uses v2's method:
+      - a faithful population passes each family at one minus its failure rate. The lawn and kinematics rates come from their rule checks at v3's bar. Local search's comes from its held-out batches' rule check. Chemotaxis's is the binomial nominal rate for five statistics at m = 21;
+      - the product is the population's chance of passing all five families, and the binomial chance of at least 3 of 5 follows.
 
    **The verdict map:**
 
@@ -99,8 +102,20 @@
 8. **The registration** (launch record 120):
 
    - **Part A** fixes every rule above, and is committed before the bands are built or any control is read. `benchmark_bands.py --version v3` and `benchmark_v3_controls.py` refuse until then.
+
    - **Part B,** after the oracle's fit, records its answer before the oracle's populations and the reading run.
-   - **Disclosure:** the planning brief's and the probe's readings of held-out data (the 10 López-Cruz batches, the Roberts cohorts, Chen's 8 recordings) and of C.1b's answers are seen.
+
+   - **Preflights before Part A** (discarded seeds; disclosed):
+
+     - **the adversary gate:** restarts 2, 4 and 6 and the κ probe, each on 5 populations against m = 21 bands built as Part A registers them. If any fails to be caught in 3 of 5, the change returns to the maintainer before registering;
+     - **the oracle:** one restart of the oracle's fit (60 generations), whose answer must bring every new statistic within the bar. This also measures where a fitted worm's log early/late sits under the detector bias (risk below).
+
+   - **Disclosure:** these are seen before Part A:
+
+     - the planning brief's readings of held-out data: the 10 López-Cruz batches, the Roberts cohorts and Chen's 8 recordings;
+     - the probe's and the preflights' readings of C.1b's answers.
+
+     The records are committed in `supporting/120-benchmark-v3/` (`probe.json`, `preflight.json`, and a summary of the brief).
 
 9. **Seeds:**
 
@@ -108,15 +123,18 @@
    |---|---|
    | 470,000,000 | the oracle's fit, k = 10,000·r + 16·(n − 1) + p, CMA 9421 + r |
    | 471,000,000 | the oracle's 40 check populations |
-   | 472,000,000 | the adversaries, 5 populations each |
-   | 473,000,000 | the negatives and the two answers, 5 populations each |
+   | 472,000,000 | the adversaries, k = 5·i + g in the order restarts 2, 4, 6, the κ probe |
+   | 473,000,000 | the negatives and the two answers, k = 5·i + g for entry i in the registered order (B.4's six, v2's blind worm, C.1's v1 answer) and population g < 5 |
    | 475,000,000 | the round trip's jitter |
    | 99,940,000 | the probe, discarded |
+   | 99,950,000 | the adversary preflight, discarded (5 populations each) |
+   | 99,960,000 | the oracle preflight, discarded (one restart, 60 generations, CMA 9423) |
 
 ## Risks / Trade-offs
 
 - **[A continuous reverser that also decays]** → the three statistics could miss it, as the onset rate and flips missed restart 4. The reported share watches for it, and the escalation path is registered.
 - **[The Chen onset rate's band is wide (CV 0.42)]** → it catches gross excess only, which is what the probe shows (z +3.7 to +6.1).
+- **[Detector bias in log early/late]** → the real ratios are López-Cruz's own counts, and the simulated ones come from our detector. On the bridge tracks our detector over-counts López-Cruz 2.2× early and 3.0× late (inferred from Calhoun), so a faithful simulated worm's ratio would sit about 0.73× lower: z ≈ −0.8 on v3's log band. v2's linear band was too wide for this to matter. The oracle's preflight measures it; if a fitted worm cannot reach the band, the change returns to the maintainer.
 - **[The bar loosens slightly (3.0078 → 3.0381)]** → every v2 statistic passes slightly more easily. The negatives are re-graded at the new bar.
 - **[The probe saw the held-out data]** → disclosed in Part A. The registered reading uses fresh simulated seeds, and the real held-out values were seen only as description.
 - **[Cost]** → the oracle's fit about 1–2 h; everything else under an hour.

@@ -35,6 +35,8 @@ The maintainer's decisions of 2026-11-01:
   - a reachability oracle;
   - W's minimum and the 3-of-5 probability recomputed.
 - **`benchmark_grade.py --bands v1|v2|v3`**, with v3 the default once VALID (`controls_v3.json`, its bands' SHA-256). v1 and v2 stay byte-identical.
+- **Preflights before Part A,** on discarded seeds: the adversary gate on 5 populations per answer, and a 60-generation oracle restart.
+- **`data/benchmark/IMPORT.md`:** imported local search is graded on log early/late, and the new chemotaxis statistics, like chemotaxis itself, cannot be imported.
 - **Launch record 120** (Part A before any reading, Part B after the oracle's fit) and **Logbook 120**.
 
 ## Capabilities
