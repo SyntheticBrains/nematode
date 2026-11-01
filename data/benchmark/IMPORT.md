@@ -10,7 +10,14 @@ Each manifest line is `<family> <file>`. A file is a CSV with its metadata sidec
 
 ## The benchmark's versions
 
-`benchmark_grade.py --bands v1|v2` picks the rule. v1 (`bands.json`) is frozen for every verdict read on it. v2 (`bands_v2.json`) becomes the default once its controls find it VALID.
+`benchmark_grade.py --bands v1|v2|v3` picks the rule. v1 (`bands.json`) and v2 (`bands_v2.json`) are frozen for every verdict read on them. The default is the newest version whose controls find it VALID: v3 (`bands_v3.json`) since 2026-11-01.
+
+**What v3 changes for imported tracks:**
+
+- **Local search** is graded on γ and the **log** of the early/late ratio, in place of the linear ratio. Its presence test is unchanged.
+- **The bar:** z\* over v3's 21 statistics (3.0381).
+- **Chemotaxis's two new statistics** (the onset rate and the direction-flip fraction) sit in the chemotaxis family, which still cannot be imported.
+- **The reversal share** that v3 reports beside a grade needs primitive labels, so imported tracks report none.
 
 **What v2 adds for imported tracks:**
 

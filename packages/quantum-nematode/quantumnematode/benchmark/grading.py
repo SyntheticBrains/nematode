@@ -82,6 +82,9 @@ LAWN_STATISTICS = (
 )
 UNIFORM_STATISTICS = ("roaming_fraction", "roaming_bout_s", "dwelling_bout_s")
 LOCAL_SEARCH_STATISTICS = ("gamma_per_min", "early_late_ratio")
+# Benchmark v3 grades local search's early/late ratio on a log scale, where a flat curve (ratio
+# near 1) sits several scales from the real worms' decay.
+LOCAL_SEARCH_STATISTICS_V3 = ("gamma_per_min", "log_early_late_ratio")
 FAMILIES: dict[str, tuple[str, ...]] = {
     "small_lawn": LAWN_STATISTICS,
     "uniform_lawn": UNIFORM_STATISTICS,
@@ -510,6 +513,25 @@ def _onsets(
         onsets.append(reversal_onsets(x, y, OFF_FOOD_DETECTOR))
         valid.append(np.isfinite(np.diff(x)) & np.isfinite(np.diff(y)))
     return onsets, valid
+
+
+def log_search_statistics(statistics: Mapping[str, float]) -> dict[str, float]:
+    """Return v3's local-search statistics from v2's: gamma, and the early/late ratio's log."""
+    ratio = statistics["early_late_ratio"]
+    log_ratio = math.log(ratio) if math.isfinite(ratio) and ratio > 0 else math.nan
+    return {"gamma_per_min": statistics["gamma_per_min"], "log_early_late_ratio": log_ratio}
+
+
+def reversal_share(animals: Sequence[Sequence[BehaviourStep]]) -> float | None:
+    """Return the share of steps in a reversal bout, by primitive label; None without labels.
+
+    Reported beside a grade, never graded: real and imported tracks carry no labels, and a point
+    worm's backing is not visible from its positions.
+    """
+    steps = [s for animal in animals for s in animal]
+    if not steps or any(s.primitive is None for s in steps):
+        return None
+    return sum(s.primitive == "reversal" for s in steps) / len(steps)
 
 
 def simulated_search(populations: Sequence[Sequence[BehaviourStep]]) -> dict[str, float]:

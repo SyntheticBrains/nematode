@@ -1,0 +1,45 @@
+"""Capture v2's grading of fixed synthetic populations, on whichever code tree is first on the path."""
+
+import dataclasses
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+TREE = Path(sys.argv[1])
+sys.path.insert(0, str(TREE / "scripts" / "analysis"))
+import benchmark_grade as bg  # noqa: E402
+from quantumnematode.benchmark import grading as g  # noqa: E402
+from quantumnematode.evaluation.odour_field import chen_field  # noqa: E402
+from quantumnematode.report.behaviour import BehaviourStep  # noqa: E402
+
+print("code from", Path(bg.__file__).resolve().parents[2], Path(g.__file__).resolve().parents[3], file=sys.stderr)
+
+
+def populations():
+    rng = np.random.default_rng(20261101)
+
+    def walk(n, x0, y0, primitive):
+        xy = np.cumsum(rng.normal(0.0, 0.05, size=(n, 2)), axis=0) + np.array([x0, y0])
+        return [
+            BehaviourStep(step=i, x=float(px), y=float(py), heading_rad=0.0, concentration=0.0, dc_dt=0.0,
+                          grad_dir=0.0, grad_strength=0.0, on_lawn=True, primitive=primitive)
+            for i, (px, py) in enumerate(xy)
+        ]
+
+    pops = {
+        "small_lawn": [walk(g.LAWN_SAMPLES, 0.0, 0.0, "run") for _ in range(64)],
+        "uniform_lawn": [walk(g.LAWN_SAMPLES, 0.0, 0.0, "run") for _ in range(64)],
+        "local_search": [walk(g.SEARCH_SAMPLES, 0.0, 0.0, "run") for _ in range(64)],
+    }
+    field = chen_field()
+    cx, cy = field.origin_mm[0] + 30.0, field.origin_mm[1] + 30.0
+    chem = [walk(600, cx, cy, "run") for _ in range(16)]
+    return pops, chem
+
+
+pops, chem = populations()
+out = bg._finite(bg.grade_populations_v2(pops, chem, bg.load_bands_v2()))
+Path(sys.argv[2]).write_text(json.dumps(out, indent=2, allow_nan=False) + "\n")
+print(json.dumps({k: out[k] for k in ("D", "D_fit", "wild_type_passes")}))

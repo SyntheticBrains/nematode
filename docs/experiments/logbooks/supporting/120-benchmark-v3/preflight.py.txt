@@ -1,0 +1,220 @@
+"""Benchmark v3 preflights (description, discarded seeds), before Part A.
+
+- adversary: C.1b's restarts 2, 4, 6 and the kappa probe, 5 populations each (animals 99,950,000,
+  k = 5 i + g), graded on the three new statistics against bands at v3's m = 21;
+- oracle: one sep-CMA restart of C.1's model fitted to the three new statistics alone (RMS of the
+  capped z), 60 generations, CMA 9423, animals 99,960,000; its answer re-simulated on 5
+  populations (k = 10,000 + g).
+"""
+
+import json
+import math
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+from scipy import stats as scipy_stats
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "docs/experiments/logbooks/supporting/120-benchmark-v3")
+import benchmark_bands as bb
+import benchmark_grade as bg
+import c1b_fit as fit
+import cma_recovery_v2 as v2
+import npe_recovery as nr
+import probe
+from quantumnematode.benchmark import chemotaxis as ch
+from quantumnematode.benchmark import grading as g
+from quantumnematode.benchmark import references as refs
+
+M = 21
+BAR = g.z_star(M)
+FLOOR = 0.03
+ADVERSARY_BASE = 99_950_000
+ORACLE_BASE = 99_960_000
+ORACLE_CMA = 9423
+ORACLE_GENERATIONS = 60
+OUT = Path("build/benchmark-v3/preflight.json")
+
+
+def factor_v3(k: int) -> float:
+    q = 1.0 - g.FAMILY_ALPHA / (2 * M)
+    return math.sqrt(1.0 + 1.0 / k) * float(scipy_stats.t.ppf(q, k - 1)) / g.z_star(M)
+
+
+def band(values):
+    values = np.asarray([v for v in values if v is not None and np.isfinite(v)], dtype=float)
+    return float(values.mean()), float(g.scale_of(values) * factor_v3(len(values)))
+
+
+def real_bands():
+    data = json.loads((refs.BENCHMARK_DATA / "lopezcruz2019_reorientations.json").read_text())
+    split = json.loads((refs.BENCHMARK_DATA / "lopezcruz2019_split.json").read_text())["sides"]
+    batches = bb.lopezcruz_batches(data)
+    log_el = {b: math.log(bb.search_statistics(r)["early_late_ratio"]) for b, r in batches.items()}
+    out = {"log_early_late": band([log_el[b] for b in batches if split[b] == "bands"])}
+    chen = refs.load_chen_tracks()
+    frs = chen.fragments()
+    onset, flip = [], []
+    for r, protocol in enumerate(chen.recording_protocol):
+        if protocol != "standard":
+            continue
+        mine = [(x, y) for rr, _, x, y in frs if rr == r]
+        onset.append(probe.onset_rate(ch.fragment_samples(mine, chen.concentration)))
+        f, v = probe.flips(mine, FLOOR)
+        flip.append(f / v)
+    out["onset_per_min"] = band(onset)
+    out["flip_fraction"] = band(flip)
+    held = {
+        b: (log_el[b] - out["log_early_late"][0]) / out["log_early_late"][1]
+        for b in batches
+        if split[b] == "held_out"
+    }
+    return out, held
+
+
+def new_statistics(params: dict[str, float], k: int, base: int) -> dict[str, float | None]:
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    from quantumnematode.evaluation.odour_field import chen_field
+
+    bands = v2._bands()
+    seeds = [base + nr.ANIMALS * k + i for i in range(nr.ANIMALS)]
+    populations, chem = bg.simulate_v2("mlp", lambda _p: BatchedMechanistic(params), seeds, bands)
+    field = chen_field()
+    frags = bg.chemotaxis_fragments(chem, field)
+    samples = ch.fragment_samples(
+        frags,
+        lambda x, y: refs.sample_field(field.field, field.cell_mm, x, y),
+    )
+    ratio = g.simulated_search(populations["local_search"])["early_late_ratio"]
+    f, v = probe.flips(frags, FLOOR)
+    return {
+        "log_early_late": math.log(ratio)
+        if ratio is not None and np.isfinite(ratio) and ratio > 0
+        else None,
+        "onset_per_min": probe.onset_rate(samples),
+        "flip_fraction": f / v if v else None,
+    }
+
+
+def z_scores(values, bands):
+    return {
+        s: (None if values[s] is None else (values[s] - bands[s][0]) / bands[s][1]) for s in bands
+    }
+
+
+def _adv(item):
+    name, params, k = item
+    return name, k, new_statistics(params, k, ADVERSARY_BASE)
+
+
+def _oracle_sim(item):
+    z, k = item
+    return new_statistics(nr.parameters_from_unit(np.asarray(z)), k, ORACLE_BASE)
+
+
+def objective(values, bands):
+    zs = z_scores(values, bands)
+    capped = [g.Z_CAP if v is None else min(abs(v), g.Z_CAP) for v in zs.values()]
+    return float(math.sqrt(np.mean(np.square(capped))))
+
+
+def main():
+    bands, held = real_bands()
+    record = {
+        "description": "Description: v3 preflights on discarded seeds, before Part A.",
+        "bar": BAR,
+        "bands_m21": bands,
+        "lopezcruz_held_out_z": held,
+    }
+    fitted = json.loads(fit.FIT_PATH.read_text())
+    answers = {
+        f"restart {r}": nr.parameters_from_unit(np.asarray(fitted["restarts"][r]["answer"]))
+        for r in (2, 4, 6)
+    }
+    kappa = json.loads(fit.PROBE_KAPPA_PATH.read_text())
+    answers["kappa probe"] = fit.parameters_kappa(np.asarray(kappa["answer"]))
+    jobs = [
+        (name, p, 5 * i + gpop) for i, (name, p) in enumerate(answers.items()) for gpop in range(5)
+    ]
+    with ProcessPoolExecutor(16, initializer=nr._worker_setup) as pool:
+        results = list(pool.map(_adv, jobs))
+        adv = {}
+        for name, k, values in results:
+            zs = z_scores(values, bands)
+            adv.setdefault(name, []).append(
+                {
+                    "k": k,
+                    "values": values,
+                    "z": zs,
+                    "caught": any(z is not None and abs(z) > BAR for z in zs.values()),
+                },
+            )
+        record["adversaries"] = {
+            n: {
+                "populations": rows,
+                "caught_in": sum(r["caught"] for r in rows),
+                "gate_holds": sum(r["caught"] for r in rows) >= 3,
+            }
+            for n, rows in adv.items()
+        }
+        print({n: v["caught_in"] for n, v in record["adversaries"].items()}, flush=True)
+
+        import cma
+
+        es = cma.CMAEvolutionStrategy(
+            [0.5] * 20,
+            0.2,
+            {
+                "CMA_diagonal": True,
+                "bounds": [0.0, 1.0],
+                "popsize": 16,
+                "seed": ORACLE_CMA,
+                "verbose": -9,
+            },
+        )
+        medians = []
+        for gen in range(1, ORACLE_GENERATIONS + 1):
+            t = time.time()
+            pop = es.ask()
+            ks = [16 * (gen - 1) + p for p in range(16)]
+            vals = list(
+                pool.map(
+                    _oracle_sim,
+                    [(list(map(float, x)), k) for x, k in zip(pop, ks, strict=True)],
+                ),
+            )
+            scores = [objective(v, bands) for v in vals]
+            es.tell(pop, scores)
+            medians.append(float(np.median(scores)))
+            print(
+                f"oracle gen {gen}: median {medians[-1]:.3f} sigma {es.sigma:.3f} ({time.time() - t:.0f} s)",
+                flush=True,
+            )
+        answer = np.clip(np.asarray(es.result.xfavorite, dtype=float), 0.0, 1.0).tolist()
+        checks = list(pool.map(_oracle_sim, [(answer, 10_000 + gpop) for gpop in range(5)]))
+    zs = [z_scores(v, bands) for v in checks]
+    record["oracle"] = {
+        "answer": answer,
+        "medians": medians,
+        "check_populations": [{"values": v, "z": z} for v, z in zip(checks, zs, strict=True)],
+        "mean_z": {s: float(np.mean([z[s] for z in zs if z[s] is not None])) for s in bands},
+        "within_bar": {s: sum(z[s] is not None and abs(z[s]) <= BAR for z in zs) for s in bands},
+    }
+    OUT.write_text(json.dumps(record, indent=2, default=float) + "\n")
+    print(
+        json.dumps(
+            {
+                "adversaries": {n: v["caught_in"] for n, v in record["adversaries"].items()},
+                "oracle_mean_z": record["oracle"]["mean_z"],
+                "oracle_within_bar_of_5": record["oracle"]["within_bar"],
+            },
+            indent=2,
+        ),
+    )
+
+
+if __name__ == "__main__":
+    main()

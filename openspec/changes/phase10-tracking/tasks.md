@@ -389,6 +389,31 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - not modelled: the tracker's noise while the worm moves, and López-Cruz's tracker.
   - **Next:** the F.0b-i re-run on v2, then C.1b on v2, each its own change.
 
+- [x] **B v3 Reorientation graded from positions** (change `benchmark-v3`), after C.1b's fits passed
+  local search while reversing half the time off food.
+
+  *(Closed 2026-11-01: [Logbook 120](../../../docs/experiments/logbooks/120-benchmark-v3.md).)*
+  **B v3 is VALID**, and `benchmark_grade.py` defaults to it.
+
+  - **Added:**
+    - **local search's log early/late ratio,** in place of the linear one;
+    - **chemotaxis's onset rate and direction-flip fraction** on Chen's tracks;
+    - **21 statistics,** z\* 3.0381;
+    - **the share of time reversing, reported** against Roberts' 17.3%, not graded.
+  - **Every registered check holds:**
+    - the rule checks and Chen's round trip;
+    - reachability: C.1's model, fitted to the new statistics alone, reaches them on 40 populations
+      while reversing 5%;
+    - all 10 held-out López-Cruz batches, and Chen's leave-one-out (0 of 6);
+    - C.1b's four reversal-dominated answers, each caught 5 of 5;
+    - the eight negatives, each failing 5 of 5.
+  - **No single statistic catches every adversary:** restart 4 fails only log early/late, and
+    restart 6 only the flip fraction.
+  - **The escalation:** if a fit is caught by the reported share but passes the three, grading the
+    share is proposed in a new change.
+  - **Next:** C.1 refitted on v3, its own change. Its registration carries the 3-of-5 probability
+    0.977.
+
 ## N — the neuromodulator layer from data (MUST)
 
 - [x] **N.1 Licences confirmed**: Bentley 2016 (CC BY, S1 Dataset) and Ripoll-Sánchez 2023 (unstated on
@@ -559,6 +584,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     accepted that and ran the fits as registered.
   - **The maintainer's decision (2026-11-01):** revise the benchmark first, grading the off-food
     reorientation level, and then refit C.1 on it. Every later controller could use the same gap.
+
+  *(Added 2026-11-01, B v3.)* **The benchmark is revised:** B v3 is VALID
+  ([Logbook 120](../../../docs/experiments/logbooks/120-benchmark-v3.md)), and C.1b's restarts 2, 4
+  and 6 and the κ probe each fail it in 5 of 5 populations. **C.1 is refitted on v3 next,** in its
+  own change.
 
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by

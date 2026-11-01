@@ -135,12 +135,13 @@ def test_the_default_grades_on_v2_once_it_is_valid(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With no ``--bands``, a VALID verdict for the vendored bands makes the grade a v2 grade."""
+    """With no ``--bands``, a VALID v2 verdict for its bands, and none for v3, gives a v2 grade."""
     controls = tmp_path / "controls_v2.json"
     controls.write_text(
         json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bg.BANDS_V2_PATH)}),
     )
     monkeypatch.setattr(bg, "CONTROLS_V2_PATH", controls)
+    monkeypatch.setattr(bg, "CONTROLS_V3_PATH", tmp_path / "no_controls_v3.json")
     _refuse_measurement(monkeypatch)
     out = tmp_path / "grade.json"
     assert bg.main(["tracks", "--manifest", str(_track_manifest(tmp_path)), "--out", str(out)]) == 0

@@ -1,0 +1,14 @@
+"""Rebuild v1's and v2's bands in memory and compare them with the vendored files, byte for byte."""
+import json, sys
+sys.path.insert(0, "scripts/analysis")
+import benchmark_bands as bb
+from quantumnematode.benchmark import references as refs
+tracks = refs.load_scheer_tracks()
+v2, _ = bb.build_v2(tracks, json.loads(bb.PROBES_PATH.read_text()))
+same2 = json.dumps(v2, indent=2, allow_nan=False) + "\n" == bb.BANDS_V2_PATH.read_text()
+print("v2 bands identical:", same2, flush=True)
+v1, rec1 = bb.build(tracks, refs.load_lopezcruz())
+split = rec1.pop("split")
+same1 = json.dumps(v1, indent=2, allow_nan=False) + "\n" == bb.BANDS_V1_PATH.read_text()
+same_split = json.dumps(split, indent=2, allow_nan=False) + "\n" == bb.LOPEZCRUZ_SPLIT_PATH.read_text()
+print("v1 bands identical:", same1, "split identical:", same_split, flush=True)
