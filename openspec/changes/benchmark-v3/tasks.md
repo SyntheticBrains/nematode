@@ -1,13 +1,13 @@
 ## 1. The statistics, behind v3's own tuples
 
-- [ ] 1.1 Identity baseline (`speedup_identity_check.py baseline --build build/benchmark-v3/identity`) on the code before any edit.
-- [ ] 1.2 `chemotaxis`: the onset rate and the direction-flip fraction from fragment samples; `grading`: v3's tuples, the log early/late, `z_star` at 21; the reported reversal share. Tests for each scenario, and for v1 and v2 unchanged.
-- [ ] 1.3 `speedup_identity_check.py check`: v1 and v2 byte-identical.
+- [x] 1.1 Identity baseline (`speedup_identity_check.py baseline --build build/benchmark-v3/identity`) on the code before any edit.
+- [x] 1.2 `chemotaxis`: the onset rate and the direction-flip fraction from fragment samples; `grading`: v3's tuples, the log early/late, `z_star` at 21; the reported reversal share. Tests for each scenario, and for v1 and v2 unchanged.
+- [x] 1.3 `speedup_identity_check.py check`: v1 and v2 byte-identical.
 
 ## 2. Bands and grading
 
-- [ ] 2.1 `benchmark_bands.py --version v3` (refuses until Part A is committed): v2's lawn, uniform and kinematics bands byte-identical, with their rule checks re-run at v3's bar; local search's γ and log early/late at m = 21; chemotaxis's five at m = 21; the leave-one-out allowance.
-- [ ] 2.2 `benchmark_grade.py --bands v3`, `grade_populations_v3`, `v3_is_valid`, the default chain; tests.
+- [x] 2.1 `benchmark_bands.py --version v3` (refuses until Part A is committed): v2's lawn, uniform and kinematics bands byte-identical, with their rule checks re-run at v3's bar; local search's γ and log early/late at m = 21; chemotaxis's five at m = 21; the leave-one-out allowance.
+- [x] 2.2 `benchmark_grade.py --bands v3`, `grade_populations_v3`, `v3_is_valid`, the default chain; tests.
 
 ## 3. Registration, the oracle and the controls
 

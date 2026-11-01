@@ -13,6 +13,13 @@ way:
   than :data:`RUN_MARGIN_S` from an onset, of the heading's turning rate on the sine of the bearing
   to the gradient. Positive means turning toward higher concentration.
 
+Benchmark v3 adds two, read from the same fragments:
+
+- **the onset rate** (per minute): the detector's onsets over the pooled seconds;
+- **the direction-flip fraction:** the share of consecutive 1-s displacement pairs, both at least
+  :data:`FLIP_FLOOR_MM`, whose directions differ by more than :data:`FLIP_ANGLE_DEG`. A worm that
+  keeps turning back flips often, whatever its detected onsets.
+
 The bands, from a handful of recordings, are wide enough that a worm ignoring the gradient can sit
 inside them. Chemotaxis must therefore also be **present**: drift and the log quintile ratio each
 above zero at the population's own lower bound (:func:`chemotaxis_presence`). The weathervane slope
@@ -32,6 +39,12 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 CHEMOTAXIS_STATISTICS = ("drift_mm_s", "log_quintile_ratio", "weathervane_deg_s")
+# Benchmark v3 adds how often a worm reorients: its onset rate, and how often its travel turns back.
+CHEMOTAXIS_STATISTICS_V3 = (*CHEMOTAXIS_STATISTICS, "onset_per_min", "flip_fraction")
+# A direction flip: consecutive 1-s displacements, both at least this long, turning by more than
+# this angle. The floor is above the chemotaxis rig's per-axis jitter (about 0.009 mm).
+FLIP_FLOOR_MM = 0.03
+FLIP_ANGLE_DEG = 135.0
 RUN_MARGIN_S = 2
 HEADING_FLOOR_MM = 0.02
 GRADIENT_STEP_MM = 0.15
@@ -109,17 +122,37 @@ def fragment_measures(
     }
 
 
+def direction_flips(x: np.ndarray, y: np.ndarray) -> tuple[int, int]:
+    """Return a fragment's direction flips and the displacement pairs they are counted over.
+
+    A pair is two consecutive 1-s displacements, each at least :data:`FLIP_FLOOR_MM`; it flips when
+    their directions differ by more than :data:`FLIP_ANGLE_DEG`.
+    """
+    d = np.stack([np.diff(np.asarray(x, dtype=float)), np.diff(np.asarray(y, dtype=float))], axis=1)
+    length = np.hypot(d[:, 0], d[:, 1])
+    usable = np.isfinite(length) & (length >= FLIP_FLOOR_MM)
+    pairs = usable[:-1] & usable[1:]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        cosine = (d[:-1, 0] * d[1:, 0] + d[:-1, 1] * d[1:, 1]) / (length[:-1] * length[1:])
+    flips = pairs & (cosine < math.cos(math.radians(FLIP_ANGLE_DEG)))
+    return int(flips.sum()), int(pairs.sum())
+
+
 def fragment_samples(
     fragments: Sequence[tuple[np.ndarray, np.ndarray]],
     concentration: Callable[[np.ndarray, np.ndarray], np.ndarray],
-) -> list[dict[str, np.ndarray]]:
-    """Return each usable fragment's samples the statistics pool: computed once, pooled later."""
+) -> list[dict[str, Any]]:
+    """Return each usable fragment's samples the statistics pool: computed once, pooled later.
+
+    Each sample also counts the fragment's direction flips, which only v3's statistics read.
+    """
     out = []
     for x, y in fragments:
         if len(x) < MIN_FRAGMENT_SAMPLES:
             continue
         m = fragment_measures(x, y, concentration)
         keep = m["valid"] & np.isfinite(m["dcdt"])
+        flips, pairs = direction_flips(x, y)
         out.append(
             {
                 "drift": m["drift"][m["valid"]],
@@ -127,6 +160,8 @@ def fragment_samples(
                 "onset": m["onset"][keep],
                 "turning": m["turning"],
                 "sin_bearing": m["sin_bearing"],
+                "flips": flips,
+                "flip_pairs": pairs,
             },
         )
     return out
@@ -156,6 +191,22 @@ def pooled_statistics(samples: Sequence[dict[str, np.ndarray]]) -> dict[str, flo
         "drift_mm_s": float(d.mean()) if len(d) else math.nan,
         "log_quintile_ratio": math.log(ratio) if ratio > 0 else math.nan,
         "weathervane_deg_s": slope,
+    }
+
+
+def pooled_statistics_v3(samples: Sequence[dict[str, Any]]) -> dict[str, float]:
+    """Return v3's chemotaxis statistics: v2's three, the onset rate and the flip fraction.
+
+    The onset rate is 60 x the mean of the per-second onset flags over the pooled seconds; the flip
+    fraction is the pooled flips over the pooled displacement pairs. NaN where undefined.
+    """
+    out = pooled_statistics(samples)
+    onsets = np.concatenate([s["onset"] for s in samples]) if samples else np.zeros(0)
+    pairs = sum(int(s["flip_pairs"]) for s in samples)
+    return {
+        **out,
+        "onset_per_min": float(60.0 * onsets.mean()) if len(onsets) else math.nan,
+        "flip_fraction": sum(int(s["flips"]) for s in samples) / pairs if pairs else math.nan,
     }
 
 

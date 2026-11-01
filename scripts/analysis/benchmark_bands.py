@@ -475,13 +475,20 @@ def batch_presence(row: dict[str, Any]) -> dict[str, Any]:
     return g.batch_search_presence(starts, means, sems)
 
 
-def search_band(stats: list[dict[str, float]]) -> dict[str, g.Band]:
-    """Return the band batches' mean, and their SD widened to a prediction interval."""
+def search_band(
+    stats: list[dict[str, float]],
+    statistics: tuple[str, ...] = g.LOCAL_SEARCH_STATISTICS,
+    factor: Callable[[int], float] = prediction_factor,
+) -> dict[str, g.Band]:
+    """Return the band batches' mean, and their SD widened to a prediction interval.
+
+    v1's (and v2's) statistics and factor by default; v3 passes its own.
+    """
     out = {}
-    for name in g.LOCAL_SEARCH_STATISTICS:
+    for name in statistics:
         values = np.array([s[name] for s in stats])
         values = values[np.isfinite(values)]
-        scale = g.scale_of(values) * prediction_factor(len(values))
+        scale = g.scale_of(values) * factor(len(values))
         out[name] = g.Band(centre=float(values.mean()), scale=scale)
     return out
 
@@ -563,14 +570,18 @@ def check_small_lawn(  # noqa: PLR0913 - the dates, the bar, the factors and the
     }
 
 
-def check_local_search(stats: list[dict[str, float]], bar: float) -> dict[str, Any]:
+def check_local_search(
+    stats: list[dict[str, float]],
+    bar: float,
+    band_of: Callable[[list[dict[str, float]]], dict[str, g.Band]] = search_band,
+) -> dict[str, Any]:
     """Grade each batch of one half of the band batches against a band from the other half."""
     rng = np.random.default_rng(CHECK_SEED)
     graded = passes = 0
     for _ in range(CHECK_SPLITS):
         order = rng.permutation(len(stats))
         half = len(stats) // 2
-        band = search_band([stats[k] for k in order[:half]])
+        band = band_of([stats[k] for k in order[:half]])
         for k in order[half:]:
             readings = g.grade(stats[k], band, bar)
             graded += 1
@@ -898,9 +909,17 @@ def prediction_factor_v2(k: int) -> float:
     return math.sqrt(1.0 + 1.0 / k) * float(scipy_stats.t.ppf(q, k - 1)) / g.z_star(m)
 
 
-def chemotaxis_recordings(chen: refs.ChenTracks) -> dict[str, dict[str, Any]]:
-    """Return each Chen recording's chemotaxis statistics, with its date and protocol."""
+def chemotaxis_recordings(
+    chen: refs.ChenTracks,
+    pooled: Callable[[list[dict[str, Any]]], dict[str, float]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Return each Chen recording's chemotaxis statistics, with its date and protocol.
+
+    ``pooled`` computes a recording's statistics from its samples: v2's three by default.
+    """
     from quantumnematode.benchmark import chemotaxis as ch
+
+    pool = ch.pooled_statistics if pooled is None else pooled
 
     fragments = chen.fragments()
     out = {}
@@ -912,23 +931,32 @@ def chemotaxis_recordings(chen: refs.ChenTracks) -> dict[str, dict[str, Any]]:
         out[date] = {
             "protocol": protocol,
             "fragments": len(mine),
-            "statistics": ch.pooled_statistics(samples),
+            "statistics": pool(samples),
             "presence": ch.chemotaxis_presence([[sample] for sample in samples]),
         }
     return out
 
 
-def chemotaxis_band(stats: list[dict[str, float]]) -> dict[str, g.Band]:
-    """Return the recordings' mean, and their SD widened to a prediction interval at v2's bar."""
+def chemotaxis_band(
+    stats: list[dict[str, float]],
+    statistics: tuple[str, ...] | None = None,
+    factor: Callable[[int], float] | None = None,
+) -> dict[str, g.Band]:
+    """Return the recordings' mean, and their SD widened to a prediction interval at v2's bar.
+
+    v2's statistics and factor by default; v3 passes its own.
+    """
     from quantumnematode.benchmark import chemotaxis as ch
 
+    names = ch.CHEMOTAXIS_STATISTICS if statistics is None else statistics
+    widen = prediction_factor_v2 if factor is None else factor
     out = {}
-    for name in ch.CHEMOTAXIS_STATISTICS:
+    for name in names:
         values = np.array([s[name] for s in stats], dtype=float)
         values = values[np.isfinite(values)]
         out[name] = g.Band(
             centre=float(values.mean()),
-            scale=g.scale_of(values) * prediction_factor_v2(len(values)),
+            scale=g.scale_of(values) * widen(len(values)),
         )
     return out
 
@@ -953,6 +981,8 @@ def chemotaxis_leave_one_out(
     stats: dict[str, dict[str, float]],
     bar: float,
     presence: dict[str, dict[str, Any]] | None = None,
+    band_of: Callable[[list[dict[str, float]]], dict[str, g.Band]] = chemotaxis_band,
+    unit_rate: float | None = None,
 ) -> dict[str, Any]:
     """Grade each standard recording against a band from the other five.
 
@@ -961,7 +991,7 @@ def chemotaxis_leave_one_out(
     """
     rows = {}
     for date, values in stats.items():
-        band = chemotaxis_band([v for d, v in stats.items() if d != date])
+        band = band_of([v for d, v in stats.items() if d != date])
         readings = g.grade(values, band, bar)
         present = True if presence is None else bool(presence[date]["present"])
         rows[date] = {
@@ -969,7 +999,7 @@ def chemotaxis_leave_one_out(
             "present": present,
             "passes": all(r.passes for r in readings.values()) and present,
         }
-    rate = chemotaxis_unit_rate()
+    rate = chemotaxis_unit_rate() if unit_rate is None else unit_rate
     allowance = binomial_allowance(len(stats), rate)
     failures = sum(not r["passes"] for r in rows.values())
     return {
@@ -1115,10 +1145,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--record", type=Path, required=True)
-    parser.add_argument("--version", choices=("v1", "v2"), default="v1")
+    parser.add_argument("--version", choices=("v1", "v2", "v3"), default="v1")
     args = parser.parse_args()
     if args.version == "v2":
         return _main_v2(args)
+    if args.version == "v3":
+        return _main_v3(args)
     bands, record = build(refs.load_scheer_tracks(), refs.load_lopezcruz())
     print(json.dumps(record["checks"], indent=2))
     failed = [name for name, check in record["checks"].items() if not check["passes"]]
@@ -1149,6 +1181,203 @@ def _main_v2(args: argparse.Namespace) -> int:
         print("B v2's launch record (Part A) is not committed, or has changed", file=sys.stderr)
         return 1
     bands, record = build_v2(refs.load_scheer_tracks(), json.loads(PROBES_PATH.read_text()))
+    args.record.parent.mkdir(parents=True, exist_ok=True)
+    args.record.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    print(
+        json.dumps(
+            {
+                "checks": record["checks"],
+                "chemotaxis_leave_one_out": record["chemotaxis_leave_one_out"],
+            },
+            indent=2,
+        ),
+    )
+    failed = [name for name, check in record["checks"].items() if not check["passes"]]
+    if failed:
+        print(
+            f"The rule's own check failed for {failed}; the bands were not written.",
+            file=sys.stderr,
+        )
+        return 1
+    args.out.write_text(json.dumps(bands, indent=2, allow_nan=False) + "\n")
+    return 0
+
+
+# ---------------------------------------------------------------------------------------------
+# Benchmark v3: local search on a log scale, and how often a worm reorients in chemotaxis
+# ---------------------------------------------------------------------------------------------
+
+BANDS_V2_PATH = _REPO / "data" / "benchmark" / "bands_v2.json"
+V3_SUPPORT_PATH = _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "120-benchmark-v3"
+V3_LAUNCH_PATH = V3_SUPPORT_PATH / "launch.md"
+ROBERTS_REVERSE_STATE = "reverse"
+
+
+def v3_families() -> dict[str, tuple[str, ...]]:
+    """Return B v3's families: v2's, with local search's log ratio and chemotaxis's five."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    return {
+        "small_lawn": g.LAWN_STATISTICS,
+        "uniform_lawn": g.UNIFORM_STATISTICS,
+        "local_search": g.LOCAL_SEARCH_STATISTICS_V3,
+        "kinematics": g.KINEMATIC_STATISTICS,
+        "chemotaxis": ch.CHEMOTAXIS_STATISTICS_V3,
+    }
+
+
+def v3_statistics() -> int:
+    """Return B v3's count of wild-type statistics."""
+    return sum(len(statistics) for statistics in v3_families().values())
+
+
+def prediction_factor_v3(k: int) -> float:
+    """Return the Student-t prediction factor for one new batch or recording, at v3's bar."""
+    m = v3_statistics()
+    q = 1.0 - g.FAMILY_ALPHA / (2 * m)
+    return math.sqrt(1.0 + 1.0 / k) * float(scipy_stats.t.ppf(q, k - 1)) / g.z_star(m)
+
+
+def search_band_v3(stats: list[dict[str, float]]) -> dict[str, g.Band]:
+    """Return local search's v3 bands: gamma and the log early/late ratio, at v3's factor."""
+    return search_band(stats, g.LOCAL_SEARCH_STATISTICS_V3, prediction_factor_v3)
+
+
+def chemotaxis_band_v3(stats: list[dict[str, float]]) -> dict[str, g.Band]:
+    """Return chemotaxis's v3 bands: its five statistics, at v3's factor."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    return chemotaxis_band(stats, ch.CHEMOTAXIS_STATISTICS_V3, prediction_factor_v3)
+
+
+def chemotaxis_unit_rate_v3() -> float:
+    """Return a recording's nominal failure rate on v3's five chemotaxis statistics."""
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    per = g.FAMILY_ALPHA / v3_statistics()
+    return 1.0 - (1.0 - per) ** len(ch.CHEMOTAXIS_STATISTICS_V3)
+
+
+def search_band_batches_v3(lopezcruz: dict[str, Any]) -> dict[str, dict[str, float]]:
+    """Return each López-Cruz band batch's v3 statistics, by date string."""
+    batches = lopezcruz_batches(lopezcruz)
+    sides = json.loads(LOPEZCRUZ_SPLIT_PATH.read_text())["sides"]
+    return {
+        b: g.log_search_statistics(search_statistics(batches[b]))
+        for b, side in sides.items()
+        if side == refs.BANDS
+    }
+
+
+def roberts_reversal_share() -> dict[str, Any]:
+    """Return the reported reversal share's reference: Roberts' tracked frames in reverse."""
+    tracks = refs.load_search_tracks("roberts2016")
+    if tracks.state is None:
+        msg = "Roberts' tracks carry no tracker state"
+        raise ValueError(msg)
+    tracked = tracks.state >= 0
+    reverse = tracks.state_names.index(ROBERTS_REVERSE_STATE)
+    return {
+        "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's "
+        "reverse state, all cohorts",
+        "value": float(np.mean(tracks.state[tracked] == reverse)),
+        "frames": int(tracked.sum()),
+    }
+
+
+def build_v3(
+    tracks: refs.ScheerTracks,
+    lopezcruz: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return B v3's bands file and its record.
+
+    v2's lawn, uniform-well, mutant and kinematics bands are copied unchanged; their rule checks
+    are re-read at v3's bar on v2's splits. Local search and chemotaxis are rebuilt at v3's factor.
+    """
+    from quantumnematode.benchmark import chemotaxis as ch
+    from quantumnematode.benchmark import measurement as mm
+
+    classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(CLASSIFIER_PATH))
+    v2 = json.loads(BANDS_V2_PATH.read_text())
+    bar = g.z_star(v3_statistics())
+    families = v3_families()
+    wild = per_date_tallies(tracks, WILD_TYPE, classifier)
+    kinematic = per_date_kinematic_tallies(tracks, WILD_TYPE, classifier)
+    kappa = json.loads(RECORD_PATH.read_text())["calibration"]["kappa"]
+    search_stats = search_band_batches_v3(lopezcruz)
+    search = search_band_v3(list(search_stats.values()))
+    checks = {
+        "small_lawn": check_small_lawn(wild, bar, kappa, seed=V2_CHECK_SEED),
+        "kinematics": check_small_lawn(
+            kinematic,
+            bar,
+            v2["kinematics_kappa"],
+            g.KINEMATIC_STATISTICS,
+            g.kinematic_statistics,
+            seed=V2_CHECK_SEED,
+        ),
+        "local_search": check_local_search(list(search_stats.values()), bar, search_band_v3),
+    }
+    chen = refs.load_chen_tracks()
+    recordings = chemotaxis_recordings(chen, ch.pooled_statistics_v3)
+    standard = {d: r["statistics"] for d, r in recordings.items() if r["protocol"] == "standard"}
+    chem_band = chemotaxis_band_v3(list(standard.values()))
+    loo = chemotaxis_leave_one_out(
+        standard,
+        bar,
+        {d: r["presence"] for d, r in recordings.items() if r["protocol"] == "standard"},
+        chemotaxis_band_v3,
+        chemotaxis_unit_rate_v3(),
+    )
+    bands = json.loads(json.dumps(v2["bands"]))
+    for n in SIZES:
+        bands[str(n)]["local_search"] = {k: _band_dict(v) for k, v in search.items()}
+        bands[str(n)]["chemotaxis"] = {k: _band_dict(v) for k, v in chem_band.items()}
+    bands_file = {
+        **v2,
+        "description": "B v3's bands: v2's, with local search graded on gamma and the log "
+        "early/late ratio, and chemotaxis's onset rate and direction-flip fraction added; from "
+        "band cohorts only.",
+        "version": 3,
+        "families": {f: list(st) for f, st in families.items()},
+        "bars": {**v2["bars"], "wild_type": bar},
+        "weights": {f"{f}/{st}": w for (f, st), w in g.weights(list(families), families).items()},
+        "fit_weights": {
+            f"{f}/{st}": w for (f, st), w in g.weights(list(V2_FIT_FAMILIES), families).items()
+        },
+        "bands": bands,
+        "reported": {"reversal_share": roberts_reversal_share()},
+    }
+    record = {
+        "description": "B v3's bands record: the rule's checks at v3's bar and the chemotaxis "
+        "validation, from band cohorts and Chen's standard-protocol recordings only.",
+        "bar": bar,
+        "statistics": v3_statistics(),
+        "bands_v2_sha256": mm.file_sha256(BANDS_V2_PATH),
+        "checks": checks,
+        "local_search_band_batches": search_stats,
+        "local_search_prediction_factor": prediction_factor_v3(len(search_stats)),
+        "chemotaxis_recordings": recordings,
+        "chemotaxis_prediction_factor": prediction_factor_v3(len(standard)),
+        "chemotaxis_leave_one_out": loo,
+        "reported": {
+            "off_protocol_chemotaxis": {
+                d: r for d, r in recordings.items() if r["protocol"] != "standard"
+            },
+        },
+    }
+    return _finite(bands_file), _finite(record)
+
+
+def _main_v3(args: argparse.Namespace) -> int:
+    """Build B v3's bands after Part A is committed; refuse if a check or the validation fails."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import cma_recovery as cr
+
+    if not cr.launch_committed(launch_path=V3_LAUNCH_PATH):
+        print("B v3's launch record (Part A) is not committed, or has changed", file=sys.stderr)
+        return 1
+    bands, record = build_v3(refs.load_scheer_tracks(), refs.load_lopezcruz())
     args.record.parent.mkdir(parents=True, exist_ok=True)
     args.record.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
     print(

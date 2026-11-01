@@ -293,23 +293,28 @@ CONTROLS_V2_PATH = (
 )
 
 
+def _validated(bands_path: Path, controls_path: Path) -> bool:
+    """Return whether a version's controls found VALID the very bands file now vendored."""
+    if not (bands_path.exists() and controls_path.exists()):
+        return False
+    try:
+        controls = json.loads(controls_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return False  # an unreadable verdict leaves the default where it was
+    if not isinstance(controls, dict) or controls.get("verdict") != "VALID":
+        return False
+    from quantumnematode.benchmark.measurement import file_sha256
+
+    return controls.get("bands_sha256") == file_sha256(bands_path)
+
+
 def v2_is_valid() -> bool:
     """Return whether B v2's controls found VALID the very bands file now vendored.
 
     The verdict records the SHA-256 of the bands it validated; a bands file that differs from it, a
     verdict that records none, or one that cannot be read, does not make v2 the default.
     """
-    if not (BANDS_V2_PATH.exists() and CONTROLS_V2_PATH.exists()):
-        return False
-    try:
-        controls = json.loads(CONTROLS_V2_PATH.read_text())
-    except (OSError, json.JSONDecodeError):
-        return False  # an unreadable verdict leaves the default at v1
-    if not isinstance(controls, dict) or controls.get("verdict") != "VALID":
-        return False
-    from quantumnematode.benchmark.measurement import file_sha256
-
-    return controls.get("bands_sha256") == file_sha256(BANDS_V2_PATH)
+    return _validated(BANDS_V2_PATH, CONTROLS_V2_PATH)
 
 
 CHEMOTAXIS_PROTOCOL = "chemotaxis_chen"
@@ -322,6 +327,28 @@ LAWN_MEASURED = ("small_lawn", "uniform_lawn")
 def load_bands_v2(path: Path = BANDS_V2_PATH) -> dict[str, Any]:
     """Load B v2's bands, with its families, bar and measurement models."""
     return json.loads(path.read_text())
+
+
+BANDS_V3_PATH = _REPO / "data" / "benchmark" / "bands_v3.json"
+CONTROLS_V3_PATH = (
+    _REPO
+    / "docs"
+    / "experiments"
+    / "logbooks"
+    / "supporting"
+    / "120-benchmark-v3"
+    / "controls_v3.json"
+)
+
+
+def v3_is_valid() -> bool:
+    """Return whether B v3's controls found VALID the very bands file now vendored."""
+    return _validated(BANDS_V3_PATH, CONTROLS_V3_PATH)
+
+
+def load_bands_v3(path: Path | None = None) -> dict[str, Any]:
+    """Load B v3's bands: v2's layout, with v3's families, bar and reported reference."""
+    return json.loads((BANDS_V3_PATH if path is None else path).read_text())
 
 
 def _v2_family_map(bands: dict[str, Any]) -> dict[str, tuple[str, ...]]:
@@ -458,8 +485,12 @@ def _chemotaxis_reading(
     bar: float,
     *,
     presence: bool,
+    version: int = 2,
 ) -> tuple[dict[str, g.Reading], dict[str, Any] | None]:
-    """Return the chemotaxis family's readings, and its presence test where asked for."""
+    """Return the chemotaxis family's readings, and its presence test where asked for.
+
+    v3 reads five statistics from the same samples, v2 three.
+    """
     from quantumnematode.benchmark import chemotaxis as ch
     from quantumnematode.benchmark.references import sample_field
     from quantumnematode.evaluation.odour_field import chen_field
@@ -474,8 +505,9 @@ def _chemotaxis_reading(
         ch.fragment_samples(chemotaxis_fragments([animal], field), concentration)
         for animal in chemotaxis
     ]
+    pooled = ch.pooled_statistics_v3 if version == 3 else ch.pooled_statistics
     readings = g.grade(
-        ch.pooled_statistics([sample for group in groups for sample in group]),
+        pooled([sample for group in groups for sample in group]),
         family_bands_v2(bands, "chemotaxis", len(chemotaxis)),
         bar,
     )
@@ -495,6 +527,53 @@ def grade_populations_v2(
     fit's objective reads only statistics and distances, the presence tests are skipped: every
     statistic, D and D_fit are unchanged, and the passes, which need presence, are not given.
     """
+    return _grade_measured(populations, chemotaxis, bands, presence=presence, version=2)
+
+
+def grade_populations_v3(
+    populations: dict[str, list[list[BehaviourStep]]],
+    chemotaxis: list[list[BehaviourStep]] | None,
+    bands: dict[str, Any],
+    *,
+    presence: bool = True,
+) -> dict[str, Any]:
+    """Grade on B v3: v2's grading, with local search's log ratio and chemotaxis's five.
+
+    Presence is read as on v2. The share of seconds in a reversal bout, over the local-search and
+    chemotaxis windows, is reported beside the grade where the steps carry primitive labels, with
+    its real reference; it takes no part in any pass, z or distance.
+    """
+    out = _grade_measured(populations, chemotaxis, bands, presence=presence, version=3)
+    labelled = [*populations.get("local_search", []), *(chemotaxis or [])]
+    share = g.reversal_share(labelled)
+    out["reversal_share"] = (
+        None
+        if share is None
+        else {
+            "value": share,
+            "windows": [
+                w
+                for w, animals in (
+                    ("local_search", populations.get("local_search")),
+                    ("chemotaxis", chemotaxis),
+                )
+                if animals
+            ],
+            "reference": bands["reported"]["reversal_share"],
+        }
+    )
+    return out
+
+
+def _grade_measured(
+    populations: dict[str, list[list[BehaviourStep]]],
+    chemotaxis: list[list[BehaviourStep]] | None,
+    bands: dict[str, Any],
+    *,
+    presence: bool,
+    version: int,
+) -> dict[str, Any]:
+    """Grade on B v2 or v3, which differ only in local search's ratio and chemotaxis's statistics."""
     clf = classifier(bands)
     bar = float(bands["bars"]["wild_type"])
     family_map = _v2_family_map(bands)
@@ -505,6 +584,8 @@ def grade_populations_v2(
     for family, animals in populations.items():
         sizes[family] = len(animals)
         values = family_values(family, animals, clf)
+        if family == "local_search" and version == 3:
+            values = g.log_search_statistics(values)
         readings[family] = g.grade(values, family_bands_v2(bands, family, len(animals)), bar)
         if family == "local_search" and presence:
             search_presence = g.simulated_search_presence(animals)
@@ -526,9 +607,10 @@ def grade_populations_v2(
             bands,
             bar,
             presence=presence,
+            version=version,
         )
     out: dict[str, Any] = {
-        "version": 2,
+        "version": version,
         "n": sizes,
         "bar": bar,
         "families": {
@@ -610,16 +692,17 @@ def main(argv: list[str] | None = None) -> int:
     for p in (batched, captures, tracks):
         p.add_argument(
             "--bands",
-            choices=("v1", "v2"),
+            choices=("v1", "v2", "v3"),
             default=None,
-            help="v2 (the default once its controls find it VALID): measured simulated tracks, "
-            "19 statistics; v1 is frozen for past verdicts",
+            help="the newest version whose controls find it VALID is the default: v3, 21 "
+            "statistics with reorientation graded; v2, measured simulated tracks, 19 statistics; "
+            "v1 frozen for past verdicts",
         )
     args = parser.parse_args(argv)
     if args.bands is None:
-        args.bands = "v2" if v2_is_valid() else "v1"
-    if args.bands == "v2":
-        return _main_v2(args)
+        args.bands = "v3" if v3_is_valid() else "v2" if v2_is_valid() else "v1"
+    if args.bands in ("v2", "v3"):
+        return _main_measured(args, int(args.bands[1]))
     bands = load_bands()
     if args.source == "batched":
         seeds = parse_seeds(args.seeds)
@@ -652,15 +735,15 @@ def _hazard_controller(controller: str) -> Any:  # noqa: ANN401 - a batched cont
     return BatchedPirouetteHazards(RUN_SPEED, HAZARDS, beta=PIROUETTE_BETA)
 
 
-def _main_v2(args: argparse.Namespace) -> int:
-    """Grade on B v2: simulated tracks are measured; imported real tracks are not.
+def _main_measured(args: argparse.Namespace, version: int) -> int:
+    """Grade on B v2 or v3: simulated tracks are measured; imported real tracks are not.
 
     The chemotaxis assay needs the measured odour field, which only the batched evaluator reads, so
     captures and imported tracks are graded without that family, and their D is not defined.
     """
     from quantumnematode.benchmark import measurement as mm
 
-    bands = load_bands_v2()
+    bands = load_bands_v3() if version == 3 else load_bands_v2()
     chemotaxis: list[list[BehaviourStep]] | None = None
     if args.source == "batched":
         seeds = parse_seeds(args.seeds)
@@ -686,8 +769,9 @@ def _main_v2(args: argparse.Namespace) -> int:
         model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
         populations = capture_populations(args.manifest, model)
         source = {"source": "captures", "manifest": str(args.manifest)}
-    graded = grade_populations_v2(populations, chemotaxis, bands)
-    result = _finite({**source, "bands": "v2", **graded})
+    grade = grade_populations_v3 if version == 3 else grade_populations_v2
+    graded = grade(populations, chemotaxis, bands)
+    result = _finite({**source, "bands": f"v{version}", **graded})
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
     print(json.dumps({k: result[k] for k in ("family_passes", "wild_type_passes", "D", "D_fit")}))
