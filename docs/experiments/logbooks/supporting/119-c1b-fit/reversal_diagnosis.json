@@ -1,0 +1,89 @@
+{
+  "description": "Description: the weathervane gain's effect on each odour, alone and in fitted answers, and the share of time and travel spent reversing, against real worms' reversal share on Scheer's lawns; discarded seeds.",
+  "sensing_terms": {
+    "centre: no sensing": {
+      "chemotaxis/drift_mm_s": -4.2304906935325167e-05,
+      "chemotaxis/log_quintile_ratio": -0.02460974309596609,
+      "chemotaxis/weathervane_deg_s": 0.1952690931242148,
+      "small_lawn/time_on_lawn": 0.1412829479004437,
+      "small_lawn/exits_per_on_lawn_hour": 57.20465890183028
+    },
+    "centre: klinokinesis only (betas 5)": {
+      "chemotaxis/drift_mm_s": 0.0024346034825703995,
+      "chemotaxis/log_quintile_ratio": 0.31501591915281646,
+      "chemotaxis/weathervane_deg_s": 0.2233287820469711,
+      "small_lawn/time_on_lawn": 0.1716215795535909,
+      "small_lawn/exits_per_on_lawn_hour": 58.90077997460548
+    },
+    "centre: kappa +30 only": {
+      "chemotaxis/drift_mm_s": -0.01831076288579414,
+      "chemotaxis/log_quintile_ratio": -0.09927282297432942,
+      "chemotaxis/weathervane_deg_s": -7.046641920666739,
+      "small_lawn/time_on_lawn": 0.0,
+      "small_lawn/exits_per_on_lawn_hour": null
+    },
+    "centre: kappa -30 only": {
+      "chemotaxis/drift_mm_s": 0.02377087601845521,
+      "chemotaxis/log_quintile_ratio": 0.22186159116428233,
+      "chemotaxis/weathervane_deg_s": 11.019023567482977,
+      "small_lawn/time_on_lawn": 0.857995791688585,
+      "small_lawn/exits_per_on_lawn_hour": 5.264093681983998
+    },
+    "restart 4 as fitted": {
+      "chemotaxis/drift_mm_s": 0.023503994705823986,
+      "chemotaxis/log_quintile_ratio": 1.4691303666990396,
+      "chemotaxis/weathervane_deg_s": 0.6365445893326197,
+      "small_lawn/time_on_lawn": 0.9818650069749973,
+      "small_lawn/exits_per_on_lawn_hour": 0.5508196721311476
+    },
+    "restart 4, kappa flipped": {
+      "chemotaxis/drift_mm_s": -0.018097874036043095,
+      "chemotaxis/log_quintile_ratio": -1.1520084303902771,
+      "chemotaxis/weathervane_deg_s": -1.140634642506746,
+      "small_lawn/time_on_lawn": 0.0010207931118656104,
+      "small_lawn/exits_per_on_lawn_hour": 7.82608695652174
+    },
+    "restart 2 as fitted": {
+      "chemotaxis/drift_mm_s": -0.021737817343791096,
+      "chemotaxis/log_quintile_ratio": -0.25008046958533875,
+      "chemotaxis/weathervane_deg_s": 2.4751185763159773,
+      "small_lawn/time_on_lawn": 0.9743148676648814,
+      "small_lawn/exits_per_on_lawn_hour": 0.15889575475483508
+    },
+    "restart 2, kappa flipped": {
+      "chemotaxis/drift_mm_s": 0.010302498022699792,
+      "chemotaxis/log_quintile_ratio": 1.0553892714997248,
+      "chemotaxis/weathervane_deg_s": -12.18019661916491,
+      "small_lawn/time_on_lawn": 0.4026018683019084,
+      "small_lawn/exits_per_on_lawn_hour": 21.984341637010676
+    }
+  },
+  "reversal_share": {
+    "restart 2 / scheer_lawn": {
+      "seconds_reversing": 0.07758541666666667,
+      "backward_share_of_travel": 0.20696917178924426
+    },
+    "restart 2 / chemotaxis_chen": {
+      "seconds_reversing": 0.5559861111111111,
+      "backward_share_of_travel": 0.689508447813481
+    },
+    "restart 4 / scheer_lawn": {
+      "seconds_reversing": 0.42346666666666666,
+      "backward_share_of_travel": 0.8066483023384358
+    },
+    "restart 4 / chemotaxis_chen": {
+      "seconds_reversing": 0.5208111111111111,
+      "backward_share_of_travel": 0.9283320175000339
+    }
+  },
+  "real_reversal_share_scheer": {
+    "PD1074_od2_Data": 0.14135102905534006,
+    "PD1074_od1_Data": 0.1613393400399116,
+    "PD1074_od4_Data": 0.13484861697452813,
+    "PD1074_od2_uniformlawn_Data": 0.1329923775132556,
+    "N2_od2_Data": 0.13863423861337887,
+    "MT15434_tph1mg280_od2_Data": 0.15037831483073627,
+    "CX14295_pdfr1ok3425_od2_Data": 0.1366694255291104,
+    "CX13078_tax4p678_od2_Data": 0.12403561773805119
+  }
+}

@@ -514,6 +514,122 @@ def _probe_kappa(workers: int) -> int:
     return 0
 
 
+REVERSAL_PATH = SUPPORT / "reversal_diagnosis.json"
+# Discarded seeds for the diagnosis: single-term sensing cases, kappa flips, reversal shares.
+TERMS_BASE = 99_900_500
+FLIP_BASE = 99_910_000
+SHARE_BASE = 99_920_000
+
+
+def _terms(item: tuple[int, str, int, dict[str, float]]) -> tuple[str, dict[str, Any]]:
+    k, name, base, params = item
+    record = v2.simulate_v2(k, [0.5] * 20, base, parameters=params)
+    keys = (
+        "chemotaxis/drift_mm_s",
+        "chemotaxis/log_quintile_ratio",
+        "chemotaxis/weathervane_deg_s",
+        "small_lawn/time_on_lawn",
+        "small_lawn/exits_per_on_lawn_hour",
+    )
+    return name, {key: record["statistics"].get(key) for key in keys}
+
+
+def _reversal_share(params: dict[str, float], protocol: str) -> dict[str, float]:
+    import benchmark_grade as bg
+    from quantumnematode.env.primitives import PRIMITIVE_KINDS
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    from quantumnematode.evaluation.odour_field import chen_field, chen_starts
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    seeds = list(range(SHARE_BASE, SHARE_BASE + nr.ANIMALS))
+    config = load_simulation_config(str(bg.FORAGING / f"{bg.ARMS['mlp']}_assay_{protocol}.yml"))
+    extra: dict[str, Any] = {}
+    if protocol == bg.CHEMOTAXIS_PROTOCOL:
+        field = chen_field()
+        extra = {"odour_field": field, "field_starts": chen_starts(seeds, field)}
+    tr = BatchedEvaluator(config, BatchedMechanistic(params), seeds, **extra).run()
+    first, stop = tr.assay["analysis_steps"]  # type: ignore[index]
+    reversing = float(np.mean(tr.primitive[:, first:stop] == PRIMITIVE_KINDS.index("reversal")))
+    dx = np.diff(tr.x[:, first : stop + 1], axis=1)
+    dy = np.diff(tr.y[:, first : stop + 1], axis=1)
+    heading = tr.heading[:, first + 1 : stop + 1]
+    along = dx * np.cos(heading) + dy * np.sin(heading)
+    back, forward = float(-along[along < 0].sum()), float(along[along > 0].sum())
+    return {"seconds_reversing": reversing, "backward_share_of_travel": back / (back + forward)}
+
+
+def _real_reversal_share() -> dict[str, float]:
+    from quantumnematode.benchmark import references as refs
+
+    tracks = refs.load_scheer_tracks()
+    flags = np.asarray(tracks.frame_flags)
+    bit = {n: i for i, n in enumerate(tracks.flag_names)}
+    reversing = (flags >> bit["reversal"]) & 1
+    tracked = ((flags >> bit["missing"]) & 1) == 0
+    genotype = np.asarray(tracks.genotype)
+    return {
+        str(tracks.genotypes[g]): float(reversing[genotype == g][tracked[genotype == g]].mean())
+        for g in sorted(set(genotype.tolist()))
+    }
+
+
+def _diagnose_reversals(workers: int) -> int:
+    """Record why the steering gain's effect inverts: time spent reversing; description only."""
+    record = json.loads(FIT_PATH.read_text())
+    answers = {f"restart {r['restart']}": r["answer"] for r in record["restarts"]}
+    fitted = {name: nr.parameters_from_unit(np.asarray(z)) for name, z in answers.items()}
+    centre = nr.parameters_from_unit(np.full(20, 0.5))
+    off = {"beta_reversal": 0.0, "beta_omega": 0.0}
+    cases: list[tuple[str, int, dict[str, float]]] = [
+        ("centre: no sensing", TERMS_BASE, centre | {"kappa_weathervane": 0.0, **off}),
+        (
+            "centre: klinokinesis only (betas 5)",
+            TERMS_BASE,
+            centre | {"kappa_weathervane": 0.0, "beta_reversal": 5.0, "beta_omega": 5.0},
+        ),
+        ("centre: kappa +30 only", TERMS_BASE, centre | {"kappa_weathervane": 30.0, **off}),
+        ("centre: kappa -30 only", TERMS_BASE, centre | {"kappa_weathervane": -30.0, **off}),
+    ]
+    for r in (4, 2):
+        p = fitted[f"restart {r}"]
+        cases.append((f"restart {r} as fitted", FLIP_BASE, p))
+        cases.append(
+            (
+                f"restart {r}, kappa flipped",
+                FLIP_BASE,
+                p | {"kappa_weathervane": -p["kappa_weathervane"]},
+            ),
+        )
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        terms = dict(pool.map(_terms, [(k, *case) for k, case in enumerate(cases)]))
+        share_jobs = [
+            (name, protocol)
+            for name in ("restart 2", "restart 4")
+            for protocol in ("scheer_lawn", "chemotaxis_chen")
+        ]
+        shares = list(
+            pool.map(
+                _reversal_share,
+                [fitted[n] for n, _ in share_jobs],
+                [p for _, p in share_jobs],
+            ),
+        )
+    out = {
+        "description": "Description: the weathervane gain's effect on each odour, alone and in "
+        "fitted answers, and the share of time and travel spent reversing, against real worms' "
+        "reversal share on Scheer's lawns; discarded seeds.",
+        "sensing_terms": terms,
+        "reversal_share": {f"{n} / {p}": s for (n, p), s in zip(share_jobs, shares, strict=True)},
+        "real_reversal_share_scheer": _real_reversal_share(),
+    }
+    cr._write_json(REVERSAL_PATH, out)
+    print(
+        json.dumps({k: out[k] for k in ("reversal_share", "real_reversal_share_scheer")}, indent=2),
+    )
+    return 0
+
+
 def _histories() -> list[dict[str, Any]]:
     return [json.loads((BUILD / "fits" / f"fit{r}.json").read_text()) for r in range(RESTARTS)]
 
@@ -705,7 +821,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "stage",
-        choices=("pilot", "probe-wide", "probe-kappa", "run", "select", "grade", "read", "smoke"),
+        choices=(
+            "pilot",
+            "probe-wide",
+            "probe-kappa",
+            "diagnose-reversals",
+            "run",
+            "select",
+            "grade",
+            "read",
+            "smoke",
+        ),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
@@ -715,6 +841,8 @@ def main(argv: list[str] | None = None) -> int:
         return _probe_wide(args.workers)
     if args.stage == "probe-kappa":
         return _probe_kappa(args.workers)
+    if args.stage == "diagnose-reversals":
+        return _diagnose_reversals(args.workers)
     if not _guarded(args.stage):
         print(
             "the launch record, its records or the encoding table is uncommitted or changed",
