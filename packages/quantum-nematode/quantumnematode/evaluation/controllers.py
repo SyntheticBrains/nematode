@@ -500,7 +500,9 @@ class BatchedMechanistic:
     - **omega turns:** ``o_s exp(-beta_omega tanh(dC/dt)) search`` per second; delta turns at the
       primitives' minimum;
     - **search:** off food, ``search = 1 + search_amplitude exp(-t_off / search_tau_s)``, with
-      ``t_off`` the seconds since food contact; on food it is 1.
+      ``t_off`` the seconds since food contact; on food it is 1;
+    - **optionally,** with ``kappa_off_food`` in the parameters, the weathervane gain is
+      ``kappa_off_food`` wherever food contact is 0, and ``kappa_weathervane`` on food.
 
     The rates are per second at a 1-second step. Each second takes three uniforms from each
     animal's own generator: the same numbers, in the same order, as one draw of three per second.
@@ -514,6 +516,10 @@ class BatchedMechanistic:
             msg = f"missing mechanistic parameters {missing}"
             raise ValueError(msg)
         self.p = {name: float(params[name]) for name in MECHANISTIC_PARAMETERS}
+        # Optional: a weathervane gain of its own off food. Without it one gain steers on and off
+        # food, as the model's 20 parameters define it.
+        off = params.get("kappa_off_food")
+        self.kappa_off_food = None if off is None else float(off)
         self.state: np.ndarray | None = None
         self.previous_contact: np.ndarray | None = None
         self.t_off: np.ndarray | None = None
@@ -598,8 +604,13 @@ class BatchedMechanistic:
         # A standard normal from two uniforms (Box-Muller), so one generator call covers the second.
         z = np.sqrt(-2.0 * np.log(np.maximum(u[:, 1], 1e-300))) * np.cos(2.0 * np.pi * u[:, 2])
         lateral = np.tanh(np.asarray(senses.lateral, dtype=np.float64) * senses.lateral_scale)
+        kappa = (
+            p["kappa_weathervane"]
+            if self.kappa_off_food is None
+            else np.where(contact > 0, p["kappa_weathervane"], self.kappa_off_food)
+        )
         curvature = (
-            p["kappa_weathervane"] * lateral
+            kappa * lateral
             + np.where(
                 roaming,
                 p["sigma_roam"],

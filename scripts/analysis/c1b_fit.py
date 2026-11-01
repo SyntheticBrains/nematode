@@ -103,6 +103,32 @@ def parameters_from_box(z: np.ndarray, upper: dict[str, float] | None = None) ->
     return out
 
 
+# The food-state steering probe: one more dimension, a weathervane gain of its own off food, on
+# the same range as the gain on food; warm-started from the chosen registered restart.
+PROBE_KAPPA_PATH = SUPPORT / "probe_kappa.json"
+PROBE_KAPPA_BASE = 450_000_000
+PROBE_KAPPA_GRADE_BASE = 452_000_000
+PROBE_KAPPA_SIGMA0 = 0.1
+
+
+def parameters_kappa(z: np.ndarray) -> dict[str, float]:
+    """Map a 21-dimensional unit point: F.0a's box, then the off-food weathervane gain."""
+    _, low, high = nr.PRIOR["kappa_weathervane"]
+    z = np.asarray(z, dtype=float)
+    return parameters_from_box(z[:20]) | {"kappa_off_food": float(low + z[20] * (high - low))}
+
+
+def _parameters(z: np.ndarray, box: str) -> dict[str, float]:
+    if box == "kappa":
+        return parameters_kappa(z)
+    return parameters_from_box(np.asarray(z), WIDE_UPPER if box == "wide" else None)
+
+
+def simulate_kappa(k: int, z: list[float], seed_base: int) -> dict[str, Any]:
+    """Run simulation k at a 21-dimensional z on v2, with the off-food weathervane gain."""
+    return v2.simulate_v2(k, z, seed_base, parameters=parameters_kappa(np.asarray(z)))
+
+
 def simulate_wide(k: int, z: list[float], seed_base: int) -> dict[str, Any]:
     """Run simulation k at z on v2, z mapped through the widened box."""
     return v2.simulate_v2(
@@ -221,17 +247,18 @@ def failing(grades: list[dict[str, Any]]) -> list[str]:
 # ---------------------------------------------------------------------------------------------
 
 
-def grade_answer(k: int, z: list[float], base: int, wide: bool = False) -> dict[str, Any]:  # noqa: FBT001, FBT002 - a pool's positional argument
+def grade_answer(k: int, z: list[float], base: int, box: str = "f0a") -> dict[str, Any]:
     """Grade an answer on population k at a base, with presence: every family and the pass.
 
-    With ``wide``, z is mapped through the widened box.
+    ``box`` maps z: ``f0a`` through F.0a's box, ``wide`` through the widened box, and ``kappa``
+    with the off-food weathervane gain as a 21st dimension.
     """
     import benchmark_grade as bg
     from quantumnematode.evaluation.controllers import BatchedMechanistic
 
     bands = v2._bands()
     seeds = [base + nr.ANIMALS * k + i for i in range(nr.ANIMALS)]
-    params = parameters_from_box(np.asarray(z), WIDE_UPPER if wide else None)
+    params = _parameters(np.asarray(z), box)
     populations, chemotaxis = bg.simulate_v2(
         "mlp",
         lambda _path: BatchedMechanistic(params),
@@ -275,6 +302,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
     state_dir: Path,
     pool: Any,  # noqa: ANN401 - a pool
     simulate: Any = None,  # noqa: ANN401 - a picklable simulator
+    start: Any = None,  # noqa: ANN401 - a strategy factory
 ) -> dict[str, Any]:
     return cr.run_fit(
         {},
@@ -289,6 +317,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
         objective=BandObjective(),
         simulate=simulate or v2.simulate_v2,
         stop=defined_stop,
+        strategy_factory=start,
     )
 
 
@@ -370,7 +399,7 @@ def _pilot_run(workers: int, *, wide: bool) -> int:
     hours = RESTARTS * (cap + 1) * per_generation / 3600.0
     answer = history["answers"][-1]
     grades = _grade_all(
-        [(g, answer, grade_base, wide) for g in range(GRADE_POPULATIONS)],
+        [(g, answer, grade_base, "wide" if wide else "f0a") for g in range(GRADE_POPULATIONS)],
         workers,
     )
     passing = sum(g["wild_type_passes"] for g in grades)
@@ -408,6 +437,311 @@ def _pilot_run(workers: int, *, wide: bool) -> int:
     }
     print(json.dumps(summary | {"populations_passing": passing}, indent=2))
     return 1 if record["returns_to_maintainer"] else 0
+
+
+def _kappa_x0() -> list[float]:
+    """Return the chosen registered restart's answer, with the off-food gain at its range's centre."""
+    record = json.loads(FIT_PATH.read_text())
+    return [*record["restarts"][record["chosen_restart"]]["answer"], 0.5]
+
+
+def _kappa_start(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
+    import cma
+
+    options = {
+        "CMA_diagonal": True,
+        "bounds": [0.0, 1.0],
+        "popsize": cr.POPSIZE,
+        "seed": seed,
+        "verbose": -9,
+    }
+    return cma.CMAEvolutionStrategy(_kappa_x0(), PROBE_KAPPA_SIGMA0, options)
+
+
+def _probe_kappa(workers: int) -> int:
+    """Fit C.1 with a weathervane gain of its own off food, warm-started; description only."""
+    if json.loads(FIT_PATH.read_text()).get("chosen_restart") is None:
+        print(
+            "no registered restart plateaued, so there is no answer to start from",
+            file=sys.stderr,
+        )
+        return 1
+    state = BUILD / "probe_kappa"
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = _fit(
+            0,
+            cma_seed=PILOT_CMA_SEED,
+            seed_base=PROBE_KAPPA_BASE,
+            cap=int(json.loads(PILOT_PATH.read_text())["registered_cap"]),
+            use_rule=True,
+            state_dir=state,
+            pool=pool,
+            simulate=simulate_kappa,
+            start=_kappa_start,
+        )
+    answer = history["answers"][-1]
+    d = _median_answer_d(
+        answer,
+        [cr.ANSWER_OFFSET + q for q in range(RESIMULATIONS)],
+        PROBE_KAPPA_BASE,
+        state / "answers.jsonl",
+        workers,
+        simulate_kappa,
+    )
+    grades = _grade_all(
+        [(g, answer, PROBE_KAPPA_GRADE_BASE, "kappa") for g in range(GRADE_POPULATIONS)],
+        workers,
+    )
+    passing = sum(g["wild_type_passes"] for g in grades)
+    parameters = parameters_kappa(np.asarray(answer))
+    record = {
+        "description": "Description: C.1 with a weathervane gain of its own off food (one more "
+        "parameter), warm-started from the chosen registered restart's answer at sigma 0.1, on "
+        "discarded seeds, after the registered verdict.",
+        # The start the fit recorded; a fit saved before starts were recorded has none.
+        "start": {
+            "x0": history.get("x0"),
+            "sigma0": history.get("sigma0"),
+            "cma_seed": history["cma_seed"],
+        },
+        "stop": history["stop"],
+        "median_D": d,
+        "populations_passing": passing,
+        "reaches": passing >= PASS_NEEDED,
+        "failing": failing(grades),
+        "kappa_on_food": parameters["kappa_weathervane"],
+        "kappa_off_food": parameters["kappa_off_food"],
+        "parameters": parameters,
+        "answer": answer,
+        "grades": grades,
+        "medians": history["medians"],
+        "sigmas": history["sigmas"],
+    }
+    cr._write_json(PROBE_KAPPA_PATH, record)
+    summary = {k: record[k] for k in ("stop", "median_D", "populations_passing", "failing")}
+    print(
+        json.dumps(summary | {k: record[k] for k in ("kappa_on_food", "kappa_off_food")}, indent=2),
+    )
+    return 0
+
+
+REVERSAL_PATH = SUPPORT / "reversal_diagnosis.json"
+# Discarded seeds for the diagnosis: single-term sensing cases, kappa flips, reversal shares.
+TERMS_BASE = 99_900_500
+FLIP_BASE = 99_910_000
+SHARE_BASE = 99_920_000
+# Seed blocks per sensing case; within a base every case runs on the same blocks' animals, so
+# opposite signs are compared on common random numbers.
+DIAGNOSIS_BLOCKS = 5
+PAIRED_SIGMA = 2.0
+
+
+TERM_KEYS = (
+    "chemotaxis/drift_mm_s",
+    "chemotaxis/log_quintile_ratio",
+    "chemotaxis/weathervane_deg_s",
+    "small_lawn/time_on_lawn",
+    "small_lawn/exits_per_on_lawn_hour",
+)
+
+
+def _terms(item: tuple[int, str, int, dict[str, float]]) -> tuple[str, int, dict[str, Any]]:
+    block, name, base, params = item
+    record = v2.simulate_v2(block, [0.5] * 20, base, parameters=params)
+    return name, block, {key: record["statistics"].get(key) for key in TERM_KEYS}
+
+
+def _mean_se(values: list[float | None]) -> dict[str, Any]:
+    """Return the mean and standard error of the defined values, and how many there were."""
+    defined = [v for v in values if v is not None]
+    n = len(defined)
+    if n == 0:
+        return {"mean": None, "se": None, "n": 0}
+    se = float(np.std(defined, ddof=1) / math.sqrt(n)) if n > 1 else None
+    return {"mean": float(np.mean(defined)), "se": se, "n": n}
+
+
+def _summarise_terms(
+    runs: list[tuple[str, int, dict[str, Any]]],
+    pairs: list[tuple[str, str]],
+) -> dict[str, Any]:
+    """Return each case's per-block values with their mean and SE, and each pair's paired effect.
+
+    A pair's difference is taken block by block, on the same animals. A sign effect is reported
+    only where the mean difference exceeds ``PAIRED_SIGMA`` paired standard errors.
+    """
+    by_case: dict[str, dict[int, dict[str, Any]]] = {}
+    for name, block, stats in runs:
+        by_case.setdefault(name, {})[block] = stats
+    cases = {
+        name: {
+            key.split("/")[1]: {
+                "blocks": [blocks[b][key] for b in sorted(blocks)],
+                **_mean_se([blocks[b][key] for b in sorted(blocks)]),
+            }
+            for key in TERM_KEYS
+        }
+        for name, blocks in by_case.items()
+    }
+    paired = {}
+    for a, b in pairs:
+        effects = {}
+        for key in TERM_KEYS:
+            diffs = [
+                by_case[a][k][key] - by_case[b][k][key]
+                for k in sorted(by_case[a])
+                if by_case[a][k][key] is not None and by_case[b][k][key] is not None
+            ]
+            summary = _mean_se(diffs)
+            mean, se = summary["mean"], summary["se"]
+            summary["sign_effect"] = bool(
+                mean is not None and se is not None and abs(mean) > PAIRED_SIGMA * se,
+            )
+            effects[key.split("/")[1]] = summary
+        paired[f"{a} minus {b}"] = effects
+    return {"cases": cases, "paired": paired}
+
+
+def _reversal_share(params: dict[str, float], protocol: str) -> dict[str, float]:
+    import benchmark_grade as bg
+    from quantumnematode.env.primitives import PRIMITIVE_KINDS
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    from quantumnematode.evaluation.odour_field import chen_field, chen_starts
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    seeds = list(range(SHARE_BASE, SHARE_BASE + nr.ANIMALS))
+    config = load_simulation_config(str(bg.FORAGING / f"{bg.ARMS['mlp']}_assay_{protocol}.yml"))
+    extra: dict[str, Any] = {}
+    if protocol == bg.CHEMOTAXIS_PROTOCOL:
+        field = chen_field()
+        extra = {"odour_field": field, "field_starts": chen_starts(seeds, field)}
+    tr = BatchedEvaluator(config, BatchedMechanistic(params), seeds, **extra).run()
+    first, stop = tr.assay["analysis_steps"]  # type: ignore[index]
+    reversing = float(np.mean(tr.primitive[:, first:stop] == PRIMITIVE_KINDS.index("reversal")))
+    dx = np.diff(tr.x[:, first : stop + 1], axis=1)
+    dy = np.diff(tr.y[:, first : stop + 1], axis=1)
+    heading = tr.heading[:, first + 1 : stop + 1]
+    along = dx * np.cos(heading) + dy * np.sin(heading)
+    back, forward = float(-along[along < 0].sum()), float(along[along > 0].sum())
+    return {"seconds_reversing": reversing, "backward_share_of_travel": back / (back + forward)}
+
+
+SEARCH_BASE = 99_930_000
+
+
+def _search_level(params: dict[str, float]) -> dict[str, Any]:
+    """Return an answer's off-food reorientations per 2-min bin, by the benchmark's own detector."""
+    import benchmark_grade as bg
+    from quantumnematode.benchmark import grading as g
+    from quantumnematode.benchmark.readouts import local_search_curve
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    seeds = list(range(SEARCH_BASE, SEARCH_BASE + nr.ANIMALS))
+    protocol = bg.PROTOCOLS["local_search"]
+    config = load_simulation_config(str(bg.FORAGING / f"{bg.ARMS['mlp']}_assay_{protocol}.yml"))
+    tr = BatchedEvaluator(config, BatchedMechanistic(params), seeds).run()
+    analysis = tuple(tr.assay["analysis_steps"])  # type: ignore[index]
+    first, end = g.analysis_bounds(analysis, g.SEARCH_SAMPLES, tr.x.shape[1])  # type: ignore[arg-type]
+    onsets, valid = g._onsets([tr.to_behaviour_steps(i, first, end) for i in range(len(seeds))])
+    curve = local_search_curve(onsets, valid, bin_s=g.SEARCH_BIN_S, start_s=0)
+    starts = curve.starts_s / 60.0
+    graded = g.local_search_statistics(starts, curve.mean)
+    return {
+        "bin_starts_min": starts.tolist(),
+        "per_bin": [float(v) for v in curve.mean],
+        "mean_per_bin": float(np.nanmean(curve.mean)),
+        "graded": {k: float(v) for k, v in graded.items()},
+    }
+
+
+def _real_reversal_share() -> dict[str, float]:
+    from quantumnematode.benchmark import references as refs
+
+    tracks = refs.load_scheer_tracks()
+    flags = np.asarray(tracks.frame_flags)
+    bit = {n: i for i, n in enumerate(tracks.flag_names)}
+    reversing = (flags >> bit["reversal"]) & 1
+    tracked = ((flags >> bit["missing"]) & 1) == 0
+    genotype = np.asarray(tracks.genotype)
+    return {
+        str(tracks.genotypes[g]): float(reversing[genotype == g][tracked[genotype == g]].mean())
+        for g in sorted(set(genotype.tolist()))
+    }
+
+
+def _diagnose_reversals(workers: int) -> int:
+    """Record why the steering gain's effect inverts: time spent reversing; description only."""
+    record = json.loads(FIT_PATH.read_text())
+    answers = {f"restart {r['restart']}": r["answer"] for r in record["restarts"]}
+    fitted = {name: nr.parameters_from_unit(np.asarray(z)) for name, z in answers.items()}
+    centre = nr.parameters_from_unit(np.full(20, 0.5))
+    off = {"beta_reversal": 0.0, "beta_omega": 0.0}
+    cases: list[tuple[str, int, dict[str, float]]] = [
+        ("centre: no sensing", TERMS_BASE, centre | {"kappa_weathervane": 0.0, **off}),
+        (
+            "centre: klinokinesis only (betas 5)",
+            TERMS_BASE,
+            centre | {"kappa_weathervane": 0.0, "beta_reversal": 5.0, "beta_omega": 5.0},
+        ),
+        ("centre: kappa +30 only", TERMS_BASE, centre | {"kappa_weathervane": 30.0, **off}),
+        ("centre: kappa -30 only", TERMS_BASE, centre | {"kappa_weathervane": -30.0, **off}),
+    ]
+    for r in (4, 2):
+        p = fitted[f"restart {r}"]
+        cases.append((f"restart {r} as fitted", FLIP_BASE, p))
+        cases.append(
+            (
+                f"restart {r}, kappa flipped",
+                FLIP_BASE,
+                p | {"kappa_weathervane": -p["kappa_weathervane"]},
+            ),
+        )
+    pairs = [
+        ("centre: kappa -30 only", "centre: kappa +30 only"),
+        ("restart 4 as fitted", "restart 4, kappa flipped"),
+        ("restart 2 as fitted", "restart 2, kappa flipped"),
+    ]
+    jobs = [(block, *case) for case in cases for block in range(DIAGNOSIS_BLOCKS)]
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        terms = _summarise_terms(list(pool.map(_terms, jobs)), pairs)
+        share_jobs = [
+            (name, protocol)
+            for name in ("restart 2", "restart 4")
+            for protocol in ("scheer_lawn", "chemotaxis_chen")
+        ]
+        shares = list(
+            pool.map(
+                _reversal_share,
+                [fitted[n] for n, _ in share_jobs],
+                [p for _, p in share_jobs],
+            ),
+        )
+        search_names = ("restart 0", "restart 2", "restart 4")
+        levels = list(pool.map(_search_level, [fitted[n] for n in search_names]))
+    reference = json.loads(
+        (_REPO / "data" / "benchmark" / "lopezcruz2019_reference.json").read_text(),
+    )
+    out = {
+        "description": "Description: the weathervane gain's effect on each odour, alone and in "
+        "fitted answers, over seed blocks with opposite signs on the same animals; the share of time and travel spent reversing, against real worms' "
+        "reversal share on Scheer's lawns; and fitted answers' off-food reorientations per 2-min "
+        "bin by the benchmark's detector, against Lopez-Cruz's reference; discarded seeds.",
+        "sensing_terms": terms,
+        "reversal_share": {f"{n} / {p}": s for (n, p), s in zip(share_jobs, shares, strict=True)},
+        "real_reversal_share_scheer": _real_reversal_share(),
+        "search_level": dict(zip(search_names, levels, strict=True)),
+        "search_level_reference": {
+            k: reference["reference"][k] for k in ("alpha", "beta", "gamma_per_min", "t0_min")
+        },
+    }
+    cr._write_json(REVERSAL_PATH, out)
+    print(
+        json.dumps({k: out[k] for k in ("reversal_share", "real_reversal_share_scheer")}, indent=2),
+    )
+    return 0
 
 
 def _histories() -> list[dict[str, Any]]:
@@ -601,7 +935,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "stage",
-        choices=("pilot", "probe-wide", "run", "select", "grade", "read", "smoke"),
+        choices=(
+            "pilot",
+            "probe-wide",
+            "probe-kappa",
+            "diagnose-reversals",
+            "run",
+            "select",
+            "grade",
+            "read",
+            "smoke",
+        ),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
@@ -609,6 +953,10 @@ def main(argv: list[str] | None = None) -> int:
         return _smoke(args.workers)
     if args.stage == "probe-wide":
         return _probe_wide(args.workers)
+    if args.stage == "probe-kappa":
+        return _probe_kappa(args.workers)
+    if args.stage == "diagnose-reversals":
+        return _diagnose_reversals(args.workers)
     if not _guarded(args.stage):
         print(
             "the launch record, its records or the encoding table is uncommitted or changed",

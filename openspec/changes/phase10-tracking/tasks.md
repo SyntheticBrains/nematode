@@ -550,16 +550,15 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **The gap is narrow.** The chosen restart's D is 1.71–1.87, and in two populations every one of
     the 19 statistics passes. Chemotaxis presence fails in all five: it drifts down the butanone
     gradient.
-  - **The diagnosis:** one weathervane gain κ serves both the lawn odour and butanone, and the two
-    pull it in opposite directions.
-    - Seven of 8 restarts and both pilots settle at κ between −12.8 and −30.3, steering away from
-      the odour, so none climbs the butanone gradient as real worms do.
-    - The one positive κ (+49.9, at the box's bound) reproduces chemotaxis, but fails the lawn and
-      kinematics families.
+  - ~~**The diagnosis:** one weathervane gain κ serves both odours.~~ *(Corrected 2026-11-01, Logbook
+    119's addendum.)* A separate off-food gain does not restore chemotaxis. The fits are
+    reversal-dominated off food (52–56% of the time, against real worms' 12–16% on the lawn), so
+    steering's effect inverts. **The benchmark lets it through:** local search grades only the
+    curve's shape, and a worm reorienting 9.5 per 2-min bin, flat (real 2.9 → 0.4), passes.
   - **The reachability pilot failed** (0 of 5), and so did a widened-box probe. The maintainer
     accepted that and ran the fits as registered.
-  - **The roadmap's risk row goes to the maintainer.** The candidate fix is in C.1's mechanism (odour-
-    or state-dependent steering), not in the benchmark or the primitives.
+  - **The maintainer's decision (2026-11-01):** revise the benchmark first, grading the off-food
+    reorientation level, and then refit C.1 on it. Every later controller could use the same gap.
 
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by

@@ -6,6 +6,7 @@ food raises reversals", "Search decays off food" and "An animal is the same alon
 
 from __future__ import annotations
 
+import dataclasses
 import math
 
 import numpy as np
@@ -131,3 +132,31 @@ def test_mean_action_is_refused() -> None:
     """The baseline needs each animal's generator."""
     with pytest.raises(ValueError, match="noise is None"):
         BatchedMechanistic(_BASE).act(_senses(2), None)
+
+
+def _steer_senses(n: int, contact: float) -> BatchedSenses:
+    senses = _senses(n, contact=contact)
+    return dataclasses.replace(senses, lateral=np.linspace(-1.0, 1.0, n))
+
+
+def _steering(params: dict[str, float], contact: float, seeds: list[int]) -> np.ndarray:
+    controller = BatchedMechanistic(params)
+    gens = _gens(seeds)
+    return np.stack([controller.act(_steer_senses(len(seeds), contact), gens) for _ in range(20)])
+
+
+def test_an_off_food_gain_changes_steering_only_off_food() -> None:
+    """Without kappa_off_food the model is unchanged; with it, only food-free steps steer by it."""
+    seeds = [3, 4, 5, 6]
+    same = {**_BASE, "kappa_off_food": _BASE["kappa_weathervane"]}
+    other = {**_BASE, "kappa_off_food": -_BASE["kappa_weathervane"]}
+    for contact in (1.0, 0.0):
+        np.testing.assert_array_equal(
+            _steering(_BASE, contact, seeds),
+            _steering(same, contact, seeds),
+        )
+    np.testing.assert_array_equal(_steering(_BASE, 1.0, seeds), _steering(other, 1.0, seeds))
+    base, flipped = _steering(_BASE, 0.0, seeds), _steering(other, 0.0, seeds)
+    # Off food only the run curvature (column 1) changes; speed and the three hazards do not.
+    np.testing.assert_array_equal(base[..., [0, 2, 3, 4]], flipped[..., [0, 2, 3, 4]])
+    assert not np.array_equal(base[..., 1], flipped[..., 1])
