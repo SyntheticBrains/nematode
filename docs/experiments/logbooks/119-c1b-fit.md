@@ -1,6 +1,6 @@
 # 119: Phase 10 — C.1b, the Mechanistic Baseline Refitted on Benchmark v2: It Fails the Wild Type, and Its Fits Are Reversal-Dominated
 
-> **Corrected 2026-11-01 (see the addendum).** The diagnosis first given here, one steering gain for two odours, is wrong. The fits are reversal-dominated off food, which the benchmark does not constrain, and the steering gain's effect inverts with the share of backward travel. The verdict is unchanged.
+> **Corrected 2026-11-01 (see the addendum).** The diagnosis first given here, one steering gain for two odours, is wrong. The fits are reversal-dominated off food, which the benchmark does not constrain, and the steering gain's effect varies with the share of backward travel. The verdict is unchanged.
 
 **Status**: completed. **C.1 fails the wild type on benchmark v2**: the chosen restart passes 0 of its 5 registered populations, against the 3 required. By the registered verdict map, the failing statistics are the diagnosis, and the roadmap's risk row goes to the maintainer.
 
@@ -135,13 +135,15 @@ C.1 was given a 21st parameter, a weathervane gain used only where food contact 
 
 So the steering gain was not what blocked chemotaxis.
 
-### The gain's sign depends on how much the worm moves backwards (`reversal_diagnosis.json`)
+### The gain's sign varies with how much the worm moves backwards (`reversal_diagnosis.json`)
+
+Each case below ran on 5 seed blocks of 200 animals, and every case in a comparison ran on the same blocks' animals. The values are the means over the blocks; the standard errors are under 0.0003 mm/s for drift and 0.01 for time on the lawn.
 
 **Each sensing term alone, at the box centre's other parameters:**
 
-- klinokinesis alone (β 5) climbs the gradient, weakly (drift +0.002, ratio +0.32);
-- κ = −30 alone climbs butanone (+0.024) **and** keeps the worm on the lawn (time on lawn 0.86);
-- κ = +30 does neither.
+- klinokinesis alone (β 5) climbs the gradient, weakly: drift +0.0025, ratio +0.36;
+- κ = −30 alone climbs butanone (+0.0237) **and** keeps the worm on the lawn (time on lawn 0.86);
+- κ = +30 does neither (−0.0179, and 0.00).
 
 So the gain means the same on both odours here, and there is no sign error between the assays.
 
@@ -149,12 +151,14 @@ So the gain means the same on both odours here, and there is no sign error betwe
 
 | Answer | κ | Drift on butanone (mm/s) | Time on the small lawn |
 |---|---|---|---|
-| restart 4 as fitted | +49.9 | +0.024 | 0.98 |
-| restart 4, κ flipped | −49.9 | −0.018 | 0.00 |
-| restart 2 as fitted | −30.3 | −0.022 | 0.97 |
-| restart 2, κ flipped | +30.3 | +0.010 | 0.40 |
+| restart 4 as fitted | +49.9 | +0.0239 | 0.98 |
+| restart 4, κ flipped | −49.9 | −0.0176 | 0.00 |
+| restart 2 as fitted | −30.3 | −0.0219 | 0.97 |
+| restart 2, κ flipped | +30.3 | +0.0106 | 0.40 |
 
-**What sets it is reversing.** Steering turns the heading, so for a worm moving mostly backwards, steering toward an odour carries it away.
+All three flips are well beyond 2 paired standard errors, on both odours. Only restart 2's moves them in opposite directions: −0.0325 ± 0.0002 mm/s on butanone, against +0.573 ± 0.009 on time on the lawn.
+
+**How reversing can set it.** κ steers only run steps. A reversal bout has its own speed and holds the heading unchanged while it backs the worm along it. So steering aims the heading during runs, and each reversal then carries the worm back along that heading. For a worm whose travel is mostly backward, aiming toward an odour moves it away.
 
 | Answer | Assay | Seconds reversing | Backward share of travel along the heading |
 |---|---|---|---|
@@ -163,7 +167,11 @@ So the gain means the same on both odours here, and there is no sign error betwe
 | restart 2 | small lawn | 8% | 21% |
 | restart 2 | chemotaxis | 56% | 69% |
 
-Real worms on Scheer's lawns are flagged as reversing **12–16%** of their tracked seconds in every cohort (4,227 animals). Restart 2 moves forward on food and mostly backwards off food, so its κ attracts on the lawn and repels butanone. Restart 4 reverses heavily everywhere, so its positive κ attracts on both.
+Real worms on Scheer's lawns are flagged as reversing **12–16%** of their tracked seconds in every cohort (4,227 animals).
+
+Restart 2 travels mostly forward on food and mostly backward off food, and its κ attracts on the lawn and repels on butanone. Restart 4 travels mostly backward everywhere, and its positive κ attracts on both. That fits the mechanism above.
+
+But the two answers differ in many other parameters too. So the comparison is consistent with reversing setting κ's effect; it does not establish it.
 
 ### The benchmark does not see it
 
@@ -171,7 +179,7 @@ Real worms on Scheer's lawns are flagged as reversing **12–16%** of their trac
 
 By the benchmark's own detector, off food:
 
-- **restart 2 reorients about 9.5 times per bin, flat** (7.5 to 9.3);
+- **restart 2 reorients about 9.5 times per bin, flat**: its bins run 7.52–10.30, with the first at 7.52 and the last at 9.30;
 - restart 4 about 7.5, flat;
 - restart 0 0.3.
 

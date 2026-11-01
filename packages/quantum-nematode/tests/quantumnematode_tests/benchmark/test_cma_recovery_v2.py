@@ -184,6 +184,51 @@ def test_a_fit_saved_with_other_callbacks_is_refused(tmp_path: Path) -> None:
         cr.run_fit({}, **common, stop=v2.guarded_stop)
 
 
+def test_a_fit_saved_with_another_start_is_refused(tmp_path: Path) -> None:
+    """A saved fit is not returned or resumed under another start point, sigma or factory.
+
+    A fit saved before starts were recorded carries none, and is returned unchecked on them.
+    """
+    import json
+
+    import cma
+
+    def elsewhere(seed: int) -> object:
+        options = {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": cr.POPSIZE, "seed": seed}
+        return cma.CMAEvolutionStrategy([0.4] * cr.DIMENSION, 0.1, options | {"verbose": -9})
+
+    common = {
+        "fit": 0,
+        "cma_seed": 1,
+        "seed_base": 0,
+        "cap": 1,
+        "use_rule": True,
+        "state_dir": tmp_path,
+        "pool": None,
+        "scales": {},
+    }
+    legacy = {
+        "fit": 0,
+        "generation": 1,
+        "medians": [1.0],
+        "sigmas": [0.2],
+        "answers": [[0.5] * 20],
+        "seconds": [1.0],
+        "stop": {"generation": 1, "by": "cap"},
+    }
+    (tmp_path / "fit0.json").write_text(json.dumps(legacy))
+    assert cr.run_fit({}, **common, strategy_factory=elsewhere)["stop"] == legacy["stop"]
+    recorded = legacy | {
+        "strategy_factory": cr._identity(cr.new_strategy),
+        "x0": [cr.X0] * cr.DIMENSION,
+        "sigma0": cr.SIGMA0,
+    }
+    (tmp_path / "fit0.json").write_text(json.dumps(recorded))
+    assert cr.run_fit({}, **common)["stop"] == legacy["stop"]
+    with pytest.raises(RuntimeError, match=r"strategy_factory|x0|sigma0"):
+        cr.run_fit({}, **common, strategy_factory=elsewhere)
+
+
 def test_undefined_never_ranks_ahead_of_defined() -> None:
     """Covers "Undefined never ranks ahead of defined": one undefined loses to three far terms."""
     truth = {"statistics": {"a/x": 0.0, "a/y": 0.0, "b/z": 0.0}}

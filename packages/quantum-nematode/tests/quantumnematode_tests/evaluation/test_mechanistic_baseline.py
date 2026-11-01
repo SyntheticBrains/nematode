@@ -156,4 +156,7 @@ def test_an_off_food_gain_changes_steering_only_off_food() -> None:
             _steering(same, contact, seeds),
         )
     np.testing.assert_array_equal(_steering(_BASE, 1.0, seeds), _steering(other, 1.0, seeds))
-    assert not np.array_equal(_steering(_BASE, 0.0, seeds), _steering(other, 0.0, seeds))
+    base, flipped = _steering(_BASE, 0.0, seeds), _steering(other, 0.0, seeds)
+    # Off food only the run curvature (column 1) changes; speed and the three hazards do not.
+    np.testing.assert_array_equal(base[..., [0, 2, 3, 4]], flipped[..., [0, 2, 3, 4]])
+    assert not np.array_equal(base[..., 1], flipped[..., 1])

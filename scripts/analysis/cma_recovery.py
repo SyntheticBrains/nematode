@@ -367,21 +367,28 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
     ``simulate`` runs one simulation, ``npe_recovery.simulate`` by default; ``stop`` decides the
     plateau from the medians and sigma, the unguarded plateau rule by default.
     ``strategy_factory`` builds the strategy from the CMA seed, sep-CMA at the box centre by
-    default.
+    default. A history records the factory, the start point and the starting sigma, and a saved
+    fit asked for with a different one is refused before it is returned or resumed.
 
     The strategy's checkpoint and the history each carry the last completed generation; a resume
     whose two markers differ is refused rather than continued from mismatched state.
     """
     state_path = state_dir / f"fit{fit}.pkl"
     history_path = state_dir / f"fit{fit}.json"
+    factory = strategy_factory or new_strategy
+    fresh = factory(cma_seed)
     identity = {
         "simulate": _identity(simulate or nr.simulate),
         "stop_rule": _identity(stop or plateau_reached),
+        "strategy_factory": _identity(factory),
+        "x0": [float(v) for v in np.asarray(fresh.x0, dtype=float)],
+        "sigma0": float(fresh.sigma0),
     }
     saved = json.loads(history_path.read_text()) if history_path.exists() else None
     if saved is not None:
         for key, value in identity.items():
-            # Histories written before identities were recorded carry none and are not checked.
+            # Histories written before an identity was recorded carry none, and are not checked
+            # on it: the callbacks before 2026-10-29, the start before 2026-11-01.
             if key in saved and saved[key] != value:
                 message = f"fit {fit}: saved with {key} {saved[key]}, asked for {value}"
                 raise RuntimeError(message)
@@ -398,7 +405,7 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
             raise RuntimeError(message)
         strategy = checkpoint["strategy"]
     else:
-        strategy = (strategy_factory or new_strategy)(cma_seed)
+        strategy = fresh
         history = {
             "fit": fit,
             "cma_seed": cma_seed,

@@ -460,6 +460,12 @@ def _kappa_start(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
 
 def _probe_kappa(workers: int) -> int:
     """Fit C.1 with a weathervane gain of its own off food, warm-started; description only."""
+    if json.loads(FIT_PATH.read_text()).get("chosen_restart") is None:
+        print(
+            "no registered restart plateaued, so there is no answer to start from",
+            file=sys.stderr,
+        )
+        return 1
     state = BUILD / "probe_kappa"
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
         history = _fit(
@@ -492,7 +498,12 @@ def _probe_kappa(workers: int) -> int:
         "description": "Description: C.1 with a weathervane gain of its own off food (one more "
         "parameter), warm-started from the chosen registered restart's answer at sigma 0.1, on "
         "discarded seeds, after the registered verdict.",
-        "start": {"x0": _kappa_x0(), "sigma0": PROBE_KAPPA_SIGMA0, "cma_seed": PILOT_CMA_SEED},
+        # The start the fit recorded; a fit saved before starts were recorded has none.
+        "start": {
+            "x0": history.get("x0"),
+            "sigma0": history.get("sigma0"),
+            "cma_seed": history["cma_seed"],
+        },
         "stop": history["stop"],
         "median_D": d,
         "populations_passing": passing,
@@ -519,19 +530,76 @@ REVERSAL_PATH = SUPPORT / "reversal_diagnosis.json"
 TERMS_BASE = 99_900_500
 FLIP_BASE = 99_910_000
 SHARE_BASE = 99_920_000
+# Seed blocks per sensing case; within a base every case runs on the same blocks' animals, so
+# opposite signs are compared on common random numbers.
+DIAGNOSIS_BLOCKS = 5
+PAIRED_SIGMA = 2.0
 
 
-def _terms(item: tuple[int, str, int, dict[str, float]]) -> tuple[str, dict[str, Any]]:
-    k, name, base, params = item
-    record = v2.simulate_v2(k, [0.5] * 20, base, parameters=params)
-    keys = (
-        "chemotaxis/drift_mm_s",
-        "chemotaxis/log_quintile_ratio",
-        "chemotaxis/weathervane_deg_s",
-        "small_lawn/time_on_lawn",
-        "small_lawn/exits_per_on_lawn_hour",
-    )
-    return name, {key: record["statistics"].get(key) for key in keys}
+TERM_KEYS = (
+    "chemotaxis/drift_mm_s",
+    "chemotaxis/log_quintile_ratio",
+    "chemotaxis/weathervane_deg_s",
+    "small_lawn/time_on_lawn",
+    "small_lawn/exits_per_on_lawn_hour",
+)
+
+
+def _terms(item: tuple[int, str, int, dict[str, float]]) -> tuple[str, int, dict[str, Any]]:
+    block, name, base, params = item
+    record = v2.simulate_v2(block, [0.5] * 20, base, parameters=params)
+    return name, block, {key: record["statistics"].get(key) for key in TERM_KEYS}
+
+
+def _mean_se(values: list[float | None]) -> dict[str, Any]:
+    """Return the mean and standard error of the defined values, and how many there were."""
+    defined = [v for v in values if v is not None]
+    n = len(defined)
+    if n == 0:
+        return {"mean": None, "se": None, "n": 0}
+    se = float(np.std(defined, ddof=1) / math.sqrt(n)) if n > 1 else None
+    return {"mean": float(np.mean(defined)), "se": se, "n": n}
+
+
+def _summarise_terms(
+    runs: list[tuple[str, int, dict[str, Any]]],
+    pairs: list[tuple[str, str]],
+) -> dict[str, Any]:
+    """Return each case's per-block values with their mean and SE, and each pair's paired effect.
+
+    A pair's difference is taken block by block, on the same animals. A sign effect is reported
+    only where the mean difference exceeds ``PAIRED_SIGMA`` paired standard errors.
+    """
+    by_case: dict[str, dict[int, dict[str, Any]]] = {}
+    for name, block, stats in runs:
+        by_case.setdefault(name, {})[block] = stats
+    cases = {
+        name: {
+            key.split("/")[1]: {
+                "blocks": [blocks[b][key] for b in sorted(blocks)],
+                **_mean_se([blocks[b][key] for b in sorted(blocks)]),
+            }
+            for key in TERM_KEYS
+        }
+        for name, blocks in by_case.items()
+    }
+    paired = {}
+    for a, b in pairs:
+        effects = {}
+        for key in TERM_KEYS:
+            diffs = [
+                by_case[a][k][key] - by_case[b][k][key]
+                for k in sorted(by_case[a])
+                if by_case[a][k][key] is not None and by_case[b][k][key] is not None
+            ]
+            summary = _mean_se(diffs)
+            mean, se = summary["mean"], summary["se"]
+            summary["sign_effect"] = bool(
+                mean is not None and se is not None and abs(mean) > PAIRED_SIGMA * se,
+            )
+            effects[key.split("/")[1]] = summary
+        paired[f"{a} minus {b}"] = effects
+    return {"cases": cases, "paired": paired}
 
 
 def _reversal_share(params: dict[str, float], protocol: str) -> dict[str, float]:
@@ -631,8 +699,14 @@ def _diagnose_reversals(workers: int) -> int:
                 p | {"kappa_weathervane": -p["kappa_weathervane"]},
             ),
         )
+    pairs = [
+        ("centre: kappa -30 only", "centre: kappa +30 only"),
+        ("restart 4 as fitted", "restart 4, kappa flipped"),
+        ("restart 2 as fitted", "restart 2, kappa flipped"),
+    ]
+    jobs = [(block, *case) for case in cases for block in range(DIAGNOSIS_BLOCKS)]
     with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
-        terms = dict(pool.map(_terms, [(k, *case) for k, case in enumerate(cases)]))
+        terms = _summarise_terms(list(pool.map(_terms, jobs)), pairs)
         share_jobs = [
             (name, protocol)
             for name in ("restart 2", "restart 4")
@@ -652,7 +726,7 @@ def _diagnose_reversals(workers: int) -> int:
     )
     out = {
         "description": "Description: the weathervane gain's effect on each odour, alone and in "
-        "fitted answers; the share of time and travel spent reversing, against real worms' "
+        "fitted answers, over seed blocks with opposite signs on the same animals; the share of time and travel spent reversing, against real worms' "
         "reversal share on Scheer's lawns; and fitted answers' off-food reorientations per 2-min "
         "bin by the benchmark's detector, against Lopez-Cruz's reference; discarded seeds.",
         "sensing_terms": terms,
