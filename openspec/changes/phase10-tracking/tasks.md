@@ -542,6 +542,25 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     registration. Both of 1164's probe misses were on the kinematics speed medians;
   - **the restarts:** keep 8. Per restart, 9 of 16 recovered, and 6985's first two reached at best 0.360.
 
+  *(2026-11-01: change `fit-c1-v2`; [Logbook 119](../../../docs/experiments/logbooks/119-c1b-fit.md).)*
+  **C.1 fails the wild type on benchmark v2.** The chosen restart (2, by selection on separate
+  populations) passes 0 of its 5 registered populations, against 3. No restart passes any of the
+  40\.
+
+  - **The gap is narrow.** The chosen restart's D is 1.71–1.87, and in two populations every one of
+    the 19 statistics passes. Chemotaxis presence fails in all five: it drifts down the butanone
+    gradient.
+  - **The diagnosis:** one weathervane gain κ serves both the lawn odour and butanone, and the two
+    pull it in opposite directions.
+    - Seven of 8 restarts and both pilots settle at κ between −12.8 and −30.3, steering away from
+      the odour, so none climbs the butanone gradient as real worms do.
+    - The one positive κ (+49.9, at the box's bound) reproduces chemotaxis, but fails the lawn and
+      kinematics families.
+  - **The reachability pilot failed** (0 of 5), and so did a widened-box probe. The maintainer
+    accepted that and ran the fits as registered.
+  - **The roadmap's risk row goes to the maintainer.** The candidate fix is in C.1's mechanism (odour-
+    or state-dependent steering), not in the benchmark or the primitives.
+
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
@@ -561,6 +580,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 - [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(Added 2026-11-01, C.1b.)* C.1 on v2 enters as failing the wild type
+  ([Logbook 119](../../../docs/experiments/logbooks/119-c1b-fit.md)). Its restarts' registered
+  grades are in `supporting/119-c1b-fit/fit.json` for the `unidentified` rule, and none passes the
+  wild type.
 
   *(Added 2026-10-24 by B.3's hardening.)* Only tph-1's (more) and tax-4's (less) roaming directions
   are resolved by the references; every other mutant difference is graded by magnitude. The

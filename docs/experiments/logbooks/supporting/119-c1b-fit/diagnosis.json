@@ -1,0 +1,412 @@
+{
+  "description": "Description: per restart, the weathervane gain, the chemotaxis readings and the failing statistics on the 5 registered populations; and the two pilots' weathervane gains.",
+  "restarts": [
+    {
+      "restart": 0,
+      "stop": {
+        "generation": 133,
+        "by": "plateau"
+      },
+      "kappa_weathervane": -14.370586059279788,
+      "kappa_unit": 0.3562941394072021,
+      "beta_reversal": 1.283597036520633,
+      "beta_omega": 2.2350862117199184,
+      "chemotaxis_present": 5,
+      "weathervane_z": [
+        5.893511420059758,
+        5.732411056303078,
+        5.717546166340726,
+        6.204665288390704,
+        5.732085930994964
+      ],
+      "drift_z": [
+        -1.5172089381309033,
+        -1.526001880127664,
+        -1.5207721057850025,
+        -1.5175317753974644,
+        -1.5238790482260496
+      ],
+      "drift_mm_s": [
+        0.001653922595718812,
+        0.0015134506134531784,
+        0.0015969990741374692,
+        0.0016487650965791884,
+        0.0015473639959531842
+      ],
+      "failing": [
+        "chemotaxis/weathervane_deg_s",
+        "kinematics/roaming_speed_p90",
+        "kinematics/roaming_survival_5min",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/exits_per_on_lawn_hour",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/time_on_lawn"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        2.7704398533105126,
+        2.687742015920467,
+        2.646339377100697,
+        2.732481532092626,
+        2.491580277120448
+      ]
+    },
+    {
+      "restart": 1,
+      "stop": {
+        "generation": 135,
+        "by": "plateau"
+      },
+      "kappa_weathervane": -24.196548056911976,
+      "kappa_unit": 0.25803451943088024,
+      "beta_reversal": 4.007565007282002,
+      "beta_omega": 1.3993886179458002,
+      "chemotaxis_present": 0,
+      "weathervane_z": [
+        3.937504998974611,
+        4.723831600597244,
+        2.429323909777559,
+        4.408423178170027,
+        4.7573771769462265
+      ],
+      "drift_z": [
+        -1.5866802771324486,
+        -1.581808580238352,
+        -1.582819192740319,
+        -1.5858159756731702,
+        -1.5871828473161333
+      ],
+      "drift_mm_s": [
+        0.0005440805537958637,
+        0.0006219085344607194,
+        0.000605763455657051,
+        0.0005578882349229108,
+        0.0005360517245421477
+      ],
+      "failing": [
+        "chemotaxis/presence",
+        "chemotaxis/weathervane_deg_s",
+        "kinematics/dwelling_speed_median",
+        "kinematics/dwelling_speed_p90",
+        "kinematics/roaming_survival_5min",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/pre_exit_enrichment",
+        "small_lawn/roaming_bout_s"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        3.1671260738073204,
+        3.2406794217973727,
+        3.3370089503150715,
+        3.300229092383083,
+        3.4991550712005877
+      ]
+    },
+    {
+      "restart": 2,
+      "stop": {
+        "generation": 180,
+        "by": "plateau"
+      },
+      "kappa_weathervane": -30.255092336944507,
+      "kappa_unit": 0.19744907663055494,
+      "beta_reversal": 4.91163786596461,
+      "beta_omega": 1.9014566111454114,
+      "chemotaxis_present": 0,
+      "weathervane_z": [
+        2.8402257058383276,
+        2.2373728142394964,
+        2.4535216571216347,
+        2.5310577274330512,
+        2.3812602881236353
+      ],
+      "drift_z": [
+        -3.050018979994734,
+        -2.9821787371292463,
+        -2.9369603655529986,
+        -2.9902381735338213,
+        -2.9230322649012126
+      ],
+      "drift_mm_s": [
+        -0.022833543043950508,
+        -0.021749758640936385,
+        -0.021027370810733532,
+        -0.021878512476468513,
+        -0.020804861904331954
+      ],
+      "failing": [
+        "chemotaxis/drift_mm_s",
+        "chemotaxis/presence",
+        "small_lawn/exits_per_on_lawn_hour",
+        "small_lawn/pre_exit_enrichment"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        1.8727282140973698,
+        1.7230969903926823,
+        1.769218411261641,
+        1.7073843121025436,
+        1.7527641951177868
+      ]
+    },
+    {
+      "restart": 3,
+      "stop": {
+        "generation": 119,
+        "by": "plateau"
+      },
+      "kappa_weathervane": -24.73186016165181,
+      "kappa_unit": 0.2526813983834819,
+      "beta_reversal": 3.3409974556920963,
+      "beta_omega": 4.078057085414089,
+      "chemotaxis_present": 5,
+      "weathervane_z": [
+        8.308334263336398,
+        10.0,
+        9.544557909445635,
+        8.946925989449547,
+        8.876954555846535
+      ],
+      "drift_z": [
+        -1.418269600443211,
+        -1.3882879677722908,
+        -1.4065287095177723,
+        -1.4155439002149373,
+        -1.371989238979641
+      ],
+      "drift_mm_s": [
+        0.0032345317813769507,
+        0.003713504504544671,
+        0.003422098834869239,
+        0.003278076309962328,
+        0.003973885471774633
+      ],
+      "failing": [
+        "chemotaxis/weathervane_deg_s",
+        "kinematics/roaming_speed_median",
+        "kinematics/roaming_survival_5min",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/pre_exit_enrichment",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/time_on_lawn"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        3.433350067062417,
+        3.8609673576321137,
+        3.569745357020844,
+        3.2407838214134466,
+        3.2314985174382396
+      ]
+    },
+    {
+      "restart": 4,
+      "stop": {
+        "generation": 248,
+        "by": "cap"
+      },
+      "kappa_weathervane": 49.856577281327205,
+      "kappa_unit": 0.9985657728132721,
+      "beta_reversal": 0.42182123242470143,
+      "beta_omega": 1.5719165205603516,
+      "chemotaxis_present": 5,
+      "weathervane_z": [
+        0.08396357560203789,
+        0.39865975434263456,
+        0.31622332202832976,
+        0.5756785461788967,
+        -0.21379116446654534
+      ],
+      "drift_z": [
+        -0.192319386809677,
+        -0.09769311861083761,
+        -0.055208057800226966,
+        -0.07948286894064156,
+        -0.10169015607989854
+      ],
+      "drift_mm_s": [
+        0.022819746460550707,
+        0.024331452039091706,
+        0.025010173758277514,
+        0.024622370581448397,
+        0.024267597213633304
+      ],
+      "failing": [
+        "kinematics/dwelling_speed_median",
+        "kinematics/dwelling_speed_p90",
+        "kinematics/roaming_speed_median",
+        "kinematics/roaming_speed_p90",
+        "local_search/gamma_per_min",
+        "local_search/presence",
+        "uniform_lawn/roaming_bout_s"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        4.763062924935173,
+        4.798301054303154,
+        3.6148440678048512,
+        3.7195967910997503,
+        4.798811130593842
+      ]
+    },
+    {
+      "restart": 5,
+      "stop": {
+        "generation": 236,
+        "by": "plateau"
+      },
+      "kappa_weathervane": -25.901926933230637,
+      "kappa_unit": 0.24098073066769363,
+      "beta_reversal": 1.6184170241078908,
+      "beta_omega": 2.5414368393616855,
+      "chemotaxis_present": 0,
+      "weathervane_z": [
+        2.2701105190459,
+        4.419955598019923,
+        6.271924012792716,
+        4.451801580387088,
+        4.573272615924117
+      ],
+      "drift_z": [
+        -1.6001819005351998,
+        -1.6059189745103541,
+        -1.6061253473318018,
+        -1.601738199395911,
+        -1.602832873142819
+      ],
+      "drift_mm_s": [
+        0.0003283848510507247,
+        0.00023673200562180873,
+        0.0002334350886939822,
+        0.00030352213888426376,
+        0.0002860341364365058
+      ],
+      "failing": [
+        "chemotaxis/presence",
+        "chemotaxis/weathervane_deg_s",
+        "kinematics/roaming_speed_median",
+        "kinematics/roaming_survival_5min",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/pre_exit_enrichment",
+        "small_lawn/roaming_bout_s"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        1.8963464654583484,
+        2.4337276750719905,
+        2.657439890944105,
+        2.372489191168336,
+        2.2475612400699463
+      ]
+    },
+    {
+      "restart": 6,
+      "stop": {
+        "generation": 123,
+        "by": "plateau"
+      },
+      "kappa_weathervane": -24.89513989394161,
+      "kappa_unit": 0.2510486010605839,
+      "beta_reversal": 0.60573800396983,
+      "beta_omega": 4.943137722807951,
+      "chemotaxis_present": 0,
+      "weathervane_z": [
+        5.25414266127259,
+        4.936076808729666,
+        5.310453531957921,
+        5.18010540096831,
+        5.189288108739355
+      ],
+      "drift_z": [
+        -1.557158115881215,
+        -1.6059009634822456,
+        -1.5937668595409404,
+        -1.6159194499861378,
+        -1.613308554612331
+      ],
+      "drift_mm_s": [
+        0.0010157129736678748,
+        0.0002370197414924639,
+        0.0004308685846078087,
+        7.696902592744334e-05,
+        0.00011867948515507954
+      ],
+      "failing": [
+        "chemotaxis/presence",
+        "chemotaxis/weathervane_deg_s",
+        "kinematics/dwelling_speed_median",
+        "kinematics/roaming_survival_5min",
+        "small_lawn/pre_exit_enrichment",
+        "small_lawn/time_on_lawn",
+        "uniform_lawn/roaming_bout_s"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        2.576069659113591,
+        2.7053649008509204,
+        2.419125996443836,
+        2.542749338561394,
+        2.73806955673241
+      ]
+    },
+    {
+      "restart": 7,
+      "stop": {
+        "generation": 248,
+        "by": "cap"
+      },
+      "kappa_weathervane": -18.348617353167796,
+      "kappa_unit": 0.31651382646832205,
+      "beta_reversal": 0.058551246602123616,
+      "beta_omega": 0.8326372933459383,
+      "chemotaxis_present": 5,
+      "weathervane_z": [
+        8.370438824856727,
+        8.759570363613918,
+        8.629602897968397,
+        8.903975220978564,
+        9.40180818944155
+      ],
+      "drift_z": [
+        -1.4690185224684533,
+        -1.4802486369252672,
+        -1.4683686398322606,
+        -1.4751565075825215,
+        -1.4599333788414814
+      ],
+      "drift_mm_s": [
+        0.0024237904302619154,
+        0.002244383305843288,
+        0.0024341726552532363,
+        0.002325732813549813,
+        0.0025689304908831367
+      ],
+      "failing": [
+        "chemotaxis/weathervane_deg_s",
+        "kinematics/dwelling_speed_median",
+        "kinematics/dwelling_speed_p90",
+        "kinematics/roaming_speed_p90",
+        "kinematics/roaming_survival_5min",
+        "local_search/presence",
+        "small_lawn/dwelling_bout_s",
+        "small_lawn/pre_exit_enrichment",
+        "small_lawn/roaming_bout_s",
+        "small_lawn/time_on_lawn"
+      ],
+      "populations_passing": 0,
+      "population_D": [
+        4.101591405524888,
+        4.069602575983808,
+        4.139756372061863,
+        4.02615661709952,
+        4.279113576542764
+      ]
+    }
+  ],
+  "pilot_kappa": -12.925913560086656,
+  "probe_wide_kappa": -12.786162653527242,
+  "kappa_box": [
+    -50.0,
+    50.0
+  ]
+}

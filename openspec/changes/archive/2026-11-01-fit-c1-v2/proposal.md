@@ -1,6 +1,6 @@
 ## Why
 
-C.1's v1 answer fails benchmark v2 on all five populations (D 6.1–6.2; [Logbook 115](../../../docs/experiments/logbooks/115-benchmark-v2.md)), so C.1 must be refitted on v2 before it can enter C.4. F.0b-i on v2 now clears sep-CMA for C.1's model on v2's objective ([Logbook 117](../../../docs/experiments/logbooks/117-cma-recovery-v2b.md); median gain 0.873). That recovery left four requirements for C.1b's plan:
+C.1's v1 answer fails benchmark v2 on all five populations (D 6.1–6.2; [Logbook 115](../../../../docs/experiments/logbooks/115-benchmark-v2.md)), so C.1 must be refitted on v2 before it can enter C.4. F.0b-i on v2 now clears sep-CMA for C.1's model on v2's objective ([Logbook 117](../../../../docs/experiments/logbooks/117-cma-recovery-v2b.md); median gain 0.873). That recovery left four requirements for C.1b's plan:
 
 - **the objective:** fit with the ranking score (definedness first, then 10·asinh(z/10)), and grade on the capped D;
 - **the plateau guard:** two of its 16 restarts stopped at generations 47 and 52 while their window still held medians with an undefined statistic;

@@ -17,9 +17,9 @@
 
 ## 4. The fits and the verdict
 
-- [ ] 4.1 `run` (8 restarts), `select` (3 populations per plateaued restart), `grade` (5 registered populations per restart, all 8), `read`: `fit.json` with the verdict.
+- [x] 4.1 `run` (8 restarts), `select` (3 populations per plateaued restart), `grade` (5 registered populations per restart, all 8), `read`: `fit.json` with the verdict.
 
 ## 5. Close-out
 
-- [ ] 5.1 Logbook 119, the tracker (C.1 on v2, C.4, the seed table), the index row, AGENTS.md and the CHANGELOG.
-- [ ] 5.2 Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.
+- [x] 5.1 Logbook 119, the tracker (C.1 on v2, C.4, the seed table), the index row, AGENTS.md and the CHANGELOG.
+- [x] 5.2 Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.

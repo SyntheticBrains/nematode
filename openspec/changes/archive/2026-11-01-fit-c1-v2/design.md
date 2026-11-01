@@ -1,11 +1,11 @@
 ## Context
 
-- **C.1 on v1** ([Logbook 113](../../../docs/experiments/logbooks/113-c1-fit.md); launch record 113):
+- **C.1 on v1** ([Logbook 113](../../../../docs/experiments/logbooks/113-c1-fit.md); launch record 113):
   - sep-CMA, 8 restarts, the plateau rule, a cap of 210;
   - the chosen restart was the plateaued one with the lowest final objective;
   - its verdict was at least 3 of 5 registered populations.
-- **Benchmark v2** ([Logbook 115](../../../docs/experiments/logbooks/115-benchmark-v2.md)): 19 statistics in five families, with chemotaxis and local search passing only where present. A faithful population passes all five families with probability 0.818, so a faithful controller passes 3 of 5 with probability 0.955.
-- **F.0b-i on v2** ([Logbook 117](../../../docs/experiments/logbooks/117-cma-recovery-v2b.md)) passed with the ranking score, 4 restarts and the σ-guarded plateau:
+- **Benchmark v2** ([Logbook 115](../../../../docs/experiments/logbooks/115-benchmark-v2.md)): 19 statistics in five families, with chemotaxis and local search passing only where present. A faithful population passes all five families with probability 0.818, so a faithful controller passes 3 of 5 with probability 0.955.
+- **F.0b-i on v2** ([Logbook 117](../../../../docs/experiments/logbooks/117-cma-recovery-v2b.md)) passed with the ranking score, 4 restarts and the σ-guarded plateau:
   - 9 of 16 restarts reached a gain of 0.75;
   - 2 stopped falsely while undefined medians sat in their window;
   - 1164's misses were on the kinematics speed medians.
