@@ -359,12 +359,15 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
     objective: Callable[[dict[str, Any]], float] | None = None,
     simulate: Callable[[int, list[float], int], dict[str, Any]] | None = None,
     stop: Callable[[list[float], float], bool] | None = None,
+    strategy_factory: Callable[[int], Any] | None = None,
 ) -> dict[str, Any]:
     """Run, or resume, one fit; return its history. State is saved after every generation.
 
     The objective scores one graded simulation; by default it is the distance to ``observation``.
     ``simulate`` runs one simulation, ``npe_recovery.simulate`` by default; ``stop`` decides the
     plateau from the medians and sigma, the unguarded plateau rule by default.
+    ``strategy_factory`` builds the strategy from the CMA seed, sep-CMA at the box centre by
+    default.
 
     The strategy's checkpoint and the history each carry the last completed generation; a resume
     whose two markers differ is refused rather than continued from mismatched state.
@@ -395,7 +398,7 @@ def run_fit(  # noqa: PLR0913 - keyword-only: one fit's registered settings
             raise RuntimeError(message)
         strategy = checkpoint["strategy"]
     else:
-        strategy = new_strategy(cma_seed)
+        strategy = (strategy_factory or new_strategy)(cma_seed)
         history = {
             "fit": fit,
             "cma_seed": cma_seed,

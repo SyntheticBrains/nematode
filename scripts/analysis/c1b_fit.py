@@ -103,6 +103,32 @@ def parameters_from_box(z: np.ndarray, upper: dict[str, float] | None = None) ->
     return out
 
 
+# The food-state steering probe: one more dimension, a weathervane gain of its own off food, on
+# the same range as the gain on food; warm-started from the chosen registered restart.
+PROBE_KAPPA_PATH = SUPPORT / "probe_kappa.json"
+PROBE_KAPPA_BASE = 450_000_000
+PROBE_KAPPA_GRADE_BASE = 452_000_000
+PROBE_KAPPA_SIGMA0 = 0.1
+
+
+def parameters_kappa(z: np.ndarray) -> dict[str, float]:
+    """Map a 21-dimensional unit point: F.0a's box, then the off-food weathervane gain."""
+    _, low, high = nr.PRIOR["kappa_weathervane"]
+    z = np.asarray(z, dtype=float)
+    return parameters_from_box(z[:20]) | {"kappa_off_food": float(low + z[20] * (high - low))}
+
+
+def _parameters(z: np.ndarray, box: str) -> dict[str, float]:
+    if box == "kappa":
+        return parameters_kappa(z)
+    return parameters_from_box(np.asarray(z), WIDE_UPPER if box == "wide" else None)
+
+
+def simulate_kappa(k: int, z: list[float], seed_base: int) -> dict[str, Any]:
+    """Run simulation k at a 21-dimensional z on v2, with the off-food weathervane gain."""
+    return v2.simulate_v2(k, z, seed_base, parameters=parameters_kappa(np.asarray(z)))
+
+
 def simulate_wide(k: int, z: list[float], seed_base: int) -> dict[str, Any]:
     """Run simulation k at z on v2, z mapped through the widened box."""
     return v2.simulate_v2(
@@ -221,17 +247,18 @@ def failing(grades: list[dict[str, Any]]) -> list[str]:
 # ---------------------------------------------------------------------------------------------
 
 
-def grade_answer(k: int, z: list[float], base: int, wide: bool = False) -> dict[str, Any]:  # noqa: FBT001, FBT002 - a pool's positional argument
+def grade_answer(k: int, z: list[float], base: int, box: str = "f0a") -> dict[str, Any]:
     """Grade an answer on population k at a base, with presence: every family and the pass.
 
-    With ``wide``, z is mapped through the widened box.
+    ``box`` maps z: ``f0a`` through F.0a's box, ``wide`` through the widened box, and ``kappa``
+    with the off-food weathervane gain as a 21st dimension.
     """
     import benchmark_grade as bg
     from quantumnematode.evaluation.controllers import BatchedMechanistic
 
     bands = v2._bands()
     seeds = [base + nr.ANIMALS * k + i for i in range(nr.ANIMALS)]
-    params = parameters_from_box(np.asarray(z), WIDE_UPPER if wide else None)
+    params = _parameters(np.asarray(z), box)
     populations, chemotaxis = bg.simulate_v2(
         "mlp",
         lambda _path: BatchedMechanistic(params),
@@ -275,6 +302,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
     state_dir: Path,
     pool: Any,  # noqa: ANN401 - a pool
     simulate: Any = None,  # noqa: ANN401 - a picklable simulator
+    start: Any = None,  # noqa: ANN401 - a strategy factory
 ) -> dict[str, Any]:
     return cr.run_fit(
         {},
@@ -289,6 +317,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
         objective=BandObjective(),
         simulate=simulate or v2.simulate_v2,
         stop=defined_stop,
+        strategy_factory=start,
     )
 
 
@@ -370,7 +399,7 @@ def _pilot_run(workers: int, *, wide: bool) -> int:
     hours = RESTARTS * (cap + 1) * per_generation / 3600.0
     answer = history["answers"][-1]
     grades = _grade_all(
-        [(g, answer, grade_base, wide) for g in range(GRADE_POPULATIONS)],
+        [(g, answer, grade_base, "wide" if wide else "f0a") for g in range(GRADE_POPULATIONS)],
         workers,
     )
     passing = sum(g["wild_type_passes"] for g in grades)
@@ -408,6 +437,81 @@ def _pilot_run(workers: int, *, wide: bool) -> int:
     }
     print(json.dumps(summary | {"populations_passing": passing}, indent=2))
     return 1 if record["returns_to_maintainer"] else 0
+
+
+def _kappa_x0() -> list[float]:
+    """Return the chosen registered restart's answer, with the off-food gain at its range's centre."""
+    record = json.loads(FIT_PATH.read_text())
+    return [*record["restarts"][record["chosen_restart"]]["answer"], 0.5]
+
+
+def _kappa_start(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
+    import cma
+
+    options = {
+        "CMA_diagonal": True,
+        "bounds": [0.0, 1.0],
+        "popsize": cr.POPSIZE,
+        "seed": seed,
+        "verbose": -9,
+    }
+    return cma.CMAEvolutionStrategy(_kappa_x0(), PROBE_KAPPA_SIGMA0, options)
+
+
+def _probe_kappa(workers: int) -> int:
+    """Fit C.1 with a weathervane gain of its own off food, warm-started; description only."""
+    state = BUILD / "probe_kappa"
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = _fit(
+            0,
+            cma_seed=PILOT_CMA_SEED,
+            seed_base=PROBE_KAPPA_BASE,
+            cap=int(json.loads(PILOT_PATH.read_text())["registered_cap"]),
+            use_rule=True,
+            state_dir=state,
+            pool=pool,
+            simulate=simulate_kappa,
+            start=_kappa_start,
+        )
+    answer = history["answers"][-1]
+    d = _median_answer_d(
+        answer,
+        [cr.ANSWER_OFFSET + q for q in range(RESIMULATIONS)],
+        PROBE_KAPPA_BASE,
+        state / "answers.jsonl",
+        workers,
+        simulate_kappa,
+    )
+    grades = _grade_all(
+        [(g, answer, PROBE_KAPPA_GRADE_BASE, "kappa") for g in range(GRADE_POPULATIONS)],
+        workers,
+    )
+    passing = sum(g["wild_type_passes"] for g in grades)
+    parameters = parameters_kappa(np.asarray(answer))
+    record = {
+        "description": "Description: C.1 with a weathervane gain of its own off food (one more "
+        "parameter), warm-started from the chosen registered restart's answer at sigma 0.1, on "
+        "discarded seeds, after the registered verdict.",
+        "start": {"x0": _kappa_x0(), "sigma0": PROBE_KAPPA_SIGMA0, "cma_seed": PILOT_CMA_SEED},
+        "stop": history["stop"],
+        "median_D": d,
+        "populations_passing": passing,
+        "reaches": passing >= PASS_NEEDED,
+        "failing": failing(grades),
+        "kappa_on_food": parameters["kappa_weathervane"],
+        "kappa_off_food": parameters["kappa_off_food"],
+        "parameters": parameters,
+        "answer": answer,
+        "grades": grades,
+        "medians": history["medians"],
+        "sigmas": history["sigmas"],
+    }
+    cr._write_json(PROBE_KAPPA_PATH, record)
+    summary = {k: record[k] for k in ("stop", "median_D", "populations_passing", "failing")}
+    print(
+        json.dumps(summary | {k: record[k] for k in ("kappa_on_food", "kappa_off_food")}, indent=2),
+    )
+    return 0
 
 
 def _histories() -> list[dict[str, Any]]:
@@ -601,7 +705,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "stage",
-        choices=("pilot", "probe-wide", "run", "select", "grade", "read", "smoke"),
+        choices=("pilot", "probe-wide", "probe-kappa", "run", "select", "grade", "read", "smoke"),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
@@ -609,6 +713,8 @@ def main(argv: list[str] | None = None) -> int:
         return _smoke(args.workers)
     if args.stage == "probe-wide":
         return _probe_wide(args.workers)
+    if args.stage == "probe-kappa":
+        return _probe_kappa(args.workers)
     if not _guarded(args.stage):
         print(
             "the launch record, its records or the encoding table is uncommitted or changed",

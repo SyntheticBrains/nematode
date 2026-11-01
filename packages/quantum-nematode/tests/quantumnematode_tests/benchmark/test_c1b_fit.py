@@ -159,3 +159,18 @@ def test_the_fits_need_part_b(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert not fit._guarded("run")
     launch.write_text("# Launch record\n\n## Part A\n\nrules\n\n## Part B\n\nthe cap\n")
     assert fit._guarded("run")
+
+
+def test_the_kappa_probe_maps_one_more_dimension() -> None:
+    """The 21st dimension is the off-food gain on the on-food range; the rest is F.0a's box."""
+    import npe_recovery as nr  # pyright: ignore[reportMissingImports]
+    import numpy as np
+
+    z = np.random.default_rng(1).random(21)
+    params = fit.parameters_kappa(z)
+    assert {k: v for k, v in params.items() if k != "kappa_off_food"} == nr.parameters_from_unit(
+        z[:20],
+    )
+    low, high = nr.PRIOR["kappa_weathervane"][1:]
+    assert params["kappa_off_food"] == pytest.approx(low + z[20] * (high - low))
+    assert fit.parameters_kappa(np.r_[z[:20], 0.5])["kappa_off_food"] == pytest.approx(0.0)
