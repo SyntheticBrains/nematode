@@ -86,6 +86,11 @@ members = ["packages/*"]
 
 [tool.uv]
 package = false
+# qiskit-serverless (through qiskit-ibm-catalog, the qpu extra) pins certifi to an exact release
+# that bundles emSign roots with compromised intermediate keys (GHSA-6q48-6c7w-9gw2). certifi is a
+# CA bundle with a stable API, so the pin is overridden here. Remove this once a qiskit-serverless
+# release pins certifi at 2026.10.18 or later.
+override-dependencies = ["certifi>=2026.10.18"]
 
 [tool.ruff]
 target-version = "py313"
