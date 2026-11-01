@@ -559,6 +559,36 @@ def _reversal_share(params: dict[str, float], protocol: str) -> dict[str, float]
     return {"seconds_reversing": reversing, "backward_share_of_travel": back / (back + forward)}
 
 
+SEARCH_BASE = 99_930_000
+
+
+def _search_level(params: dict[str, float]) -> dict[str, Any]:
+    """Return an answer's off-food reorientations per 2-min bin, by the benchmark's own detector."""
+    import benchmark_grade as bg
+    from quantumnematode.benchmark import grading as g
+    from quantumnematode.benchmark.readouts import local_search_curve
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    seeds = list(range(SEARCH_BASE, SEARCH_BASE + nr.ANIMALS))
+    protocol = bg.PROTOCOLS["local_search"]
+    config = load_simulation_config(str(bg.FORAGING / f"{bg.ARMS['mlp']}_assay_{protocol}.yml"))
+    tr = BatchedEvaluator(config, BatchedMechanistic(params), seeds).run()
+    analysis = tuple(tr.assay["analysis_steps"])  # type: ignore[index]
+    first, end = g.analysis_bounds(analysis, g.SEARCH_SAMPLES, tr.x.shape[1])  # type: ignore[arg-type]
+    onsets, valid = g._onsets([tr.to_behaviour_steps(i, first, end) for i in range(len(seeds))])
+    curve = local_search_curve(onsets, valid, bin_s=g.SEARCH_BIN_S, start_s=0)
+    starts = curve.starts_s / 60.0
+    graded = g.local_search_statistics(starts, curve.mean)
+    return {
+        "bin_starts_min": starts.tolist(),
+        "per_bin": [float(v) for v in curve.mean],
+        "mean_per_bin": float(np.nanmean(curve.mean)),
+        "graded": {k: float(v) for k, v in graded.items()},
+    }
+
+
 def _real_reversal_share() -> dict[str, float]:
     from quantumnematode.benchmark import references as refs
 
@@ -615,13 +645,23 @@ def _diagnose_reversals(workers: int) -> int:
                 [p for _, p in share_jobs],
             ),
         )
+        search_names = ("restart 0", "restart 2", "restart 4")
+        levels = list(pool.map(_search_level, [fitted[n] for n in search_names]))
+    reference = json.loads(
+        (_REPO / "data" / "benchmark" / "lopezcruz2019_reference.json").read_text(),
+    )
     out = {
         "description": "Description: the weathervane gain's effect on each odour, alone and in "
-        "fitted answers, and the share of time and travel spent reversing, against real worms' "
-        "reversal share on Scheer's lawns; discarded seeds.",
+        "fitted answers; the share of time and travel spent reversing, against real worms' "
+        "reversal share on Scheer's lawns; and fitted answers' off-food reorientations per 2-min "
+        "bin by the benchmark's detector, against Lopez-Cruz's reference; discarded seeds.",
         "sensing_terms": terms,
         "reversal_share": {f"{n} / {p}": s for (n, p), s in zip(share_jobs, shares, strict=True)},
         "real_reversal_share_scheer": _real_reversal_share(),
+        "search_level": dict(zip(search_names, levels, strict=True)),
+        "search_level_reference": {
+            k: reference["reference"][k] for k in ("alpha", "beta", "gamma_per_min", "t0_min")
+        },
     }
     cr._write_json(REVERSAL_PATH, out)
     print(

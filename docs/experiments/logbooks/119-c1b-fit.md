@@ -1,4 +1,6 @@
-# 119: Phase 10 — C.1b, the Mechanistic Baseline Refitted on Benchmark v2: It Fails the Wild Type on One Steering Gain
+# 119: Phase 10 — C.1b, the Mechanistic Baseline Refitted on Benchmark v2: It Fails the Wild Type, and Its Fits Are Reversal-Dominated
+
+> **Corrected 2026-11-01 (see the addendum).** The diagnosis first given here, one steering gain for two odours, is wrong. The fits are reversal-dominated off food, which the benchmark does not constrain, and the steering gain's effect inverts with the share of backward travel. The verdict is unchanged.
 
 **Status**: completed. **C.1 fails the wild type on benchmark v2**: the chosen restart passes 0 of its 5 registered populations, against the 3 required. By the registered verdict map, the failing statistics are the diagnosis, and the roadmap's risk row goes to the maintainer.
 
@@ -73,7 +75,7 @@ Across all 8 restarts and both pilots, the weathervane gain is negative in 9 of 
   - in populations 1 and 2, **every one of the 19 statistics passes**, and only the presence test fails.
 - **Across all restarts:** none passes any of the 40 registered populations. The restart spread is a median D of 2.87 (1.92–3.44).
 
-### Why: one steering gain for two odours (`diagnosis.json`; description)
+### Why: one steering gain for two odours (`diagnosis.json`; description; *superseded by the addendum*)
 
 C.1 steers by one weathervane gain κ, applied to the odour it senses. On the lawn assays that odour is the lawn's; in Chen's assay it is butanone.
 
@@ -118,3 +120,67 @@ C.1 steers by one weathervane gain κ, applied to the odour it senses. On the la
   - `grading.analysis_bounds`.
 - `speedup_identity_check.py --build/--out`.
 - `cma_recovery_v2.simulate_v2(parameters=...)`.
+
+## Addendum (2026-11-01): the diagnosis corrected
+
+The maintainer asked for the diagnosis to be tested before anything else was fitted. Three checks, all description and all on discarded seeds, overturn it. The registered verdict is unchanged.
+
+### A weathervane gain of its own off food does not restore chemotaxis (`probe_kappa.json`)
+
+C.1 was given a 21st parameter, a weathervane gain used only where food contact is 0. It was fitted warm from the chosen restart's answer at σ 0.1, with the same objective and the doubly guarded plateau, and stopped at generation 121.
+
+- **The fit is the best yet:** D 1.49–1.65, and all 19 statistics pass in 3 of 5 populations.
+- **The off-food gain settles near zero** (−4.2, against −35.0 on food), and the weathervane slope matches the real worms' (0.02–0.38 °/s against 0.36).
+- **Chemotaxis presence still fails in all 5.** The drift is −0.016 to −0.017 mm/s, and the klinokinesis ratio −0.28 to −0.36, against +1.40.
+
+So the steering gain was not what blocked chemotaxis.
+
+### The gain's sign depends on how much the worm moves backwards (`reversal_diagnosis.json`)
+
+**Each sensing term alone, at the box centre's other parameters:**
+
+- klinokinesis alone (β 5) climbs the gradient, weakly (drift +0.002, ratio +0.32);
+- κ = −30 alone climbs butanone (+0.024) **and** keeps the worm on the lawn (time on lawn 0.86);
+- κ = +30 does neither.
+
+So the gain means the same on both odours here, and there is no sign error between the assays.
+
+**In the fitted answers the sign is set by the rest of the parameters:**
+
+| Answer | κ | Drift on butanone (mm/s) | Time on the small lawn |
+|---|---|---|---|
+| restart 4 as fitted | +49.9 | +0.024 | 0.98 |
+| restart 4, κ flipped | −49.9 | −0.018 | 0.00 |
+| restart 2 as fitted | −30.3 | −0.022 | 0.97 |
+| restart 2, κ flipped | +30.3 | +0.010 | 0.40 |
+
+**What sets it is reversing.** Steering turns the heading, so for a worm moving mostly backwards, steering toward an odour carries it away.
+
+| Answer | Assay | Seconds reversing | Backward share of travel along the heading |
+|---|---|---|---|
+| restart 4 | small lawn | 42% | 81% |
+| restart 4 | chemotaxis | 52% | 93% |
+| restart 2 | small lawn | 8% | 21% |
+| restart 2 | chemotaxis | 56% | 69% |
+
+Real worms on Scheer's lawns are flagged as reversing **12–16%** of their tracked seconds in every cohort (4,227 animals). Restart 2 moves forward on food and mostly backwards off food, so its κ attracts on the lawn and repels butanone. Restart 4 reverses heavily everywhere, so its positive κ attracts on both.
+
+### The benchmark does not see it
+
+**Local search grades only the curve's shape.** It grades γ and the early/late ratio, not the reorientation rate's level. López-Cruz's wild type reorients α + β = 2.94 times per 2-min bin at 9 min, decaying to 0.44 by 44 min.
+
+By the benchmark's own detector, off food:
+
+- **restart 2 reorients about 9.5 times per bin, flat** (7.5 to 9.3);
+- restart 4 about 7.5, flat;
+- restart 0 0.3.
+
+Restart 2 still passes local search (γ 0.097, early/late 1.09), in every registered population.
+
+**Backward motion is not visible from midbody positions.** A worm reversing half its time draws much the same path as one going forward.
+
+### What changes
+
+- **The diagnosis:** sep-CMA found reversal-dominated locomotion off food, which the benchmark does not constrain. The chemotaxis failure follows from it. It is not established that C.1's model fails v2 with physiological reversing.
+- **The candidate fix is in the benchmark** (the maintainer's decision, 2026-11-01): grade the off-food reorientation level, then refit C.1 on the revised benchmark. Every later controller could use the same gap, so it comes before C.2.
+- **The registered verdict, 0 of 5, stands as read.** Logbook 119's earlier diagnosis is kept above as what was first concluded, marked superseded.
