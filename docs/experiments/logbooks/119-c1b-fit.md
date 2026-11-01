@@ -58,7 +58,7 @@ Across all 8 restarts and both pilots, the weathervane gain is negative in 9 of 
   - `edge` and `a_intake` were pinned at F.0a's upper bounds.
 - **The widened-box probe** (`probe_wide.json`; the maintainer's decision): the same pilot with those two upper bounds raised from 5 to 10.
   - Both parameters settled inside the wider box.
-  - Its answer still passed 0 of 5 populations, failing the same statistics, with D 2.79.
+  - Its answer still passed 0 of 5 populations, with D 2.79. It failed all six of the pilot's failing statistics, plus the dwelling speed p90, the roaming speed median and exits per on-lawn hour.
   - **The box was not the limit.**
 - **The maintainer's decision:** accept the reachability fail and run as registered, on F.0a's box (Part B).
 

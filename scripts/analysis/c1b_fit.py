@@ -590,10 +590,10 @@ def _smoke(workers: int) -> int:
 
 def _guarded(stage: str) -> bool:
     if stage == "pilot":
-        bound: tuple[Path, ...] = (ENCODINGS_PATH,)
-    else:
-        bound = (ENCODINGS_PATH, PILOT_PATH, PROBE_WIDE_PATH)
-    return cr.launch_committed(bound, launch_path=LAUNCH_PATH)
+        return cr.launch_committed((ENCODINGS_PATH,), launch_path=LAUNCH_PATH)
+    bound = (ENCODINGS_PATH, PILOT_PATH, PROBE_WIDE_PATH)
+    has_part_b = LAUNCH_PATH.exists() and "\n## Part B\n" in LAUNCH_PATH.read_text()
+    return has_part_b and cr.launch_committed(bound, launch_path=LAUNCH_PATH)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -78,6 +78,7 @@ def test_the_verdict_needs_three_of_five() -> None:
     """One unlucky population does not fail a faithful controller; three failing do."""
     assert fit.wild_type_verdict([_pass(1.0)] * 4 + [_fail(4.0)])
     assert not fit.wild_type_verdict([_pass(1.0)] * 2 + [_fail(4.0)] * 3)
+    assert fit.wild_type_verdict([_pass(1.0)] * 3 + [_fail(4.0)] * 2)
 
 
 def test_the_cap_follows_the_pilot() -> None:
@@ -146,3 +147,15 @@ def test_failing_names_statistics_and_presence() -> None:
         "chemotaxis_presence": {"present": True},
     }
     assert fit.failing([grade]) == ["kinematics/roaming_speed_median", "local_search/presence"]
+
+
+def test_the_fits_need_part_b(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every stage after the pilot needs the launch record's Part B; the pilot needs Part A only."""
+    launch = tmp_path / "launch.md"
+    launch.write_text("# Launch record\n\n## Part A\n\nrules\n")
+    monkeypatch.setattr(fit, "LAUNCH_PATH", launch)
+    monkeypatch.setattr(fit.cr, "launch_committed", lambda *_, **__: True)
+    assert fit._guarded("pilot")
+    assert not fit._guarded("run")
+    launch.write_text("# Launch record\n\n## Part A\n\nrules\n\n## Part B\n\nthe cap\n")
+    assert fit._guarded("run")

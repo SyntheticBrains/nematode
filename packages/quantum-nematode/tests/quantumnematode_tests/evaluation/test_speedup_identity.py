@@ -172,8 +172,23 @@ def test_a_new_run_starts_a_new_buffer() -> None:
     )
 
 
-@pytest.mark.parametrize(("start", "stop"), [(0, 400), (1, 50), (120, 360), (399, 400), (380, 999)])
-def test_a_window_of_an_animal_is_its_whole_series_sliced(start: int, stop: int) -> None:
+@pytest.mark.parametrize(
+    ("start", "stop"),
+    [
+        (0, 400),
+        (1, 50),
+        (120, 360),
+        (399, 400),
+        (380, 999),
+        (-50, None),
+        (10, -20),
+        (-30, -10),
+        (-999, 5),
+        (300, 100),
+        (0, None),
+    ],
+)
+def test_a_window_of_an_animal_is_its_whole_series_sliced(start: int, stop: int | None) -> None:
     """Covers "A windowed animal is the same": built from start to stop, every field and type."""
     tr = _trajectories(gradient=True, phases=True)
     names = [f.name for f in dataclasses.fields(BehaviourStep)]

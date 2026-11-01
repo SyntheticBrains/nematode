@@ -158,8 +158,9 @@ class BatchedTrajectories:
         the signed speed is computed on those floats with ``math``'s cosine and sine.
         """
         total = self.x.shape[1]
-        end = total if stop is None else min(stop, total)
-        start = min(max(start, 0), end)
+        # Python's slice rules, negative bounds included; an empty range keeps start <= end.
+        start, end, _ = slice(start, stop).indices(total)
+        end = max(end, start)
         lo = max(start - 1, 0)
         xs = self.x[animal, lo:end].tolist()
         ys = self.y[animal, lo:end].tolist()

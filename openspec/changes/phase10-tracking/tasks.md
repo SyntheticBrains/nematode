@@ -649,9 +649,10 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     one-core equivalents (213 an hour), against 1,697 at 12 and 1,891 at 18, so 16 workers (a fit's
     population) is the right size and running restarts side by side adds nothing. The earlier
     "about 6 cores' worth" was measured before High Power and the speed-up;
-  - **small and exact, not yet taken:** converting and measuring only each family's analysis
-    window (about 7%), and per-function work on the evaluator's kernels (perhaps 10–15% of their
-    time);
+  - **done** ([Logbook 119](../../../docs/experiments/logbooks/119-c1b-fit.md)): converting and
+    measuring only each family's analysis window, exact, about 3–4% per simulation;
+  - **small and exact, not yet taken:** per-function work on the evaluator's kernels (perhaps
+    10–15% of their time);
   - **in W's registration:** a registered sequential stopping rule for the null draws, and W's
     cost re-sized from v2 timings rather than v1's;
   - **dropped:** surrogate-assisted CMA. The objective is noisy, and it would need its own
