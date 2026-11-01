@@ -29,10 +29,11 @@
 
 **Records**: [`supporting/120-benchmark-v3/`](supporting/120-benchmark-v3/):
 
-- `launch.md` (Part A, Part B);
+- `launch.md` (Part A, Part B and an erratum);
 - `brief.md`, `probe.json`, `preflight.json` and `preflight_controls.json` (the planning readings and preflights, disclosed), with the probe's and preflight's scripts as run (`probe.py.txt`, `preflight.py.txt`);
-- `identity.json`, `rebuild_check.txt` (v1 and v2 unchanged);
-- `bands_v3_record.json`, `round_trip.json`, `oracle_fit.json`, `read.json`, `controls_v3.json`.
+- `identity.json`, `rebuild_check.txt` and `v2_baseline_capture.py.txt` (v1 and v2 unchanged);
+- `bands_v3_record.json`, `round_trip.json`, `oracle_fit.json`, `read.json`, `controls_v3.json`;
+- `adversaries_disjoint.json` (the adversaries re-read on disjoint seeds, description), with its script as run.
 
 The bands are [`data/benchmark/bands_v3.json`](../../../data/benchmark/bands_v3.json) (SHA-256 `8af38429…`).
 
@@ -105,7 +106,7 @@ The bar is 3.038. Restart 4 backs up continuously: its onsets and flips stay wit
 
 5. **Chen's leave-one-out:** every standard recording passes on all five statistics and is present (largest |z| 1.85), 0 failures against an allowance of 1. The allowance is recomputed at the nominal rate 1 − (1 − 0.05/21)⁵ = 0.0118.
 
-6. **The adversaries** are each caught in 5 of 5 populations (the table above).
+6. **The adversaries** are each caught in 5 of 5 populations (the table above). Their populations shared animal seeds with the oracle fit's restart 1, which Part A missed (the erratum in `launch.md`). The reading stands, since the adversaries are fixed answers. Re-read on disjoint seeds as description, each is again caught in 5 of 5, by the same statistics (`adversaries_disjoint.json`).
 
 7. **The negatives** each fail the wild type in 5 of 5 populations, and the open-loop four fail chemotaxis in 5 of 5:
 

@@ -1,0 +1,180 @@
+{
+  "version": 2,
+  "n": {
+    "small_lawn": 64,
+    "kinematics": 64,
+    "uniform_lawn": 64,
+    "local_search": 64,
+    "chemotaxis": 16
+  },
+  "bar": 3.0077865564732633,
+  "families": {
+    "small_lawn": {
+      "roaming_fraction": {
+        "value": 0.9248169456066946,
+        "centre": 0.1693625364393881,
+        "scale": 0.0585398269611133,
+        "z": 10.0,
+        "passes": false
+      },
+      "roaming_bout_s": {
+        "value": 2947.0833333333335,
+        "centre": 216.66666666666666,
+        "scale": 37.35054741090556,
+        "z": 10.0,
+        "passes": false
+      },
+      "dwelling_bout_s": {
+        "value": 209.0909090909091,
+        "centre": 1067.927031509121,
+        "scale": 409.8851155205773,
+        "z": -2.0953093681565904,
+        "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+        "value": 0.0,
+        "centre": 0.7104713257487811,
+        "scale": 0.3371004507597174,
+        "z": -2.1075953002958148,
+        "passes": true
+      },
+      "pre_exit_enrichment": {
+        "value": null,
+        "centre": 0.29533931414320275,
+        "scale": 0.11642572512979012,
+        "z": 10.0,
+        "passes": false
+      },
+      "time_on_lawn": {
+        "value": 1.0,
+        "centre": 0.9781185208237833,
+        "scale": 0.010137784607767375,
+        "z": 2.158408372520716,
+        "passes": true
+      }
+    },
+    "kinematics": {
+      "dwelling_speed_median": {
+        "value": 0.02126033451145091,
+        "centre": 0.012838345155748037,
+        "scale": 0.0012129453920353137,
+        "z": 6.943420050898447,
+        "passes": false
+      },
+      "dwelling_speed_p90": {
+        "value": 0.0375161920154464,
+        "centre": 0.028228348042629806,
+        "scale": 0.0019323803353949954,
+        "z": 4.806426458960045,
+        "passes": false
+      },
+      "roaming_speed_median": {
+        "value": 0.02773241082845347,
+        "centre": 0.037258195394971876,
+        "scale": 0.001601854078832107,
+        "z": -5.946724294302475,
+        "passes": false
+      },
+      "roaming_speed_p90": {
+        "value": 0.04214682133233337,
+        "centre": 0.07326134970632286,
+        "scale": 0.006526662592295641,
+        "z": -4.767295372480025,
+        "passes": false
+      },
+      "roaming_survival_5min": {
+        "value": 0.9084389194358117,
+        "centre": 0.19388298312439115,
+        "scale": 0.0726870400916354,
+        "z": 9.830582390073818,
+        "passes": false
+      }
+    },
+    "uniform_lawn": {
+      "roaming_fraction": {
+        "value": 0.8964435146443515,
+        "centre": 0.21302061713020617,
+        "scale": 0.11078053269475101,
+        "z": 6.169160599699185,
+        "passes": false
+      },
+      "roaming_bout_s": {
+        "value": 2324.0677966101694,
+        "centre": 327.5531914893617,
+        "scale": 37.35054741090556,
+        "z": 10.0,
+        "passes": false
+      },
+      "dwelling_bout_s": {
+        "value": 304.61538461538464,
+        "centre": 1263.888888888889,
+        "scale": 677.2686597571583,
+        "z": -1.4163854926012105,
+        "passes": true
+      }
+    },
+    "local_search": {
+      "gamma_per_min": {
+        "value": null,
+        "centre": 0.10842435606485114,
+        "scale": 0.040354698428154416,
+        "z": 10.0,
+        "passes": false
+      },
+      "early_late_ratio": {
+        "value": 1.0043883216908471,
+        "centre": 4.21212558753302,
+        "scale": 1.6209027270629235,
+        "z": -1.978981966212491,
+        "passes": true
+      }
+    },
+    "chemotaxis": {
+      "drift_mm_s": {
+        "value": 3.5090457890386595e-05,
+        "centre": 0.025892152204068538,
+        "scale": 0.015975538371273735,
+        "z": -1.6185408682484708,
+        "passes": true
+      },
+      "log_quintile_ratio": {
+        "value": 0.05342516667358057,
+        "centre": 1.3984932594373005,
+        "scale": 0.7589036664095972,
+        "z": -1.7723831789182012,
+        "passes": true
+      },
+      "weathervane_deg_s": {
+        "value": -3.3437998062356633,
+        "centre": 0.363577707063617,
+        "scale": 0.8717139899751141,
+        "z": -4.252974663633791,
+        "passes": false
+      }
+    }
+  },
+  "family_passes": {
+    "small_lawn": false,
+    "kinematics": false,
+    "uniform_lawn": false,
+    "local_search": false,
+    "chemotaxis": false
+  },
+  "kinematics_reported": {
+    "reversals_per_on_lawn_min": 5.337770946227595
+  },
+  "local_search_presence": {
+    "lower_bound": 0.9849295067406835,
+    "present": false
+  },
+  "chemotaxis_presence": {
+    "lower_bounds": {
+      "drift_mm_s": -0.0006832129797669322,
+      "log_quintile_ratio": -0.14571181118139365
+    },
+    "present": false
+  },
+  "wild_type_passes": false,
+  "D": 6.38832184239289,
+  "D_fit": 6.931702330848432
+}

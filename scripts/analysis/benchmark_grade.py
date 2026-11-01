@@ -42,7 +42,7 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 import quantumnematode.brain  # noqa: F401  - registers the brains the configs name
@@ -305,7 +305,10 @@ def _validated(bands_path: Path, controls_path: Path) -> bool:
         return False
     from quantumnematode.benchmark.measurement import file_sha256
 
-    return controls.get("bands_sha256") == file_sha256(bands_path)
+    try:
+        return controls.get("bands_sha256") == file_sha256(bands_path)
+    except OSError:
+        return False  # unreadable bands leave the default where it was
 
 
 def v2_is_valid() -> bool:
@@ -421,20 +424,42 @@ def chemotaxis_fragments(
     return out
 
 
+@overload
+def simulate_v2(
+    arm: str,
+    controller: Callable[[Path], Any],
+    seeds: list[int],
+    bands: dict[str, Any],
+    assays: None = None,
+) -> tuple[dict[str, list[list[BehaviourStep]]], list[list[BehaviourStep]]]: ...
+
+
+@overload
+def simulate_v2(
+    arm: str,
+    controller: Callable[[Path], Any],
+    seeds: list[int],
+    bands: dict[str, Any],
+    assays: tuple[str, ...],
+) -> tuple[dict[str, list[list[BehaviourStep]]], list[list[BehaviourStep]] | None]: ...
+
+
 def simulate_v2(
     arm: str,
     controller: Callable[[Path], Any],
     seeds: list[int],
     bands: dict[str, Any],
     assays: tuple[str, ...] | None = None,
-) -> tuple[dict[str, list[list[BehaviourStep]]], list[list[BehaviourStep]]]:
+) -> tuple[dict[str, list[list[BehaviourStep]]], list[list[BehaviourStep]] | None]:
     """Run a controller on the v2 assays; measure each rig's tracks before they are windowed.
 
     Returns the lawn families' windowed, measured animals and the chemotaxis assay's measured
     animals over its analysis window. ``controller`` builds a fresh
     controller for each assay from that assay's config path. ``assays`` names the families to run
     (``chemotaxis`` among them), all by default; each assay is its own run on the animals' own
-    streams, so a subset gives those families' animals exactly as the full run does.
+    streams, so a subset gives those families' animals exactly as the full run does. Without
+    ``chemotaxis`` among them, no chemotaxis population is returned (None), so the grading leaves
+    that family out.
     """
     from quantumnematode.benchmark import measurement as mm
     from quantumnematode.evaluation.odour_field import chen_field, chen_starts
@@ -467,7 +492,7 @@ def simulate_v2(
             for i, seed in enumerate(seeds)
         ]
     if assays is not None and "chemotaxis" not in assays:
-        return populations, []
+        return populations, None
     path = FORAGING / f"{ARMS[arm]}_assay_{CHEMOTAXIS_PROTOCOL}.yml"
     config = load_simulation_config(str(path))
     field = chen_field()

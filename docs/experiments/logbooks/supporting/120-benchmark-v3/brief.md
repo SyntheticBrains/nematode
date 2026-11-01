@@ -20,5 +20,5 @@ A research pass before planning read these real data sets with the benchmark's o
 
 ## Records
 
-- `probe.json` and `probe.py.txt` (the script as run): the discriminability probe (animals at 99,940,000).
+- `probe.json` and `probe.py.txt` (the script as run): the discriminability probe (animals at 99,940,000). Its `roberts_reversal_share` is null: the probe looked up the tracker state `R`, but Roberts' store names it `reverse`. The reported reference (17.34% of tracked frames) is computed by `benchmark_bands.roberts_reversal_share`.
 - `preflight.json` and `preflight.py.txt` (the script as run): the adversary and oracle preflights (99,950,000 and 99,960,000, CMA 9423).

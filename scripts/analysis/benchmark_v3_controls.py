@@ -98,6 +98,7 @@ NEW_STATISTICS = (
 ORACLE_ASSAYS = ("local_search", "chemotaxis")
 ADVERSARY_RESTARTS = (2, 4, 6)
 KAPPA_PROBE = "kappa probe"
+ADVERSARY_NAMES = (*(f"restart {r}" for r in ADVERSARY_RESTARTS), KAPPA_PROBE)
 ANSWERS = ("blind_v2", "c1_v1")
 NEGATIVE_ORDER = (*bc.NEGATIVES, *ANSWERS)
 
@@ -248,6 +249,9 @@ def _oracle_fit(args: argparse.Namespace) -> int:
         return 1
     if not ROUND_TRIP_PATH.exists() or not json.loads(ROUND_TRIP_PATH.read_text())["passes"]:
         print("the round trip has not passed; the oracle is not fitted", file=sys.stderr)
+        return 1
+    if json.loads(ROUND_TRIP_PATH.read_text())["bands_sha256"] != mm.file_sha256(bg.BANDS_V3_PATH):
+        print("the round trip was read on other bands; the oracle is not fitted", file=sys.stderr)
         return 1
     from quantumnematode.evaluation.controllers import MECHANISTIC_PARAMETERS
 
@@ -719,12 +723,17 @@ def verdict(
         "reachability": oracle_passes,
         "lopezcruz_held_out": bool(read.get("lopezcruz_held_out", {}).get("passes", False)),
         "chemotaxis_leave_one_out": bool(record["chemotaxis_leave_one_out"]["passes"]),
-        "adversaries_caught": bool(adversaries)
-        and all(a["caught_3_of_5"] for a in adversaries.values()),
-        "negatives_fail_wild_type": bool(negatives)
-        and all(negatives[n]["fails_wild_type_3_of_5"] for n in NEGATIVE_ORDER),
-        "open_loop_fail_chemotaxis": bool(negatives)
-        and all(negatives[n]["fails_chemotaxis_3_of_5"] for n in v2c.OPEN_LOOP),
+        "adversaries_caught": all(
+            name in adversaries and adversaries[name]["caught_3_of_5"] for name in ADVERSARY_NAMES
+        ),
+        "negatives_fail_wild_type": all(
+            name in negatives and negatives[name]["fails_wild_type_3_of_5"]
+            for name in NEGATIVE_ORDER
+        ),
+        "open_loop_fail_chemotaxis": all(
+            name in negatives and negatives[name]["fails_chemotaxis_3_of_5"]
+            for name in v2c.OPEN_LOOP
+        ),
         "lawn_n2_control_carried_from_v2": bool(v2_read["n2_control"]["passes"]),
     }
     return {"checks": checks, "verdict": "VALID" if all(checks.values()) else "VOID"}
@@ -746,6 +755,12 @@ def _verdict(_args: argparse.Namespace) -> int:
         for p in (ROUND_TRIP_PATH, BANDS_V3_RECORD, READ_PATH, V2_READ_PATH)
     ]
     read = parts[2]
+    if read["bands_sha256"] != mm.file_sha256(bg.BANDS_V3_PATH):
+        print(
+            f"{READ_PATH} was read on other bands: the read must be redone; no verdict",
+            file=sys.stderr,
+        )
+        return 1
     out = {
         "description": "B v3's verdict: the bands record, the round trip, the oracle and the read.",
         "bands_sha256": mm.file_sha256(bg.BANDS_V3_PATH),
@@ -770,6 +785,7 @@ def _oracle_preflight_simulate(item: tuple[int, list[float], str]) -> float:
 
 
 def _preflight(args: argparse.Namespace) -> int:
+    args.out.parent.mkdir(parents=True, exist_ok=True)
     bands = bg.load_bands_v3(args.bands)
     record: dict[str, Any] = {
         "description": "Description: B v3's controls preflight on discarded seeds, before Part A.",

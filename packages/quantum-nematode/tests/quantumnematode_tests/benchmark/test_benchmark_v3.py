@@ -207,6 +207,72 @@ def test_v2_is_unchanged() -> None:
         assert bg._finite(v3["families"][family]) == bg._finite(v2["families"][family])
 
 
+_V2_BASELINE = Path(__file__).parent / "fixtures" / "v2_grade_baseline.json"
+
+
+def _baseline_populations() -> tuple[
+    dict[str, list[list[BehaviourStep]]],
+    list[list[BehaviourStep]],
+]:
+    """Return the fixed synthetic populations the v2 baseline was captured on, before v3's code."""
+    from quantumnematode.evaluation.odour_field import chen_field
+
+    rng = np.random.default_rng(20261101)
+
+    def walk(n: int, x0: float, y0: float) -> list[BehaviourStep]:
+        xy = np.cumsum(rng.normal(0.0, 0.05, size=(n, 2)), axis=0) + np.array([x0, y0])
+        return [
+            BehaviourStep(
+                step=i,
+                x=float(px),
+                y=float(py),
+                heading_rad=0.0,
+                concentration=0.0,
+                dc_dt=0.0,
+                grad_dir=0.0,
+                grad_strength=0.0,
+                on_lawn=True,
+                primitive="run",
+            )
+            for i, (px, py) in enumerate(xy)
+        ]
+
+    populations = {
+        "small_lawn": [walk(g.LAWN_SAMPLES, 0.0, 0.0) for _ in range(64)],
+        "uniform_lawn": [walk(g.LAWN_SAMPLES, 0.0, 0.0) for _ in range(64)],
+        "local_search": [walk(g.SEARCH_SAMPLES, 0.0, 0.0) for _ in range(64)],
+    }
+    field = chen_field()
+    cx, cy = field.origin_mm[0] + 30.0, field.origin_mm[1] + 30.0
+    return populations, [walk(600, cx, cy) for _ in range(16)]
+
+
+def _assert_close(actual: Any, expected: Any) -> None:
+    if isinstance(expected, dict):
+        assert set(actual) == set(expected)
+        for key, value in expected.items():
+            _assert_close(actual[key], value)
+    elif isinstance(expected, list):
+        assert len(actual) == len(expected)
+        for a, e in zip(actual, expected, strict=True):
+            _assert_close(a, e)
+    elif isinstance(expected, float):
+        assert actual == pytest.approx(expected, rel=1e-9, abs=1e-12)
+    else:
+        assert actual == expected
+
+
+def test_v2_grading_matches_its_pre_v3_baseline() -> None:
+    """Covers "v2 is unchanged": v2's grading of fixed populations matches the pre-v3 capture.
+
+    The baseline was captured with the code before v3 (commit ``f7e7e8de``) on these populations:
+    every statistic, D, D_fit and both presence readings.
+    """
+    populations, chemotaxis = _baseline_populations()
+    graded = bg._finite(bg.grade_populations_v2(populations, chemotaxis, bg.load_bands_v2()))
+    _assert_close(graded, json.loads(_V2_BASELINE.read_text()))
+
+
 def test_the_reversal_share_is_reported_where_labelled() -> None:
     """The share of labelled seconds reversing is reported over local search and chemotaxis."""
     bands = _bands_v3()
@@ -270,6 +336,24 @@ def test_an_imported_track_reports_no_share(
     assert set(result["families"]) == {"small_lawn", "kinematics"}
     assert set(result["families"]["small_lawn"]) == set(g.LAWN_STATISTICS)
     assert result["bar"] == pytest.approx(V3_BAR)
+
+
+def test_unreadable_bands_leave_the_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A bands file that cannot be hashed makes no version valid, so the default falls back."""
+    bands = _write_bands_v3(tmp_path, monkeypatch)
+    controls = tmp_path / "controls_v3.json"
+    controls.write_text(json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bands)}))
+    monkeypatch.setattr(bg, "CONTROLS_V3_PATH", controls)
+
+    def unreadable(_path: Path) -> str:
+        msg = "unreadable"
+        raise PermissionError(msg)
+
+    monkeypatch.setattr(mm, "file_sha256", unreadable)
+    assert bg.v3_is_valid() is False
 
 
 def test_v3_is_the_default_only_once_valid(
@@ -340,9 +424,11 @@ def test_the_vendored_v3_bands_follow_their_rules() -> None:
         if r["protocol"] == "standard"
     ]
     assert len(standard) == 6
+    rebuilt = bb.chemotaxis_band_v3(standard)
     for name in ch.CHEMOTAXIS_STATISTICS_V3:
-        centre = v3["bands"]["200"]["chemotaxis"][name]["centre"]
-        assert centre == pytest.approx(float(np.mean([s[name] for s in standard])))
+        vendored = v3["bands"]["200"]["chemotaxis"][name]
+        assert vendored["centre"] == pytest.approx(float(np.mean([s[name] for s in standard])))
+        assert vendored["scale"] == pytest.approx(rebuilt[name].scale)
     controls = json.loads(bg.CONTROLS_V3_PATH.read_text())
     assert controls["verdict"] == "VALID"
     assert controls["bands_sha256"] == mm.file_sha256(bg.BANDS_V3_PATH)

@@ -250,3 +250,13 @@ From the preflights, on 16 workers:
 It is fitted to the three new statistics alone, so it says nothing about the other families: it dwells faster than it roams, and it steers away from the odour. It witnesses only that C.1's model can reach the new statistics.
 
 **Next, under the guard:** `read` (the oracle's 40 populations, then, if they pass, the rest of the read), then `verdict`.
+
+## Erratum: one seed block overlaps
+
+*Added 2026-11-01, after the read, from the PR review. It changes no rule and no registered reading.*
+
+- **Part A's seed table claimed every block disjoint, and one is not.** The oracle fit's simulation index, k = 10,000·r + 16·(n − 1) + m, spans 2,000,000 animal seeds per restart. So restart 1's fit animals run from 472,000,000 to 472,319,999. The adversaries' registered populations (472,000,000 + 200·k + i, k < 20) reuse the animal seeds of restart 1's generations 1 and 2.
+- **Why the reading stands:** the adversaries are C.1b's fixed answers, not fitted on those streams, and the oracle's answer was checked on 471 M, which no fit used. A shared seed gives different controllers the same noise streams; it selects nothing.
+- **Described beside it** (`adversaries_disjoint.json`, with its script as run): on 474,000,000 + 200·k + i, which no scheme uses, each adversary is again caught in 5 of 5 populations, by the same statistics. Restart 4 is caught by log early/late alone, and restart 6 by the flip fraction alone.
+- **The discarded blocks also overlap one another.** The oracle preflight's fit animals (99,960,000 to 100,151,999) include the controls preflight's 99.97 M, 99.98 M and 99.99 M blocks. All are discarded, and none was read as a gate.
+- **Every other registered block is disjoint.** Restart 0's fit animals end at 470,255,999, below the oracle's check populations (471 M); restart 1's end below the negatives (473 M).

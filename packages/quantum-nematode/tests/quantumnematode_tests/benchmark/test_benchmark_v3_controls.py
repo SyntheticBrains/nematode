@@ -86,7 +86,7 @@ def _valid_parts() -> tuple[dict[str, Any], ...]:
     read = {
         "oracle": {"passes": True},
         "lopezcruz_held_out": {"passes": True},
-        "adversaries": {"restart 2": {"caught_3_of_5": True}},
+        "adversaries": {name: {"caught_3_of_5": True} for name in v3c.ADVERSARY_NAMES},
         "negatives": negatives,
     }
     return {"passes": True}, record, read, {"n2_control": {"passes": True}}
@@ -102,6 +102,16 @@ def test_the_verdict_is_valid_only_if_every_check_holds() -> None:
     out = v3c.verdict(round_trip, record, stopped, v2_read)
     assert out["verdict"] == "VOID"
     assert out["checks"]["negatives_fail_wild_type"] is False
+
+
+@pytest.mark.parametrize("name", [*v3c.ADVERSARY_NAMES, *v3c.NEGATIVE_ORDER])
+def test_a_missing_adversary_or_negative_voids_the_verdict(name: str) -> None:
+    """Every registered adversary and negative must be read: omitting any one gives VOID."""
+    round_trip, record, read, v2_read = _valid_parts()
+    read["adversaries"].pop(name, None)
+    read["negatives"].pop(name, None)
+    out = v3c.verdict(round_trip, record, read, v2_read)
+    assert out["verdict"] == "VOID"
 
 
 def test_three_of_five_follows_the_family_rates() -> None:
