@@ -1,0 +1,41 @@
+{
+  "description": "B v3's round trip: Chen's smoothed fragments with the model's jitter.",
+  "bands_sha256": "8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b",
+  "fragments": 4809,
+  "seed_base": 475000000,
+  "denoiser": "the authors' SmoothX/SmoothY, resampled to 1 s as the raw paths are",
+  "applied": "jitter only; the fragments are the real ones",
+  "bar": 1.0,
+  "chemotaxis": {
+    "drift_mm_s": {
+      "raw": 0.024224619888602073,
+      "round_trip": 0.024215065827730753,
+      "reported": true
+    },
+    "log_quintile_ratio": {
+      "raw": 1.140419019850904,
+      "round_trip": 1.125595375971461,
+      "reported": true
+    },
+    "weathervane_deg_s": {
+      "raw": 0.3514905343773446,
+      "round_trip": 0.38140419108203755,
+      "reported": true
+    },
+    "onset_per_min": {
+      "raw": 1.2008073528010463,
+      "round_trip": 1.306664125642114,
+      "scale": 0.9426473665400728,
+      "z": 0.11229731986586704,
+      "passes": true
+    },
+    "flip_fraction": {
+      "raw": 0.02465499246202018,
+      "round_trip": 0.02524756715444369,
+      "scale": 0.02037163854385763,
+      "z": 0.02908821944527285,
+      "passes": true
+    }
+  },
+  "passes": true
+}

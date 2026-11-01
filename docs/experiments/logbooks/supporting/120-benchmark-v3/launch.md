@@ -193,3 +193,60 @@ From the preflights, on 16 workers:
 - `benchmark_bands.py --version v3`, `benchmark_v3_controls.py round-trip` and `oracle-fit` refuse unless this record is committed and unchanged. `round-trip` runs once, and `oracle-fit` also refuses unless the round trip passed.
 - `read` and `verdict` refuse unless this record is committed with Part B, and `bands_v3.json`, `bands_v3_record.json`, `round_trip.json` and `oracle_fit.json` are byte-identical to their versions in that commit.
 - `read` runs once: it refuses if `read.json` or its start marker exists.
+
+## Part B: the bands, the round trip and the oracle's answer
+
+*Added 2026-11-01, after the oracle's fit and before its 40 populations and the read. It changes no rule.*
+
+### The bands
+
+`data/benchmark/bands_v3.json`, SHA-256 `8af38429…`, built by the guarded builder: 21 statistics, z\* = 3.0381 (`bands_v3_record.json`). They equal the dry build's.
+
+- **The rule checks** at v3's bar, gate 0.90: the small lawn 0.945, kinematics 0.975 and local search 0.991. All pass. At v2's bar the first two read 0.94 and 0.96.
+
+- **The new bands** (centre ± scale):
+
+  | Statistic | Band |
+  |---|---|
+  | γ (per min) | 0.1084 ± 0.0412 |
+  | log early/late | 1.393 ± 0.375 |
+  | onset rate (per min) | 1.115 ± 0.943 |
+  | flip fraction | 0.0234 ± 0.0204 |
+
+  Drift, the log quintile ratio and the weathervane slope keep v2's centres, with scales at v3's factor.
+
+- **Chen's leave-one-out:** every standard recording passes and is present, 0 failures against an allowance of 1 (largest |z| 1.85). Off protocol, reported: 20220804 present, 20220203 not.
+
+- **The reported reference:** Roberts' reverse state is 17.34% of 2,048,900 tracked frames.
+
+### The round trip
+
+`round_trip.json`: **passes.** The onset rate reads 1.201 per minute raw and 1.307 round-tripped (z +0.11); the flip fraction reads 0.0247 and 0.0252 (z +0.03). Drift, the log quintile ratio and the weathervane slope are reported.
+
+### The oracle's answer
+
+`oracle_fit.json`:
+
+| Restart | CMA seed | Stop | Final objective |
+|---|---|---|---|
+| 0 | 9421 | plateau, generation 80 | 0.127 |
+| 1 | 9422 | cap, generation 100 | 0.090 |
+
+**Restart 1 is taken.** Its answer, in C.1's parameters:
+
+| Parameter | Value | Parameter | Value |
+|---|---|---|---|
+| a0 | −5.367 | r_dwell | 0.0259 |
+| a_intake | −5.000 | r_roam | 0.0038 |
+| a_satiety | 3.944 | beta_reversal | 1.820 |
+| b0 | −9.092 | edge | 1.360 |
+| b_intake | −0.500 | o_dwell | 0.0894 |
+| b_satiety | 1.866 | o_roam | 0.0013 |
+| v_dwell | 0.160 | beta_omega | 0.534 |
+| v_roam | 0.0599 | search_amplitude | 19.53 |
+| sigma_dwell | 5.15 | search_tau_s | 409.0 |
+| sigma_roam | 57.06 | kappa_weathervane | −26.08 |
+
+It is fitted to the three new statistics alone, so it says nothing about the other families: it dwells faster than it roams, and it steers away from the odour. It witnesses only that C.1's model can reach the new statistics.
+
+**Next, under the guard:** `read` (the oracle's 40 populations, then, if they pass, the rest of the read), then `verdict`.

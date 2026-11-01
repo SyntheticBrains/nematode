@@ -298,3 +298,15 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
 - **The record:** κ, the rule checks and the chemotaxis leave-one-out are in `docs/experiments/logbooks/supporting/115-benchmark-v2/bands_v2_record.json`.
 - **Licence:** CC0-1.0 for the parts from Scheer & Bargmann, and CC BY 4.0 for the parts from López-Cruz et al. and Chen et al.
 - **Checksum:** SHA-256 `21f591b864d497ee3ee305c217e3c9e197a8bc466298219d46841819b875f438` as written.
+
+## `bands_v3.json`
+
+- **Derived by** `scripts/analysis/benchmark_bands.py --version v3` from the files above, on band cohorts only. It holds:
+  - v2's small-lawn, uniform-well, mutant and kinematics bands and its measurement models, unchanged;
+  - local search's bands on γ and the log early/late ratio, from López-Cruz's 17 band batches;
+  - chemotaxis's bands on five statistics (v2's three, the onset rate and the direction-flip fraction), from Chen's six standard recordings;
+  - the five families, the 21-statistic bar (z\* 3.0381) and the weights;
+  - the reported reversal share's reference, from Roberts' tracker states.
+- **The record:** the rule checks and the chemotaxis leave-one-out are in `docs/experiments/logbooks/supporting/120-benchmark-v3/bands_v3_record.json`.
+- **Licence:** CC0-1.0 for the parts from Scheer & Bargmann and Roberts et al., and CC BY 4.0 for the parts from López-Cruz et al. and Chen et al.
+- **Checksum:** SHA-256 `8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b` as written.
