@@ -37,8 +37,6 @@ import npe_recovery as nr
 DESCRIPTION = "Check that a speed-up of C.1's simulation path leaves every output byte-identical."
 _REPO = Path(__file__).resolve().parents[2]
 BUILD = _REPO / "build" / "v2-speedup"
-BASELINE_PATH = BUILD / "baseline.jsonl"
-MANIFEST_PATH = BUILD / "baseline_manifest.json"
 IDENTITY_PATH = (
     _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "118-v2-speedup" / "identity.json"
 )
@@ -153,29 +151,33 @@ def _inputs() -> dict[str, Any]:
     }
 
 
-def _baseline(workers: int) -> int:
+def _baseline(workers: int, build: Path) -> int:
     """Record the baseline once, on the code before the change; never overwrite one."""
-    if BASELINE_PATH.exists() or MANIFEST_PATH.exists():
+    baseline_path, manifest_path = build / "baseline.jsonl", build / "baseline_manifest.json"
+    if baseline_path.exists() or manifest_path.exists():
         print(
-            f"{BASELINE_PATH} already exists: a baseline is recorded once, on the code before the "
+            f"{baseline_path} already exists: a baseline is recorded once, on the code before the "
             "change. Remove it and its manifest to record a new one.",
             file=sys.stderr,
         )
         return 1
     jobs = baseline_jobs()
     results = _run_all(jobs, workers)
-    BUILD.mkdir(parents=True, exist_ok=True)
-    with BASELINE_PATH.open("w") as out:
+    build.mkdir(parents=True, exist_ok=True)
+    with baseline_path.open("w") as out:
         for job, result in zip(jobs, results, strict=True):
             out.write(json.dumps({**job, "expected": result}, allow_nan=False) + "\n")
-    MANIFEST_PATH.write_text(json.dumps(_inputs(), indent=2) + "\n")
-    print(f"wrote {len(jobs)} baseline records to {BASELINE_PATH}")
+    manifest_path.write_text(json.dumps(_inputs(), indent=2) + "\n")
+    print(f"wrote {len(jobs)} baseline records to {baseline_path}")
     return 0
 
 
-def _incomplete(baseline: list[dict[str, Any]], stored: list[dict[str, Any]]) -> list[str]:
+def _incomplete(
+    baseline: list[dict[str, Any]],
+    stored: list[dict[str, Any]],
+    manifest: dict[str, Any],
+) -> list[str]:
     """Return why the check's inputs differ from those the baseline recorded, if they do."""
-    manifest = json.loads(MANIFEST_PATH.read_text())
     names = [j["name"] for j in baseline]
     problems = []
     if names != manifest["baseline_jobs"] or names != [j["name"] for j in baseline_jobs()]:
@@ -199,10 +201,11 @@ def _same(a: dict[str, Any], b: dict[str, Any]) -> bool:
     return json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
 
 
-def _check(workers: int) -> int:
-    baseline = [json.loads(line) for line in BASELINE_PATH.read_text().splitlines()]
+def _check(workers: int, build: Path, out: Path) -> int:
+    baseline = [json.loads(line) for line in (build / "baseline.jsonl").read_text().splitlines()]
+    manifest = json.loads((build / "baseline_manifest.json").read_text())
     stored = stored_jobs()
-    problems = _incomplete(baseline, stored)
+    problems = _incomplete(baseline, stored, manifest)
     if problems:
         print("the check's inputs are incomplete: " + "; ".join(problems), file=sys.stderr)
         return 1
@@ -219,14 +222,14 @@ def _check(workers: int) -> int:
     record = {
         "description": "Description: every statistic, D and presence reading re-simulated after "
         "the speed-up, against the baseline from the code before it and against stored records.",
-        "inputs": json.loads(MANIFEST_PATH.read_text()),
+        "inputs": manifest,
         "jobs": len(rows),
         "identical": sum(r["identical"] for r in rows),
         "all_identical": all(r["identical"] for r in rows),
         "rows": rows,
     }
-    IDENTITY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    IDENTITY_PATH.write_text(json.dumps(record, indent=2) + "\n")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(record, indent=2) + "\n")
     print(json.dumps({k: record[k] for k in ("jobs", "identical", "all_identical")}, indent=2))
     return 0 if record["all_identical"] else 1
 
@@ -236,8 +239,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("stage", choices=("baseline", "check"))
     parser.add_argument("--workers", type=int, default=16)
+    parser.add_argument(
+        "--build",
+        type=Path,
+        default=BUILD,
+        help="this change's baseline directory",
+    )
+    parser.add_argument("--out", type=Path, default=IDENTITY_PATH, help="the identity record")
     args = parser.parse_args(argv)
-    return _baseline(args.workers) if args.stage == "baseline" else _check(args.workers)
+    build, out = args.build.resolve(), args.out.resolve()
+    if args.stage == "baseline":
+        return _baseline(args.workers, build)
+    return _check(args.workers, build, out)
 
 
 if __name__ == "__main__":

@@ -542,6 +542,25 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     registration. Both of 1164's probe misses were on the kinematics speed medians;
   - **the restarts:** keep 8. Per restart, 9 of 16 recovered, and 6985's first two reached at best 0.360.
 
+  *(2026-11-01: change `fit-c1-v2`; [Logbook 119](../../../docs/experiments/logbooks/119-c1b-fit.md).)*
+  **C.1 fails the wild type on benchmark v2.** The chosen restart (2, by selection on separate
+  populations) passes 0 of its 5 registered populations, against 3. No restart passes any of the
+  40\.
+
+  - **The gap is narrow.** The chosen restart's D is 1.71–1.87, and in two populations every one of
+    the 19 statistics passes. Chemotaxis presence fails in all five: it drifts down the butanone
+    gradient.
+  - **The diagnosis:** one weathervane gain κ serves both the lawn odour and butanone, and the two
+    pull it in opposite directions.
+    - Seven of 8 restarts and both pilots settle at κ between −12.8 and −30.3, steering away from
+      the odour, so none climbs the butanone gradient as real worms do.
+    - The one positive κ (+49.9, at the box's bound) reproduces chemotaxis, but fails the lawn and
+      kinematics families.
+  - **The reachability pilot failed** (0 of 5), and so did a widened-box probe. The maintainer
+    accepted that and ran the fits as registered.
+  - **The roadmap's risk row goes to the maintainer.** The candidate fix is in C.1's mechanism (odour-
+    or state-dependent steering), not in the benchmark or the primitives.
+
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
@@ -561,6 +580,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 - [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(Added 2026-11-01, C.1b.)* C.1 on v2 enters as failing the wild type
+  ([Logbook 119](../../../docs/experiments/logbooks/119-c1b-fit.md)). Its restarts' registered
+  grades are in `supporting/119-c1b-fit/fit.json` for the `unidentified` rule, and none passes the
+  wild type.
 
   *(Added 2026-10-24 by B.3's hardening.)* Only tph-1's (more) and tax-4's (less) roaming directions
   are resolved by the references; every other mutant difference is graded by magnitude. The
@@ -607,15 +631,28 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 
   *(Added 2026-10-31; [Logbook 118](../../../docs/experiments/logbooks/118-v2-speedup.md).)*
   **The compute plan.** T.1 sized W at 1,210–2,390 core-hours at v1's 27 s per connectome
-  evaluation. On this machine 16 workers deliver about 6 cores' worth of work, so that is about
-  200–400 h, too long to run as sized. The levers, each keeping every output identical unless
+  evaluation. At the 6 cores' worth then measured for 16 workers, that was about 200–400 h, too
+  long to run as sized (about 9.2 cores' worth after the levers below). The levers, each keeping every output identical unless
   stated:
 
   - **done:** the High Power energy mode (1.35×) and the v2 speed-up of Logbook 118 (1.54× on one
     core, 1.35× on 16 workers);
-  - **before C.2's cost pilot:** a whole generation (16 candidates × 200 animals) in one evaluator
-    call, with a GPU check at that size, since the earlier MPS check found its gain only at
-    4,000 or more animals per call;
+  - ~~**before C.2's cost pilot:** a whole generation (16 candidates × 200 animals) in one evaluator
+    call~~ *(corrected 2026-10-31, measured: `supporting/118-v2-speedup/scaling.json`)*. Batching
+    is exact (an animal's trajectory is byte-identical at 200, 800 and 3,200 animals per call),
+    but the evaluator is bound by computation, not per-step overhead. Time per animal falls only
+    about 30% from 200 to 800 animals and is flat beyond (Scheer's lawn 6.6 → 4.7 ms, chemotaxis
+    13.1 → 11.0 ms), so batching would gain at most about 1.3× on the evaluator while giving up
+    parallel workers. Not planned on the CPU. A GPU path would break byte-identity, so it is
+    W's option only, with a statistical parity standard of its own;
+  - **parallel use is near its best:** 16 workers deliver 1,968 simulations an hour, about 9.2
+    one-core equivalents (213 an hour), against 1,697 at 12 and 1,891 at 18, so 16 workers (a fit's
+    population) is the right size and running restarts side by side adds nothing. The earlier
+    "about 6 cores' worth" was measured before High Power and the speed-up;
+  - **done** ([Logbook 119](../../../docs/experiments/logbooks/119-c1b-fit.md)): converting and
+    measuring only each family's analysis window, exact, about 3–4% per simulation;
+  - **small and exact, not yet taken:** per-function work on the evaluator's kernels (perhaps
+    10–15% of their time);
   - **in W's registration:** a registered sequential stopping rule for the null draws, and W's
     cost re-sized from v2 timings rather than v1's;
   - **dropped:** surrogate-assisted CMA. The objective is noisy, and it would need its own

@@ -330,3 +330,40 @@ def test_the_library_computes_its_offsets_once() -> None:
     lib = _library()
     assert lib.starts is lib.starts
     assert lib.starts.tolist() == [0, 3]
+
+
+@pytest.mark.parametrize("vendored", [True, False])
+def test_a_measured_window_is_the_whole_track_measured_and_sliced(vendored: bool) -> None:  # noqa: FBT001
+    """Covers "A windowed animal is the same": noise and losses drawn over the whole track."""
+    import dataclasses
+    import json
+
+    from quantumnematode.benchmark import references as refs
+
+    if vendored:
+        bands = json.loads((refs.BENCHMARK_DATA / "bands_v2.json").read_text())
+        model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+    else:
+        model = mm.TrackerModel(
+            jitter_mm=0.005,
+            p_omega=0.3,
+            runs_omega_s=(2, 5),
+            p_other=0.01,
+            fragment_lengths_s=(39, 120),
+        )
+    kinds = (["run"] * 40 + ["omega"] * 3 + ["reversal"] * 2) * 30
+    steps = _steps(len(kinds), kinds)
+    names = [f.name for f in dataclasses.fields(BehaviourStep) if f.init]
+    for seed, (first, end) in zip(
+        (1, 2, 3, 4),
+        ((0, 1350), (200, 900), (1000, 1350), (5, 6)),
+        strict=True,
+    ):
+        whole = mm.measure(steps, seed, model)[first:end]
+        window = mm.measure_window(steps[first:end], first, kinds, seed, model)
+        assert len(window) == len(whole)
+        for a, b in zip(window, whole, strict=True):
+            for name in names:
+                va, vb = getattr(a, name), getattr(b, name)
+                assert type(va) is type(vb), name
+                assert va == vb or (isinstance(va, float) and math.isnan(va) and math.isnan(vb))

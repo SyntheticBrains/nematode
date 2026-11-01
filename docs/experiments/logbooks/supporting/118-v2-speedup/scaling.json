@@ -1,0 +1,16 @@
+{
+  "description": "Description: measured 2026-10-31 after the speed-up, High Power energy mode, Apple M5 Max (6 super and 12 performance cores). Throughput is C.1's v2 simulation at the box centre on discarded seeds (base 99,500,000), jobs a whole number of rounds per worker count where possible; one core is one profiled simulation (16.9 s, base 99,600,000). Batch size is one BatchedEvaluator run of C.1's model at the box centre on one core (seeds from 99,800,000); at every size the first 200 animals' trajectories were byte-identical to the 200-animal run.",
+  "throughput_sims_per_hour": {
+    "1": 213,
+    "6": 1178,
+    "12": 1697,
+    "16": 1968,
+    "18": 1891
+  },
+  "throughput_jobs": {"6": 24, "12": 48, "16": 48, "18": 54},
+  "batch_ms_per_animal": {
+    "scheer_lawn": {"200": 6.61, "800": 4.72, "3200": 4.63},
+    "chemotaxis_chen": {"200": 13.09, "800": 10.98, "3200": 11.74}
+  },
+  "batch_first_200_identical": true
+}

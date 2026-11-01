@@ -424,14 +424,28 @@ def analysis_steps(
     ValueError
         If the window is shorter than ``samples``: the reference's length cannot be read from it.
     """
+    first, end = analysis_bounds(analysis, samples, len(steps))
+    return list(steps[first:end])
+
+
+def analysis_bounds(analysis: tuple[int, int], samples: int, length: int) -> tuple[int, int]:
+    """Return the step range of an assay's analysis window: its first ``samples`` steps.
+
+    ``length`` is how many steps the track has.
+
+    Raises
+    ------
+    ValueError
+        If the window is shorter than ``samples``: the reference's length cannot be read from it.
+    """
     first, stop = analysis
-    if stop - first < samples or len(steps) < first + samples:
+    if stop - first < samples or length < first + samples:
         msg = (
-            f"the analysis window holds {min(stop, len(steps)) - first} steps, shorter than the "
+            f"the analysis window holds {min(stop, length) - first} steps, shorter than the "
             f"reference's {samples}"
         )
         raise ValueError(msg)
-    return list(steps[first : first + samples])
+    return first, first + samples
 
 
 def simulated_windows(

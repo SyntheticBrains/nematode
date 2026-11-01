@@ -411,3 +411,17 @@ Grading on B v2 MAY skip the chemotaxis and local-search presence tests when onl
 
 - **WHEN** stored or baseline simulations are re-run after the change: v2 with and without presence, and v1
 - **THEN** every graded statistic, D and presence reading SHALL equal the stored record exactly
+
+### Requirement: A v2 simulation builds only each family's analysis window, identically
+
+A v2 simulation SHALL build steps only over each family's analysis window. The lawn families' windows SHALL be measured with noise, lost seconds and fragment cuts drawn over the whole episode, so they are byte-identical to building and measuring the whole episode and then windowing. Local search's window is not measured. Chemotaxis SHALL be measured directly over its analysis window, as before, and its statistics, D and presence readings derived from that window, byte-identical to building the whole episode and measuring its window.
+
+#### Scenario: A windowed animal is the same
+
+- **WHEN** a lawn family's animal has its window built and measured directly, and its whole episode built, measured and then windowed, from the same seed
+- **THEN** every field of every step SHALL be equal
+
+#### Scenario: Simulations re-simulate exactly
+
+- **WHEN** the identity check's baseline and stored records are re-simulated after the change
+- **THEN** every statistic, D and presence reading SHALL equal them exactly

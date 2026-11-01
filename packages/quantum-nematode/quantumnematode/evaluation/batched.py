@@ -143,46 +143,73 @@ class BatchedTrajectories:
     grad_dir: np.ndarray | None = None
     grad_strength: np.ndarray | None = None
 
-    def to_behaviour_steps(self, animal: int) -> list[BehaviourStep]:
+    def to_behaviour_steps(
+        self,
+        animal: int,
+        start: int = 0,
+        stop: int | None = None,
+    ) -> list[BehaviourStep]:
         """Return one animal's record as the per-step runner's ``BehaviourStep`` series.
 
-        The live food-gradient fields are the recorded ones, or 0 when the run did not record them.
-        Each column is read once as Python floats, the values ``float`` gives element by element,
-        and the signed speed is computed on those floats with ``math``'s cosine and sine.
+        Only steps ``start`` to ``stop`` are built, each with its own step index and its signed
+        speed from the step before it, so they equal the whole series sliced. The live
+        food-gradient fields are the recorded ones, or 0 when the run did not record them. Each
+        column is read once as Python floats, the values ``float`` gives element by element, and
+        the signed speed is computed on those floats with ``math``'s cosine and sine.
         """
-        n = self.x.shape[1]
-        xs = self.x[animal].tolist()
-        ys = self.y[animal].tolist()
-        headings = self.heading[animal].tolist()
+        total = self.x.shape[1]
+        # Python's slice rules, negative bounds included; an empty range keeps start <= end.
+        start, end, _ = slice(start, stop).indices(total)
+        end = max(end, start)
+        lo = max(start - 1, 0)
+        xs = self.x[animal, lo:end].tolist()
+        ys = self.y[animal, lo:end].tolist()
+        headings = self.heading[animal, lo:end].tolist()
+        n = end - start
         zeros = [0.0] * n
-        grad_dir = zeros if self.grad_dir is None else self.grad_dir[animal].tolist()
-        grad_strength = zeros if self.grad_strength is None else self.grad_strength[animal].tolist()
+        grad_dir = zeros if self.grad_dir is None else self.grad_dir[animal, start:stop].tolist()
+        grad_strength = (
+            zeros if self.grad_strength is None else self.grad_strength[animal, start:stop].tolist()
+        )
+        # Index i of the window is index i + start - lo of the columns read from lo.
+        shift = start - lo
         signed = [0.0] * n
-        for t in range(1, n):
+        for i in range(n):
+            t = i + shift
+            if i + start == 0:
+                continue
             h = headings[t]
-            signed[t] = (xs[t] - xs[t - 1]) * math.cos(h) + (ys[t] - ys[t - 1]) * math.sin(h)
-        kinds = [PRIMITIVE_KINDS[p] for p in self.primitive[animal].tolist()]
+            signed[i] = (xs[t] - xs[t - 1]) * math.cos(h) + (ys[t] - ys[t - 1]) * math.sin(h)
+        kinds = [PRIMITIVE_KINDS[p] for p in self.primitive[animal, start:stop].tolist()]
         names = self.phase_names
-        phases = [None] * n if names is None else [names[p] for p in self.phase[animal].tolist()]
+        phases = (
+            [None] * n
+            if names is None
+            else [names[p] for p in self.phase[animal, start:stop].tolist()]
+        )
         return list(
             map(
                 BehaviourStep,
-                range(n),
-                xs,
-                ys,
-                headings,
-                self.concentration[animal].tolist(),
-                self.derivative[animal].tolist(),
+                range(start, end),
+                xs[shift:],
+                ys[shift:],
+                headings[shift:],
+                self.concentration[animal, start:stop].tolist(),
+                self.derivative[animal, start:stop].tolist(),
                 grad_dir,
                 grad_strength,
                 signed,
-                self.satiety[animal].tolist(),
-                self.intake[animal].tolist(),
-                [bool(v) for v in self.on_lawn[animal].tolist()],
+                self.satiety[animal, start:stop].tolist(),
+                self.intake[animal, start:stop].tolist(),
+                [bool(v) for v in self.on_lawn[animal, start:stop].tolist()],
                 kinds,
                 phases,
             ),
         )
+
+    def primitive_kinds(self, animal: int) -> list[str]:
+        """Return the primitive at every step of one animal's run."""
+        return [PRIMITIVE_KINDS[p] for p in self.primitive[animal].tolist()]
 
 
 def _refuse(reason: str) -> None:

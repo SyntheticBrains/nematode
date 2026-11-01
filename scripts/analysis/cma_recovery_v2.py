@@ -111,17 +111,20 @@ def simulate_v2(
     seed_base: int,
     *,
     presence: bool = False,
+    parameters: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Run simulation k of C.1's model at z on v2; return its graded statistics and D.
 
     With ``presence``, as the candidates' observations need, it also records the presence tests.
+    ``parameters`` overrides the model's parameters, for a box other than F.0a's; by default z is
+    mapped through F.0a's box.
     """
     import benchmark_grade as bg
     from quantumnematode.evaluation.controllers import BatchedMechanistic
 
     bands = _bands()
     seeds = [seed_base + nr.ANIMALS * k + i for i in range(nr.ANIMALS)]
-    params = nr.parameters_from_unit(np.asarray(z))
+    params = nr.parameters_from_unit(np.asarray(z)) if parameters is None else parameters
     start = time.perf_counter()
     populations, chemotaxis = bg.simulate_v2(
         "mlp",
