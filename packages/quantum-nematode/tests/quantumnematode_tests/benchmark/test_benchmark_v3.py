@@ -315,3 +315,34 @@ def test_the_reported_reference_is_roberts_reverse_share() -> None:
     reference = bb.roberts_reversal_share()
     assert reference["value"] == pytest.approx(0.1734, abs=1e-4)
     assert reference["frames"] > 1_000_000
+
+
+def test_the_vendored_v3_bands_follow_their_rules() -> None:
+    """The vendored v3 bands: v2's lawn and kinematics, local search and chemotaxis at v3's factor.
+
+    Local search is rebuilt from the López-Cruz band batches, and chemotaxis's centres are the means
+    of the standard recordings in the bands' record; the verdict validates these very bands.
+    """
+    v2, v3 = bg.load_bands_v2(), bg.load_bands_v3()
+    assert v3["version"] == 3
+    assert v3["bars"]["wild_type"] == pytest.approx(V3_BAR)
+    for size in ("64", "200"):
+        for family in ("small_lawn", "uniform_lawn", "mutants", "kinematics"):
+            assert v3["bands"][size][family] == v2["bands"][size][family]
+    search = _search_band()
+    for name, band in search.items():
+        assert v3["bands"]["200"]["local_search"][name]["centre"] == pytest.approx(band.centre)
+        assert v3["bands"]["200"]["local_search"][name]["scale"] == pytest.approx(band.scale)
+    record = json.loads((bb.V3_SUPPORT_PATH / "bands_v3_record.json").read_text())
+    standard = [
+        r["statistics"]
+        for r in record["chemotaxis_recordings"].values()
+        if r["protocol"] == "standard"
+    ]
+    assert len(standard) == 6
+    for name in ch.CHEMOTAXIS_STATISTICS_V3:
+        centre = v3["bands"]["200"]["chemotaxis"][name]["centre"]
+        assert centre == pytest.approx(float(np.mean([s[name] for s in standard])))
+    controls = json.loads(bg.CONTROLS_V3_PATH.read_text())
+    assert controls["verdict"] == "VALID"
+    assert controls["bands_sha256"] == mm.file_sha256(bg.BANDS_V3_PATH)

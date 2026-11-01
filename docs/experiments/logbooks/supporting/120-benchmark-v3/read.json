@@ -1,0 +1,4726 @@
+{
+  "description": "B v3's read: the oracle's 40 populations, then held-out L\u00f3pez-Cruz, the adversaries, the negatives, W's minimum and the 3-of-5 probability.",
+  "bands_sha256": "8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b",
+  "oracle": {
+    "populations": [
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4133352973521573,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.05468088957702659,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0717508675413923,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.045659803399862066,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022828956462809805,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.0271791881033453,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05108666666666667,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4448079034809282,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.138607121540797,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0867165835567771,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.029783541982704994,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023223119846756058,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.00783055381957537,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051546666666666664,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4271163556401456,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.0914300640766444,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0691288954668419,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.04844130172852571,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022956893242769647,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.020899046244141895,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05115111111111111,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4005661235460247,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.02063005062030243,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0609444896610387,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.05712366386766104,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02270993701306704,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.033021597366916865,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.050785555555555556,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3942082700963832,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.0036759197414334365,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0765383486597535,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.04058104193688425,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02295372303062383,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.021054665152213204,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05099666666666667,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.2439400647330021,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.39703586778917604,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0855972796080295,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.03097094672012651,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02314907005456211,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.011465499139978973,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051153333333333335,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3596261140377293,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.08854237445736476,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0981147910417606,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.017691843761746893,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02346252809502985,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.003921483099711898,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05152333333333333,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.420530162787289,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.07386703332967168,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0965297605974083,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.019373310766921982,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02313527180783818,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.012142825448033304,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05144777777777778,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4069588982151657,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.03767730395481352,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0772237793184836,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.0398539082461109,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022898156765334066,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.02378229381939847,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05096666666666667,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3467893147261383,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.12277354655315417,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0918783239723644,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.024307750505630065,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023296557602159193,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.0042256520712436125,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05119111111111111,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4152818979931425,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.05987178022865265,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.1103299820824208,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.004733455000215264,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02345613570103366,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.0036076942023472985,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05171111111111111,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4329682742080843,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.10703504680849847,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0785542783078002,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.03844245892100421,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022916714885118847,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.022871315561816104,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051436666666666665,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.402823663071101,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.026650104538739616,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.1028127942372914,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.012708004245200489,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023784675631889157,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.019735014061679677,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05183666666666667,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4652555978877333,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.1931338403288235,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.102493668174544,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.013046546603748247,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023446352904010054,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.003127477699264077,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051853333333333335,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.2489349445873315,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.383716302082719,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0636937191769873,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.054207165489227695,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02241374110771932,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.047561218453853304,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05020555555555556,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.392529481264883,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.0008008121921788955,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0733100838465532,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.044005721119991084,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022512863048154665,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.042695535203978854,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05006222222222222,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3759352758069407,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.04505164832629194,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0952025258453486,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.020781297251763264,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02300724327471361,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.018427471273107284,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05141111111111111,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4126626261495479,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.05288711504324419,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0789427379216732,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.03803036461335359,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022950651130911583,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.021205458113988596,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.049827777777777776,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3368460857059097,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.1492885971913578,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0926107783296652,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.023530732096307738,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02293940177570899,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.021757664809506604,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05041888888888889,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4808827797958057,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.23480596904897988,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0781061799314369,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.038917820537944806,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022547241679194786,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.04100796201411943,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05089333333333333,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3809035124850144,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.03180313048226913,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.1071068185094421,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.00815272257299713,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023070100573991333,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.015341941400662336,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051284444444444445,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4452946438386982,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.1399050847283764,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.1083075996083451,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.00687888344552959,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023390711514557988,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.0003961613482362794,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05128111111111111,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3710268889891022,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.05814056790785947,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0725240496472086,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.04483957928078957,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022892841504997465,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.02404320853792534,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05001666666666667,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.5267876413534829,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.3572178863713423,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.1090629409745616,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.006077585533894936,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023077270155734263,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.014990002025363967,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051215555555555556,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4307962125985463,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.10124293204889359,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.091566354861551,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.024638700468348776,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02309431305925194,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.01415340248129762,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05127222222222222,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.39938494253462,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.01748026152597879,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0989146865079242,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.016843280985722152,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02332223071664079,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.002965413999262946,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051473333333333336,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4425805813377275,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.132667646618273,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.114711926087434,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -8.49043750786494e-05,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023808547569259365,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.020906836216231166,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05168222222222222,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4297560404109189,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.09846916326902515,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0977380406541342,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.018091516429384266,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023407397112728663,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.0012152215399215515,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05117,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4070019914473801,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.037792218258004606,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.1206874810854435,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": 0.0062542158623673915,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023450038228142803,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.00330838234887359,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.051451111111111114,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.2333578764856798,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.4252547951285669,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.083654398295923,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.03303203698682691,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02274040431276285,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.03152602303546499,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.050784444444444445,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4437178727926872,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.13570039789628374,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0865071050414552,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.03000576560816402,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023297873421322685,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.004161061333455906,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.052332222222222224,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.398919853745518,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.016240035361096885,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0882380776475546,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.028169477015481826,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023073264349694495,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.015186638443742564,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05160777777777778,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3126680458752158,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.21376281870824432,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0920488701752624,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.02412682791575003,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02332844690019033,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.002660274894415914,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05203666666666667,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4403615823901665,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.12675036669431664,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.085647353186479,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.03091782656064075,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.0232417677758646,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.006915167015102231,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05135555555555556,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3183276569882514,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.19867065147068141,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.1121049212431624,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.0028505248359308576,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023516436845386107,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": 0.006567747917350362,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05139111111111111,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4350845252893225,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.11267833476536135,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0761498081845395,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.040993222025648604,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023013476816165432,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.01812148010610311,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05131,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.290569913941482,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": -0.27269066659755986,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0829904581136354,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.033736372675711945,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.022992529574562243,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.019149735224516504,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05148888888888889,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4389663955576415,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.12302990029060647,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0955449092052685,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.020418082573535744,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.023016438365502268,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.017976104007344052,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05090666666666667,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.4676002648469875,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.19938623208484865,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0785817564594204,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.03841330894128152,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.0227633704849796,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.0303986629476985,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.050505555555555554,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      },
+      {
+        "new": {
+          "local_search/log_early_late_ratio": {
+            "value": 1.3948901512623977,
+            "centre": 1.3928297884050682,
+            "scale": 0.37500320689194194,
+            "z": 0.005494253967601844,
+            "passes": true
+          },
+          "chemotaxis/onset_per_min": {
+            "value": 1.0918392657819669,
+            "centre": 1.1147919609730097,
+            "scale": 0.9426473665400728,
+            "z": -0.024349185077861327,
+            "passes": true
+          },
+          "chemotaxis/flip_fraction": {
+            "value": 0.02289317532500465,
+            "centre": 0.02338264105876667,
+            "scale": 0.02037163854385763,
+            "z": -0.024026822030454833,
+            "passes": true
+          }
+        },
+        "reversal_share": {
+          "value": 0.05109777777777778,
+          "windows": [
+            "local_search",
+            "chemotaxis"
+          ],
+          "reference": {
+            "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+            "value": 0.17338425496607937,
+            "frames": 2048900
+          }
+        }
+      }
+    ],
+    "statistics": {
+      "local_search/log_early_late_ratio": {
+        "mean_z": 0.007786879345755324,
+        "share_within_bar": 1.0,
+        "z_sd": 0.1703780822725537,
+        "passes": true
+      },
+      "chemotaxis/onset_per_min": {
+        "mean_z": -0.026713906656028553,
+        "share_within_bar": 1.0,
+        "z_sd": 0.015372863900453523,
+        "passes": true
+      },
+      "chemotaxis/flip_fraction": {
+        "mean_z": -0.013898946641110304,
+        "share_within_bar": 1.0,
+        "z_sd": 0.015559712117795391,
+        "passes": true
+      }
+    },
+    "passes": true
+  },
+  "lopezcruz_held_out": {
+    "batches": {
+      "030617_031217": {
+        "gamma_per_min": {
+          "value": 0.11241598977131637,
+          "z": 0.0968989386007439,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.5956618648899819,
+          "z": 0.5408809118354024,
+          "passes": true
+        }
+      },
+      "031615_032515": {
+        "gamma_per_min": {
+          "value": 0.09364011994083865,
+          "z": -0.35889485202994675,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.8192678585921638,
+          "z": 1.1371584625140945,
+          "passes": true
+        }
+      },
+      "031715_032315": {
+        "gamma_per_min": {
+          "value": 0.09652677064457094,
+          "z": -0.28881993787895677,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.7604645659780256,
+          "z": 0.9803510231817623,
+          "passes": true
+        }
+      },
+      "040815_041115": {
+        "gamma_per_min": {
+          "value": 0.12082063057538733,
+          "z": 0.3009258692071016,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.5963444356870808,
+          "z": 0.5427010850620695,
+          "passes": true
+        }
+      },
+      "070815_071115": {
+        "gamma_per_min": {
+          "value": 0.15225046419180743,
+          "z": 1.063901067281083,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.1865203543747096,
+          "z": -0.5501537859909746,
+          "passes": true
+        }
+      },
+      "082216_082616": {
+        "gamma_per_min": {
+          "value": 0.13571065801799853,
+          "z": 0.6623888593076295,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.619194087379465,
+          "z": 0.6036329685031846,
+          "passes": true
+        }
+      },
+      "102216_102516": {
+        "gamma_per_min": {
+          "value": 0.09538008824932243,
+          "z": -0.3166562362927544,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.0887067596787068,
+          "z": -0.8109878079362537,
+          "passes": true
+        }
+      },
+      "_071315": {
+        "gamma_per_min": {
+          "value": 0.15657006625392955,
+          "z": 1.168761604539116,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.4422979798076243,
+          "z": 0.1319140489825477,
+          "passes": true
+        }
+      },
+      "_091515": {
+        "gamma_per_min": {
+          "value": 0.15612227093179654,
+          "z": 1.1578911453196774,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.5972426393402819,
+          "z": 0.5450962743209705,
+          "passes": true
+        }
+      },
+      "_111315": {
+        "gamma_per_min": {
+          "value": 0.11003927008876244,
+          "z": 0.03920285936933686,
+          "passes": true
+        },
+        "log_early_late_ratio": {
+          "value": 1.6936676464618532,
+          "z": 0.8022274277336303,
+          "passes": true
+        }
+      }
+    },
+    "count": 10,
+    "gated": "log_early_late_ratio",
+    "passes": true
+  },
+  "adversaries": {
+    "restart 2": {
+      "populations": [
+        {
+          "name": "restart 2",
+          "k": 0,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.09571630416518417,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.4589397114506557,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.642342807001092,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.742174402900772,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.19961150749369733,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.650696705399106,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.5783128066476118,
+          "D_fit": 1.399401428160157,
+          "reversal_share": {
+            "value": 0.5266811111111112,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 2",
+          "k": 1,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.11017980209377527,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.4203707134720363,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.570232019498795,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.665676244562968,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1976974479922593,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.556739633791082,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.697142360203737,
+          "D_fit": 1.690674568526178,
+          "reversal_share": {
+            "value": 0.5258866666666666,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 2",
+          "k": 2,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.1020741403701972,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.441985626557069,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.585413546347146,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.6817814471946515,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.197029564351661,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.523954659761603,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.5746597514912035,
+          "D_fit": 1.3546763328798683,
+          "reversal_share": {
+            "value": 0.5236811111111112,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 2",
+          "k": 3,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.1191287132203267,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.3965071545421783,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.581457469411178,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.6775846742799945,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1975719893280996,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.550581137316211,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.570645303473802,
+          "D_fit": 1.3919419119501715,
+          "reversal_share": {
+            "value": 0.5236266666666667,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 2",
+          "k": 4,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.09924163911439038,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.449538898645814,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.597976281144597,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.6951085250005993,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.19820784032949756,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.581793697858608,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.5865218371484673,
+          "D_fit": 1.351830163338026,
+          "reversal_share": {
+            "value": 0.5226377777777778,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        }
+      ],
+      "caught_in": 5,
+      "caught_3_of_5": true
+    },
+    "restart 4": {
+      "populations": [
+        {
+          "name": "restart 4",
+          "k": 5,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.007717134635231412,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.693602156764916,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.247948638869221,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.262942382925046,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.04623333945886346,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 1.121691726019095,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": true
+          },
+          "wild_type_passes": false,
+          "D": 4.36752748642423,
+          "D_fit": 4.590902142294589,
+          "reversal_share": {
+            "value": 0.5012611111111112,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 4",
+          "k": 6,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.048005196263747676,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.586168244499399,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.127991960533528,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.1356872898821546,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.045433028391514474,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 1.0824061739204744,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": true
+          },
+          "wild_type_passes": false,
+          "D": 3.78489350085501,
+          "D_fit": 4.595611637143018,
+          "reversal_share": {
+            "value": 0.50479,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 4",
+          "k": 7,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.06846992370100217,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.5315961046852684,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.2534588745321837,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.268787872827794,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.04626539302566463,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 1.1232651667971731,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": true
+          },
+          "wild_type_passes": false,
+          "D": 3.84953130699338,
+          "D_fit": 4.607113715027738,
+          "reversal_share": {
+            "value": 0.5028322222222222,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 4",
+          "k": 8,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.030813236784330504,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.6320130777260418,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.1330931495405183,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.141098845876539,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.044773121326172456,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 1.0500127528453205,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": true
+          },
+          "wild_type_passes": false,
+          "D": 4.920820094614022,
+          "D_fit": 4.59421971711907,
+          "reversal_share": {
+            "value": 0.5095866666666666,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 4",
+          "k": 9,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.012823446947020273,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7483765725692337,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.3013457778069903,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.319588315256836,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.04716533646806492,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 1.1674414582851074,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": false,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": true
+          },
+          "wild_type_passes": false,
+          "D": 4.928871853189364,
+          "D_fit": 4.585444442223217,
+          "reversal_share": {
+            "value": 0.5019555555555556,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        }
+      ],
+      "caught_in": 5,
+      "caught_3_of_5": true
+    },
+    "restart 6": {
+      "populations": [
+        {
+          "name": "restart 6",
+          "k": 10,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.39183073733783347,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.6693079756933247,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.796828809459823,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.8452175688254018,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.14443244935699445,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.942075206057797,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.7905021017915055,
+          "D_fit": 2.618867913391195,
+          "reversal_share": {
+            "value": 0.3629411111111111,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 6",
+          "k": 11,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.41392243186975913,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.6103972940620306,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.8251577072567273,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.875270055897937,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1453652962935775,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.987866659434252,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.879953041079739,
+          "D_fit": 2.7383098293923744,
+          "reversal_share": {
+            "value": 0.36401222222222224,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 6",
+          "k": 12,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.3995595036453359,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.6486981084562977,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.809526639526937,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.858687961379216,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1438403281178005,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.913009245658039,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.8359803198898006,
+          "D_fit": 2.7413648119760454,
+          "reversal_share": {
+            "value": 0.3643688888888889,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 6",
+          "k": 13,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.3866507410433827,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.6831211810186426,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.8525437627009875,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.9043223361210053,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.14585301402726242,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.011807675893724,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.772517832344373,
+          "D_fit": 2.557891871605238,
+          "reversal_share": {
+            "value": 0.36404888888888887,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "restart 6",
+          "k": 14,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.4064638789348906,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.6302865984674133,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.832995930416947,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.8835851729167103,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1454060606060606,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.98986769201665,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.9244675424055964,
+          "D_fit": 2.8469792303533485,
+          "reversal_share": {
+            "value": 0.3628166666666667,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        }
+      ],
+      "caught_in": 5,
+      "caught_3_of_5": true
+    },
+    "kappa probe": {
+      "populations": [
+        {
+          "name": "kappa probe",
+          "k": 15,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.12716772644966562,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.3750699692552395,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.704367115849419,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.8079724001688104,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.2036020385816045,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.846583309184858,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.5863403881275513,
+          "D_fit": 1.5173044688480821,
+          "reversal_share": {
+            "value": 0.51836,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "kappa probe",
+          "k": 16,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.13256193059997448,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.360685547865842,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.709481357335406,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.813397802782259,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.20391244437416703,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.86182046312779,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.7622197191579216,
+          "D_fit": 1.95334208526213,
+          "reversal_share": {
+            "value": 0.5176822222222223,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "kappa probe",
+          "k": 17,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.1295480433150466,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.3687225118958493,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.678643348180186,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.7806835447788565,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.20146683909107704,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.741770950280559,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.5426630121572433,
+          "D_fit": 1.4321279368245885,
+          "reversal_share": {
+            "value": 0.5195422222222222,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "kappa probe",
+          "k": 18,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.12560039700557252,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.379249478697527,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.663788273293563,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.764924656127687,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.20110563660770922,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.724040295842027,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.59201671170471,
+          "D_fit": 1.5695447473948703,
+          "reversal_share": {
+            "value": 0.5206522222222222,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        },
+        {
+          "name": "kappa probe",
+          "k": 19,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.1347292239190958,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.3549061484386105,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.707623702509322,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.8114271243588917,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.2032440931557461,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 8.829012536706847,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": true,
+            "kinematics": true,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 2.6167949082313826,
+          "D_fit": 1.6209746676265326,
+          "reversal_share": {
+            "value": 0.5197388888888889,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          },
+          "caught": true
+        }
+      ],
+      "caught_in": 5,
+      "caught_3_of_5": true
+    }
+  },
+  "negatives": {
+    "hmm": {
+      "populations": [
+        {
+          "name": "hmm",
+          "k": 0,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.004281303613969605,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.702764294469653,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.627532668116325,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.665621096854246,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.12912153647370353,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.190495363801691,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.173941624959169,
+          "D_fit": 4.795123795002204,
+          "reversal_share": {
+            "value": 0.22416222222222223,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "hmm",
+          "k": 1,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.00037256833067945917,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.715174513526766,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.6016984574938817,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.63821507893127,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.12829540642692472,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.149942413433941,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.174252478116696,
+          "D_fit": 4.799128775341063,
+          "reversal_share": {
+            "value": 0.22348444444444446,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "hmm",
+          "k": 2,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.009047427334978854,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.6900547399020764,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.6027090379109614,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.6392871451704076,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.12770975630990353,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.121194106528713,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.203639025831723,
+          "D_fit": 4.857011155440879,
+          "reversal_share": {
+            "value": 0.22280111111111112,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "hmm",
+          "k": 3,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.0006341154302525659,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7124900464544033,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.637977441312254,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.676701351853808,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1300455485890951,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.235853134773441,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.209306630472955,
+          "D_fit": 4.847248116663043,
+          "reversal_share": {
+            "value": 0.22455444444444445,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "hmm",
+          "k": 4,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.007851671580971309,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7351186183046408,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.580293863439931,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.6155081846951838,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1285235404597938,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.1611410233237605,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.237840026154037,
+          "D_fit": 4.9098767889296235,
+          "reversal_share": {
+            "value": 0.22042,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    },
+    "poisson": {
+      "populations": [
+        {
+          "name": "poisson",
+          "k": 5,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.016477422622517418,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.6702415885716677,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.500991642287582,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.5313810508726786,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1513686155944125,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.282556715313193,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.504403036996654,
+          "D_fit": 8.456308075459681,
+          "reversal_share": {
+            "value": 0.22400555555555557,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "poisson",
+          "k": 6,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.004345215328263349,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7257681482599447,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.5058165167752553,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.5364994807956123,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1499099386873231,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.2109533975953255,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.454700310000368,
+          "D_fit": 8.37886391571596,
+          "reversal_share": {
+            "value": 0.2236811111111111,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "poisson",
+          "k": 7,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.012318331625885312,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.6813324030505705,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.495575605477739,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.525635491077904,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.151092092359811,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.268982783397693,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.086451031944492,
+          "D_fit": 7.474075236018015,
+          "reversal_share": {
+            "value": 0.22498222222222222,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "poisson",
+          "k": 8,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.0002103934365010138,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7147420508405866,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.4857022380235843,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.5151614073381974,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1492419119478948,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.178161399151502,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.966210683730935,
+          "D_fit": 7.97335016203171,
+          "reversal_share": {
+            "value": 0.22403,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "poisson",
+          "k": 9,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.002205767398190027,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7200630025685117,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 3.4878277426154196,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 2.5174162320661724,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1502256321706082,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.2264501129236205,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.979985435197855,
+          "D_fit": 7.664817328296456,
+          "reversal_share": {
+            "value": 0.22539,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    },
+    "random_walk": {
+      "populations": [
+        {
+          "name": "random_walk",
+          "k": 10,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.8292793548845254,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -1.5027883046422352,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.2504007278083438,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.9169826001183868,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.005189728381748332,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.8930510247298585,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.40503512080204,
+          "D_fit": 8.593876770938152,
+          "reversal_share": {
+            "value": 0.0003355555555555556,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "random_walk",
+          "k": 11,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.3646431135879093,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -4.686554327252454,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.25720641394012417,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.9097628418361775,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.004454076930953275,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.9291625750703622,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.554469801309,
+          "D_fit": 8.616004997630657,
+          "reversal_share": {
+            "value": 0.00035444444444444445,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "random_walk",
+          "k": 12,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.10536051565782635,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.4332220340671094,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.2569622810308505,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.9100218283012539,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.005123038303249714,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.8963246975056169,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.475485588773298,
+          "D_fit": 8.597864706818898,
+          "reversal_share": {
+            "value": 0.0003511111111111111,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "random_walk",
+          "k": 13,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.5108256237659907,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.3519909921549793,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.25459960889116856,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.9125282503457496,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.005066411063946324,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.8991044071093133,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.440118606277833,
+          "D_fit": 8.612469286421582,
+          "reversal_share": {
+            "value": 0.00031666666666666665,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "random_walk",
+          "k": 14,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.048790164169432056,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.8442869982973416,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.2535444955899043,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.9136475589427037,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.004988119512647242,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.9029475712775037,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.502739992803449,
+          "D_fit": 8.615104559806541,
+          "reversal_share": {
+            "value": 0.00035555555555555557,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    },
+    "correlated_walk": {
+      "populations": [
+        {
+          "name": "correlated_walk",
+          "k": 15,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.5108256237659907,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.3519909921549793,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.47498400364975024,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.6787352089802509,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.009411496052717426,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.6858135135262238,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.396294451574578,
+          "D_fit": 8.551526978307553,
+          "reversal_share": {
+            "value": 0.00032555555555555555,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "correlated_walk",
+          "k": 16,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.5108256237659907,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.3519909921549793,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.4967239624920369,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.6556725456620668,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.00907215144270134,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.7024712118888526,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.400658161736525,
+          "D_fit": 8.556058265107376,
+          "reversal_share": {
+            "value": 0.00023444444444444446,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "correlated_walk",
+          "k": 17,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.3101549283038396,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -2.8871082705519475,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.49473012368253094,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.6577876937866769,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.008826888562571382,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.714510640116579,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.451802486236777,
+          "D_fit": 8.604527618274547,
+          "reversal_share": {
+            "value": 0.0003,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "correlated_walk",
+          "k": 18,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.19237189264745627,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.201193679667723,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.5018908038966244,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.650191342841173,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.0090302381148554,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.7045286471685778,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.463245829436931,
+          "D_fit": 8.60255500775869,
+          "reversal_share": {
+            "value": 0.0003022222222222222,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "correlated_walk",
+          "k": 19,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 1.1298648321722142,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -0.7012338865374769,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 0.4979853290629197,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": -0.6543344349160382,
+              "passes": true
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.008403087114722535,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": -0.7353141433270083,
+              "passes": true
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 7.3673319563056845,
+          "D_fit": 8.558219773984362,
+          "reversal_share": {
+            "value": 0.00034666666666666667,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    },
+    "untrained_mlp": {
+      "populations": [
+        {
+          "name": "untrained_mlp",
+          "k": 20,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.01129889373148584,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7443111320942837,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.683314949538775,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.78563937611559,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1736168429607243,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.374674431736156,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.376776112511008,
+          "D_fit": 6.613662483705909,
+          "reversal_share": {
+            "value": 0.3186733333333333,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_mlp",
+          "k": 21,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.00616030308705213,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.6977536720574986,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.665912639382353,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.767178273083715,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16939308258391467,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.167339102880973,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.392933117127689,
+          "D_fit": 6.650004953681104,
+          "reversal_share": {
+            "value": 0.3174988888888889,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_mlp",
+          "k": 22,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.006468708237073641,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.696931265357093,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.648762576546326,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.748984764625748,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16982827537911416,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.188701782876624,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.484655909722209,
+          "D_fit": 6.803071324822693,
+          "reversal_share": {
+            "value": 0.31844222222222224,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_mlp",
+          "k": 23,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.009598013635916149,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.73977549062693,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.7334917209234835,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.8388690070102047,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.17388715853329909,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.387943642850069,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.526778363244743,
+          "D_fit": 6.850468998439518,
+          "reversal_share": {
+            "value": 0.31766666666666665,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_mlp",
+          "k": 24,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.01762160134981963,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.667190471391137,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.723358397956996,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.828119151522165,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.17514772961268946,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.449822370801997,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.646972319389442,
+          "D_fit": 6.692588165582486,
+          "reversal_share": {
+            "value": 0.32005333333333336,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    },
+    "untrained_connectome": {
+      "populations": [
+        {
+          "name": "untrained_connectome",
+          "k": 25,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.02778875469224043,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.6400782943335406,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 5.425182623283284,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 4.5726438277033425,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16101291869279524,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.75597484894146,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.504919664546725,
+          "D_fit": 5.055036258496625,
+          "reversal_share": {
+            "value": 0.13362,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_connectome",
+          "k": 26,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.0015303894547926478,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.710100002827927,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 5.43236375871631,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 4.580261878405997,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16002434427516884,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.707447853162592,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.401118503179924,
+          "D_fit": 4.9794463591839255,
+          "reversal_share": {
+            "value": 0.13302111111111112,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_connectome",
+          "k": 27,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.059034976880800574,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.5567557477144556,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 5.4281098546042,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 4.575749157888118,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1626949761114733,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.838543436394884,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 5.372876954346762,
+          "D_fit": 4.924953579881238,
+          "reversal_share": {
+            "value": 0.1329611111111111,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_connectome",
+          "k": 28,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.054155972102373204,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.5697663158609654,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 5.43419502391018,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 4.582204561596841,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.15819114476158594,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.617460024759087,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.453887010037143,
+          "D_fit": 5.018553835252065,
+          "reversal_share": {
+            "value": 0.13285,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "untrained_connectome",
+          "k": 29,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.04656568225336384,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.5900069156998797,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 5.421470004065957,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 4.568705324983122,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.15897964442154083,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.656165780226785,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": true,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.351788408093135,
+          "D_fit": 4.854414194771343,
+          "reversal_share": {
+            "value": 0.1336211111111111,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    },
+    "blind_v2": {
+      "populations": [
+        {
+          "name": "blind_v2",
+          "k": 30,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.06529352306094037,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.540066433956285,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.810832197652438,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.9209150397836563,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1717243039396614,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.2817737543071654,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": true,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.83156096741358,
+          "D_fit": 3.8986284634553527,
+          "reversal_share": {
+            "value": 0.32656111111111114,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "blind_v2",
+          "k": 31,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.006430890330290626,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.7313299007028466,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.834190125519075,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.945694112738976,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16732046873435047,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.065598938725689,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": true,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.797150845051023,
+          "D_fit": 3.8142212987258977,
+          "reversal_share": {
+            "value": 0.3229977777777778,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "blind_v2",
+          "k": 32,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.15091754174349045,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -4.116624342877668,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.874839857026694,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.988817058763661,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16507593917789315,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 6.955419801606937,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": true,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.8603031818428555,
+          "D_fit": 3.885873160989445,
+          "reversal_share": {
+            "value": 0.31221333333333334,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "blind_v2",
+          "k": 33,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 0.05994826061378225,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -3.5543203452533647,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.8719308357348705,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.98573104654416,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16779991088079482,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.08913372437448,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": true,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.790618080457018,
+          "D_fit": 3.831057273870061,
+          "reversal_share": {
+            "value": 0.3206466666666667,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "blind_v2",
+          "k": 34,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": -0.11659378204305693,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -4.0250950997415575,
+              "passes": false
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 4.878390827529148,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 3.992584077723771,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.16715383222535501,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 7.057419110253044,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": true,
+            "uniform_lawn": false,
+            "local_search": false,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 4.83086172943882,
+          "D_fit": 3.838840479513448,
+          "reversal_share": {
+            "value": 0.31485,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    },
+    "c1_v1": {
+      "populations": [
+        {
+          "name": "c1_v1",
+          "k": 35,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 1.3339184807930171,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -0.1570954768635526,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 6.3119788970858774,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 5.513394637900292,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1239882053654024,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 4.938511160506031,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.118500234482406,
+          "D_fit": 7.194649729805504,
+          "reversal_share": {
+            "value": 0.02133,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "c1_v1",
+          "k": 36,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 1.1428183811726056,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -0.6666913846006229,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 6.418979989079904,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 5.626905899685032,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.1388566810723446,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.668372711648921,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.071757449133861,
+          "D_fit": 7.081817224794342,
+          "reversal_share": {
+            "value": 0.015392222222222222,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "c1_v1",
+          "k": 37,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 1.2213645470378052,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -0.45723673348924493,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 6.384668887505949,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 5.590507239070415,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.13733905579399142,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.593875744942687,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.088703237149034,
+          "D_fit": 7.111334074493517,
+          "reversal_share": {
+            "value": 0.016895555555555556,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "c1_v1",
+          "k": 38,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 1.289804240175717,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -0.2747324458455584,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 6.288687846444065,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 5.488686511119754,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.13520524515393387,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.489131561726215,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.167741585792075,
+          "D_fit": 7.234274345070257,
+          "reversal_share": {
+            "value": 0.021364444444444443,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        },
+        {
+          "name": "c1_v1",
+          "k": 39,
+          "new": {
+            "local_search/log_early_late_ratio": {
+              "value": 1.2954651447506018,
+              "centre": 1.3928297884050682,
+              "scale": 0.37500320689194194,
+              "z": -0.2596368294058943,
+              "passes": true
+            },
+            "chemotaxis/onset_per_min": {
+              "value": 6.348050427240956,
+              "centre": 1.1147919609730097,
+              "scale": 0.9426473665400728,
+              "z": 5.551660835245622,
+              "passes": false
+            },
+            "chemotaxis/flip_fraction": {
+              "value": 0.13102960617333292,
+              "centre": 0.02338264105876667,
+              "scale": 0.02037163854385763,
+              "z": 5.2841584088985085,
+              "passes": false
+            }
+          },
+          "family_passes": {
+            "small_lawn": false,
+            "kinematics": false,
+            "uniform_lawn": false,
+            "local_search": true,
+            "chemotaxis": false
+          },
+          "wild_type_passes": false,
+          "D": 6.080462295498787,
+          "D_fit": 7.123817336703175,
+          "reversal_share": {
+            "value": 0.018283333333333332,
+            "windows": [
+              "local_search",
+              "chemotaxis"
+            ],
+            "reference": {
+              "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+              "value": 0.17338425496607937,
+              "frames": 2048900
+            }
+          }
+        }
+      ],
+      "fails_wild_type_in": 5,
+      "fails_wild_type_3_of_5": true,
+      "fails_chemotaxis_in": 5,
+      "fails_chemotaxis_3_of_5": true
+    }
+  },
+  "w_minimum": {
+    "fitted": {
+      "families": [
+        "small_lawn",
+        "kinematics"
+      ],
+      "source": "halves of N2's 26 unread held-out dates, on PD1074's band scales",
+      "splits": 1000,
+      "seed": 2034,
+      "median": 1.5034151814561396,
+      "minimum_95th": 2.9666951987001497,
+      "v2_minimum_95th": 2.9666951987001497
+    },
+    "held_out": {
+      "families": [
+        "local_search",
+        "chemotaxis"
+      ],
+      "source": "halves of L\u00f3pez-Cruz's 17 band batches (1000 splits) crossed with every 3-against-3 split of Chen's 6 recordings (10)",
+      "seed": 2036,
+      "pairs": 10000,
+      "median": 1.2865433101028039,
+      "minimum_95th": 2.046569770948831,
+      "reported_local_search_95th": 2.326399838992743,
+      "reported_chemotaxis_95th": 2.1395989070750447
+    }
+  },
+  "three_of_five": {
+    "failure_rates": {
+      "small_lawn": 0.05500000000000005,
+      "uniform_lawn": 0.05,
+      "local_search": 0.009444444444444478,
+      "kinematics": 0.025000000000000022,
+      "chemotaxis": 0.011848207376375486
+    },
+    "population_passes": 0.8567666053207476,
+    "three_of_five": 0.976566269460212
+  }
+}
