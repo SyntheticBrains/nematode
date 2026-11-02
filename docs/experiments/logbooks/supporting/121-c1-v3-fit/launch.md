@@ -180,3 +180,38 @@ At about 33 s per generation on 16 workers (the probes'):
 - `recovery-preflight` and `recovery` refuse unless this record is committed and unchanged, with `113-c1-fit/encodings.md` and the two truths' records byte-identical to their versions in that commit.
 - `recovery-preflight` runs once, and `recovery` refuses until the preflight has passed.
 - `run`, `select`, `grade` and `read` also refuse unless this record carries Part B, with `recovery_preflight.json` and `recovery.json` bound and the recovery passing.
+
+## Part B: the recovery
+
+*Added 2026-11-02, after the recovery and before any fit. It changes no rule.*
+
+### The preflight
+
+`recovery_preflight.json`: **passes.**
+
+| | Truth t = 0 (`basin_warm`) | Truth t = 1 (`basin_boxA`) |
+|---|---|---|
+| floor | 0.486 | 0.490 |
+| oracle D | 0.487 | 0.390 |
+| prior D | 7.105 | 7.173 |
+| box centre's D | 6.954 | 7.007 |
+| separated (prior D − floor ≥ 1.0) | yes | yes |
+
+The oracle's median gain is 1.007 (≥ 0.85), and the box centre's is 0.024 (≤ 0.25).
+
+### The recovery
+
+`recovery.json`: **passes.** The median best-restart gain is **0.985** (≥ 0.75).
+
+| Truth | Fit | Stop | Final objective | D | Gain | Chosen |
+|---|---|---|---|---|---|---|
+| 0 | 0 | plateau, 175 | 0.707 | 0.678 | **0.971** | yes |
+| 0 | 1 | plateau, 69 | 6.216 | 4.116 | 0.452 | |
+| 1 | 2 | plateau, 193 | 0.815 | 0.783 | 0.956 | |
+| 1 | 3 | plateau, 264 | 0.518 | 0.494 | **0.999** | yes |
+
+- **Fit 1 stopped early** at generation 69 on the guarded plateau, at a score of 5.7. A stuck restart can satisfy the rule, as C.1's v1 fit showed. Selection would not choose such a restart, since it passes no population.
+- **The parameters:** the chosen restarts reproduce their truths' behaviour to about the floor, but single parameters miss by up to 0.86–0.88 of their range. The 21 statistics do not pin every one of the 25 parameters.
+- **The state-swap mapping** was used for fit 2.
+
+**Next, under the guard:** `run` (12 restarts), `select`, `grade` and `read`.
