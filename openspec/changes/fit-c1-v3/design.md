@@ -85,7 +85,7 @@
      - the oracle: the same over re-simulations 11–20;
      - the prior D: the median D from the observation to 200 prior draws of the 25-parameter box (`default_rng(5781)`).
 
-   - **Gain** = (prior D − D) / (prior D − floor).
+   - **Gain** = (prior D − D) / (prior D − floor). Every D here (the floor, the oracle, the prior D, the box centre and the answers) is the registered, capped D on v3's scales and family map (`cma_recovery_v2.predictive_distance_v2(capped=True)`); the fits rank on the ranking score.
 
    - **Before the fits:**
 
@@ -103,7 +103,13 @@
 
    - **The gate:** per truth, the restart with the lower final objective is re-simulated 10 times, and its gain read. The median gain over the two truths (their mean) must be at least **0.75**. If it falls short, no registered fit runs until the maintainer decides.
 
-   - The other restart's gain, the stops and the parameter errors are reported.
+   - **Preflighted** (discarded seeds at 85,000,000; `recovery_gate_preflight.json`, disclosed in Part A):
+
+     - floors 0.39 and 0.44; prior D 7.08 and 7.10; oracle gains 0.995 and 0.991; the box centre's gains 0.018 and 0.017. Every pre-fit check passes;
+     - scored as recovery fits of each truth, the other passing probe answer gains 0.93–0.94, the near basin (box B) 0.85–0.94, and the far basin (the first box-centre run) 0.665–0.666;
+     - so with 2 restarts per truth the gate fails only if both truths' best restarts land in the far basin: about 1%, crude, from the probes' 1 far basin in 3 box-centre runs.
+
+   - The other restart's gain, the stops and the parameter errors are reported. C.1's two states can swap roles (one probe answer's "dwelling" state is the fast one), so each parameter error is read after mapping the answer's dwelling and roaming parameters onto the truth's in whichever order is closer; the gain, read on behaviour, is unaffected.
 
 5. **The registered fit** (`c1_v3_fit.py`): C.1b's design on v3.
 
@@ -131,14 +137,15 @@
 
    | Base | Use |
    |---|---|
-   | 500,000,000 + 200·k + i | the fit: k = 10,000·r + 16·(n − 1) + m; answers at k = 10,000·r + 8,000 + q (q < 10), above the cap's 5,279 |
+   | 500,000,000 + 200·k + i | the fit: k = 10,000·r + 16·(n − 1) + m; answers at k = 10,000·r + 8,000 + q (q < 10), above the cap's 5,279. The script defines this offset itself: `cma_recovery`'s answer helpers use 5,000, which a cap above 312 would reach |
    | 520,000,000 + 200·g + i | the registered populations, g < 5 |
    | 521,000,000 + 200·(3r + s) + i | the selection populations, s < 3 |
    | 530,000,000 + 200·k + i | the recovery's fits, k = 10,000·fit + …, answers at 10,000·fit + 8,000 + q |
    | 540,000,000 + 200·(100·t + q) + i | the truths' observation (q = 0) and re-simulations (1–20) |
    | 541,000,000 + 200·j + i | the prior draws, j < 200 |
    | 542,000,000 + 200·q + i | the box centre's re-simulations, q < 10 |
-   | 86,000,000 and 86,970,000; CMA 5990 | the smoke, discarded |
+   | 86,000,000 and 86,970,000; CMA 5990 | the smoke, discarded: two generations of each stage, the recovery's included |
+   | 85,000,000 | the recovery gate's preflight, discarded |
    | 87,000,000–98,970,000; CMA 5760–5768 | the probes, discarded |
 
 7. **The registration:** launch record 121.
@@ -153,8 +160,8 @@
 ## Risks / Trade-offs
 
 - **[The mechanisms were chosen on the benchmark]** → It is disclosed. Each one answers a named failure with a measured cause, and the mutant predictions remain C.1's held-out test. No mechanism was added after the 25-parameter probes.
-- **[Box-centre restarts find the passing basin about 1 time in 3]** → With 8 restarts and selection, the chance of none is about 4% (crude, from 3 restarts). If none passes, the fail map applies.
+- **[Box-centre restarts find the passing basin about 1 time in 3]** → With 8 restarts and selection, the chance that none finds it is about 4% (crude, from 3 restarts). The verdict needs more: the chosen restart must pass 3 of 5. The one box-centre pass sat at 3 of 5 (D 1.08–1.33), and the warm start at 4 of 5 (D 0.85–1.04). So the verdict passes with a probability of roughly 60–85%, not 96%. If it fails, the fail map applies, with a registered C.1 standing near D 1.
 - **[Recovery on fitted truths]** → The truths sit near the real wild type, which is where F.0b-i's truths were chosen to be. Using two of them, not four, is the maintainer's reduced choice.
 - **[Parameters at their bounds]** → The probe answers touch a few bounds (search amplitude, a switching rate, one κ near −50). The box is not widened. A bound is reported where it holds.
-- **[Under-reversal]** → C.1 passes v3 while reversing 2–6%, against 12–17% in real worms. v3 cannot grade it from positions. It is reported beside the verdict.
+- **[Under-reversal]** → C.1 passes v3 while reversing 2–6%, against 12–17% in real worms. v3 cannot grade it from positions, and its escalation rule covers only over-reversal, so v3 does not constrain reversal from below. It is reported beside the verdict and stated in the logbook.
 - **[Cost]** → about 20 h in all. The fits are resumable, and the recovery gates them.
