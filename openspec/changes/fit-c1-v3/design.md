@@ -97,7 +97,7 @@
 
    - **The fits:** 2 restarts per truth (fit = 2t + j):
 
-     - sep-CMA from the box centre, σ₀ 0.2, population 16, CMA seeds 5777 + fit;
+     - sep-CMA from the box centre, σ₀ 0.2, population 16, CMA seeds 5782 + fit;
      - ranked by the definedness-first score against the truth's observation, on v3's scales;
      - the doubly guarded plateau, cap 330.
 
@@ -114,10 +114,10 @@
 5. **The registered fit** (`c1_v3_fit.py`): C.1b's design on v3.
 
    - **The objective:** the ranking score against v3's band centres at n = 200, over v3's four assays through its measurement models, without presence.
-   - **sep-CMA:** 8 restarts r = 0–7 from the box centre, σ₀ 0.2, population 16, bounds [0, 1], CMA seeds 5769 + r. The answer is `xfavorite`.
+   - **sep-CMA:** 12 restarts r = 0–11 from the box centre, σ₀ 0.2, population 16, bounds [0, 1], CMA seeds 5769 + r. The answer is `xfavorite`. Twelve, not C.1b's eight, the maintainer's decision at approval: about 4 restarts are expected in the passing basin instead of about 2.7.
    - **The stop:** the plateau rule once σ ≤ σ₀ and no median of 1,000 or more lies in the last 40 generations; otherwise **the cap of 330**. The cap is ⌈1.5 × 218⌉ rounded up to 330, from the probes' longest plateau.
    - **Selection:**
-     - every plateaued restart is graded with presence on 3 selection populations;
+     - every plateaued restart is graded with presence on 5 selection populations (C.1b used 3), so a near-threshold answer is less likely to be chosen over a stronger one by luck;
      - the restart passing most is chosen, ties going to the lower median D and then the lower r;
      - a capped restart cannot be chosen. If none plateaus, no verdict is read.
    - **The verdict:**
@@ -138,8 +138,8 @@
    | Base | Use |
    |---|---|
    | 500,000,000 + 200·k + i | the fit: k = 10,000·r + 16·(n − 1) + m; answers at k = 10,000·r + 8,000 + q (q < 10), above the cap's 5,279. The script defines this offset itself: `cma_recovery`'s answer helpers use 5,000, which a cap above 312 would reach |
-   | 520,000,000 + 200·g + i | the registered populations, g < 5 |
-   | 521,000,000 + 200·(3r + s) + i | the selection populations, s < 3 |
+   | 525,000,000 + 200·g + i | the registered populations, g < 5 (the fit's block ends at 523,601,999) |
+   | 526,000,000 + 200·(5r + s) + i | the selection populations, s < 5 |
    | 530,000,000 + 200·k + i | the recovery's fits, k = 10,000·fit + …, answers at 10,000·fit + 8,000 + q |
    | 540,000,000 + 200·(100·t + q) + i | the truths' observation (q = 0) and re-simulations (1–20) |
    | 541,000,000 + 200·j + i | the prior draws, j < 200 |
@@ -160,8 +160,8 @@
 ## Risks / Trade-offs
 
 - **[The mechanisms were chosen on the benchmark]** → It is disclosed. Each one answers a named failure with a measured cause, and the mutant predictions remain C.1's held-out test. No mechanism was added after the 25-parameter probes.
-- **[Box-centre restarts find the passing basin about 1 time in 3]** → With 8 restarts and selection, the chance that none finds it is about 4% (crude, from 3 restarts). The verdict needs more: the chosen restart must pass 3 of 5. The one box-centre pass sat at 3 of 5 (D 1.08–1.33), and the warm start at 4 of 5 (D 0.85–1.04). So the verdict passes with a probability of roughly 60–85%, not 96%. If it fails, the fail map applies, with a registered C.1 standing near D 1.
+- **[Box-centre restarts find the passing basin about 1 time in 3]** → With 12 restarts and selection, the chance that none finds it is under 1% (crude, from 3 restarts). The verdict needs more: the chosen restart must pass 3 of 5. The one box-centre pass sat at 3 of 5 (D 1.08–1.33), and the warm start at 4 of 5 (D 0.85–1.04). So the verdict passes with a probability of roughly 70–90% with 12 restarts and 5 selection populations, not 99%. If it fails, the fail map applies, with a registered C.1 standing near D 1.
 - **[Recovery on fitted truths]** → The truths sit near the real wild type, which is where F.0b-i's truths were chosen to be. Using two of them, not four, is the maintainer's reduced choice.
 - **[Parameters at their bounds]** → The probe answers touch a few bounds (search amplitude, a switching rate, one κ near −50). The box is not widened. A bound is reported where it holds.
 - **[Under-reversal]** → C.1 passes v3 while reversing 2–6%, against 12–17% in real worms. v3 cannot grade it from positions, and its escalation rule covers only over-reversal, so v3 does not constrain reversal from below. It is reported beside the verdict and stated in the logbook.
-- **[Cost]** → about 20 h in all. The fits are resumable, and the recovery gates them.
+- **[Cost]** → about 25 h in all (36 h for the fits at most). The fits are resumable, and the recovery gates them.

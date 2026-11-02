@@ -34,7 +34,7 @@
 
 ## 4. The fit and the verdict
 
-- [ ] 4.1 `run` (8 restarts), `select`, `grade` (every restart on 5 registered populations), `read`: `fit.json` with the verdict.
+- [ ] 4.1 `run` (12 restarts), `select` (5 populations per plateaued restart), `grade` (every restart on 5 registered populations), `read`: `fit.json` with the verdict.
 
 ## 5. Close-out
 

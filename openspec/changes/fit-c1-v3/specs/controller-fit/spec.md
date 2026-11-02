@@ -2,7 +2,7 @@
 
 ### Requirement: C.1 is refitted on benchmark v3 with its 25-parameter model
 
-C.1 (v3) SHALL be C.1's 20 parameters on F.0a's box plus `v_off_food`, `sigma_off_food`, `speed_log_sd_dwell`, `speed_log_sd_roam` and `kappa_off_food`, on ranges set without search data. It SHALL be fitted to the real wild type on benchmark v3 by sep-CMA from the box centre, with 8 restarts, the definedness-first ranking score against v3's bands at n = 200, the doubly guarded plateau and a cap of 330. Selection on 3 separate populations per plateaued restart SHALL choose the restart, and the verdict SHALL be at least 3 of 5 registered populations passing with presence at |z| ≤ 3.0381.
+C.1 (v3) SHALL be C.1's 20 parameters on F.0a's box plus `v_off_food`, `sigma_off_food`, `speed_log_sd_dwell`, `speed_log_sd_roam` and `kappa_off_food`, on ranges set without search data. It SHALL be fitted to the real wild type on benchmark v3 by sep-CMA from the box centre, with 12 restarts, the definedness-first ranking score against v3's bands at n = 200, the doubly guarded plateau and a cap of 330. Selection on 5 separate populations per plateaued restart SHALL choose the restart, and the verdict SHALL be at least 3 of 5 registered populations passing with presence at |z| ≤ 3.0381.
 
 #### Scenario: A capped restart is not chosen
 

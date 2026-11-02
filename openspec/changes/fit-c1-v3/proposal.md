@@ -16,7 +16,7 @@ The maintainer's decisions (2026-11-02):
 
 - refit C.1 on v3 with the three mechanisms;
 - a reduced recovery on the 25-parameter model first;
-- C.1b's design for the registered fit, with 8 restarts.
+- C.1b's design for the registered fit, with 12 restarts and 5 selection populations per plateaued restart (decided at approval, before registration, to raise the verdict's odds).
 
 ## What Changes
 
@@ -35,10 +35,10 @@ The maintainer's decisions (2026-11-02):
 
 - **The registered fit:** `scripts/analysis/c1_v3_fit.py`, C.1b's design on v3:
 
-  - 8 box-centre restarts;
+  - 12 box-centre restarts;
   - the ranking score against v3's bands;
   - the doubly guarded plateau, cap 330;
-  - selection on 3 separate populations per plateaued restart;
+  - selection on 5 separate populations per plateaued restart;
   - a verdict at 3 of 5 registered populations with presence.
 
 - **The probes are the pilot.** They are disclosed, they set the cap, and they show reachability. No further pilot runs.
@@ -65,5 +65,5 @@ None.
 - **Records:** `docs/experiments/logbooks/supporting/121-c1-v3-fit/` (the probes as disclosure, the launch record, the recovery, the fit); Logbook 121; the tracker (C.1, C.4, the seed table); AGENTS.md; the CHANGELOG.
 - **Cost** at about 33 s per generation on 16 workers:
   - the recovery: about 6–8 h (4 fits, plus its preflight's about 250 simulations);
-  - the fits: about 13 h typical, 24 h at most;
+  - the fits: about 18 h typical, 36 h at most;
   - grading: under 10 minutes.
