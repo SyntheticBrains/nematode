@@ -27,7 +27,7 @@
 ## 3. Registration and the recovery
 
 - [x] 3.1 The probes' records and scripts, the sensitivity tests and the recovery gate's preflight, committed to `supporting/121-c1-v3-fit/probes/`.
-- [ ] 3.2 Launch record 121, Part A (rules, seeds, the encoding extension, the probes disclosed), committed.
+- [x] 3.2 Launch record 121, Part A (rules, seeds, the encoding extension, the probes disclosed), committed.
 - [ ] 3.3 `recovery-preflight`: the observations, floors, oracle, prior D and the box centre's gain. Stop if a check fails.
 - [ ] 3.4 `recovery`: 4 fits, the gains, the gate. Return to the maintainer if the median gain is below 0.75.
 - [ ] 3.5 Part B: the recovery's result, committed.
