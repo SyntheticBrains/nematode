@@ -1,7 +1,7 @@
 ## 1. The model's options
 
-- [ ] 1.1 `BatchedMechanistic`: `v_off_food`, `sigma_off_food`, and the paired speed spread, each off by default. Tests for each scenario. (The code and two tests exist uncommitted from the probes; they are committed with this task.)
-- [ ] 1.2 `speedup_identity_check.py check --build build/benchmark-v3/identity --out supporting/121-c1-v3-fit/identity.json`: all 55 jobs byte-identical.
+- [x] 1.1 `BatchedMechanistic`: `v_off_food`, `sigma_off_food`, and the paired speed spread, each off by default. Tests for each scenario. (The code and two tests exist uncommitted from the probes; they are committed with this task.)
+- [x] 1.2 `speedup_identity_check.py check --build build/benchmark-v3/identity --out supporting/121-c1-v3-fit/identity.json`: all 55 jobs byte-identical.
 
 ## 2. The fit script
 

@@ -160,3 +160,37 @@ def test_an_off_food_gain_changes_steering_only_off_food() -> None:
     # Off food only the run curvature (column 1) changes; speed and the three hazards do not.
     np.testing.assert_array_equal(base[..., [0, 2, 3, 4]], flipped[..., [0, 2, 3, 4]])
     assert not np.array_equal(base[..., 1], flipped[..., 1])
+
+
+def test_off_food_kinematics_change_runs_only_off_food() -> None:
+    """Without the off-food speed and noise the model is unchanged; with them, only food-free steps.
+
+    On food every column is the state's; off food the speed and curvature columns change, and the
+    three hazards do not.
+    """
+    seeds = [3, 4, 5, 6]
+    off = {**_BASE, "v_off_food": 0.15, "sigma_off_food": 55.0}
+    np.testing.assert_array_equal(_steering(_BASE, 1.0, seeds), _steering(off, 1.0, seeds))
+    base, moved = _steering(_BASE, 0.0, seeds), _steering(off, 0.0, seeds)
+    np.testing.assert_array_equal(base[..., 2:], moved[..., 2:])
+    assert not np.array_equal(base[..., 0], moved[..., 0])
+    assert not np.array_equal(base[..., 1], moved[..., 1])
+
+
+def test_a_speed_spread_varies_speed_by_window_only() -> None:
+    """Without the spread the model is unchanged; with it, speed varies across 10-s windows only.
+
+    Within a window the speed column holds; across windows it moves; curvature and the hazards
+    draw exactly what they drew without the spread, since the spread's normal adds no draw.
+    """
+    seeds = [3, 4, 5, 6]
+    spread = {**_BASE, "speed_log_sd_dwell": 0.5, "speed_log_sd_roam": 0.5}
+    base, varied = _steering(_BASE, 1.0, seeds), _steering(spread, 1.0, seeds)
+    np.testing.assert_array_equal(base[..., 1:], varied[..., 1:])
+    # Steps 0-9 share one window and 10-19 the next (each animal stays in its state here).
+    first, second = varied[:10, :, 0], varied[10:, :, 0]
+    assert np.all(first == first[0])
+    assert np.all(second == second[0])
+    assert not np.array_equal(first[0], second[0])
+    with pytest.raises(ValueError, match="come together"):
+        BatchedMechanistic({**_BASE, "speed_log_sd_dwell": 0.5})
