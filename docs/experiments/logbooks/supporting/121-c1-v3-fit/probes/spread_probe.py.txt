@@ -1,0 +1,96 @@
+"""C.1 on v3: the speed-spread probe (description, discarded seeds).
+
+As the structural probe, plus ``speed_log_sd_dwell`` and ``speed_log_sd_roam`` (uniform 0-1.5): each
+state's run speed varies across 10-s windows as exp(sd z) about its median, the mechanism v2's
+reachability worm needed to match the window-speed medians and 90th percentiles. 24 dimensions, CMA
+5764, fit animals 93,000,000, graded on 93,970,000.
+
+The structural probe's description follows.
+
+C.1 with a run speed and curvature noise of its own off food (``v_off_food`` uniform 0.005-0.20
+mm/s, ``sigma_off_food`` uniform 5-60 deg/s, the state priors' ranges), whatever the state, so slow
+dwelling on food no longer slows search and chemotaxis. 22 dimensions from the box centre, sigma0
+0.2, population 16, CMA 5763; v3's ranking score against the band centres at n = 200; C.1b's guarded
+stop, cap 300; fit animals 95,000,000 + 200·k + i; the answer graded with presence on 5 populations
+at 95,970,000. Reaches: at least 3 of 5 pass.
+"""
+
+import json
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c1-v3")
+import benchmark_grade as bg
+import benchmark_v3_controls as v3c
+import c1b_fit as c1b
+import cma_recovery as cr
+import diagnostic_probes as dp
+import npe_recovery as nr
+import readiness_probe as rp
+
+CMA_SEED, FIT_BASE, GRADE_BASE, SIGMA0, DIM = 5764, 93_000_000, 93_970_000, 0.2, 24
+EXTRA = {"v_off_food": (0.005, 0.20), "sigma_off_food": (5.0, 60.0), "speed_log_sd_dwell": (0.0, 1.5), "speed_log_sd_roam": (0.0, 1.5)}
+
+
+def parameters(z):
+    z = np.asarray(z, dtype=float)
+    out = nr.parameters_from_unit(z[:20])
+    for value, (name, (low, high)) in zip(z[20:], EXTRA.items(), strict=True):
+        out[name] = float(low + value * (high - low))
+    return out
+
+
+def simulate(k, z, seed_base):
+    return dp._record(k, z, seed_base, parameters(z))
+
+
+def start(seed):
+    import cma
+
+    return cma.CMAEvolutionStrategy([0.5] * DIM, SIGMA0, {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": cr.POPSIZE, "seed": seed, "verbose": -9})
+
+
+def grade(item):
+    z, gpop = item
+    graded = v3c._mechanistic_graded(parameters(z), v3c.population_seeds(GRADE_BASE, gpop), bg.load_bands_v3())
+    return bg._finite({
+        "g": gpop, "wild_type_passes": graded["wild_type_passes"], "family_passes": graded["family_passes"],
+        "D": graded["D"], "D_fit": graded["D_fit"],
+        "failing": [f"{f}/{n}" for f, rs in graded["families"].items() for n, r in rs.items() if not r["passes"]],
+        "z": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "chemotaxis_present": graded["chemotaxis_presence"]["present"],
+        "local_search_present": graded["local_search_presence"]["present"],
+        "reversal_share": graded["reversal_share"]["value"] if graded["reversal_share"] else None,
+    })
+
+
+def main():
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        history = cr.run_fit(
+            {}, fit=0, cma_seed=CMA_SEED, seed_base=FIT_BASE, cap=300, use_rule=True, state_dir=Path("build/c1-v3/spread"),
+            pool=pool, scales={}, objective=rp.V3BandObjective(), simulate=simulate, stop=c1b.defined_stop, strategy_factory=start,
+        )
+        answer = history["answers"][-1]
+        grades = list(pool.map(grade, [(answer, g) for g in range(5)]))
+    passing = sum(bool(g["wild_type_passes"]) for g in grades)
+    record = {
+        "description": "Description: C.1 with off-food run speed and curvature noise and a per-state speed spread, on v3; discarded seeds.",
+        "cma_seed": CMA_SEED, "fit_base": FIT_BASE, "grade_base": GRADE_BASE, "stop": history.get("stop"),
+        "generations": len(history["medians"]), "medians": history["medians"], "sigmas": history["sigmas"],
+        "answer": answer, "parameters": parameters(answer), "populations_passing": passing, "reaches": passing >= 3,
+        "grades": grades, "wall_hours": (time.time() - t0) / 3600,
+    }
+    Path("build/c1-v3/probe_spread.json").write_text(json.dumps(bg._finite(record), indent=2) + "\n")
+    print("spread", json.dumps({k: record[k] for k in ("stop", "generations", "populations_passing", "reaches")}), flush=True)
+    for g in grades:
+        print(" ", g["g"], g["wild_type_passes"], round(g["D"], 2) if g["D"] else None, g["failing"], "chem", g["chemotaxis_present"], "rev", round(g["reversal_share"], 3) if g["reversal_share"] else None, flush=True)
+
+
+if __name__ == "__main__":
+    main()

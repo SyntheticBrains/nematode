@@ -1,0 +1,51 @@
+"""On the speed-spread probe's answer: weaken the weathervane gain on paired seeds (description)."""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c1-v3")
+import benchmark_grade as bg
+import benchmark_v3_controls as v3c
+import npe_recovery as nr
+
+BASE = 92_000_000
+ANSWER = json.loads(Path("build/c1-v3/probe_spread.json").read_text())["parameters"]
+CASES = {
+    "as fitted": {},
+    "kappa x0.75": {"kappa_weathervane": ANSWER["kappa_weathervane"] * 0.75},
+    "kappa x0.5": {"kappa_weathervane": ANSWER["kappa_weathervane"] * 0.5},
+    "kappa x0.25": {"kappa_weathervane": ANSWER["kappa_weathervane"] * 0.25},
+    "kappa 0": {"kappa_weathervane": 0.0},
+}
+KEYS = ("small_lawn/time_on_lawn", "small_lawn/exits_per_on_lawn_hour", "small_lawn/roaming_bout_s", "small_lawn/dwelling_bout_s",
+        "kinematics/dwelling_speed_median", "local_search/gamma_per_min", "local_search/log_early_late_ratio",
+        "chemotaxis/drift_mm_s", "chemotaxis/log_quintile_ratio", "chemotaxis/weathervane_deg_s", "chemotaxis/onset_per_min", "chemotaxis/flip_fraction")
+
+
+def run(item):
+    name, block = item
+    params = {**ANSWER, **CASES[name]}
+    g = v3c._mechanistic_graded(params, v3c.population_seeds(BASE, block), bg.load_bands_v3())
+    z = {k: g["families"][k.split("/")[0]][k.split("/")[1]]["z"] for k in KEYS}
+    return name, block, bg._finite({"D": g["D"], "passes": g["wild_type_passes"], "families": g["family_passes"], "z": z, "chem_present": g["chemotaxis_presence"]["present"]})
+
+
+def main():
+    with ProcessPoolExecutor(16, initializer=nr._worker_setup) as pool:
+        rows = list(pool.map(run, [(n, b) for n in CASES for b in range(3)]))
+    out = {}
+    for name, block, r in rows:
+        out.setdefault(name, []).append(r)
+    Path("build/c1-v3/kappa_sensitivity.json").write_text(json.dumps(out, indent=2) + "\n")
+    for name, rs in out.items():
+        zs = {k.split("/")[1]: round(float(np.mean([r["z"][k] for r in rs])), 1) for k in KEYS}
+        print(f"{name:16s} D {np.mean([r['D'] for r in rs]):.2f} pass {sum(bool(r['passes']) for r in rs)}/3 chem {[r['chem_present'] for r in rs]} | {zs}")
+
+
+if __name__ == "__main__":
+    main()

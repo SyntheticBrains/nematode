@@ -5,7 +5,7 @@
 
 ## 2. The fit script
 
-- [ ] 2.1 `scripts/analysis/c1_v3_fit.py`:
+- [x] 2.1 `scripts/analysis/c1_v3_fit.py`:
 
   - the 25-parameter box;
   - the v3 band objective and simulation;
@@ -22,11 +22,11 @@
   - parameter errors read modulo the dwelling/roaming swap;
   - selection and ties.
 
-- [ ] 2.2 The smoke (CMA 5990, animals 86,000,000, grading 86,970,000, discarded): two generations of each stage, `recovery-preflight` and `recovery` included.
+- [x] 2.2 The smoke (CMA 5990, animals 86,000,000, grading 86,970,000, discarded): two generations of each stage, `recovery-preflight` and `recovery` included.
 
 ## 3. Registration and the recovery
 
-- [ ] 3.1 The probes' records and scripts, the sensitivity tests and the recovery gate's preflight, committed to `supporting/121-c1-v3-fit/probes/`.
+- [x] 3.1 The probes' records and scripts, the sensitivity tests and the recovery gate's preflight, committed to `supporting/121-c1-v3-fit/probes/`.
 - [ ] 3.2 Launch record 121, Part A (rules, seeds, the encoding extension, the probes disclosed), committed.
 - [ ] 3.3 `recovery-preflight`: the observations, floors, oracle, prior D and the box centre's gain. Stop if a check fails.
 - [ ] 3.4 `recovery`: 4 fits, the gains, the gate. Return to the maintainer if the median gain is below 0.75.
