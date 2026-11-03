@@ -17,29 +17,35 @@ ingestion drive exciting NSM, and one peptide couple from NSM, nlp-54 through TR
 rate's decay constant, 1/gamma from the benchmark's own fit, is set against 6-12 min. The vector's
 magnitudes were set by trial on seeds 54,100,000 and up; the reported run is on 54,000,000.
 
-**readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
-score against the band centres on D_fit's families, one after another, stopping once 2 have
-passed: the plateau rule once sigma <= sigma0 and every median of the last 40 generations is below
-100, or the cap of 1,000. Each answer is graded with presence on 5 populations, on all five families and the three
-mutants' differences from their wild type; an answer is ready when D_fit's three families pass in
-at least 3 of 5. If exactly one of the three passes, a warm restart from it runs (sigma0 0.1, CMA 5983).
+**pilot** runs one sep-CMA restart (CMA 5985) for 150 generations in the rescaled box, its answer
+re-simulated twice every 25 generations on D_fit's assays. In the first box (wiring scales 0-3),
+restart 0's answer stalled at a ranking score of about 10.6 from generation 50 to 325, its start
+saturating more than half the network; the readiness restarts run only if the pilot beats 10.6.
 
-**measure** runs restart 0 through the cap with no plateau stop, grades its answer, and
-re-simulates its answer at every 50th generation twice on D_fit's assays: the plateau rule had
-stopped it at generation 48 with the population median flat and the answer far from the bands.
+**readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
+score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
+Each runs through the cap of 1,000 generations: the plateau rule (recorded with every history, with
+its guard on every median of the last 40 generations below 100) stopped the first box's restart 0
+at generation 48 while its answer had stopped improving far from the bands, so each restart's
+answer is instead re-simulated twice at every 50th generation to show when it converges. Each
+answer is graded with presence on 5 populations, on all five families and the three mutants'
+differences from their wild type; an answer is ready when D_fit's three families pass in at least
+3 of 5. If exactly one of the three is ready, a warm restart from it runs (sigma0 0.1, CMA 5983).
 
 **read** writes the readiness record and the W sizing record from the stored histories and grades.
 
 Seeds: the restarts at 40,000,000 + 200·(20,000·r + 16·(n - 1) + m) + i; the warm restart at
 55,000,000 + 200·(16·(n - 1) + m) + i; the grading at 52,000,000 + 200·(5r + g) + i, its mutants on
 their wild type's animals; the cost pilot at 53,000,000; the feasibility check at 54,000,000; the
-smoke at 59,000,000; the measured restart's trajectory at 60,000,000 + 200·(2g + q) + i.
+smoke at 59,000,000; the first box's early reads at 61,000,000; the pilot at 62,000,000 and its
+trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,000,000 +
+200·(2,100·r + 2g + q) + i.
 
 Usage::
 
     uv run python scripts/analysis/c2_encoder_probe.py cost
     uv run python scripts/analysis/c2_encoder_probe.py feasibility
-    uv run python scripts/analysis/c2_encoder_probe.py measure
+    uv run python scripts/analysis/c2_encoder_probe.py pilot
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -115,15 +121,28 @@ FEASIBILITY_TRIALS = 20
 FEASIBILITY_WINDOW_MIN = (6.0, 12.0)
 SMOKE_BASE = 59_000_000
 # The measured restart's trajectory: its answer at every 50th generation, re-simulated twice.
-TRAJECTORY_BASE = 60_000_000
+# The old box's early reads of its stalled restart, kept with the stall's record.
+PEEK_BASE = 61_000_000
+# The pilot in the rescaled box, its answer read every 25 generations.
+PILOT_BASE = 62_000_000
+PILOT_CMA = 5985
+PILOT_CAP = 150
+PILOT_EVERY = 25
+PILOT_TRAJECTORY_BASE = 63_000_000
+# The stalled restart's answer score in the old box, which the pilot must beat.
+STALL_SCORE = 10.6
+# Each readiness restart's answer at every 50th generation, re-simulated twice.
+TRAJECTORY_BASE = 64_000_000
 TRAJECTORY_EVERY = 50
 TRAJECTORY_REPEATS = 2
+TRAJECTORY_BLOCK = 2_100
 SMOKE_CMA = 5984
 
 READINESS_PATH = SUPPORT / "readiness.json"
 COST_PATH = SUPPORT / "cost.json"
 FEASIBILITY_PATH = SUPPORT / "feasibility.json"
 W_SIZING_PATH = SUPPORT / "w_sizing.json"
+PILOT_PATH = SUPPORT / "readiness" / "pilot.json"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -613,102 +632,57 @@ def ready(grades: list[dict[str, Any]]) -> bool:
     return sum(bool(g["fit_passes"]) for g in grades) >= PASS_NEEDED
 
 
-def _run_restart(
-    r: int,
+def trajectory_k(restart: int, generation: int, repeat: int) -> int:
+    """Return the simulation index of a restart's answer at a generation, re-simulated."""
+    return TRAJECTORY_BLOCK * restart + TRAJECTORY_REPEATS * generation + repeat
+
+
+def _fit(  # noqa: PLR0913 - one restart's settings
     pool: ProcessPoolExecutor,
-    grades: dict[str, list[dict[str, Any]]],
-) -> None:
-    warm = r == WARM_RESTART
-    history = cr.run_fit(
+    *,
+    cma_seed: int,
+    seed_base: int,
+    cap: int,
+    state_dir: Path,
+    factory: Callable[[int], Any],
+) -> dict[str, Any]:
+    """Run, or resume, one restart through its cap; the plateau rule is recorded but not used."""
+    return cr.run_fit(
         {},
         fit=0,
-        cma_seed=WARM_CMA if warm else READINESS_CMA + r,
-        seed_base=WARM_BASE if warm else READINESS_BASE + ANIMALS * RESTART_BLOCK * r,
-        cap=CAP,
-        use_rule=True,
-        state_dir=_restart_dir(r),
+        cma_seed=cma_seed,
+        seed_base=seed_base,
+        cap=cap,
+        use_rule=False,
+        state_dir=state_dir,
         pool=pool,
         scales={},
         objective=FitObjective(),
         simulate=simulate,
         stop=readiness_stop,
-        strategy_factory=start_warm if warm else start_centre,
+        strategy_factory=factory,
     )
-    if str(r) not in grades:
-        answer = history["answers"][-1]
-        ks = [GRADE_POPULATIONS * r + g for g in range(GRADE_POPULATIONS)]
-        grades[str(r)] = list(
-            pool.map(grade_answer, ks, [answer] * len(ks), [GRADE_BASE] * len(ks)),
-        )
-        _write(_grades_path(), grades)
 
 
-def _readiness(workers: int) -> int:
-    path = _grades_path()
-    grades: dict[str, list[dict[str, Any]]] = json.loads(path.read_text()) if path.exists() else {}
-    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
-        for r in range(RESTARTS):
-            if sum(ready(grades[q]) for q in grades if int(q) < RESTARTS) >= PASSES_WANTED:
-                break
-            _run_restart(r, pool, grades)
-        passing = [int(q) for q in grades if int(q) < RESTARTS and ready(grades[q])]
-        if len(passing) == 1 and all(str(r) in grades for r in range(RESTARTS)):
-            x0 = json.loads((_restart_dir(passing[0]) / "fit0.json").read_text())["answers"][-1]
-            warm = BUILD / "readiness" / "warm_x0.json"
-            if not warm.exists():
-                _write(warm, {"from_restart": passing[0], "x0": x0})
-            _run_restart(WARM_RESTART, pool, grades)
-    return 0
-
-
-def trajectory_k(generation: int, repeat: int) -> int:
-    """Return the simulation index of a generation's answer, re-simulated."""
-    return TRAJECTORY_REPEATS * generation + repeat
-
-
-def _measure(workers: int) -> int:
-    """Run restart 0 through the cap without a plateau stop, grade it, and read its trajectory.
-
-    The plateau rule stopped restart 0 at generation 48 with the population median flat while the
-    distribution's mean was still far from the bands, so restart 0 is measured to the cap first.
-    Its answer at every 50th generation is re-simulated twice on D_fit's assays, on fresh animals,
-    to show when the mean converges.
-    """
-    path = _grades_path()
-    grades: dict[str, list[dict[str, Any]]] = json.loads(path.read_text()) if path.exists() else {}
-    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
-        history = cr.run_fit(
-            {},
-            fit=0,
-            cma_seed=READINESS_CMA,
-            seed_base=READINESS_BASE,
-            cap=CAP,
-            use_rule=False,
-            state_dir=_restart_dir(0),
-            pool=pool,
-            scales={},
-            objective=FitObjective(),
-            simulate=simulate,
-            stop=readiness_stop,
-            strategy_factory=start_centre,
-        )
-        if "0" not in grades:
-            answer = history["answers"][-1]
-            ks = list(range(GRADE_POPULATIONS))
-            grades["0"] = list(
-                pool.map(grade_answer, ks, [answer] * len(ks), [GRADE_BASE] * len(ks)),
-            )
-            _write(path, grades)
-        generations = list(range(TRAJECTORY_EVERY, len(history["answers"]) + 1, TRAJECTORY_EVERY))
-        jobs = [(g, q) for g in generations for q in range(TRAJECTORY_REPEATS)]
-        records = list(
-            pool.map(
-                simulate,
-                [trajectory_k(g, q) for g, q in jobs],
-                [history["answers"][g - 1] for g, _ in jobs],
-                [TRAJECTORY_BASE] * len(jobs),
-            ),
-        )
+def trajectory(
+    history: dict[str, Any],
+    pool: ProcessPoolExecutor,
+    *,
+    base: int,
+    restart: int,
+    every: int,
+) -> list[dict[str, Any]]:
+    """Re-simulate a restart's answer at every ``every``-th generation twice on D_fit's assays."""
+    generations = list(range(every, len(history["answers"]) + 1, every))
+    jobs = [(g, q) for g in generations for q in range(TRAJECTORY_REPEATS)]
+    records = list(
+        pool.map(
+            simulate,
+            [trajectory_k(restart, g, q) for g, q in jobs],
+            [history["answers"][g - 1] for g, _ in jobs],
+            [base] * len(jobs),
+        ),
+    )
     objective = FitObjective()
     points = []
     for g in generations:
@@ -722,7 +696,99 @@ def _measure(workers: int) -> int:
                 "answer_D_fit": [r["D_fit"] for r in mine],
             },
         )
-    _write(BUILD / "readiness" / "trajectory.json", {"restart": 0, "points": points})
+    return points
+
+
+def converged_generation(points: list[dict[str, Any]], tolerance: float = 0.05) -> int | None:
+    """Return the first checkpoint whose answer score is within 5% of the restart's best."""
+    scores = [float(np.median(p["answer_score"])) for p in points]
+    if not scores:
+        return None
+    best = min(scores)
+    return next(
+        p["generation"] for p, x in zip(points, scores, strict=True) if x <= best * (1 + tolerance)
+    )
+
+
+def _pilot(workers: int) -> int:
+    """One restart in the rescaled box for 150 generations, its answer read every 25."""
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = _fit(
+            pool,
+            cma_seed=PILOT_CMA,
+            seed_base=PILOT_BASE,
+            cap=PILOT_CAP,
+            state_dir=BUILD / "readiness" / "pilot",
+            factory=start_centre,
+        )
+        points = trajectory(history, pool, base=PILOT_TRAJECTORY_BASE, restart=0, every=PILOT_EVERY)
+    best = min(float(np.median(p["answer_score"])) for p in points)
+    record = {
+        "description": DESCRIPTION + " The pilot in the rescaled box.",
+        "wiring_range": next([e.low, e.high] for e in entries() if e.name == "wiring.excitatory"),
+        "stall_score": STALL_SCORE,
+        "best_answer_score": best,
+        "improves_past_stall": best < STALL_SCORE,
+        "points": points,
+        "medians": history["medians"],
+        "sigmas": history["sigmas"],
+        "answer": history["answers"][-1],
+    }
+    _write(PILOT_PATH, record)
+    print(json.dumps({k: record[k] for k in ("best_answer_score", "improves_past_stall")}))
+    return 0
+
+
+def _restart(
+    r: int,
+    pool: ProcessPoolExecutor,
+    grades: dict[str, list[dict[str, Any]]],
+) -> None:
+    """Run one readiness restart through the cap, grade its answer and read its trajectory."""
+    warm = r == WARM_RESTART
+    history = _fit(
+        pool,
+        cma_seed=WARM_CMA if warm else READINESS_CMA + r,
+        seed_base=WARM_BASE if warm else READINESS_BASE + ANIMALS * RESTART_BLOCK * r,
+        cap=CAP,
+        state_dir=_restart_dir(r),
+        factory=start_warm if warm else start_centre,
+    )
+    if str(r) not in grades:
+        answer = history["answers"][-1]
+        ks = [GRADE_POPULATIONS * r + g for g in range(GRADE_POPULATIONS)]
+        grades[str(r)] = list(
+            pool.map(grade_answer, ks, [answer] * len(ks), [GRADE_BASE] * len(ks)),
+        )
+        _write(_grades_path(), grades)
+    path = _restart_dir(r) / "trajectory.json"
+    if not path.exists():
+        points = trajectory(history, pool, base=TRAJECTORY_BASE, restart=r, every=TRAJECTORY_EVERY)
+        _write(path, {"restart": r, "points": points})
+
+
+def _readiness(workers: int) -> int:
+    """Run the readiness restarts in turn, each through the cap, until 2 are ready."""
+    if not (PILOT_PATH.exists() and json.loads(PILOT_PATH.read_text())["improves_past_stall"]):
+        print(
+            "the pilot has not improved past the stall; no readiness restart runs",
+            file=sys.stderr,
+        )
+        return 1
+    path = _grades_path()
+    grades: dict[str, list[dict[str, Any]]] = json.loads(path.read_text()) if path.exists() else {}
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        for r in range(RESTARTS):
+            if sum(ready(grades[q]) for q in grades if int(q) < RESTARTS) >= PASSES_WANTED:
+                break
+            _restart(r, pool, grades)
+        passing = [int(q) for q in grades if int(q) < RESTARTS and ready(grades[q])]
+        if len(passing) == 1 and all(str(r) in grades for r in range(RESTARTS)):
+            x0 = json.loads((_restart_dir(passing[0]) / "fit0.json").read_text())["answers"][-1]
+            warm = BUILD / "readiness" / "warm_x0.json"
+            if not warm.exists():
+                _write(warm, {"from_restart": passing[0], "x0": x0})
+            _restart(WARM_RESTART, pool, grades)
     return 0
 
 
@@ -793,12 +859,15 @@ def _read() -> int:
     for r in sorted(grades):
         history = json.loads((_restart_dir(r) / "fit0.json").read_text())
         answer = history["answers"][-1]
+        points = json.loads((_restart_dir(r) / "trajectory.json").read_text())["points"]
         restarts.append(
             {
                 "restart": r,
                 "warm": r == WARM_RESTART,
                 "stop": history["stop"],
                 "final_median": history["medians"][-1],
+                "converged_generation": converged_generation(points),
+                "trajectory": points,
                 "seconds_per_generation_median": float(np.median(history["seconds"])),
                 "ready": ready(grades[r]),
                 "fit_passing_populations": int(sum(bool(g["fit_passes"]) for g in grades[r])),
@@ -841,7 +910,7 @@ def _read() -> int:
 def w_sizing(readiness: dict[str, Any]) -> dict[str, Any]:
     """Return what F.0b-ii's and W's registrations size from: generations, pace, spread, path."""
     cost = json.loads(COST_PATH.read_text()) if COST_PATH.exists() else None
-    stops = [x["stop"]["generation"] for x in readiness["restarts"] if not x["warm"]]
+    converged = [x["converged_generation"] for x in readiness["restarts"] if not x["warm"]]
     pairs = readiness["spread"]["pairs"]
     held_out = [p["held_out_D"] for p in pairs]
     minimum = readiness["w_minimum"]["held_out"]["minimum_95th"]
@@ -849,7 +918,8 @@ def w_sizing(readiness: dict[str, Any]) -> dict[str, Any]:
         {
             "description": DESCRIPTION + " What F.0b-ii's and W's registrations are sized from.",
             "tying": TYING,
-            "generations_per_restart": stops,
+            "converged_generation_per_restart": converged,
+            "cap": CAP,
             "seconds_per_generation_d_fit": [
                 x["seconds_per_generation_median"] for x in readiness["restarts"]
             ],
@@ -921,14 +991,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "stage",
-        choices=("cost", "feasibility", "measure", "readiness", "read", "smoke"),
+        choices=("cost", "feasibility", "pilot", "readiness", "read", "smoke"),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
     stages: dict[str, Callable[[], int]] = {
         "cost": lambda: _cost(args.workers),
         "feasibility": _feasibility,
-        "measure": lambda: _measure(args.workers),
+        "pilot": lambda: _pilot(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),

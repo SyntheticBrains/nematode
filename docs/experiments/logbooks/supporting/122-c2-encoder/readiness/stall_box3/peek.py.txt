@@ -1,0 +1,28 @@
+"""An early read of the measured restart: its answer at a few generations, re-simulated on D_fit.
+
+Description on discarded seeds (61,000,000 + 200·(2·g + q) + i), one process beside the run.
+"""
+
+import json
+import sys
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+import npe_recovery as nr
+
+nr._worker_setup()
+h = json.loads((p.BUILD / "readiness" / "r0" / "fit0.json").read_text())
+objective = p.FitObjective()
+out = []
+for g in [int(x) for x in sys.argv[1].split(",")]:
+    z = h["answers"][g - 1]
+    recs = [p.simulate(2 * g + q, z, 61_000_000) for q in range(2)]
+    row = {
+        "generation": g,
+        "median": h["medians"][g - 1],
+        "sigma": h["sigmas"][g - 1],
+        "answer_score": [objective(r) for r in recs],
+        "answer_D_fit": [r["D_fit"] for r in recs],
+    }
+    out.append(row)
+    print(json.dumps(row), flush=True)

@@ -82,7 +82,8 @@ TIMESCALE_POOLS: tuple[str, ...] = ("monoamine", "neuropeptide")
 Tying = Literal["per_couple", "per_ligand"]
 Kind = Literal["linear", "log"]
 
-_WIRING_RANGE = (0.0, 3.0)
+# Scales of 0.5-0.75 leave the settled network graded; at 1.5 more than half of it saturates.
+_WIRING_RANGE = (0.0, 1.5)
 _GROUP_RANGE = (-2.0, 2.0)
 _SENSORY_RANGE = (-5.0, 5.0)
 _READOUT_RANGE = (-3.0, 3.0)

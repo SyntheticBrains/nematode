@@ -49,9 +49,20 @@ def test_the_seed_blocks_do_not_overlap() -> None:
     trials = probe.ANIMALS * probe.FEASIBILITY_TRIALS
     blocks.append((probe.FEASIBILITY_TRIAL_BASE, probe.FEASIBILITY_TRIAL_BASE + trials))
     blocks.append((probe.SMOKE_BASE, probe.SMOKE_BASE + probe.ANIMALS * 101))
-    last_trajectory = probe.trajectory_k(probe.CAP, probe.TRAJECTORY_REPEATS - 1)
+    last_trajectory = probe.trajectory_k(probe.WARM_RESTART, probe.CAP, 1)
+    assert probe.trajectory_k(1, 0, 0) > probe.trajectory_k(0, probe.CAP, 1)
     blocks.append(
         (probe.TRAJECTORY_BASE, probe.TRAJECTORY_BASE + probe.ANIMALS * (last_trajectory + 1)),
+    )
+    blocks.append((probe.PEEK_BASE, probe.PEEK_BASE + probe.ANIMALS * 2_000))
+    pilot = cr.POPSIZE * probe.PILOT_CAP
+    blocks.append((probe.PILOT_BASE, probe.PILOT_BASE + probe.ANIMALS * pilot))
+    pilot_trajectory = probe.trajectory_k(0, probe.PILOT_CAP, 1) + 1
+    blocks.append(
+        (
+            probe.PILOT_TRAJECTORY_BASE,
+            probe.PILOT_TRAJECTORY_BASE + probe.ANIMALS * pilot_trajectory,
+        ),
     )
     assert last_k < probe.RESTART_BLOCK
     ordered = sorted(blocks)
@@ -91,3 +102,13 @@ def test_an_encoded_population_is_graded() -> None:
     assert set(graded["mutants"]) == set(probe.MUTANTS)
     for reading in graded["mutants"].values():
         assert set(reading["statistics"]) == {"roaming_fraction", "exits_per_on_lawn_hour"}
+
+
+def test_the_converged_generation_is_the_first_within_five_percent() -> None:
+    """The first checkpoint within 5% of the best answer score is the converged generation."""
+    points = [
+        {"generation": g, "answer_score": [score, score]}
+        for g, score in ((50, 12.0), (100, 8.5), (150, 8.1), (200, 8.0), (250, 8.3))
+    ]
+    assert probe.converged_generation(points) == 150
+    assert probe.converged_generation([]) is None

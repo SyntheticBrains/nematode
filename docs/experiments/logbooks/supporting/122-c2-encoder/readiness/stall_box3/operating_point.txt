@@ -1,0 +1,14 @@
+{"sensory_gain": 1.0, "scale": 0.25, "saturated_fraction": 0.0, "motor_pool_sd_across_senses": 0.012}
+{"sensory_gain": 1.0, "scale": 0.5, "saturated_fraction": 0.0, "motor_pool_sd_across_senses": 0.151}
+{"sensory_gain": 1.0, "scale": 0.75, "saturated_fraction": 0.026, "motor_pool_sd_across_senses": 0.43}
+{"sensory_gain": 1.0, "scale": 1.0, "saturated_fraction": 0.199, "motor_pool_sd_across_senses": 0.632}
+{"sensory_gain": 1.0, "scale": 1.5, "saturated_fraction": 0.556, "motor_pool_sd_across_senses": 0.703}
+{"sensory_gain": 1.0, "scale": 2.0, "saturated_fraction": 0.696, "motor_pool_sd_across_senses": 0.78}
+{"sensory_gain": 1.0, "scale": 3.0, "saturated_fraction": 0.837, "motor_pool_sd_across_senses": 0.807}
+{"sensory_gain": 5.0, "scale": 0.25, "saturated_fraction": 0.0, "motor_pool_sd_across_senses": 0.035}
+{"sensory_gain": 5.0, "scale": 0.5, "saturated_fraction": 0.0, "motor_pool_sd_across_senses": 0.268}
+{"sensory_gain": 5.0, "scale": 0.75, "saturated_fraction": 0.072, "motor_pool_sd_across_senses": 0.51}
+{"sensory_gain": 5.0, "scale": 1.0, "saturated_fraction": 0.313, "motor_pool_sd_across_senses": 0.672}
+{"sensory_gain": 5.0, "scale": 1.5, "saturated_fraction": 0.623, "motor_pool_sd_across_senses": 0.713}
+{"sensory_gain": 5.0, "scale": 2.0, "saturated_fraction": 0.725, "motor_pool_sd_across_senses": 0.726}
+{"sensory_gain": 5.0, "scale": 3.0, "saturated_fraction": 0.865, "motor_pool_sd_across_senses": 0.668}

@@ -109,7 +109,7 @@
 
     | Block | Range | Centre |
     |---|---|---|
-    | θ_exc, θ_inh, θ_gap | [0, 3] | 1.5 |
+    | θ_exc, θ_inh, θ_gap | [0, 1.5] *(first [0, 3])* | 0.75 *(first 1.5)* |
     | γ (4) | [−2, 2] | 0 |
     | sensory gains (36) | [−5, 5] | 0 |
     | readout (20), bias (5) | [−3, 3] | 0 |
@@ -119,6 +119,8 @@
     | τ_mono, τ_pep | log [10, 3000] s | 173 s |
 
     The ranges are provisional. The readiness probe reports every parameter its answer leaves at a bound, and F.0b-ii's registration fixes the box.
+
+    *(Amended 2026-11-03, the maintainer's decision.)* **The wiring scales are rescaled to [0, 1.5].** The first box's restart 0 stalled: its answer's ranking score sat at about 10.6 (D_fit about 5.8) from generation 50 to 325, with σ flat and the worm off the small lawn (time on the lawn z −116). An operating-point scan by forward passes alone, with no benchmark data, found the first box's centre (1.5) saturating 56–62% of neurons, and its answer's settled network switch-like (one unit of any sense moving the motor pools across the whole tanh range). Scales of 0.5–0.75 leave the network graded (0–7% saturated). Every other range is unchanged. A 150-generation pilot in the new box must beat the stall's 10.6 before the readiness restarts run, and each restart then runs through the cap with its answer re-simulated every 50 generations (decision 11).
 
 07. **The vector interface:**
 

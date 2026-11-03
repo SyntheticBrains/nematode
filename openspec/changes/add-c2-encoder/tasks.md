@@ -46,7 +46,7 @@
   - the settling step at 3,200 animals on CPU and on MPS;
   - projections for F.0b-ii, C.2 and W.
 - [x] 4.3 The feasibility check: a hand-set vector's post-removal decay constant against 6–12 min.
-- [ ] 4.4 The readiness probe:
+- [ ] 4.4 The readiness probe *(amended 2026-11-03: the first box stalled; rescaled wiring scales, a 150-generation pilot that must beat 10.6, then restarts through the cap with trajectories)*:
   - up to 3 restarts against v3's D_fit (CMA 5980–5982), stopping after 2 pass, with the tightened guard and a cap of 1,000;
   - each answer graded with presence on 5 populations, on all five families and the three mutants;
   - families, bounds, reversal share and timescales reported;
