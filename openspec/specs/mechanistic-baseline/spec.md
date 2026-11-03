@@ -60,7 +60,7 @@ The spread's z SHALL be the sine partner of that second's curvature normal, so t
 #### Scenario: The spread holds within a window
 
 - **WHEN** the spread is given, and an animal's state and food contact stay unchanged within a window
-- **THEN** its speed SHALL hold within that 10-s window and vary across windows, and its curvature and hazards SHALL equal those without the spread
+- **THEN** its speed SHALL hold within that 10-s window, and SHALL vary across windows where its state's spread is positive (a spread of 0 leaves the speed unchanged); its curvature and hazards SHALL equal those without the spread
 
 #### Scenario: One spread without the other is refused
 

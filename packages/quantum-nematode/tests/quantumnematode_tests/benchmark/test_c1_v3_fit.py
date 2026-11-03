@@ -211,6 +211,22 @@ def test_a_stored_record_is_reused_only_at_its_point(tmp_path: Path) -> None:
         fit.run_jobs([(3, [0.4] * fit.DIMENSION)], 0, store, workers=1)
 
 
+def test_a_stored_record_is_reused_only_at_its_seed_base(tmp_path: Path) -> None:
+    """A record run at one seed base is refused at another; a record carrying none is reused."""
+    store = tmp_path / "sims.jsonl"
+    z = [0.5] * fit.DIMENSION
+    store.write_text(
+        json.dumps({"k": 3, "z": z, "statistics": {}, "seed_base": 500_000_000})
+        + "\n"
+        + json.dumps({"k": 4, "z": z, "statistics": {}})
+        + "\n",
+    )
+    assert fit.run_jobs([(3, z)], 500_000_000, store, workers=1)[3]["seed_base"] == 500_000_000
+    with pytest.raises(ValueError, match="another seed base"):
+        fit.run_jobs([(3, z)], 530_000_000, store, workers=1)
+    assert fit.run_jobs([(4, z)], 530_000_000, store, workers=1)[4]["z"] == z
+
+
 def test_selection_refuses_an_unfinished_fit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

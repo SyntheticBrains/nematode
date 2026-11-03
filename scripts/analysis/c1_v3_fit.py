@@ -334,12 +334,21 @@ def run_jobs(
 ) -> dict[int, dict[str, Any]]:
     """Run each (k, z) not already in the store at a seed base; return every record by k.
 
-    A stored record is reused only for the point it was run at: a k stored at another z is refused.
+    A stored record is reused only for the point and seed base it was run at: a k stored at another
+    z, or at another seed base, is refused. Each record carries its seed base; records written
+    before it was recorded carry none and are not checked on it.
     """
     stored = v2.read_records(path)
     for k, z in jobs:
-        if k in stored and [float(v) for v in stored[k]["z"]] != [float(v) for v in z]:
+        if k not in stored:
+            continue
+        if [float(v) for v in stored[k]["z"]] != [float(v) for v in z]:
             msg = f"{path}: simulation {k} is stored at another point; remove the store to rerun"
+            raise ValueError(msg)
+        if stored[k].get("seed_base", seed_base) != seed_base:
+            msg = (
+                f"{path}: simulation {k} is stored at another seed base; remove the store to rerun"
+            )
             raise ValueError(msg)
     todo = [(k, z) for k, z in jobs if k not in stored]
     if todo:
@@ -349,12 +358,13 @@ def run_jobs(
             ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool,
             path.open("a") as out,
         ):
-            for record in pool.map(
+            for result in pool.map(
                 simulate,
                 [k for k, _ in todo],
                 [z for _, z in todo],
                 [seed_base] * len(todo),
             ):
+                record = {**result, "seed_base": seed_base}
                 out.write(json.dumps(record, allow_nan=False) + "\n")
                 out.flush()
                 stored[record["k"]] = record
