@@ -22,6 +22,12 @@ re-simulated twice every 25 generations on D_fit's assays. In the first box (wir
 restart 0's answer stalled at a ranking score of about 10.6 from generation 50 to 325, its start
 saturating more than half the network; the readiness restarts run only if the pilot beats 10.6.
 
+**pilot-uncompressed** repeats the pilot (CMA 5986) ranking candidates on definedness first and then
+the uncapped weighted RMS of z, since the ranking score's compression, 10·asinh(z/10), leaves a
+statistic far from its band (time on the lawn at z about -120) almost no slope. It passes when its
+best checkpoint by the registered ranking score beats 10.6 with its worm on the lawn more than the
+stall's 26% of the time.
+
 **readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
 score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
 Each runs through the cap of 1,000 generations: the plateau rule (recorded with every history, with
@@ -39,13 +45,14 @@ Seeds: the restarts at 40,000,000 + 200·(20,000·r + 16·(n - 1) + m) + i; the 
 their wild type's animals; the cost pilot at 53,000,000; the feasibility check at 54,000,000; the
 smoke at 59,000,000; the first box's early reads at 61,000,000; the pilot at 62,000,000 and its
 trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,000,000 +
-200·(2,100·r + 2g + q) + i.
+200·(2,100·r + 2g + q) + i; the second pilot at 66,000,000 and its trajectory at 67,000,000.
 
 Usage::
 
     uv run python scripts/analysis/c2_encoder_probe.py cost
     uv run python scripts/analysis/c2_encoder_probe.py feasibility
     uv run python scripts/analysis/c2_encoder_probe.py pilot
+    uv run python scripts/analysis/c2_encoder_probe.py pilot-uncompressed
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -131,6 +138,14 @@ PILOT_EVERY = 25
 PILOT_TRAJECTORY_BASE = 63_000_000
 # The stalled restart's answer score in the old box, which the pilot must beat.
 STALL_SCORE = 10.6
+# The first box's stalled answer's time on the small lawn (generation 300, its diagnosis).
+STALL_TIME_ON_LAWN = 0.261
+# The second pilot, ranking its candidates on the uncompressed score, and its trajectory.
+UNCOMPRESSED_PILOT_BASE = 66_000_000
+UNCOMPRESSED_PILOT_CMA = 5986
+UNCOMPRESSED_PILOT_TRAJECTORY_BASE = 67_000_000
+# Above any weighted RMS of uncapped z a physically possible record reaches.
+UNCOMPRESSED_UNDEFINED_RANK = 1_000_000.0
 # Each readiness restart's answer at every 50th generation, re-simulated twice.
 TRAJECTORY_BASE = 64_000_000
 TRAJECTORY_EVERY = 50
@@ -143,6 +158,7 @@ COST_PATH = SUPPORT / "cost.json"
 FEASIBILITY_PATH = SUPPORT / "feasibility.json"
 W_SIZING_PATH = SUPPORT / "w_sizing.json"
 PILOT_PATH = SUPPORT / "readiness" / "pilot.json"
+UNCOMPRESSED_PILOT_PATH = SUPPORT / "readiness" / "pilot_uncompressed.json"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -354,6 +370,50 @@ class FitObjective:
     def __call__(self, record: dict[str, Any]) -> float:
         """Return one simulation's ranking score against the band centres."""
         return v2.ranking_score(self.truth, record, self.scales, self.family_map)
+
+
+def uncompressed_score(
+    truth: dict[str, Any],
+    draw: dict[str, Any],
+    scales: dict[str, float],
+    family_map: dict[str, tuple[str, ...]],
+) -> float:
+    """Return definedness first, then the weighted RMS of the uncapped z.
+
+    The score is 1,000,000 x u + D, u the statistics undefined in exactly one of the two records and
+    D the weighted RMS (families equal, split equally within each) of each defined statistic's z on
+    the bands' scales, neither capped nor compressed, a statistic undefined in both counting 0. Far
+    from the bands a statistic's term grows linearly, so progress on it is rewarded at full weight.
+    """
+    from quantumnematode.benchmark import grading as g
+
+    readings: dict[str, dict[str, Any]] = {f: {} for f in family_map}
+    undefined = 0
+    for family, stats in family_map.items():
+        for s in stats:
+            key = f"{family}/{s}"
+            a, b = truth["statistics"].get(key), draw["statistics"].get(key)
+            if (a is None) != (b is None):
+                undefined += 1
+                term = 0.0
+            elif a is None:
+                term = 0.0
+            else:
+                term = (float(b) - float(a)) / scales[key]
+            readings[family][s] = g.Reading(0.0, g.Band(0.0, scales[key]), term, passes=True)
+    return UNCOMPRESSED_UNDEFINED_RANK * undefined + g.distance(
+        readings,
+        list(family_map),
+        family_map,
+    )
+
+
+class UncompressedObjective(FitObjective):
+    """The uncompressed score against the band centres on D_fit's families; picklable."""
+
+    def __call__(self, record: dict[str, Any]) -> float:
+        """Return one simulation's uncompressed score against the band centres."""
+        return uncompressed_score(self.truth, record, self.scales, self.family_map)
 
 
 def readiness_stop(medians: list[float], sigma: float) -> bool:
@@ -645,6 +705,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
     cap: int,
     state_dir: Path,
     factory: Callable[[int], Any],
+    objective: Callable[[dict[str, Any]], float] | None = None,
 ) -> dict[str, Any]:
     """Run, or resume, one restart through its cap; the plateau rule is recorded but not used."""
     return cr.run_fit(
@@ -657,7 +718,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
         state_dir=state_dir,
         pool=pool,
         scales={},
-        objective=FitObjective(),
+        objective=FitObjective() if objective is None else objective,
         simulate=simulate,
         stop=readiness_stop,
         strategy_factory=factory,
@@ -683,7 +744,7 @@ def trajectory(
             [base] * len(jobs),
         ),
     )
-    objective = FitObjective()
+    objective, uncompressed = FitObjective(), UncompressedObjective()
     points = []
     for g in generations:
         mine = [r for (gen, _), r in zip(jobs, records, strict=True) if gen == g]
@@ -693,7 +754,9 @@ def trajectory(
                 "median": history["medians"][g - 1],
                 "sigma": history["sigmas"][g - 1],
                 "answer_score": [objective(r) for r in mine],
+                "answer_uncompressed_score": [uncompressed(r) for r in mine],
                 "answer_D_fit": [r["D_fit"] for r in mine],
+                "answer_time_on_lawn": [r["statistics"]["small_lawn/time_on_lawn"] for r in mine],
             },
         )
     return points
@@ -736,6 +799,51 @@ def _pilot(workers: int) -> int:
     }
     _write(PILOT_PATH, record)
     print(json.dumps({k: record[k] for k in ("best_answer_score", "improves_past_stall")}))
+    return 0
+
+
+def _uncompressed_pilot(workers: int) -> int:
+    """Run the second pilot: 150 generations ranking candidates on the uncompressed score.
+
+    It passes when its best checkpoint by the registered ranking score beats the stall's 10.6 and
+    that checkpoint's worm spends more of the small lawn's assay on the lawn than the stall's 0.261.
+    """
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = _fit(
+            pool,
+            cma_seed=UNCOMPRESSED_PILOT_CMA,
+            seed_base=UNCOMPRESSED_PILOT_BASE,
+            cap=PILOT_CAP,
+            state_dir=BUILD / "readiness" / "pilot_uncompressed",
+            factory=start_centre,
+            objective=UncompressedObjective(),
+        )
+        points = trajectory(
+            history,
+            pool,
+            base=UNCOMPRESSED_PILOT_TRAJECTORY_BASE,
+            restart=0,
+            every=PILOT_EVERY,
+        )
+    best = min(points, key=lambda p: float(np.median(p["answer_score"])))
+    best_score = float(np.median(best["answer_score"]))
+    best_time = float(np.median(best["answer_time_on_lawn"]))
+    record = {
+        "description": DESCRIPTION + " The second pilot, on the uncompressed score.",
+        "stall_score": STALL_SCORE,
+        "stall_time_on_lawn": STALL_TIME_ON_LAWN,
+        "best_generation": best["generation"],
+        "best_answer_score": best_score,
+        "best_time_on_lawn": best_time,
+        "passes": best_score < STALL_SCORE and best_time > STALL_TIME_ON_LAWN,
+        "points": points,
+        "medians": history["medians"],
+        "sigmas": history["sigmas"],
+        "answer": history["answers"][-1],
+    }
+    _write(UNCOMPRESSED_PILOT_PATH, record)
+    keys = ("best_generation", "best_answer_score", "best_time_on_lawn", "passes")
+    print(json.dumps({k: record[k] for k in keys}))
     return 0
 
 
@@ -991,7 +1099,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "stage",
-        choices=("cost", "feasibility", "pilot", "readiness", "read", "smoke"),
+        choices=(
+            "cost",
+            "feasibility",
+            "pilot",
+            "pilot-uncompressed",
+            "readiness",
+            "read",
+            "smoke",
+        ),
     )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
@@ -999,6 +1115,7 @@ def main(argv: list[str] | None = None) -> int:
         "cost": lambda: _cost(args.workers),
         "feasibility": _feasibility,
         "pilot": lambda: _pilot(args.workers),
+        "pilot-uncompressed": lambda: _uncompressed_pilot(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),
