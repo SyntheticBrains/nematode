@@ -190,3 +190,43 @@ def test_the_data_layer_matches_the_per_step_brain() -> None:
     _, log = p.run_batched(config, BatchedConnectome(brain), list(p.PARITY_SEEDS), _STATE_STEPS)
     assert p.state_mismatches(refs, log, _STATE_STEPS) == []
     assert np.max(np.abs(np.asarray(refs[0].modulators))) > 0
+
+
+@pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_scheer"])
+@pytest.mark.parametrize("wiring", ["wild_type", "rewired_degree_preserving"])
+def test_the_encoded_brain_matches_the_per_step_brain(wiring: str, protocol: str) -> None:
+    """Covers the batched-evaluation scenario "The encoded brain matches the per-step runner".
+
+    An encoded connectome with a vector away from the box's centre, on the wild type and on the
+    degree-preserving null: features (which carry food contact and every ligand's concentration),
+    action means and derivatives within 1e-5 over 50 steps, and trajectories over 300.
+    """
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain, config = p.encoded_brain(protocol, wiring)
+    refs = p.references(config, brain, _STEPS)
+    trajectories, log = p.run_batched(
+        config,
+        BatchedConnectome(brain),
+        list(p.PARITY_SEEDS),
+        _STEPS,
+    )
+    assert p.state_mismatches(refs, log, _STATE_STEPS) == []
+    assert p.trajectory_mismatches(refs, trajectories, log) == []
+    assert np.max(np.abs(np.asarray(refs[0].modulators))) > 0
+    if protocol == "uniform_lawn_scheer":
+        assert min(float(np.asarray(f)[3]) for f in refs[0].features) > 0
+
+
+def test_an_encoded_animal_is_the_same_alone_and_in_a_batch() -> None:
+    """The encoded brain on seeds 5001-5032: a seed alone and in the batch draws the same bouts."""
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain, config = p.encoded_brain("uniform_lawn_scheer")
+    batched = BatchedConnectome(brain)
+    seeds = list(range(5001, 5033))
+    crowd, _ = p.run_batched(config, batched, seeds, _STEPS)
+    for i in (0, 17, 31):
+        alone, _ = p.run_batched(config, batched, [seeds[i]], _STEPS)
+        assert np.array_equal(alone.primitive[0], crowd.primitive[i])
+        assert np.allclose(alone.x[0], crowd.x[i], atol=1e-9)

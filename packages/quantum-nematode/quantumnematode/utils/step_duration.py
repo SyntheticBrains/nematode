@@ -368,6 +368,18 @@ def derive_step_coupled(config: SimulationConfig) -> SimulationConfig:
             brain_config.modulator_step_seconds,
             amount_per_step(brain_config.modulator_step_seconds, k),
         )
+        if brain_config.encoder != "none" and not math.isclose(
+            brain_updates["modulator_step_seconds"],
+            step,
+            rel_tol=1e-12,
+        ):
+            # The encoder's timescales are in worm-seconds, so its decay must be taken per step.
+            msg = (
+                f"brain.config.encoder={brain_config.encoder!r} requires modulator_step_seconds to "
+                f"come to the {step:g}-s step; it comes to "
+                f"{brain_updates['modulator_step_seconds']:g} s"
+            )
+            raise ValueError(msg)
         if brain_config.dynamics == "leaky":
             brain_updates["membrane_tau_steps"] = convert(
                 "brain.config.membrane_tau_steps",

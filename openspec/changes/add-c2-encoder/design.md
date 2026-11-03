@@ -82,7 +82,7 @@
       - this is the corrected model Phase 9 left (Logbook 103: no wiring effect remains under it). It replaces the degree normaliser that produced the artefact;
       - additive coupling needs no derived inverse, so a write is one scaling.
     - **Determinism:** the weights depend on the data and the vector alone, not the brain's seed.
-    - **The composition** is computed once per write and cached, not on every step. It is written as functions of a parameter tensor that also accept a leading candidate axis, so a whole-generation batched path can be built for W without redesigning the encoder.
+    - **The composition** is recomputed on every forward, not cached. It is six elementwise passes over the 302 × 302 matrix, under 1% of a settling step's products at the batch sizes the fits use, and a cache keyed on writes would go stale on a write through `.data`, which torch's version counter does not see. The chemical and gap terms are summed into one matrix first, so each settling step is one product instead of two. The composition is written as functions of a parameter tensor that also accept a leading candidate axis, so a whole-generation batched path can be built for W without redesigning the encoder.
 
 03. **Sensory inputs,** replacing `food_gains` when the encoder is on.
 
@@ -123,11 +123,11 @@
 07. **The vector interface:**
 
     - `encoder_parameters()` gives the 196 names in a fixed order;
-    - `encoder_box()` gives each name's range and kind;
+    - `encoder_entries()` gives each name's block, range and kind;
     - `write_encoder(brain, z)` writes a unit-box vector in place, under `no_grad`;
     - `read_encoder(brain)` returns it.
 
-    A write followed by a read round-trips exactly. Under PPO, the policy's learnable parameters are the encoder's tensors and nothing else, and the PPO rule's critic is unchanged. That composition is differentiable, so C.3 trains the same architecture.
+    A write followed by a read round-trips to float32 precision (the brain's tensors are float32). Under PPO, the policy's learnable parameters are the encoder's tensors and nothing else, its two timescales held, and the PPO rule's critic is unchanged. That composition is differentiable, so C.3 trains the same architecture.
 
     **Brain reuse:** a fit's worker builds one brain per wiring and writes each candidate's vector into it, instead of rebuilding (0.7–1 s of a roughly 13-s simulation). A changed wiring or mutant always rebuilds, as W's fresh draw per fit requires. A test checks that a reused brain's actions equal a fresh build's.
 
@@ -156,7 +156,7 @@
 10. **Configs:**
 
     - data-layer primitives assay configs for v3's four assays, carrying `encoder: compact`, `synapse_signs: per_connection`, `modulator_layer: data` and `modulator_satiety_link: true`;
-    - `generate_assay_configs.py` gains a `datalayer` arm;
+    - `generate_assay_configs.py` gains an `encoded` arm, the data-layer arm with the encoder (`generate_lawn_configs.py`'s `..._lawns_encoded_s1_primitives`), on every assay protocol so the generator's per-arm checks stay uniform;
     - `benchmark_grade.ARMS` gains `connectome_c2`.
 
 11. **The probes** (description, discarded seeds; `scripts/analysis/c2_encoder_probe.py`):

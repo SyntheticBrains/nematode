@@ -2,8 +2,8 @@
 """Emit the standard lawn assays as protocols on the 1-second primitives worm.
 
 Each assay reproduces its reference's arena, lawn, start, food history, duration and analysis window,
-on both 1-second primitives arms: the MLP reading internal state, food contact and locomotor state,
-and the connectome with serotonin and PDF.
+on the 1-second primitives arms: the MLP reading internal state, food contact and locomotor state,
+the connectome with serotonin and PDF, and the data-layer connectome under the compact encoder.
 
 | Protocol | Reference | Arena | Lawn | Phases | Analysis |
 |---|---|---|---|---|---|
@@ -43,7 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import generate_lawn_configs as lawn_gen
 
 FORAGING = lawn_gen.FORAGING
-ARMS: tuple[str, ...] = ("internal", "modulated")
+ARMS: tuple[str, ...] = ("internal", "modulated", lawn_gen.ENCODED_STEM_ARM)
 REFERENCE_STEP_S = 5.0
 # Satiety empties over 12 h of basal decay: 300 over 43,200 s, written per 5-s reference step.
 INITIAL_SATIETY = 300.0
@@ -126,9 +126,15 @@ PROTOCOLS: dict[str, dict[str, Any]] = {
 }
 
 
+def _arm_stem(arm: str) -> str:
+    if arm == lawn_gen.ENCODED_STEM_ARM:
+        return lawn_gen.encoded_stem()
+    return lawn_gen.primitives_stem(arm)
+
+
 def stem(arm: str, protocol: str) -> str:
     """Return an assay config's stem: its primitives arm's, then the protocol."""
-    return f"{lawn_gen.primitives_stem(arm)}_assay_{protocol}"
+    return f"{_arm_stem(arm)}_assay_{protocol}"
 
 
 def derive(arm: str, protocol: str) -> tuple[Path, str]:
@@ -137,7 +143,11 @@ def derive(arm: str, protocol: str) -> tuple[Path, str]:
         msg = f"unknown arm {arm!r} or protocol {protocol!r}"
         raise ValueError(msg)
     spec = PROTOCOLS[protocol]
-    _, text = lawn_gen.derive_primitives(arm)
+    _, text = (
+        lawn_gen.derive_encoded()
+        if arm == lawn_gen.ENCODED_STEM_ARM
+        else lawn_gen.derive_primitives(arm)
+    )
     data: dict[str, Any] = yaml.safe_load(text)
     total_s = sum(phase["duration_s"] for phase in spec["phases"])
     data["max_steps"] = round(total_s / REFERENCE_STEP_S)
@@ -177,7 +187,7 @@ def derive(arm: str, protocol: str) -> tuple[Path, str]:
     header = (
         f"# Assay `{protocol}` on the 1-second primitives worm, arm `{arm}`.\n#\n"
         f"# Reference: {spec['reference']}.\n"
-        f"# Derived from {lawn_gen.primitives_stem(arm)}.yml: the reference's arena, one centred\n"
+        f"# Derived from {_arm_stem(arm)}.yml: the reference's arena, one centred\n"
         "# lawn, its phases and analysis window; satiety a 12-h reserve that never ends the\n"
         "# episode; no movement cost; a lawn whose cells halve in about 2 h under a still worm.\n"
         + (

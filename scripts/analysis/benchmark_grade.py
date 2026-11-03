@@ -68,6 +68,10 @@ ARMS = {
     "connectome": (
         "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_s1_primitives"
     ),
+    # C.2's arm: the data-layer connectome under the compact encoder.
+    "connectome_c2": (
+        "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives"
+    ),
 }
 PROTOCOLS = {
     "small_lawn": "scheer_lawn",

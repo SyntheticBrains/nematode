@@ -192,8 +192,13 @@ class BatchedConnectome:
         self.concentrations = np.zeros((n, self.width), dtype=np.float32)
 
     def state(self, senses: BatchedSenses) -> np.ndarray:
-        """Return the brain's state vectors: food features, then the modulators if it has them."""
+        """Return the brain's state vectors: food features, then the modulators if it has them.
+
+        An encoded brain's food features end with food contact, as its own extractor's do.
+        """
         food = _food_features(senses)
+        if self.brain.config.encoder != "none":
+            food = np.column_stack([food, np.clip(senses.food_contact, 0.0, 1.0)])
         if not self.brain.config.modulators:
             return food.astype(np.float32)
         drive = senses.intake.copy()

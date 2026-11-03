@@ -13,10 +13,11 @@
 
 The brain SHALL refuse the encoder:
 
-- unless `dynamics` is settling and `sensing_mode` is klinotaxis;
-- unless the data layer is used with the satiety link;
+- unless `dynamics` is settling, `sensing_mode` is klinotaxis and the action space is the primitives';
+- unless the full data layer is used with the satiety link and without `modulator_timescales_s`;
 - unless `synapse_signs` is `per_connection`, `gap_normalisation` is `strength` with additive coupling, and `weight_prior` is unset;
-- unless `modulator_step_seconds` equals the configured step.
+- while any weight setting it replaces (the chemical draw and scales, the gap weighting and scale, plastic gaps, the readout width, the sensory projections, traces and node noise) is away from its default;
+- unless `modulator_step_seconds` is at most 1 s; and the loader SHALL refuse it unless the converted `modulator_step_seconds` equals the configured step.
 
 #### Scenario: The encoder is off
 
@@ -73,7 +74,7 @@ Food contact SHALL reach only CEP, ADE and PDE, through one gain per class.
 
 ### Requirement: A unit box and a vector interface
 
-The encoder SHALL expose its parameters' names in a fixed order and each one's range. It SHALL write a unit-box vector into a brain in place and read it back, and `BatchedConnectome` SHALL act on the written values without a rebuild. The box's centre SHALL be the registered start for C.2's fits. Under PPO the policy's learnable parameters SHALL be exactly the encoder's, with the PPO rule's critic unchanged.
+The encoder SHALL expose its parameters' names in a fixed order and each one's range. It SHALL write a unit-box vector into a brain in place and read it back, and `BatchedConnectome` SHALL act on the written values without a rebuild. The box's centre SHALL be the registered start for C.2's fits. Under PPO the policy's learnable parameters SHALL be exactly the encoder's, its two timescales held, with the PPO rule's critic unchanged.
 
 `encoder_modulator_tying` SHALL choose between:
 
@@ -83,7 +84,7 @@ The encoder SHALL expose its parameters' names in a fixed order and each one's r
 #### Scenario: A vector round-trips
 
 - **WHEN** a unit-box vector is written and read back
-- **THEN** the read vector SHALL equal the written one
+- **THEN** the read vector SHALL equal the written one to float32 precision (1e-6)
 
 #### Scenario: A reused brain equals a fresh one
 

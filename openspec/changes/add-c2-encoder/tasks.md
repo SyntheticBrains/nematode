@@ -4,21 +4,21 @@
 
 ## 2. The encoder
 
-- [ ] 2.1 `connectome/encoder.py`:
+- [x] 2.1 `connectome/encoder.py`:
   - the parameter table (names, blocks, ranges, kinds) for `per_couple` and `per_ligand` tying;
   - the unit box, `write_encoder` and `read_encoder`;
   - the class and neuron index maps: amphid classes, CEP/ADE/PDE, transmitter groups, the monoamine mask, ligand groups;
   - the composition, as functions of a parameter tensor that accept a leading candidate axis.
-- [ ] 2.2 `connectome_ppo.py`:
+- [x] 2.2 `connectome_ppo.py`:
   - `encoder: compact` and its refusals (strength-normalised additive gaps among them);
-  - the fixed wiring (count-normalised signed weights, the scales and group gains, strength-normalised gaps × scale), composed once per write;
+  - the fixed wiring (count-normalised signed weights, the scales and group gains, strength-normalised gaps × scale), composed per forward into one recurrent matrix;
   - the class-tied sensory input with antisymmetric lateral, and food contact;
   - the readout bias;
   - the two timescales;
   - the encoder's tensors as the policy's only learnable parameters under PPO, with the critic unchanged;
   - the per-step runner's food-contact feed.
-- [ ] 2.3 `BatchedConnectome`: the encoded brain, food contact, the live reads. The tax-4 encoding helper. Brain reuse per wiring, rebuilt on a changed wiring or mutant.
-- [ ] 2.4 Tests for every spec scenario:
+- [x] 2.3 `BatchedConnectome`: the encoded brain, food contact, the live reads. The tax-4 encoding helper. Brain reuse per wiring, rebuilt on a changed wiring or mutant.
+- [x] 2.4 Tests for every spec scenario:
   - identity off;
   - refusals;
   - seed-independence of weights;
