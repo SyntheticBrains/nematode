@@ -664,6 +664,14 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     Cook 2019, since connectome conclusions can depend on the reconstruction.
   - **The weights:** the fitted C.2 is re-graded under 1% weight noise.
 
+  *(Added 2026-11-03, from digest #512: Minnick et al. 2026.)* **The nearest outside design.** An
+  untuned fly brain-and-nerve-cord connectome in a body reaches 95% of odour sources against 18% for
+  a count-and-sign-preserving rewiring, and almost none with its leg commands replayed senses-off.
+  W's registration cites it as the precedent W goes beyond: W fits every arm at equal budget and
+  grades fidelity to real-worm bands, not task success. Its senses-off control has a cheap
+  counterpart for the fitted C.2, all sensory gains at zero; whether W carries it is the
+  registration's decision.
+
 - [ ] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
   both directions. Draws per arm are sized from F.0 and the cost pilot. Every outcome is named,
   including "the nulls pass too" and "a null beats the wild type".
