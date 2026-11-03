@@ -77,6 +77,13 @@ def test_the_seed_blocks_do_not_overlap() -> None:
             probe.UNCOMPRESSED_PILOT_TRAJECTORY_BASE + probe.ANIMALS * pilot_trajectory,
         ),
     )
+    blocks.append((probe.REDUCED_BASE, probe.REDUCED_BASE + probe.ANIMALS * pilot))
+    blocks.append(
+        (
+            probe.REDUCED_TRAJECTORY_BASE,
+            probe.REDUCED_TRAJECTORY_BASE + probe.ANIMALS * pilot_trajectory,
+        ),
+    )
     assert last_k < probe.RESTART_BLOCK
     ordered = sorted(blocks)
     for (_, end), (start, _) in itertools.pairwise(ordered):
@@ -147,3 +154,15 @@ def test_the_uncompressed_score_keeps_far_statistics_linear_and_definedness_firs
     absurd = probe.uncompressed_score(truth, draw(0.0, roaming=5_000.0), scales, family_map)
     undefined = probe.uncompressed_score(truth, draw(None), scales, family_map)
     assert absurd < undefined
+
+
+def test_the_reduced_subset_embeds_at_the_box_centre() -> None:
+    """The reduced subset's values land on their names, and every other coordinate sits at 0.5."""
+    names = [e.name for e in probe.entries()]
+    x = [0.1 + 0.04 * i for i in range(len(probe.REDUCED_NAMES))]
+    z = probe.embed(x)
+    assert len(probe.REDUCED_NAMES) == 18
+    for name, value in zip(probe.REDUCED_NAMES, x, strict=True):
+        assert z[names.index(name)] == value
+    others = [v for n, v in zip(names, z, strict=True) if n not in probe.REDUCED_NAMES]
+    assert others == [0.5] * (len(names) - 18)

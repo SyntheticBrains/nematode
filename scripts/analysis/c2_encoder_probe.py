@@ -28,6 +28,12 @@ statistic far from its band (time on the lawn at z about -120) almost no slope. 
 best checkpoint by the registered ranking score beats 10.6 with its worm on the lawn more than the
 stall's 26% of the time.
 
+**reduced** asks whether the encoder can hold the lawn at all: it fits only the lawn-holding subset
+(the wiring scales, the food-contact gains, the speed and reversal readout rows with their biases,
+and those two log-SDs; :data:`REDUCED_NAMES`), every other parameter at the box centre, on the
+uncompressed score for 150 generations (CMA 5987). The worm holds the lawn when the best
+checkpoint's median time on it reaches 0.75.
+
 **readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
 score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
 Each runs through the cap of 1,000 generations: the plateau rule (recorded with every history, with
@@ -45,7 +51,8 @@ Seeds: the restarts at 40,000,000 + 200·(20,000·r + 16·(n - 1) + m) + i; the 
 their wild type's animals; the cost pilot at 53,000,000; the feasibility check at 54,000,000; the
 smoke at 59,000,000; the first box's early reads at 61,000,000; the pilot at 62,000,000 and its
 trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,000,000 +
-200·(2,100·r + 2g + q) + i; the second pilot at 66,000,000 and its trajectory at 67,000,000.
+200·(2,100·r + 2g + q) + i; the second pilot at 66,000,000 and its trajectory at 67,000,000; the reachability probe at
+68,000,000 and its trajectory at 69,000,000.
 
 Usage::
 
@@ -53,6 +60,7 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py feasibility
     uv run python scripts/analysis/c2_encoder_probe.py pilot
     uv run python scripts/analysis/c2_encoder_probe.py pilot-uncompressed
+    uv run python scripts/analysis/c2_encoder_probe.py reduced
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -146,6 +154,30 @@ UNCOMPRESSED_PILOT_CMA = 5986
 UNCOMPRESSED_PILOT_TRAJECTORY_BASE = 67_000_000
 # Above any weighted RMS of uncapped z a physically possible record reaches.
 UNCOMPRESSED_UNDEFINED_RANK = 1_000_000.0
+# The reachability probe: only the lawn-holding subset is fitted, every other parameter held at the
+# box centre, on the uncompressed score.
+REDUCED_NAMES: tuple[str, ...] = (
+    "wiring.excitatory",
+    "wiring.inhibitory",
+    "wiring.gap",
+    "sensory.CEP.contact",
+    "sensory.ADE.contact",
+    "sensory.PDE.contact",
+    *(
+        f"readout.{output}.{pool}"
+        for output in ("speed", "reversal")
+        for pool in ("VB", "DB", "VA", "DA")
+    ),
+    "readout.speed.bias",
+    "readout.reversal.bias",
+    "noise.speed",
+    "noise.reversal",
+)
+REDUCED_BASE = 68_000_000
+REDUCED_CMA = 5987
+REDUCED_TRAJECTORY_BASE = 69_000_000
+# The worm holds the lawn when the best checkpoint's median time on it reaches this (real: 0.98).
+HOLDS_LAWN = 0.75
 # Each readiness restart's answer at every 50th generation, re-simulated twice.
 TRAJECTORY_BASE = 64_000_000
 TRAJECTORY_EVERY = 50
@@ -159,6 +191,7 @@ FEASIBILITY_PATH = SUPPORT / "feasibility.json"
 W_SIZING_PATH = SUPPORT / "w_sizing.json"
 PILOT_PATH = SUPPORT / "readiness" / "pilot.json"
 UNCOMPRESSED_PILOT_PATH = SUPPORT / "readiness" / "pilot_uncompressed.json"
+REDUCED_PATH = SUPPORT / "readiness" / "reduced.json"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -440,6 +473,34 @@ def start_centre(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
     return cma.CMAEvolutionStrategy([cr.X0] * len(entries()), cr.SIGMA0, options)
 
 
+def embed(x: list[float] | np.ndarray) -> list[float]:
+    """Return the full vector: the reduced subset's values in place, every other at the centre."""
+    names = [e.name for e in entries()]
+    z = [cr.X0] * len(names)
+    for name, value in zip(REDUCED_NAMES, x, strict=True):
+        z[names.index(name)] = float(value)
+    return z
+
+
+def simulate_reduced(k: int, x: list[float], seed_base: int) -> dict[str, Any]:
+    """Run simulation k of the reduced subset at x, the rest at the centre, on D_fit's assays."""
+    return {**simulate(k, embed(x), seed_base), "x": list(map(float, x))}
+
+
+def start_reduced(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
+    """Return sep-CMA at the reduced subset's centre, sigma0 0.2."""
+    import cma
+
+    options = {
+        "CMA_diagonal": True,
+        "bounds": [0.0, 1.0],
+        "popsize": cr.POPSIZE,
+        "seed": seed,
+        "verbose": -9,
+    }
+    return cma.CMAEvolutionStrategy([cr.X0] * len(REDUCED_NAMES), cr.SIGMA0, options)
+
+
 def start_warm(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
     """Return sep-CMA at the one passing restart's answer, σ₀ 0.1."""
     import cma
@@ -706,6 +767,7 @@ def _fit(  # noqa: PLR0913 - one restart's settings
     state_dir: Path,
     factory: Callable[[int], Any],
     objective: Callable[[dict[str, Any]], float] | None = None,
+    simulate_fn: Callable[[int, list[float], int], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Run, or resume, one restart through its cap; the plateau rule is recorded but not used."""
     return cr.run_fit(
@@ -719,26 +781,27 @@ def _fit(  # noqa: PLR0913 - one restart's settings
         pool=pool,
         scales={},
         objective=FitObjective() if objective is None else objective,
-        simulate=simulate,
+        simulate=simulate if simulate_fn is None else simulate_fn,
         stop=readiness_stop,
         strategy_factory=factory,
     )
 
 
-def trajectory(
+def trajectory(  # noqa: PLR0913 - the history, the pool and how to re-simulate it
     history: dict[str, Any],
     pool: ProcessPoolExecutor,
     *,
     base: int,
     restart: int,
     every: int,
+    simulate_fn: Callable[[int, list[float], int], dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Re-simulate a restart's answer at every ``every``-th generation twice on D_fit's assays."""
     generations = list(range(every, len(history["answers"]) + 1, every))
     jobs = [(g, q) for g in generations for q in range(TRAJECTORY_REPEATS)]
     records = list(
         pool.map(
-            simulate,
+            simulate if simulate_fn is None else simulate_fn,
             [trajectory_k(restart, g, q) for g, q in jobs],
             [history["answers"][g - 1] for g, _ in jobs],
             [base] * len(jobs),
@@ -843,6 +906,49 @@ def _uncompressed_pilot(workers: int) -> int:
     }
     _write(UNCOMPRESSED_PILOT_PATH, record)
     keys = ("best_generation", "best_answer_score", "best_time_on_lawn", "passes")
+    print(json.dumps({k: record[k] for k in keys}))
+    return 0
+
+
+def _reduced(workers: int) -> int:
+    """Run the reachability probe: the lawn-holding subset alone, 150 generations, read every 25."""
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = _fit(
+            pool,
+            cma_seed=REDUCED_CMA,
+            seed_base=REDUCED_BASE,
+            cap=PILOT_CAP,
+            state_dir=BUILD / "readiness" / "reduced",
+            factory=start_reduced,
+            objective=UncompressedObjective(),
+            simulate_fn=simulate_reduced,
+        )
+        points = trajectory(
+            history,
+            pool,
+            base=REDUCED_TRAJECTORY_BASE,
+            restart=0,
+            every=PILOT_EVERY,
+            simulate_fn=simulate_reduced,
+        )
+    best = max(points, key=lambda p: float(np.median(p["answer_time_on_lawn"])))
+    best_time = float(np.median(best["answer_time_on_lawn"]))
+    record = {
+        "description": DESCRIPTION + " The reachability probe: the lawn-holding subset alone.",
+        "names": list(REDUCED_NAMES),
+        "holds_lawn_at": HOLDS_LAWN,
+        "best_generation": best["generation"],
+        "best_time_on_lawn": best_time,
+        "best_answer_score": float(np.median(best["answer_score"])),
+        "holds_lawn": best_time >= HOLDS_LAWN,
+        "points": points,
+        "medians": history["medians"],
+        "sigmas": history["sigmas"],
+        "answer": history["answers"][-1],
+        "answer_full": embed(history["answers"][-1]),
+    }
+    _write(REDUCED_PATH, record)
+    keys = ("best_generation", "best_time_on_lawn", "best_answer_score", "holds_lawn")
     print(json.dumps({k: record[k] for k in keys}))
     return 0
 
@@ -1104,6 +1210,7 @@ def main(argv: list[str] | None = None) -> int:
             "feasibility",
             "pilot",
             "pilot-uncompressed",
+            "reduced",
             "readiness",
             "read",
             "smoke",
@@ -1116,6 +1223,7 @@ def main(argv: list[str] | None = None) -> int:
         "feasibility": _feasibility,
         "pilot": lambda: _pilot(args.workers),
         "pilot-uncompressed": lambda: _uncompressed_pilot(args.workers),
+        "reduced": lambda: _reduced(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),
