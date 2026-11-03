@@ -1,0 +1,50 @@
+{
+  "description": "Description: every existing connectome output re-run after the change, against a baseline from the code before it.",
+  "baseline_code": "c73feb221baf334855e15d48eb79a1df41b60607",
+  "code": "d4f57b4e347aaff4fd7e91beae2f243480c55be2",
+  "jobs": 10,
+  "identical": 10,
+  "all_identical": true,
+  "rows": [
+    {
+      "job": "batched/hand_placed/scheer_lawn",
+      "identical": true
+    },
+    {
+      "job": "batched/hand_placed/uniform_lawn_scheer",
+      "identical": true
+    },
+    {
+      "job": "batched/hand_placed/food_removal_lopezcruz",
+      "identical": true
+    },
+    {
+      "job": "batched/hand_placed/chemotaxis_chen",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/scheer_lawn",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/uniform_lawn_scheer",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/food_removal_lopezcruz",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/chemotaxis_chen",
+      "identical": true
+    },
+    {
+      "job": "per_step/hand_placed/scheer_lawn",
+      "identical": true
+    },
+    {
+      "job": "per_step/data_layer/scheer_lawn",
+      "identical": true
+    }
+  ]
+}

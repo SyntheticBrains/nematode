@@ -31,7 +31,7 @@
   - per-ligand tying (132);
   - a reused brain equal to a fresh one;
   - the encoder and its mutants on every existing null wiring and the receptor-placement null.
-- [ ] 2.5 Layered parity for the encoded brain on the wild type and on `rewired_degree_preserving` (seeds 5001–5032). The identity check against 1.1: every record byte-identical. The existing parity tests pass.
+- [x] 2.5 Layered parity for the encoded brain on the wild type and on `rewired_degree_preserving` (seeds 5001–5032). The identity check against 1.1: every record byte-identical. The existing parity tests pass.
 
 ## 3. Configs
 
