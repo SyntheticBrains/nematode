@@ -1,6 +1,6 @@
 ## Why
 
-C.1's 20-parameter model cannot reach benchmark v3's wild type. Eight discarded-seed probes (2026-11-02, description) traced why to three things it lacks, each a mechanism rather than a tuning:
+C.1's 20-parameter model cannot reach benchmark v3's wild type. Nine discarded-seed probes (2026-11-02, description) traced why to three things it lacks, each a mechanism rather than a tuning:
 
 - **one run speed per state.** v2's own reachability worm needed a per-window speed spread to match the graded window-speed medians and 90th percentiles (launch record 115, amendments 2–3). Without one, C.1b's fits faked the spread by shuttling back and forth (reversal-dominated, caught by v3). On v3 they fake it with extreme tortuosity, and dwelling speeds miss at z +6 to +10;
 - **the same run kinematics on and off food,** so slow dwelling also slows search and chemotaxis;

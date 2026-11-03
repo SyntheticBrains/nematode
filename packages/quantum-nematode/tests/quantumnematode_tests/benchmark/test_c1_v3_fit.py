@@ -199,3 +199,27 @@ def test_every_registered_stage_refuses_before_part_a(
     """With no committed launch record no registered stage runs."""
     monkeypatch.setattr(fit, "LAUNCH_PATH", _REPO / "no-such-dir" / "launch.md")
     assert fit.main([stage]) == 1
+
+
+def test_a_stored_record_is_reused_only_at_its_point(tmp_path: Path) -> None:
+    """A store's record for k is reused at the same z, and refused at another, before any run."""
+    store = tmp_path / "sims.jsonl"
+    z = [0.5] * fit.DIMENSION
+    store.write_text(json.dumps({"k": 3, "z": z, "statistics": {}}) + "\n")
+    assert fit.run_jobs([(3, z)], 0, store, workers=1)[3]["z"] == z
+    with pytest.raises(ValueError, match="another point"):
+        fit.run_jobs([(3, [0.4] * fit.DIMENSION)], 0, store, workers=1)
+
+
+def test_selection_refuses_an_unfinished_fit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Selection, grading and the read need every restart stopped."""
+    monkeypatch.setattr(fit, "BUILD", tmp_path)
+    (tmp_path / "fits").mkdir()
+    for r in range(fit.RESTARTS):
+        stop = None if r == 5 else {"generation": 100, "by": "plateau"}
+        (tmp_path / "fits" / f"fit{r}.json").write_text(json.dumps({"stop": stop}))
+    with pytest.raises(RuntimeError, match=r"\[5\] have not stopped"):
+        fit._histories()

@@ -332,8 +332,15 @@ def run_jobs(
     path: Path,
     workers: int,
 ) -> dict[int, dict[str, Any]]:
-    """Run each (k, z) not already in the store at a seed base; return every record by k."""
+    """Run each (k, z) not already in the store at a seed base; return every record by k.
+
+    A stored record is reused only for the point it was run at: a k stored at another z is refused.
+    """
     stored = v2.read_records(path)
+    for k, z in jobs:
+        if k in stored and [float(v) for v in stored[k]["z"]] != [float(v) for v in z]:
+            msg = f"{path}: simulation {k} is stored at another point; remove the store to rerun"
+            raise ValueError(msg)
     todo = [(k, z) for k, z in jobs if k not in stored]
     if todo:
         v2._drop_torn_line(path)
@@ -554,7 +561,13 @@ def _recovery(workers: int) -> int:
 
 
 def _histories() -> list[dict[str, Any]]:
-    return [json.loads((BUILD / "fits" / f"fit{r}.json").read_text()) for r in range(RESTARTS)]
+    """Return the 12 restarts' histories; refused while any restart has not stopped."""
+    histories = [json.loads((BUILD / "fits" / f"fit{r}.json").read_text()) for r in range(RESTARTS)]
+    running = [r for r, h in enumerate(histories) if h["stop"] is None]
+    if running:
+        msg = f"restarts {running} have not stopped; run the fit to its end first"
+        raise RuntimeError(msg)
+    return histories
 
 
 def _run(workers: int) -> int:
