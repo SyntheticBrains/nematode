@@ -175,12 +175,12 @@ def encoder_entries(spec: LayerSpec, tying: Tying = "per_couple") -> list[Encode
         EncoderEntry(f"readout.{output}.bias", "readout", *_READOUT_RANGE) for output in OUTPUTS
     ]
     entries += [EncoderEntry(f"noise.{output}", "noise", *_NOISE_RANGE) for output in OUTPUTS]
+    # A fixed-sign strength is a positive magnitude, read on a log scale: the box's centre leaves
+    # the pools' held currents weak, so they do not swamp the sensory input on food.
     entries += [
-        EncoderEntry(
-            f"modulator.{name}",
-            "modulator",
-            *(_FIXED_STRENGTH_RANGE if fixed else _SIGNED_STRENGTH_RANGE),
-        )
+        EncoderEntry(f"modulator.{name}", "modulator", *_FIXED_STRENGTH_RANGE, kind="log")
+        if fixed
+        else EncoderEntry(f"modulator.{name}", "modulator", *_SIGNED_STRENGTH_RANGE)
         for name, fixed in modulator_groups(spec, tying)
     ]
     entries += [

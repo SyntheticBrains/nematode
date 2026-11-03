@@ -1,0 +1,4 @@
+{"pick": 0, "speed_change_on_contact": -7.267, "off_lawn_speed_output": 1.038, "reversal_change": -1.031, "time_on_lawn": 0.36, "exits_per_on_lawn_hour": 7.63, "roaming_fraction": 0.0}
+{"pick": 1, "speed_change_on_contact": -5.328, "off_lawn_speed_output": 0.925, "reversal_change": -0.708, "time_on_lawn": 0.833, "exits_per_on_lawn_hour": 1.07, "roaming_fraction": 0.0}
+{"pick": 2, "speed_change_on_contact": -4.676, "off_lawn_speed_output": 0.839, "reversal_change": -1.863, "time_on_lawn": 0.919, "exits_per_on_lawn_hour": 0.35, "roaming_fraction": 0.0}
+{"pick": 3, "speed_change_on_contact": -4.603, "off_lawn_speed_output": 1.218, "reversal_change": -2.117, "time_on_lawn": 0.531, "exits_per_on_lawn_hour": 7.39, "roaming_fraction": 0.0}

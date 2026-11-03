@@ -115,7 +115,7 @@
     | readout (20), bias (5) | [−3, 3] | 0 |
     | log-SD (5) | [−4, 1] | −1.5 |
     | signed strengths (104) | [−3, 3] | 0 |
-    | fixed-sign strengths (17) | [0.001, 3] | 1.5 |
+    | fixed-sign strengths (17) | log [0.001, 3] *(first linear)* | 0.055 *(first 1.5)* |
     | τ_mono, τ_pep | log [10, 3000] s | 173 s |
 
     The ranges are provisional. The readiness probe reports every parameter its answer leaves at a bound, and F.0b-ii's registration fixes the box.
@@ -125,6 +125,8 @@
     *(Amended 2026-11-04, the maintainer's decision.)* **The pilot in the new box did not beat the stall** (best checkpoint 10.62, the worm on the small lawn 23% of the time), so the readiness restarts did not run. The ranking score compresses each statistic as 10·asinh(z/10), whose slope at z ≈ 120 is 0.09, so progress on the dominant failure is barely rewarded. A second pilot ranks candidates on definedness first (1,000,000 × the statistics undefined in one record) and then the uncapped weighted RMS of z, scoring its checkpoints on both. It passes when its best checkpoint by the registered ranking score beats 10.6 with the worm on the lawn more than the stall's 26%; the readiness restarts then run under that objective, and F.0b-ii recovers under the same one. x₀ stays at the box centre, so every arm of W keeps the same start. A hand-set, biologically designed start was considered and kept in reserve: a start tuned to routes in the wild type's wiring would favour the wild type over its nulls in W.
 
     *(Amended 2026-11-04, the maintainer's decision.)* **The second pilot failed too** (best 11.01; the worm on the lawn 21–29% at every checkpoint), so the stall is neither the score's compression nor the box's saturation alone. A reachability probe asks whether any vector of the encoder holds the lawn: it fits only the lawn-holding subset (the 3 wiring scales, the 3 food-contact gains, the speed and reversal readout rows and biases, and their two log-SDs; 18 parameters), every other parameter at the box centre, on the uncompressed score for 150 generations. The worm holds the lawn when the best checkpoint's median time on it reaches 0.75, a bar fixed before the probe runs. If it does, the readiness design becomes a staged fit (this subset first, then all 196 from its answer), the same procedure for every arm of W, so x₀ stays the box centre. If it does not, the encoder's sensory-to-motor path needs a design change, which goes to review.
+
+    *(Amended 2026-11-04, the maintainer's decision.)* **The reachability probe did not hold the lawn** (0.18), but the diagnosis found why. Forward passes show food contact can move the speed and reversal outputs strongly (90th percentile 1.9 pre-squash), and the settings where contact slows the worm most hold Scheer's small lawn once the 17 fixed-sign modulator strengths sit at their floor: 0.92 of the assay on it with 0.35 exits per on-lawn hour (real 0.98 and 0.71), against 0.15 at the box centre's 1.5. On food those pools inject currents held through every settling step, while the sensory input is only the initial state, so the centre's strengths swamp the senses. **The fixed-sign strengths, the ingestion drive among them, are now read on a log scale over the same [0.001, 3], centred at 0.055.** A third pilot on the registered ranking score, with the same pass rule, gates the readiness restarts.
 
 07. **The vector interface:**
 

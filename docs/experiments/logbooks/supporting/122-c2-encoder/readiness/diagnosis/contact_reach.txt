@@ -1,0 +1,4 @@
+the reduced answer: {"speed": 0.0266, "reversal": -0.0049, "pools": 0.0097}
+speed |change| median 0.2111 90th 1.9339 max 8.9863
+reversal |change| median 0.2235 90th 1.8557 max 9.0055
+pools |change| median 0.1729 90th 0.7817 max 0.9921

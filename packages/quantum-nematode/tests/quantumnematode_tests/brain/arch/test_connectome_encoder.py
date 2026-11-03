@@ -210,6 +210,20 @@ class TestTheParameterTable:
         critic = {id(p) for p in brain.critic.parameters()}
         assert optimised == {id(p) for p in learnable} | critic
 
+    def test_fixed_sign_strengths_are_on_a_log_scale(self) -> None:
+        """A fixed-sign strength centres on its range's geometric mean; a signed one on 0."""
+        brain = _brain()
+        encoder = brain.topology.encoder
+        assert encoder is not None
+        fixed = [e for e in encoder.entries if e.block == "modulator" and e.low > 0]
+        signed = [e for e in encoder.entries if e.block == "modulator" and e.low < 0]
+        assert len(fixed) == 17
+        assert len(signed) == 104
+        for entry in fixed:
+            assert entry.kind == "log"
+            assert entry.value(0.5) == pytest.approx(np.sqrt(entry.low * entry.high))
+        assert all(entry.value(0.5) == 0.0 for entry in signed)
+
     def test_the_box_centre_is_written_at_construction(self) -> None:
         brain = _brain()
         np.testing.assert_allclose(enc.read_encoder(brain), 0.5, atol=1e-6)

@@ -32,7 +32,13 @@ stall's 26% of the time.
 (the wiring scales, the food-contact gains, the speed and reversal readout rows with their biases,
 and those two log-SDs; :data:`REDUCED_NAMES`), every other parameter at the box centre, on the
 uncompressed score for 150 generations (CMA 5987). The worm holds the lawn when the best
-checkpoint's median time on it reaches 0.75.
+checkpoint's median time on it reaches 0.75. It did not (0.18): forward passes showed contact can
+slow the worm, and settings that do held the lawn (0.92 of the assay on it) only with the fixed-sign
+modulator strengths at their floor, the box centre's 1.5 swamping the sensory input on food.
+
+**pilot-log** is the third pilot (CMA 5988), with the fixed-sign strengths on a log scale over the
+same range, centred at 0.055, on the registered ranking score; it passes as the second pilot does,
+and the readiness restarts run only once it has.
 
 **readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
 score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
@@ -52,7 +58,8 @@ their wild type's animals; the cost pilot at 53,000,000; the feasibility check a
 smoke at 59,000,000; the first box's early reads at 61,000,000; the pilot at 62,000,000 and its
 trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,000,000 +
 200·(2,100·r + 2g + q) + i; the second pilot at 66,000,000 and its trajectory at 67,000,000; the reachability probe at
-68,000,000 and its trajectory at 69,000,000.
+68,000,000 and its trajectory at 69,000,000; the existence tests at 70,000,000 and 70,100,000; the
+third pilot at 71,000,000 and its trajectory at 72,000,000.
 
 Usage::
 
@@ -61,6 +68,7 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py pilot
     uv run python scripts/analysis/c2_encoder_probe.py pilot-uncompressed
     uv run python scripts/analysis/c2_encoder_probe.py reduced
+    uv run python scripts/analysis/c2_encoder_probe.py pilot-log
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -178,6 +186,12 @@ REDUCED_CMA = 5987
 REDUCED_TRAJECTORY_BASE = 69_000_000
 # The worm holds the lawn when the best checkpoint's median time on it reaches this (real: 0.98).
 HOLDS_LAWN = 0.75
+# The existence tests of contact-slowing settings, at the centre's and the floor's fixed strengths.
+EXISTENCE_BASES = (70_000_000, 70_100_000)
+# The third pilot, in the box with log-scaled fixed-sign strengths, on the registered ranking score.
+LOG_PILOT_BASE = 71_000_000
+LOG_PILOT_CMA = 5988
+LOG_PILOT_TRAJECTORY_BASE = 72_000_000
 # Each readiness restart's answer at every 50th generation, re-simulated twice.
 TRAJECTORY_BASE = 64_000_000
 TRAJECTORY_EVERY = 50
@@ -192,6 +206,7 @@ W_SIZING_PATH = SUPPORT / "w_sizing.json"
 PILOT_PATH = SUPPORT / "readiness" / "pilot.json"
 UNCOMPRESSED_PILOT_PATH = SUPPORT / "readiness" / "pilot_uncompressed.json"
 REDUCED_PATH = SUPPORT / "readiness" / "reduced.json"
+LOG_PILOT_PATH = SUPPORT / "readiness" / "pilot_logbox.json"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -953,6 +968,50 @@ def _reduced(workers: int) -> int:
     return 0
 
 
+def _log_pilot(workers: int) -> int:
+    """Run the third pilot: 150 generations with log-scaled fixed-sign strengths, ranking score.
+
+    It passes when its best checkpoint by the registered ranking score beats the stall's 10.6 and
+    that checkpoint's worm spends more of the small lawn's assay on the lawn than the stall's 0.261.
+    """
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = _fit(
+            pool,
+            cma_seed=LOG_PILOT_CMA,
+            seed_base=LOG_PILOT_BASE,
+            cap=PILOT_CAP,
+            state_dir=BUILD / "readiness" / "pilot_logbox",
+            factory=start_centre,
+        )
+        points = trajectory(
+            history,
+            pool,
+            base=LOG_PILOT_TRAJECTORY_BASE,
+            restart=0,
+            every=PILOT_EVERY,
+        )
+    best = min(points, key=lambda p: float(np.median(p["answer_score"])))
+    best_score = float(np.median(best["answer_score"]))
+    best_time = float(np.median(best["answer_time_on_lawn"]))
+    record = {
+        "description": DESCRIPTION + " The third pilot, fixed-sign strengths on a log scale.",
+        "stall_score": STALL_SCORE,
+        "stall_time_on_lawn": STALL_TIME_ON_LAWN,
+        "best_generation": best["generation"],
+        "best_answer_score": best_score,
+        "best_time_on_lawn": best_time,
+        "passes": best_score < STALL_SCORE and best_time > STALL_TIME_ON_LAWN,
+        "points": points,
+        "medians": history["medians"],
+        "sigmas": history["sigmas"],
+        "answer": history["answers"][-1],
+    }
+    _write(LOG_PILOT_PATH, record)
+    keys = ("best_generation", "best_answer_score", "best_time_on_lawn", "passes")
+    print(json.dumps({k: record[k] for k in keys}))
+    return 0
+
+
 def _restart(
     r: int,
     pool: ProcessPoolExecutor,
@@ -983,11 +1042,8 @@ def _restart(
 
 def _readiness(workers: int) -> int:
     """Run the readiness restarts in turn, each through the cap, until 2 are ready."""
-    if not (PILOT_PATH.exists() and json.loads(PILOT_PATH.read_text())["improves_past_stall"]):
-        print(
-            "the pilot has not improved past the stall; no readiness restart runs",
-            file=sys.stderr,
-        )
+    if not (LOG_PILOT_PATH.exists() and json.loads(LOG_PILOT_PATH.read_text())["passes"]):
+        print("the log-box pilot has not passed; no readiness restart runs", file=sys.stderr)
         return 1
     path = _grades_path()
     grades: dict[str, list[dict[str, Any]]] = json.loads(path.read_text()) if path.exists() else {}
@@ -1211,6 +1267,7 @@ def main(argv: list[str] | None = None) -> int:
             "pilot",
             "pilot-uncompressed",
             "reduced",
+            "pilot-log",
             "readiness",
             "read",
             "smoke",
@@ -1224,6 +1281,7 @@ def main(argv: list[str] | None = None) -> int:
         "pilot": lambda: _pilot(args.workers),
         "pilot-uncompressed": lambda: _uncompressed_pilot(args.workers),
         "reduced": lambda: _reduced(args.workers),
+        "pilot-log": lambda: _log_pilot(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),
