@@ -24,17 +24,22 @@ passed: the plateau rule once sigma <= sigma0 and every median of the last 40 ge
 mutants' differences from their wild type; an answer is ready when D_fit's three families pass in
 at least 3 of 5. If exactly one of the three passes, a warm restart from it runs (sigma0 0.1, CMA 5983).
 
+**measure** runs restart 0 through the cap with no plateau stop, grades its answer, and
+re-simulates its answer at every 50th generation twice on D_fit's assays: the plateau rule had
+stopped it at generation 48 with the population median flat and the answer far from the bands.
+
 **read** writes the readiness record and the W sizing record from the stored histories and grades.
 
 Seeds: the restarts at 40,000,000 + 200·(20,000·r + 16·(n - 1) + m) + i; the warm restart at
 55,000,000 + 200·(16·(n - 1) + m) + i; the grading at 52,000,000 + 200·(5r + g) + i, its mutants on
 their wild type's animals; the cost pilot at 53,000,000; the feasibility check at 54,000,000; the
-smoke at 59,000,000.
+smoke at 59,000,000; the measured restart's trajectory at 60,000,000 + 200·(2g + q) + i.
 
 Usage::
 
     uv run python scripts/analysis/c2_encoder_probe.py cost
     uv run python scripts/analysis/c2_encoder_probe.py feasibility
+    uv run python scripts/analysis/c2_encoder_probe.py measure
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -109,6 +114,10 @@ FEASIBILITY_TRIAL_BASE = 54_100_000
 FEASIBILITY_TRIALS = 20
 FEASIBILITY_WINDOW_MIN = (6.0, 12.0)
 SMOKE_BASE = 59_000_000
+# The measured restart's trajectory: its answer at every 50th generation, re-simulated twice.
+TRAJECTORY_BASE = 60_000_000
+TRAJECTORY_EVERY = 50
+TRAJECTORY_REPEATS = 2
 SMOKE_CMA = 5984
 
 READINESS_PATH = SUPPORT / "readiness.json"
@@ -652,6 +661,71 @@ def _readiness(workers: int) -> int:
     return 0
 
 
+def trajectory_k(generation: int, repeat: int) -> int:
+    """Return the simulation index of a generation's answer, re-simulated."""
+    return TRAJECTORY_REPEATS * generation + repeat
+
+
+def _measure(workers: int) -> int:
+    """Run restart 0 through the cap without a plateau stop, grade it, and read its trajectory.
+
+    The plateau rule stopped restart 0 at generation 48 with the population median flat while the
+    distribution's mean was still far from the bands, so restart 0 is measured to the cap first.
+    Its answer at every 50th generation is re-simulated twice on D_fit's assays, on fresh animals,
+    to show when the mean converges.
+    """
+    path = _grades_path()
+    grades: dict[str, list[dict[str, Any]]] = json.loads(path.read_text()) if path.exists() else {}
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        history = cr.run_fit(
+            {},
+            fit=0,
+            cma_seed=READINESS_CMA,
+            seed_base=READINESS_BASE,
+            cap=CAP,
+            use_rule=False,
+            state_dir=_restart_dir(0),
+            pool=pool,
+            scales={},
+            objective=FitObjective(),
+            simulate=simulate,
+            stop=readiness_stop,
+            strategy_factory=start_centre,
+        )
+        if "0" not in grades:
+            answer = history["answers"][-1]
+            ks = list(range(GRADE_POPULATIONS))
+            grades["0"] = list(
+                pool.map(grade_answer, ks, [answer] * len(ks), [GRADE_BASE] * len(ks)),
+            )
+            _write(path, grades)
+        generations = list(range(TRAJECTORY_EVERY, len(history["answers"]) + 1, TRAJECTORY_EVERY))
+        jobs = [(g, q) for g in generations for q in range(TRAJECTORY_REPEATS)]
+        records = list(
+            pool.map(
+                simulate,
+                [trajectory_k(g, q) for g, q in jobs],
+                [history["answers"][g - 1] for g, _ in jobs],
+                [TRAJECTORY_BASE] * len(jobs),
+            ),
+        )
+    objective = FitObjective()
+    points = []
+    for g in generations:
+        mine = [r for (gen, _), r in zip(jobs, records, strict=True) if gen == g]
+        points.append(
+            {
+                "generation": g,
+                "median": history["medians"][g - 1],
+                "sigma": history["sigmas"][g - 1],
+                "answer_score": [objective(r) for r in mine],
+                "answer_D_fit": [r["D_fit"] for r in mine],
+            },
+        )
+    _write(BUILD / "readiness" / "trajectory.json", {"restart": 0, "points": points})
+    return 0
+
+
 def _parameters_at_bounds(answer: list[float]) -> list[str]:
     return [
         e.name
@@ -845,12 +919,16 @@ def _write(path: Path, record: Any) -> None:  # noqa: ANN401 - any JSON-shaped r
 def main(argv: list[str] | None = None) -> int:
     """CLI: the cost pilot, the feasibility check, the readiness probe, its reading, a smoke."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument("stage", choices=("cost", "feasibility", "readiness", "read", "smoke"))
+    parser.add_argument(
+        "stage",
+        choices=("cost", "feasibility", "measure", "readiness", "read", "smoke"),
+    )
     parser.add_argument("--workers", type=int, default=16)
     args = parser.parse_args(argv)
     stages: dict[str, Callable[[], int]] = {
         "cost": lambda: _cost(args.workers),
         "feasibility": _feasibility,
+        "measure": lambda: _measure(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),
