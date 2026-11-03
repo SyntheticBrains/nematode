@@ -38,7 +38,12 @@ modulator strengths at their floor, the box centre's 1.5 swamping the sensory in
 
 **pilot-log** is the third pilot (CMA 5988), with the fixed-sign strengths on a log scale over the
 same range, centred at 0.055, on the registered ranking score; it passes as the second pilot does,
-and the readiness restarts run only once it has.
+and the readiness restarts run only once it has. It did not (10.69), though random settings of the
+lawn subset at the new box's centre hold the lawn (0.93).
+
+**pilot-staged** fits in two stages: the lawn subset from the box centre on the uncompressed score
+(CMA 5989), which must hold the lawn, then every parameter from its answer at sigma0 0.1 on the
+registered ranking score (CMA 5990); it passes as the second pilot does.
 
 **readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
 score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
@@ -59,7 +64,8 @@ smoke at 59,000,000; the first box's early reads at 61,000,000; the pilot at 62,
 trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,000,000 +
 200·(2,100·r + 2g + q) + i; the second pilot at 66,000,000 and its trajectory at 67,000,000; the reachability probe at
 68,000,000 and its trajectory at 69,000,000; the existence tests at 70,000,000 and 70,100,000; the
-third pilot at 71,000,000 and its trajectory at 72,000,000.
+third pilot at 71,000,000 and its trajectory at 72,000,000; the staged pilot's stage 1 at 73,000,000
+(trajectory 74,000,000) and stage 2 at 75,000,000 (trajectory 76,000,000).
 
 Usage::
 
@@ -69,6 +75,7 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py pilot-uncompressed
     uv run python scripts/analysis/c2_encoder_probe.py reduced
     uv run python scripts/analysis/c2_encoder_probe.py pilot-log
+    uv run python scripts/analysis/c2_encoder_probe.py pilot-staged
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -192,6 +199,15 @@ EXISTENCE_BASES = (70_000_000, 70_100_000, 70_200_000)
 LOG_PILOT_BASE = 71_000_000
 LOG_PILOT_CMA = 5988
 LOG_PILOT_TRAJECTORY_BASE = 72_000_000
+# The staged pilot: stage 1 fits the lawn subset from the box centre on the uncompressed score and
+# must hold the lawn; stage 2 fits all parameters from its answer on the registered ranking score.
+STAGE1_BASE = 73_000_000
+STAGE1_CMA = 5989
+STAGE1_TRAJECTORY_BASE = 74_000_000
+STAGE2_BASE = 75_000_000
+STAGE2_CMA = 5990
+STAGE2_TRAJECTORY_BASE = 76_000_000
+STAGE2_SIGMA0 = 0.1
 # Each readiness restart's answer at every 50th generation, re-simulated twice.
 TRAJECTORY_BASE = 64_000_000
 TRAJECTORY_EVERY = 50
@@ -207,6 +223,7 @@ PILOT_PATH = SUPPORT / "readiness" / "pilot.json"
 UNCOMPRESSED_PILOT_PATH = SUPPORT / "readiness" / "pilot_uncompressed.json"
 REDUCED_PATH = SUPPORT / "readiness" / "reduced.json"
 LOG_PILOT_PATH = SUPPORT / "readiness" / "pilot_logbox.json"
+STAGED_PILOT_PATH = SUPPORT / "readiness" / "pilot_staged.json"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -514,6 +531,21 @@ def start_reduced(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
         "verbose": -9,
     }
     return cma.CMAEvolutionStrategy([cr.X0] * len(REDUCED_NAMES), cr.SIGMA0, options)
+
+
+def start_stage2(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
+    """Return sep-CMA over every parameter at stage 1's answer, sigma0 0.1."""
+    import cma
+
+    x0 = json.loads((BUILD / "readiness" / "staged" / "stage1_x0.json").read_text())["x0"]
+    options = {
+        "CMA_diagonal": True,
+        "bounds": [0.0, 1.0],
+        "popsize": cr.POPSIZE,
+        "seed": seed,
+        "verbose": -9,
+    }
+    return cma.CMAEvolutionStrategy(x0, STAGE2_SIGMA0, options)
 
 
 def start_warm(seed: int) -> Any:  # noqa: ANN401 - a cma strategy
@@ -1012,6 +1044,96 @@ def _log_pilot(workers: int) -> int:
     return 0
 
 
+def _summary(points: list[dict[str, Any]]) -> dict[str, Any]:
+    best = min(points, key=lambda p: float(np.median(p["answer_score"])))
+    return {
+        "best_generation": best["generation"],
+        "best_answer_score": float(np.median(best["answer_score"])),
+        "best_time_on_lawn": float(np.median(best["answer_time_on_lawn"])),
+        "final_time_on_lawn": float(np.median(points[-1]["answer_time_on_lawn"])),
+    }
+
+
+def _staged_pilot(workers: int) -> int:
+    """Run the staged pilot: the lawn subset first, then every parameter from its answer.
+
+    Stage 1 must hold the lawn (its final checkpoint's median time on it at least 0.75) for stage 2
+    to run. The pilot passes when stage 2's best checkpoint by the registered ranking score beats
+    the stall's 10.6 with the worm on the lawn more than the stall's 0.261.
+    """
+    root = BUILD / "readiness" / "staged"
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        first = _fit(
+            pool,
+            cma_seed=STAGE1_CMA,
+            seed_base=STAGE1_BASE,
+            cap=PILOT_CAP,
+            state_dir=root / "stage1",
+            factory=start_reduced,
+            objective=UncompressedObjective(),
+            simulate_fn=simulate_reduced,
+        )
+        first_points = trajectory(
+            first,
+            pool,
+            base=STAGE1_TRAJECTORY_BASE,
+            restart=0,
+            every=PILOT_EVERY,
+            simulate_fn=simulate_reduced,
+        )
+        record: dict[str, Any] = {
+            "description": DESCRIPTION + " The staged pilot.",
+            "names_stage1": list(REDUCED_NAMES),
+            "stage1": {**_summary(first_points), "points": first_points},
+        }
+        record["stage1"]["holds_lawn"] = record["stage1"]["final_time_on_lawn"] >= HOLDS_LAWN
+        start = embed(first["answers"][-1])
+        record["stage1"]["answer_full"] = start
+        _write(root / "stage1_x0.json", {"x0": start})
+        if record["stage1"]["holds_lawn"]:
+            second = _fit(
+                pool,
+                cma_seed=STAGE2_CMA,
+                seed_base=STAGE2_BASE,
+                cap=PILOT_CAP,
+                state_dir=root / "stage2",
+                factory=start_stage2,
+            )
+            second_points = trajectory(
+                second,
+                pool,
+                base=STAGE2_TRAJECTORY_BASE,
+                restart=0,
+                every=PILOT_EVERY,
+            )
+            record["stage2"] = {
+                **_summary(second_points),
+                "points": second_points,
+                "answer": second["answers"][-1],
+            }
+            summary = record["stage2"]
+            record["passes"] = (
+                summary["best_answer_score"] < STALL_SCORE
+                and summary["best_time_on_lawn"] > STALL_TIME_ON_LAWN
+            )
+        else:
+            record["passes"] = False
+    _write(STAGED_PILOT_PATH, record)
+    print(
+        json.dumps(
+            {
+                "stage1_holds_lawn": record["stage1"]["holds_lawn"],
+                "stage1_final_time_on_lawn": record["stage1"]["final_time_on_lawn"],
+                "stage2": {
+                    k: v for k, v in record.get("stage2", {}).items() if k.startswith("best")
+                },
+                "passes": record["passes"],
+            },
+        ),
+    )
+    return 0
+
+
 def _restart(
     r: int,
     pool: ProcessPoolExecutor,
@@ -1268,6 +1390,7 @@ def main(argv: list[str] | None = None) -> int:
             "pilot-uncompressed",
             "reduced",
             "pilot-log",
+            "pilot-staged",
             "readiness",
             "read",
             "smoke",
@@ -1282,6 +1405,7 @@ def main(argv: list[str] | None = None) -> int:
         "pilot-uncompressed": lambda: _uncompressed_pilot(args.workers),
         "reduced": lambda: _reduced(args.workers),
         "pilot-log": lambda: _log_pilot(args.workers),
+        "pilot-staged": lambda: _staged_pilot(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),
