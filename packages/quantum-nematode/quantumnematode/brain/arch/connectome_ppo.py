@@ -1420,6 +1420,19 @@ class PerturbationDimension(TypedDict):
     causally_connected_draws: int
 
 
+def _settling_tanh(x: torch.Tensor) -> torch.Tensor:
+    """Return ``tanh(x)``, through NumPy's kernel wherever no gradient is taken on the CPU.
+
+    Where torch's CPU tanh is not vectorised, NumPy's float32 tanh is several times faster and
+    agrees with it to within one float32 ulp. Each element's value depends on that element alone,
+    not on the array's size or layout, so a network settles the same alone or in any batch. A
+    gradient, or a tensor on another device, takes torch's tanh.
+    """
+    if x.device.type != "cpu" or (torch.is_grad_enabled() and x.requires_grad):
+        return torch.tanh(x)
+    return torch.from_numpy(np.tanh(x.detach().numpy()))
+
+
 class ConnectomeTopology(nn.Module):
     """Forward-pass network whose connectivity is the Cook 2019 connectome.
 
@@ -2339,7 +2352,7 @@ class ConnectomeTopology(nn.Module):
             preact = h @ recurrent
             if held is not None:
                 preact = preact + held
-            h = torch.tanh(preact)
+            h = _settling_tanh(preact)
         if self.capture_penultimate:
             self.penultimate = previous.detach()
         mean = self._pool_motor(h) @ self.readout.T + self.readout_bias

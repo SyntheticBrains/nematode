@@ -563,3 +563,22 @@ class TestUnderPPO:
         assert not np.allclose(before, after)
         assert torch.equal(brain.topology.w_chem, w_chem)
         assert torch.equal(brain.topology.encoder.timescales_s, timescales)  # type: ignore[union-attr]
+
+
+class TestTheSettlingTanh:
+    def test_it_agrees_with_torch_and_does_not_depend_on_the_batch(self) -> None:
+        """Within one float32 ulp of torch's tanh, and each row the same alone or in a batch."""
+        x = torch.randn(64, 302, generator=torch.Generator().manual_seed(2)) * 3.0
+        out = cp._settling_tanh(x)
+        torch.testing.assert_close(out, torch.tanh(x), rtol=0.0, atol=1.2e-7)
+        for i in (0, 31, 63):
+            assert torch.equal(cp._settling_tanh(x[i : i + 1]), out[i : i + 1])
+            assert torch.equal(cp._settling_tanh(x[i]), out[i])
+
+    def test_a_gradient_takes_torchs_tanh(self) -> None:
+        x = torch.randn(4, 302, generator=torch.Generator().manual_seed(3), requires_grad=True)
+        y = cp._settling_tanh(x)
+        assert y.requires_grad
+        y.sum().backward()
+        assert x.grad is not None
+        torch.testing.assert_close(x.grad, 1.0 - torch.tanh(x.detach()) ** 2)

@@ -1,0 +1,199 @@
+{
+  "description": "C.2's encoder before F.0b-ii: its cost, a slow decay's feasibility, its readiness. The cost pilot.",
+  "workers": 16,
+  "fit": {
+    "assays": [
+      "small_lawn",
+      "uniform_lawn"
+    ],
+    "generations": [
+      {
+        "wall_seconds": 23.22790079191327,
+        "simulation_seconds_median": 21.740279145305976
+      },
+      {
+        "wall_seconds": 21.237008583266288,
+        "simulation_seconds_median": 20.835613187402487
+      }
+    ]
+  },
+  "all": {
+    "assays": "all four",
+    "generations": [
+      {
+        "wall_seconds": 53.96729716658592,
+        "simulation_seconds_median": 53.35348558309488
+      },
+      {
+        "wall_seconds": 55.558772458694875,
+        "simulation_seconds_median": 54.971473624929786
+      }
+    ]
+  },
+  "profile": {
+    "fit": {
+      "seconds": 14.898899083025753,
+      "parts_cumulative_seconds": {
+        "evaluator_run": 7.850282667,
+        "settling": 3.253469502,
+        "modulator_release": 0.10888009700000001,
+        "action_noise": 1.011062281,
+        "record_conversion": 0.7364907150000001,
+        "measurement": 2.815296332,
+        "grading": 0.568829334,
+        "brain_write": 0.000455084
+      },
+      "top_by_own_time": [
+        {
+          "function": "connectome_ppo.py:1423:_settling_tanh",
+          "own_seconds": 1.1947777800000001
+        },
+        {
+          "function": "connectome_ppo.py:2336:_forward_encoded",
+          "own_seconds": 1.1342883540000002
+        },
+        {
+          "function": "measurement.py:70:_splice",
+          "own_seconds": 0.9637916420000001
+        },
+        {
+          "function": "measurement.py:257:measure_window",
+          "own_seconds": 0.677403999
+        },
+        {
+          "function": "~:0:<built-in method torch.randn>",
+          "own_seconds": 0.600035575
+        },
+        {
+          "function": "batched.py:703:_start_bouts",
+          "own_seconds": 0.570495979
+        },
+        {
+          "function": "batched.py:146:to_behaviour_steps",
+          "own_seconds": 0.558091695
+        },
+        {
+          "function": "batched.py:478:_odour",
+          "own_seconds": 0.5156382890000001
+        },
+        {
+          "function": "_reader.py:189:parse_cell",
+          "own_seconds": 0.40686213800000004
+        },
+        {
+          "function": "~:0:<method 'reduce' of 'numpy.ufunc' objects>",
+          "own_seconds": 0.34098834100000003
+        },
+        {
+          "function": "batched.py:566:_sense",
+          "own_seconds": 0.32845959
+        },
+        {
+          "function": "controllers.py:90:_sample",
+          "own_seconds": 0.30013009300000004
+        },
+        {
+          "function": "encoder.py:220:compose_chemical",
+          "own_seconds": 0.291825714
+        },
+        {
+          "function": "~:0:<method 'feed' of 'xml.etree.ElementTree.XMLParser' objects>",
+          "own_seconds": 0.235004135
+        },
+        {
+          "function": "cell.py:206:coordinate_to_tuple",
+          "own_seconds": 0.23371723300000002
+        }
+      ]
+    },
+    "all": {
+      "seconds": 27.096850708127022,
+      "parts_cumulative_seconds": {
+        "evaluator_run": 20.452067125000003,
+        "settling": 7.738111617,
+        "modulator_release": 0.265833625,
+        "action_noise": 2.431346731,
+        "record_conversion": 1.4965657490000002,
+        "measurement": 3.3876435760000003,
+        "grading": 1.6973737910000002,
+        "brain_write": 0.000232458
+      },
+      "top_by_own_time": [
+        {
+          "function": "batched.py:478:_odour",
+          "own_seconds": 2.84834185
+        },
+        {
+          "function": "connectome_ppo.py:1423:_settling_tanh",
+          "own_seconds": 2.8192527960000002
+        },
+        {
+          "function": "connectome_ppo.py:2336:_forward_encoded",
+          "own_seconds": 2.709460945
+        },
+        {
+          "function": "~:0:<built-in method torch.randn>",
+          "own_seconds": 1.4409114010000001
+        },
+        {
+          "function": "batched.py:703:_start_bouts",
+          "own_seconds": 1.371928763
+        },
+        {
+          "function": "batched.py:146:to_behaviour_steps",
+          "own_seconds": 1.143461926
+        },
+        {
+          "function": "measurement.py:70:_splice",
+          "own_seconds": 0.967802853
+        },
+        {
+          "function": "measurement.py:257:measure_window",
+          "own_seconds": 0.874161026
+        },
+        {
+          "function": "batched.py:566:_sense",
+          "own_seconds": 0.81189506
+        },
+        {
+          "function": "controllers.py:90:_sample",
+          "own_seconds": 0.729220771
+        },
+        {
+          "function": "encoder.py:220:compose_chemical",
+          "own_seconds": 0.699422222
+        },
+        {
+          "function": "~:0:<method 'reduce' of 'numpy.ufunc' objects>",
+          "own_seconds": 0.656236806
+        },
+        {
+          "function": "batched.py:629:_stam_state",
+          "own_seconds": 0.5125231490000001
+        },
+        {
+          "function": "batched.py:650:_move",
+          "own_seconds": 0.414006301
+        },
+        {
+          "function": "batched.py:620:_stam_derivative",
+          "own_seconds": 0.386950138
+        }
+      ]
+    }
+  },
+  "compute_path": {
+    "animals": 3200,
+    "repeats": 30,
+    "cpu_1_thread_seconds": 0.004896854516118765,
+    "cpu_18_threads_seconds": 0.0054222289472818375,
+    "mps_seconds": 0.0012570207472890615,
+    "mps_max_abs_difference_from_cpu": 2.205371856689453e-06
+  },
+  "projection_hours_per_restart": {
+    "100_generations": 0.5899169050907302,
+    "300_generations": 1.7697507152721907,
+    "500_generations": 2.949584525453651,
+    "1000_generations": 5.899169050907302
+  }
+}

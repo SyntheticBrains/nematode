@@ -384,7 +384,7 @@ class CompactEncoder(nn.Module):
             self.tied_strength = nn.Parameter(torch.zeros(len(groups)))
         monoamine = [name in MONOAMINES for name in spec.ligands]
         self.register_buffer("monoamine_mask", torch.tensor(monoamine, dtype=torch.bool))
-        self.register_buffer("timescales_s", torch.full((2,), 60.0, dtype=torch.float64))
+        self.register_buffer("timescales_s", torch.full((2,), 60.0))
 
     def chemical(self) -> torch.Tensor:
         """Return the ``(N, N)`` chemical weights, indexed ``[pre, post]``."""
@@ -422,7 +422,7 @@ class CompactEncoder(nn.Module):
     def decay(self, step_seconds: float) -> np.ndarray:
         """Return each ligand's per-step decay, ``exp(-step / timescale)``, in the layer's order."""
         timescale = torch.where(self.monoamine_mask, self.timescales_s[0], self.timescales_s[1])
-        return np.exp(-step_seconds / timescale.cpu().numpy()).astype(np.float32)
+        return np.exp(-step_seconds / timescale.cpu().double().numpy()).astype(np.float32)
 
     def own_parameters(self) -> list[nn.Parameter]:
         """Return the learnable tensors this module holds."""
@@ -488,7 +488,7 @@ def write_encoder(brain: object, z: Sequence[float] | np.ndarray) -> None:
                 torch.where(encoder.group_fixed, _softplus_inverse(strengths), strengths),
             )
         encoder.timescales_s.copy_(
-            torch.tensor(values[cursor : cursor + len(TIMESCALE_POOLS)], dtype=torch.float64),
+            torch.tensor(values[cursor : cursor + len(TIMESCALE_POOLS)], dtype=torch.float32),
         )
     brain._modulator_decay = encoder.decay(brain.config.modulator_step_seconds)  # type: ignore[attr-defined]  # noqa: SLF001 - the brain's own decay
 

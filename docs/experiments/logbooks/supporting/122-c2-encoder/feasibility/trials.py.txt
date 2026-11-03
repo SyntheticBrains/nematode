@@ -1,0 +1,35 @@
+"""Feasibility trials: the hand-set vector's magnitudes, on the trial seed block (discarded).
+
+Run as `uv run python build/c2-encoder/feasibility/trials.py '<json list of changes>' <first trial>`.
+Every trial's changes are relative to FEASIBILITY_VALUES as they then stood, with
+readout.reversal.bias -2.0; trial t ran on population t at FEASIBILITY_TRIAL_BASE. The reported
+vector takes trial 4's change, readout.reversal.bias -1.0.
+"""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+import npe_recovery as nr
+
+BASE = p.FEASIBILITY_VALUES
+
+
+def trial(item):
+    t, changes = item
+    values = {**BASE, **changes}
+    z = p.feasibility_vector(values)
+    r = p.feasibility_run(z, p.FEASIBILITY_TRIAL_BASE + p.ANIMALS * t)
+    return {"trial": t, "changes": changes, **r}
+
+
+if __name__ == "__main__":
+    grid = json.loads(sys.argv[1])
+    start = int(sys.argv[2])
+    items = [(start + i, c) for i, c in enumerate(grid)]
+    assert items[-1][0] < p.FEASIBILITY_TRIALS
+    with ProcessPoolExecutor(max_workers=min(16, len(items)), initializer=nr._worker_setup) as pool:
+        for out in pool.map(trial, items):
+            print(json.dumps(out), flush=True)

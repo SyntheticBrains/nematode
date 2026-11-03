@@ -186,8 +186,11 @@
     |---|---|
     | 40,000,000 + 200·k + i, k = 20,000·r + 16·(n − 1) + m, r < 3 (to 51,199,999); CMA 5980–5982 | the readiness restarts (the 20,000 stride clears the cap's 15,999) |
     | 52,000,000 + 200·(5r + g) + i, g < 5 | their grading, mutants included |
+    | 55,000,000 + 200·(16·(n − 1) + m) + i; CMA 5983 | the warm restart, run only if exactly one of the three passes |
     | 53,000,000 | the cost pilot |
     | 54,000,000 | the feasibility check |
+    | 54,100,000 + 200·t + i, t < 20 | the feasibility trials that set the hand-set vector's magnitudes |
+    | 59,000,000 | the probe's smoke |
     | 5001–5032 | parity, as registered |
 
 ## Risks / Trade-offs
