@@ -1,0 +1,26 @@
+{
+  "description": "C.1 (v3)'s recovery: each truth's observation, floor, oracle, prior D and the box centre's D, with the pre-fit checks.",
+  "truths": [
+    {
+      "floor": 0.4856906251877718,
+      "oracle_D": 0.4866308725933554,
+      "prior_D": 7.10526289465359,
+      "centre_D": 6.953567285407247,
+      "separated": true,
+      "oracle_gain": 0.9998579594923496,
+      "centre_gain": 0.022916225259156316
+    },
+    {
+      "floor": 0.4901189259499703,
+      "oracle_D": 0.39023911066066386,
+      "prior_D": 7.173020908537028,
+      "centre_D": 7.006558121178923,
+      "separated": true,
+      "oracle_gain": 1.0149455753727277,
+      "centre_gain": 0.024908757870733374
+    }
+  ],
+  "oracle_median_gain": 1.0074017674325386,
+  "centre_median_gain": 0.023912491564944845,
+  "passed": true
+}

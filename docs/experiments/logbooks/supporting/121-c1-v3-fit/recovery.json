@@ -1,0 +1,191 @@
+{
+  "description": "C.1 (v3)'s reduced recovery: 2 truths x 2 restarts, the gate on the median best-restart gain.",
+  "truths": [
+    {
+      "truth": 0,
+      "source": "basin_warm.json",
+      "restarts": [
+        {
+          "fit": 0,
+          "cma_seed": 5782,
+          "stop": {
+            "generation": 175,
+            "by": "plateau"
+          },
+          "final_objective": 0.70692419912682,
+          "D": 0.6777316649920406,
+          "gain": 0.970988905024861,
+          "best": true,
+          "parameter_errors": {
+            "swapped": false,
+            "errors": {
+              "a0": 0.017485763322000247,
+              "a_intake": 0.5466694511858057,
+              "a_satiety": 0.45514996822603815,
+              "b0": 0.08258316751953276,
+              "b_intake": 0.0758098162152388,
+              "b_satiety": 0.0018615154396059985,
+              "v_dwell": 0.008986484141334537,
+              "v_roam": 0.021842883016274905,
+              "sigma_dwell": 0.2781428720156277,
+              "sigma_roam": 0.8785377130753549,
+              "kappa_weathervane": 0.14248926201378706,
+              "r_dwell": 0.23439343539326216,
+              "r_roam": 0.04067887285591143,
+              "beta_reversal": 0.8104369277441779,
+              "edge": 0.10174512923476409,
+              "o_dwell": 0.3035085057219927,
+              "o_roam": 0.02128455316191269,
+              "beta_omega": 0.044915522884667214,
+              "search_amplitude": 0.05334944357228111,
+              "search_tau_s": 0.03205643955160764,
+              "v_off_food": 0.10550870049478578,
+              "sigma_off_food": 0.17257677306938884,
+              "speed_log_sd_dwell": 0.047192349725534544,
+              "speed_log_sd_roam": 0.04925644631127124,
+              "kappa_off_food": 0.00300244834100849
+            }
+          }
+        },
+        {
+          "fit": 1,
+          "cma_seed": 5783,
+          "stop": {
+            "generation": 69,
+            "by": "plateau"
+          },
+          "final_objective": 6.216365998522982,
+          "D": 4.116313859722453,
+          "gain": 0.4515320496942527,
+          "best": false,
+          "parameter_errors": {
+            "swapped": false,
+            "errors": {
+              "a0": 0.09490182397550884,
+              "a_intake": 0.518130035924768,
+              "a_satiety": 0.39716219445524736,
+              "b0": 0.20968194696127018,
+              "b_intake": 0.30722515026558334,
+              "b_satiety": 0.0008326478164376594,
+              "v_dwell": 0.9510150955882203,
+              "v_roam": 0.15880172179283486,
+              "sigma_dwell": 0.039844109818226836,
+              "sigma_roam": 0.09641603783184008,
+              "kappa_weathervane": 0.2557560079326778,
+              "r_dwell": 0.3798254613450315,
+              "r_roam": 0.3395189545019285,
+              "beta_reversal": 0.35018449486211134,
+              "edge": 0.23873927868660183,
+              "o_dwell": 0.21599994651229446,
+              "o_roam": 0.08433650612557625,
+              "beta_omega": 0.2809244210705379,
+              "search_amplitude": 0.0778845723282926,
+              "search_tau_s": 0.12209750226778204,
+              "v_off_food": 0.14185181840662942,
+              "sigma_off_food": 0.575938784120517,
+              "speed_log_sd_dwell": 0.4156561029696572,
+              "speed_log_sd_roam": 0.35498594243032516,
+              "kappa_off_food": 0.15733034088697656
+            }
+          }
+        }
+      ]
+    },
+    {
+      "truth": 1,
+      "source": "basin_boxA.json",
+      "restarts": [
+        {
+          "fit": 2,
+          "cma_seed": 5784,
+          "stop": {
+            "generation": 193,
+            "by": "plateau"
+          },
+          "final_objective": 0.8149530543640099,
+          "D": 0.7829214549578463,
+          "gain": 0.9561863199893098,
+          "best": false,
+          "parameter_errors": {
+            "swapped": true,
+            "errors": {
+              "a0": 0.15750278692346714,
+              "a_intake": 0.149831863637369,
+              "a_satiety": 0.10436220129392815,
+              "b0": 0.5907991138136375,
+              "b_intake": 0.3280001278190514,
+              "b_satiety": 0.23517907497445292,
+              "v_dwell": 0.04198825670236983,
+              "v_roam": 0.00044628553957697104,
+              "sigma_dwell": 0.3364851180272843,
+              "sigma_roam": 0.08837778056309775,
+              "kappa_weathervane": 0.10814710227066289,
+              "r_dwell": 0.02104759273769476,
+              "r_roam": 0.09482049774166451,
+              "beta_reversal": 0.48890730453401504,
+              "edge": 0.46315084754963143,
+              "o_dwell": 0.06303304965514067,
+              "o_roam": 0.4134730805980663,
+              "beta_omega": 0.4006330963345618,
+              "search_amplitude": 0.29012425972416156,
+              "search_tau_s": 0.020011834714177,
+              "v_off_food": 0.24566319204026188,
+              "sigma_off_food": 0.14269537142390964,
+              "speed_log_sd_dwell": 0.1262950539504895,
+              "speed_log_sd_roam": 0.01266347449157873,
+              "kappa_off_food": 0.021984820879389577
+            }
+          }
+        },
+        {
+          "fit": 3,
+          "cma_seed": 5785,
+          "stop": {
+            "generation": 264,
+            "by": "plateau"
+          },
+          "final_objective": 0.5175325298182949,
+          "D": 0.49439284618443036,
+          "gain": 0.9993604694120014,
+          "best": true,
+          "parameter_errors": {
+            "swapped": false,
+            "errors": {
+              "a0": 0.013826924336938717,
+              "a_intake": 0.8004740392793159,
+              "a_satiety": 0.777733581113336,
+              "b0": 0.7418842123883402,
+              "b_intake": 0.36135629530341784,
+              "b_satiety": 0.17872132542247202,
+              "v_dwell": 0.16440438253646686,
+              "v_roam": 0.0011871540650304074,
+              "sigma_dwell": 0.3240708335697339,
+              "sigma_roam": 0.0767190849594413,
+              "kappa_weathervane": 0.15226627072632248,
+              "r_dwell": 0.8628789902415066,
+              "r_roam": 0.038828143726159836,
+              "beta_reversal": 0.17799702052573707,
+              "edge": 0.4273480655688355,
+              "o_dwell": 0.16056052502784823,
+              "o_roam": 0.0674032388801361,
+              "beta_omega": 0.08610290096145046,
+              "search_amplitude": 0.12085385158915618,
+              "search_tau_s": 0.002601291491386881,
+              "v_off_food": 0.1345728477827005,
+              "sigma_off_food": 0.06173244991102145,
+              "speed_log_sd_dwell": 0.013877919602939548,
+              "speed_log_sd_roam": 0.012015043802702574,
+              "kappa_off_food": 0.011717187982446031
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "gains": [
+    0.970988905024861,
+    0.9993604694120014
+  ],
+  "median_gain": 0.9851746872184313,
+  "passes": true
+}

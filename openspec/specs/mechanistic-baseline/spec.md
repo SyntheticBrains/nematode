@@ -5,7 +5,9 @@
 C.1's mechanistic baseline: a closed-loop roaming/dwelling worm on the primitives, with intake- and
 satiety-dependent switching, klinokinetic reversal and omega hazards, weathervane steering, an edge
 reversal on falling food contact, and a search term that decays off food. It has 20 parameters, and
-every random draw comes from each animal's own generator.
+every random draw comes from each animal's own generator. Optional off-food run kinematics, a per-state
+speed spread and an off-food weathervane gain extend it to C.1 (v3)'s 25 parameters; without them it is
+unchanged.
 
 ## Requirements
 
@@ -40,3 +42,27 @@ It SHALL draw every random number from each animal's own generator, and refuse `
 
 - **WHEN** one animal runs alone and inside a batch
 - **THEN** its actions SHALL be the same
+
+### Requirement: Optional off-food run kinematics and a per-state speed spread
+
+`BatchedMechanistic` SHALL accept two optional mechanisms, each used only when its parameters are given:
+
+- `v_off_food` and `sigma_off_food`: the run speed and curvature noise wherever food contact is 0, whatever the state;
+- `speed_log_sd_dwell` and `speed_log_sd_roam`, given together: each state's run speed varies across 10-s windows as exp(sd·z) about its median.
+
+The spread's z SHALL be the sine partner of that second's curvature normal, so that no random draw is added. Without these parameters, every action SHALL be byte-identical to the 20-parameter model's.
+
+#### Scenario: Off-food kinematics change only food-free seconds
+
+- **WHEN** an animal is on food
+- **THEN** its run speed and curvature SHALL be its state's, with or without the off-food parameters
+
+#### Scenario: The spread holds within a window
+
+- **WHEN** the spread is given, and an animal's state and food contact stay unchanged within a window
+- **THEN** its speed SHALL hold within that 10-s window, and SHALL vary across windows where its state's spread is positive (a spread of 0 leaves the speed unchanged); its curvature and hazards SHALL equal those without the spread
+
+#### Scenario: One spread without the other is refused
+
+- **WHEN** only `speed_log_sd_dwell` is given
+- **THEN** the controller SHALL raise an error

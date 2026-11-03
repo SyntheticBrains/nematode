@@ -483,6 +483,10 @@ UNIFORM_BLOCK_STEPS = 4_096
 _UNIFORMS_PER_STEP = 3
 
 
+# The run-speed spread's window: the roaming/dwelling classifier reads 10-s windows.
+SPEED_WINDOW_STEPS = 10
+
+
 class BatchedMechanistic:
     """A closed-loop roaming/dwelling worm with klinokinesis, weathervane, an edge and search terms.
 
@@ -502,7 +506,14 @@ class BatchedMechanistic:
     - **search:** off food, ``search = 1 + search_amplitude exp(-t_off / search_tau_s)``, with
       ``t_off`` the seconds since food contact; on food it is 1;
     - **optionally,** with ``kappa_off_food`` in the parameters, the weathervane gain is
-      ``kappa_off_food`` wherever food contact is 0, and ``kappa_weathervane`` on food.
+      ``kappa_off_food`` wherever food contact is 0, and ``kappa_weathervane`` on food. Likewise
+      ``v_off_food`` and ``sigma_off_food`` set the run speed and the curvature noise wherever food
+      contact is 0, whatever the state; on food the state's own values apply;
+    - **optionally,** with ``speed_log_sd_dwell`` and ``speed_log_sd_roam``, the run speed varies
+      within a state: at the first second and every :data:`SPEED_WINDOW_STEPS` seconds after, each
+      animal draws a standard normal z, and its run speed is the speed above times
+      ``exp(speed_log_sd_s z)`` for its state ``s``, so that speed is the median. The normal is the
+      sine partner of that second's curvature normal (one Box-Muller pair), so no draw is added.
 
     The rates are per second at a 1-second step. Each second takes three uniforms from each
     animal's own generator: the same numbers, in the same order, as one draw of three per second.
@@ -520,6 +531,22 @@ class BatchedMechanistic:
         # food, as the model's 20 parameters define it.
         off = params.get("kappa_off_food")
         self.kappa_off_food = None if off is None else float(off)
+        # Optional: a run speed and curvature noise of their own off food, whatever the state.
+        speed_off, sigma_off = params.get("v_off_food"), params.get("sigma_off_food")
+        self.v_off_food = None if speed_off is None else float(speed_off)
+        self.sigma_off_food = None if sigma_off is None else float(sigma_off)
+        # Optional: a per-state spread of the run speed, redrawn every window.
+        sd_dwell, sd_roam = params.get("speed_log_sd_dwell"), params.get("speed_log_sd_roam")
+        if (sd_dwell is None) != (sd_roam is None):
+            msg = "speed_log_sd_dwell and speed_log_sd_roam come together"
+            raise ValueError(msg)
+        self.speed_log_sd = (
+            None
+            if sd_dwell is None or sd_roam is None
+            else np.array([float(sd_dwell), float(sd_roam)])
+        )
+        self.steps = 0
+        self.speed_z: np.ndarray | None = None
         self.state: np.ndarray | None = None
         self.previous_contact: np.ndarray | None = None
         self.t_off: np.ndarray | None = None
@@ -550,6 +577,8 @@ class BatchedMechanistic:
         self.state = None
         self.previous_contact = None
         self.t_off = None
+        self.steps = 0
+        self.speed_z = None
 
     def _switch_rates(self, senses: BatchedSenses) -> tuple[np.ndarray, np.ndarray]:
         p = self.p
@@ -609,16 +638,20 @@ class BatchedMechanistic:
             if self.kappa_off_food is None
             else np.where(contact > 0, p["kappa_weathervane"], self.kappa_off_food)
         )
-        curvature = (
-            kappa * lateral
-            + np.where(
-                roaming,
-                p["sigma_roam"],
-                p["sigma_dwell"],
-            )
-            * z
-        )
+        sigma = np.where(roaming, p["sigma_roam"], p["sigma_dwell"])
+        if self.sigma_off_food is not None:
+            sigma = np.where(contact > 0, sigma, self.sigma_off_food)
+        curvature = kappa * lateral + sigma * z
         speed = np.where(roaming, p["v_roam"], p["v_dwell"])
+        if self.v_off_food is not None:
+            speed = np.where(contact > 0, speed, self.v_off_food)
+        if self.speed_log_sd is not None:
+            if self.steps % SPEED_WINDOW_STEPS == 0:
+                radius = np.sqrt(-2.0 * np.log(np.maximum(u[:, 1], 1e-300)))
+                self.speed_z = radius * np.sin(2.0 * np.pi * u[:, 2])
+            assert self.speed_z is not None  # noqa: S101
+            speed = speed * np.exp(self.speed_log_sd[self.state] * self.speed_z)
+        self.steps += 1
         v_max = load_kinematics().v_max_mm_per_s
         raw = np.zeros((n, 5))
         raw[:, 0] = np.clip(2.0 * speed / v_max - 1.0, -1.0, 1.0)

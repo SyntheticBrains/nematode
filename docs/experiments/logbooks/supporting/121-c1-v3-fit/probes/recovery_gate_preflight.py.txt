@@ -1,0 +1,88 @@
+"""Preflight of C.1 (v3)'s reduced-recovery gate (description, discarded seeds at 85,000,000).
+
+Truths: the 25-parameter probes' passing answers, full-warm (t = 0) and full-box A (t = 1). For each:
+the observation (q = 0) and re-simulations 1-20 at 85,000,000 + 200·(100·t + q) + i; the floor
+(median capped v3 D from the observation to re-simulations 1-10), the oracle (11-20), the prior D
+(to 200 prior draws of the 25-parameter box at 85,100,000 + 200·j + i, draws from default_rng(85))
+and the box centre's D (10 re-simulations at 85,300,000 + 200·q + i). Then each 25-parameter probe
+answer (warm, box A, box B, the first box-centre run) re-simulated 10 times at
+85,200,000 + 200·(10·a + q) + i is scored against each truth as if it were a recovery fit.
+"""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c1-v3")
+import benchmark_grade as bg
+import cma_recovery_v2 as v2
+import diagnostic_probes as dp
+import full25_probe as f25
+import npe_recovery as nr
+
+BASE = 85_000_000
+ANSWERS = {
+    "full_warm": "build/c1-v3/basin_warm.json",
+    "full_boxA": "build/c1-v3/basin_boxA.json",
+    "full_boxB": "build/c1-v3/basin_boxB.json",
+    "full_first": "build/c1-v3/probe_full25.json",
+}
+OUT = Path("build/c1-v3/recovery_gate_preflight.json")
+
+
+def sim(item):
+    k, z = item
+    return k, dp._record(k, z, BASE, f25.parameters(z))
+
+
+def main():
+    bands = bg.load_bands_v3()
+    scales = v2.band_scales_v2(bands)
+    family_map = {f: tuple(st) for f, st in bands["families"].items()}
+
+    def d(a, b):
+        return v2.predictive_distance_v2(a, b, scales, family_map, capped=True)
+
+    answers = {n: json.loads(Path(p).read_text())["answer"] for n, p in ANSWERS.items()}
+    truths = [answers["full_warm"], answers["full_boxA"]]
+    prior = np.random.default_rng(85).random((200, 25))
+    jobs = []
+    for t, z in enumerate(truths):
+        jobs += [(100 * t + q, z) for q in range(21)]
+    jobs += [(500 + j, list(map(float, prior[j]))) for j in range(200)]
+    for a, z in enumerate(answers.values()):
+        jobs += [(1000 + 10 * a + q, z) for q in range(10)]
+    jobs += [(1500 + q, [0.5] * 25) for q in range(10)]
+    with ProcessPoolExecutor(16, initializer=nr._worker_setup) as pool:
+        records = dict(pool.map(sim, jobs))
+    out = {"description": "Description: preflight of C.1 (v3)'s reduced-recovery gate; discarded seeds.", "truths": {}}
+    for t, name in enumerate(("full_warm", "full_boxA")):
+        obs = records[100 * t]
+        floor = float(np.median([d(obs, records[100 * t + q]) for q in range(1, 11)]))
+        oracle = float(np.median([d(obs, records[100 * t + q]) for q in range(11, 21)]))
+        prior_d = float(np.median([d(obs, records[500 + j]) for j in range(200)]))
+        centre = float(np.median([d(obs, records[1500 + q]) for q in range(10)]))
+
+        def gain(x, prior_d=prior_d, floor=floor):
+            return (prior_d - x) / (prior_d - floor)
+
+        scored = {}
+        for a, n in enumerate(answers):
+            dd = float(np.median([d(obs, records[1000 + 10 * a + q]) for q in range(10)]))
+            scored[n] = {"D": dd, "gain": gain(dd)}
+        out["truths"][name] = {
+            "floor": floor, "oracle_D": oracle, "oracle_gain": gain(oracle), "prior_D": prior_d,
+            "prior_minus_floor": prior_d - floor, "centre_D": centre, "centre_gain": gain(centre), "answers": scored,
+        }
+    OUT.write_text(json.dumps(bg._finite(out), indent=2) + "\n")
+    for name, r in out["truths"].items():
+        print(name, {k: round(v, 3) for k, v in r.items() if not isinstance(v, dict)})
+        print("   ", {n: (round(s["D"], 2), round(s["gain"], 3)) for n, s in r["answers"].items()})
+
+
+if __name__ == "__main__":
+    main()
