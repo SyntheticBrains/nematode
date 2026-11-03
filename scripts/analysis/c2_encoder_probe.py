@@ -187,7 +187,7 @@ REDUCED_TRAJECTORY_BASE = 69_000_000
 # The worm holds the lawn when the best checkpoint's median time on it reaches this (real: 0.98).
 HOLDS_LAWN = 0.75
 # The existence tests of contact-slowing settings, at the centre's and the floor's fixed strengths.
-EXISTENCE_BASES = (70_000_000, 70_100_000)
+EXISTENCE_BASES = (70_000_000, 70_100_000, 70_200_000)
 # The third pilot, in the box with log-scaled fixed-sign strengths, on the registered ranking score.
 LOG_PILOT_BASE = 71_000_000
 LOG_PILOT_CMA = 5988
