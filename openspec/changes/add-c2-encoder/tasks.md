@@ -1,6 +1,6 @@
 ## 1. The baseline
 
-- [ ] 1.1 Record a connectome identity baseline before any edit: the hand-placed and data-layer arms in the batched evaluator, on all four v3 assays, on discarded seeds (`build/c2-encoder/identity`). The data-layer arm comes from the modulated assay configs with a `modulator_layer: data` override.
+- [x] 1.1 Record a connectome identity baseline before any edit: the hand-placed and data-layer arms in the batched evaluator, on all four v3 assays, on discarded seeds (`build/c2-encoder/identity`). The data-layer arm comes from the modulated assay configs with a `modulator_layer: data` override.
 
 ## 2. The encoder
 
