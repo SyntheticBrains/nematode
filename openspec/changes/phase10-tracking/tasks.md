@@ -590,6 +590,23 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   and 6 and the κ probe each fail it in 5 of 5 populations. **C.1 is refitted on v3 next,** in its
   own change.
 
+  *(2026-11-03: change `fit-c1-v3`; [Logbook 121](../../../docs/experiments/logbooks/121-c1-v3-fit.md).)*
+  **C.1 (v3) passes the wild type on benchmark v3.** The chosen restart (6, by selection) passes 3
+  of 5 registered populations (D 1.03–1.14); the two misses are the small lawn's roaming-bout
+  length.
+
+  - **The model gained three mechanisms,** found by probes on discarded seeds (25 parameters):
+    - a per-state speed spread, which v2's reachability worm had needed;
+    - off-food run kinematics;
+    - an off-food weathervane gain.
+  - **A reduced recovery passed first** (median gain 0.985).
+  - **Three restarts pass the wild type** (0, 4 and 6); restart 4 passes 5 of 5.
+  - **Beside the verdict:**
+    - C.1 reverses about 3%, against real worms' 12–17%; v3 does not constrain reversal from below;
+    - the roaming-bout tension across the two lawns persists from v1.
+  - **The guarded plateau let two stuck restarts stop** (a median near 507; a score of 5.7). C.2's
+    registration tightens the guard and adds a readiness probe.
+
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
@@ -609,6 +626,12 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 - [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(Added 2026-11-03, C.1 on v3.)* **C.1 (v3) enters as passing the wild type**
+  ([Logbook 121](../../../docs/experiments/logbooks/121-c1-v3-fit.md)). Its wild-type-passing
+  restarts for the `unidentified` rule are 0, 4 and 6 (`supporting/121-c1-v3-fit/fit.json`). Its
+  mutant encodings are the registered table's, with tax-4 also removing the off-food weathervane
+  gain (launch record 121).
 
   *(Added 2026-11-01, C.1b.)* C.1 on v2 enters as failing the wild type
   ([Logbook 119](../../../docs/experiments/logbooks/119-c1b-fit.md)). Its restarts' registered

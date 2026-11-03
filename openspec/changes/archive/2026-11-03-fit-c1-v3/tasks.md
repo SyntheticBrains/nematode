@@ -34,9 +34,9 @@
 
 ## 4. The fit and the verdict
 
-- [ ] 4.1 `run` (12 restarts), `select` (5 populations per plateaued restart), `grade` (every restart on 5 registered populations), `read`: `fit.json` with the verdict.
+- [x] 4.1 `run` (12 restarts), `select` (5 populations per plateaued restart), `grade` (every restart on 5 registered populations), `read`: `fit.json` with the verdict.
 
 ## 5. Close-out
 
-- [ ] 5.1 Logbook 121, the tracker (C.1 on v3, C.4, the seed table), the index row, AGENTS.md and the CHANGELOG.
-- [ ] 5.2 At archive, `mechanistic-baseline`'s Purpose names the optional off-food kinematics and speed spread. Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.
+- [x] 5.1 Logbook 121, the tracker (C.1 on v3, C.4, the seed table), the index row, AGENTS.md and the CHANGELOG.
+- [x] 5.2 At archive, `mechanistic-baseline`'s Purpose names the optional off-food kinematics and speed spread. Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.
