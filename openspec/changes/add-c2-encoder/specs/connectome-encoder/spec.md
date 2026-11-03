@@ -15,7 +15,7 @@ The brain SHALL refuse the encoder:
 
 - unless `dynamics` is settling and `sensing_mode` is klinotaxis;
 - unless the data layer is used with the satiety link;
-- unless `synapse_signs` is `per_connection` and `weight_prior` is unset;
+- unless `synapse_signs` is `per_connection`, `gap_normalisation` is `strength` with additive coupling, and `weight_prior` is unset;
 - unless `modulator_step_seconds` equals the configured step.
 
 #### Scenario: The encoder is off
@@ -30,7 +30,22 @@ The brain SHALL refuse the encoder:
 
 ### Requirement: The wiring is fixed from data
 
-With the encoder on, a chemical edge's weight SHALL be its scale × its grounded sign × its synapse count, normalised by the root sum of squares of the counts onto its postsynaptic neuron. An edge without a grounded sign SHALL take its presynaptic transmitter group's signed gain in place of the scale and sign. Gap junctions SHALL keep their data weights × the gap scale. No weight SHALL depend on the brain's seed.
+With the encoder on:
+
+- a chemical edge's weight SHALL be its scale × its grounded sign × its synapse count, normalised by the root sum of squares of the counts onto its postsynaptic neuron;
+- an edge without a grounded sign SHALL take its presynaptic transmitter group's signed gain in place of the scale and sign;
+- a gap pair's weight SHALL be its count divided by √(s_i·s_j), s a neuron's summed pair counts, × the gap scale.
+
+No weight SHALL depend on the brain's seed. On a rewired null:
+
+- each edge SHALL carry its own count and its origin's sign;
+- every normalisation SHALL be recomputed on the null's counts;
+- the parameters' names SHALL be the wild type's.
+
+#### Scenario: A null is encoded with the wild type's parameters
+
+- **WHEN** an encoded brain is built on any existing rewired null, or under the receptor-placement null
+- **THEN** it SHALL build, with the same parameter names as the wild type, and its mutant encodings SHALL build on it
 
 #### Scenario: Two seeds, one vector
 
@@ -58,12 +73,27 @@ Food contact SHALL reach only CEP, ADE and PDE, through one gain per class.
 
 ### Requirement: A unit box and a vector interface
 
-The encoder SHALL expose its parameters' names in a fixed order and each one's range. It SHALL write a unit-box vector into a brain in place and read it back, and `BatchedConnectome` SHALL act on the written values without a rebuild. The box's centre SHALL be the registered start for C.2's fits. Under PPO the brain's learnable parameters SHALL be exactly the encoder's.
+The encoder SHALL expose its parameters' names in a fixed order and each one's range. It SHALL write a unit-box vector into a brain in place and read it back, and `BatchedConnectome` SHALL act on the written values without a rebuild. The box's centre SHALL be the registered start for C.2's fits. Under PPO the policy's learnable parameters SHALL be exactly the encoder's, with the PPO rule's critic unchanged.
+
+`encoder_modulator_tying` SHALL choose between:
+
+- `per_couple`, 196 parameters;
+- `per_ligand`, one signed gain per fitted ligand and one strength per fixed-sign ligand: 132 parameters.
 
 #### Scenario: A vector round-trips
 
 - **WHEN** a unit-box vector is written and read back
 - **THEN** the read vector SHALL equal the written one
+
+#### Scenario: A reused brain equals a fresh one
+
+- **WHEN** one brain has a sequence of vectors written into it, and a fresh brain is built for the last
+- **THEN** the two SHALL act identically on the same senses and generators
+
+#### Scenario: Per-ligand tying shares a ligand's strengths
+
+- **WHEN** `per_ligand` tying is set
+- **THEN** every couple of one fitted ligand SHALL carry the same signed strength, and the parameter count SHALL be 132
 
 #### Scenario: The batched controller sees a write
 
@@ -97,7 +127,9 @@ Before F.0b-ii's registration, on discarded seeds:
 
 - a cost pilot SHALL time a generation on D_fit's assays and on all four;
 - a feasibility check SHALL show whether a hand-set vector carries a post-removal decay of 6–12 min without reading López-Cruz's data;
-- a readiness probe SHALL fit one restart to v3's band centres on D_fit's families. Its plateau SHALL wait until every median in the last 40 generations is below 100, and its answer SHALL be graded with presence on 5 populations on all five families.
+- a readiness probe SHALL fit up to 3 restarts to v3's band centres on D_fit's families, stopping once 2 pass D_fit's families in 3 of 5 populations. Each plateau SHALL wait until every median in the last 40 generations is below 100. Each answer SHALL be graded with presence on 5 populations on all five families and the three mutants;
+- the restart-to-restart spread of the held-out families and of the mutant differences SHALL be recorded against W's minimum;
+- the cost pilot SHALL be profiled, and SHALL time a whole generation's settling step on CPU and on MPS.
 
 Each check's result SHALL be recorded.
 

@@ -2,7 +2,7 @@
 
 ### Requirement: The encoded connectome under the batched evaluator
 
-`BatchedConnectome` SHALL support a brain built with `encoder: compact`, feeding it food contact as the per-step runner does. It SHALL meet the layered parity with the per-step runner on seeds 5001–5032. With the encoder unset, every existing connectome record SHALL be byte-identical to a baseline recorded before the encoder was added.
+`BatchedConnectome` SHALL support a brain built with `encoder: compact`, feeding it food contact as the per-step runner does. It SHALL meet the layered parity with the per-step runner on seeds 5001–5032, on the wild type and on the degree-preserving null. With the encoder unset, every existing connectome record SHALL be byte-identical to a baseline recorded before the encoder was added.
 
 #### Scenario: The encoded brain matches the per-step runner
 

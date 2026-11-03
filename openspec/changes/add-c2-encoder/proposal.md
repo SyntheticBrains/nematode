@@ -13,11 +13,14 @@ The maintainer's decisions (2026-11-03):
   - the neuromodulator layer's 121 strengths and two tied timescales;
 - **the 533 chemical edges without a grounded sign** keep one signed gain per presynaptic transmitter group;
 - **the encoder lives in the brain, in both runners,** so C.3 trains the same architecture by reward;
-- **build, then probe:** a cost pilot and a C.2 readiness probe on discarded seeds follow, before F.0b-ii's change. The probes' answers become its truths, as C.1's did.
+- **build, then probe:** a cost pilot and a C.2 readiness probe on discarded seeds follow, before F.0b-ii's change. The probes' answers become its truths, as C.1's did;
+- **at the spec review, because W is the phase's longest run:**
+  - fix W's inheritance here: the gap model (strength-normalised, the corrected model of Logbook 103, for every arm), how a null is encoded, the compute path, the cost per fit, and the fit-to-fit spread that sizes W's draws per arm;
+  - build a modulator-tying switch, so F.0b-ii can choose 196 or 132 parameters on that evidence.
 
 ## What Changes
 
-- **`encoder: compact`** on `ConnectomePPOBrain` (default none, byte-identical when unset). It turns the brain into a function of 196 named parameters:
+- **`encoder: compact`** on `ConnectomePPOBrain` (default none, byte-identical when unset). It turns the brain into a function of 196 named parameters (132 under `per_ligand` tying):
 
   | Block | Parameters | Count |
   |---|---|---|
@@ -43,7 +46,9 @@ The maintainer's decisions (2026-11-03):
   - byte-identity for every existing connectome path;
   - a cost pilot;
   - a feasibility check that the slow state can carry a ~9-minute decay;
-  - a readiness probe, one sep-CMA restart against v3's D_fit on discarded seeds, graded with presence.
+  - the encoder on every existing null wiring, with parity on one null;
+  - a readiness probe: up to 3 sep-CMA restarts against v3's D_fit on discarded seeds, graded with presence. It measures the restart-to-restart spread of held-out predictions and mutant differences against W's minimum;
+  - a profiled cost pilot, with a CPU-against-MPS benchmark of a whole generation's settling step.
 
 - **Logbook 122.**
 
@@ -69,5 +74,5 @@ The maintainer's decisions (2026-11-03):
 - **Records:** `docs/experiments/logbooks/supporting/122-c2-encoder/`; Logbook 122; the tracker (F.0b-ii, C.2, design.md's open question); AGENTS.md; the CHANGELOG.
 - **Cost:**
   - engineering: several days;
-  - the probes: about 1–6 h, sized by the cost pilot;
+  - the probes: the cost pilot first; then up to 3 readiness restarts at a cap of 1,000 generations, each projected by the pilot;
   - nothing registered; F.0b-ii and C.2 follow in their own changes.
