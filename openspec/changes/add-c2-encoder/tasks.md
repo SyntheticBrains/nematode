@@ -39,13 +39,13 @@
 
 ## 4. The probes (description, discarded seeds)
 
-- [ ] 4.1 `scripts/analysis/c2_encoder_probe.py cost|feasibility|readiness`.
-- [ ] 4.2 The cost pilot:
+- [x] 4.1 `scripts/analysis/c2_encoder_probe.py cost|feasibility|readiness`.
+- [x] 4.2 The cost pilot:
   - generation pace on D_fit's assays and all four, with brain reuse;
   - a profile of where the time goes, and the byte-identical speed-ups it names;
   - the settling step at 3,200 animals on CPU and on MPS;
   - projections for F.0b-ii, C.2 and W.
-- [ ] 4.3 The feasibility check: a hand-set vector's post-removal decay constant against 6–12 min.
+- [x] 4.3 The feasibility check: a hand-set vector's post-removal decay constant against 6–12 min.
 - [ ] 4.4 The readiness probe:
   - up to 3 restarts against v3's D_fit (CMA 5980–5982), stopping after 2 pass, with the tightened guard and a cap of 1,000;
   - each answer graded with presence on 5 populations, on all five families and the three mutants;
