@@ -1,0 +1,46 @@
+"""Diagnose C.2's stage-2 answer's speed misses: values against band centres, per-step noise off, new wiring.
+
+Variants: A the answer on the wiring it was fitted on (López-Cruz overrides excluded); B the same with
+the speed output's per-second noise at its floor; C the answer on the corrected wiring. Each is graded
+by the probe's own grade_seeds on 200 animals of seed block 88,000,000 (disjoint from every block the
+probe declares), with presence and the three mutants.
+"""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+REPO = Path.cwd()  # run from the repository root
+sys.path.insert(0, str(REPO / "scripts/analysis"))
+SEEDS = [88_000_000 + i for i in range(200)]
+RECORD = REPO / "docs/experiments/logbooks/supporting/122-c2-encoder/readiness/pilot_staged.json"
+
+
+def variant(name: str) -> dict:
+    import c2_encoder_probe as p
+
+    z = list(json.loads(RECORD.read_text())["stage2_extended"]["answer"])
+    names = [e.name for e in p.entries()]
+    if name in ("A", "B"):
+        path = p.FORAGING / f"{p.bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+        for genes in ((), ("tph-1",), ("pdfr-1",)):
+            settings = {
+                "modulator_knockout_genes": list(genes),
+                "encoder_modulator_tying": p.TYING,
+                "sign_override_exclude": ["lopezcruz2019"],
+            }
+            brain, _, _ = p.harness.build_brain(path, p.BRAIN_SEED, settings)
+            p._BRAINS[(genes, ())] = brain
+    if name == "B":
+        z[names.index("noise.speed")] = 0.0
+    graded = p.grade_seeds(z, SEEDS)
+    return {"variant": name, "graded": graded}
+
+
+if __name__ == "__main__":
+    out = Path(sys.argv[1])
+    with ProcessPoolExecutor(max_workers=3) as pool:
+        results = list(pool.map(variant, ["A", "B", "C"]))
+    out.write_text(json.dumps(results, indent=1, default=float) + "\n")
+    print("written", out)
