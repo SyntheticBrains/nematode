@@ -138,7 +138,7 @@ and tests do not keep their relative speeds between a Mac and a runner. On
 and 1194s of test time on CI, balanced to 1.00x by its own numbers. So every CI
 shard times its own tests and uploads them as the artifact
 `test-durations-shard-<n>` (14 days' retention). The union of one run's five
-files is the suite timed on CI. Take a run whose five shards all passed:
+files is the suite timed on CI. Take a `main` run whose five shards all passed:
 
 ```bash
 dir=$(mktemp -d)
@@ -149,8 +149,13 @@ uv run python scripts/merge_test_durations.py "$dir"
 Download into a new, empty directory every time. `gh` puts each artifact in its
 own `test-durations-shard-<n>/` folder there, which is what the script reads. A
 reused directory can still hold an earlier run's folders. The script refuses
-fewer than five files, and any test that appears in two of them. Refresh this way when shard times drift apart, and after a PR that adds
-heavy tests, from that PR's own run. Then run `pre-commit`.
+fewer than five files, and any test that appears in two of them. Then run `pre-commit`.
+
+Refresh in a standalone PR, from a green `main` run, when shard times drift
+apart or after PRs that add heavy tests. Never add it to a feature PR: the new
+commit costs that PR another full CI run. Until the next refresh, new tests are
+budgeted at the mean, and the freshness hook allows up to 10% of the suite to be
+unmeasured.
 
 **Locally**, for example to cover a new module before its first CI run, regenerate with:
 
