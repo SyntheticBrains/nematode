@@ -1,0 +1,150 @@
+"""Planning probe for benchmark v4: on-lawn activity measured from 1-s positions alone.
+
+Candidate statistics, each over an animal's on-lawn seconds (both samples present and on the lawn):
+
+- the pause share: the fraction of 1-s displacements shorter than a floor, at several floors;
+- the on-lawn direction-flip fraction: chemotaxis.direction_flips on the on-lawn track (other
+  samples blanked), its pairs at least 0.03 mm and turning more than 135 degrees;
+- on-lawn reversal onsets per minute: grading.on_lawn_reversals.
+
+Real: Scheer's OD 2 wild type (PD1074), band cohorts, through grading.real_on_lawn, pooled per
+recording date; held-out cohorts beside them. Simulated: 200 animals each, measured on Scheer's rig by
+benchmark_grade.simulate_v2 (small lawn only), of C.2's stage-2 answer on the wiring it was fitted
+on, C.1's v3 answer (Logbook 121), and the constant-hazard and pirouette negatives, on seed block
+600,000,000 + 200·c + i. The authors' per-frame flags give the reference shares beside. Description
+for planning; nothing is registered. Run from the repository root.
+"""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+OUT = Path(sys.argv[1])
+FLOORS_MM = (0.005, 0.0075, 0.01, 0.015, 0.02)
+ANIMALS = 200
+BASE = 600_000_000
+CONTROLLERS = ("c2_stage2", "c1_v3", "constant", "pirouette")
+
+
+def statistics(x: np.ndarray, y: np.ndarray, on: np.ndarray) -> dict[str, float]:
+    """Return one track's on-lawn counts: pauses per floor, flips and their pairs, onsets."""
+    from quantumnematode.benchmark import chemotaxis as ch
+    from quantumnematode.benchmark import grading as g
+
+    x, y, on = np.asarray(x, float), np.asarray(y, float), np.asarray(on, bool)
+    step = np.hypot(np.diff(x), np.diff(y))
+    valid = np.isfinite(step) & on[1:] & on[:-1]
+    out: dict[str, float] = {"seconds": float(valid.sum())}
+    for floor in FLOORS_MM:
+        out[f"pause_{floor}"] = float((valid & (step < floor)).sum())
+    xb, yb = np.where(on, x, np.nan), np.where(on, y, np.nan)
+    flips, pairs = ch.direction_flips(xb, yb)
+    out["flips"], out["pairs"] = float(flips), float(pairs)
+    onsets, seconds = g.on_lawn_reversals(x, y, on)
+    out["onsets"], out["onset_seconds"] = float(onsets), float(seconds)
+    return out
+
+
+def pooled(rows: list[dict[str, float]]) -> dict[str, float]:
+    total = {k: sum(r[k] for r in rows) for k in rows[0]}
+    result = {f"pause_share_{f}": total[f"pause_{f}"] / total["seconds"] for f in FLOORS_MM}
+    result["flip_fraction"] = total["flips"] / total["pairs"] if total["pairs"] else float("nan")
+    result["onsets_per_min"] = 60.0 * total["onsets"] / total["onset_seconds"]
+    result["animals"] = len(rows)
+    return result
+
+
+def real() -> dict:
+    import benchmark_bands as bb
+    from quantumnematode.benchmark import grading as g
+    from quantumnematode.benchmark.references import load_scheer_tracks
+
+    tracks = load_scheer_tracks()
+    arm = "PD1074_od2_Data"
+    out: dict = {}
+    for side in ("bands", "held_out"):
+        rows = [
+            i for i in range(len(tracks.x))
+            if tracks.genotypes[tracks.genotype[i]] == arm and tracks.side[i] == side
+        ]
+        by_date: dict[int, list[dict[str, float]]] = {}
+        flags = {"reversal": 0, "pause": 0, "frames": 0}
+        names = list(tracks.flag_names)
+        for i in rows:
+            on = g.real_on_lawn(tracks.x[i], tracks.y[i], tracks.boundary_radius[i])
+            by_date.setdefault(int(tracks.date[i]), []).append(statistics(tracks.x[i], tracks.y[i], on))
+            ff = tracks.frame_flags[i]
+            ok = ((ff >> names.index("missing")) & 1 == 0) & ((ff >> names.index("midbody_in_lawn")) & 1 == 1)
+            flags["frames"] += int(ok.sum())
+            flags["reversal"] += int((ok & ((ff >> names.index("reversal")) & 1 == 1)).sum())
+            flags["pause"] += int((ok & ((ff >> names.index("pause")) & 1 == 1)).sum())
+        dates = {d: pooled(v) for d, v in sorted(by_date.items())}
+        everything = pooled([r for v in by_date.values() for r in v])
+        spread = {
+            k: float(np.std([v[k] for v in dates.values()], ddof=1))
+            for k in everything if k != "animals"
+        }
+        out[side] = {
+            "pooled": everything,
+            "date_sd": spread,
+            "dates": len(dates),
+            "per_date": dates,
+            "flag_shares": {
+                "reversal": flags["reversal"] / flags["frames"],
+                "pause": flags["pause"] / flags["frames"],
+            },
+        }
+    return out
+
+
+def simulated(name: str) -> dict:
+    import benchmark_grade as bg
+
+    bands = bg.load_bands_v3()
+    c = CONTROLLERS.index(name)
+    seeds = [BASE + ANIMALS * c + i for i in range(ANIMALS)]
+    if name == "c2_stage2":
+        import c2_encoder_probe as p
+
+        z = json.loads(p.STAGED_PILOT_PATH.read_text())["stage2_extended"]["answer"]
+        p._BRAIN_SETTINGS["sign_override_exclude"] = ["lopezcruz2019"]
+        arm, controller = p.ARM, p.controller(z)
+    elif name == "c1_v3":
+        from quantumnematode.evaluation.controllers import BatchedMechanistic
+
+        params = json.loads(Path("docs/experiments/logbooks/supporting/121-c1-v3-fit/fit.json").read_text())["parameters"]
+        arm, controller = "mlp", (lambda _path: BatchedMechanistic(params))
+    else:
+        from quantumnematode.evaluation.controllers import BatchedConstantHazards, BatchedPirouetteHazards
+
+        hazards = (0.02, 0.01, 0.01)
+        make = (
+            (lambda: BatchedConstantHazards(0.15, hazards))
+            if name == "constant"
+            else (lambda: BatchedPirouetteHazards(0.15, hazards, beta=3.0))
+        )
+        arm, controller = "mlp", (lambda _path: make())
+    populations, _ = bg.simulate_v2(arm, controller, seeds, bands, assays=("small_lawn",))
+    rows = []
+    labels = {"reversal": 0, "seconds": 0}
+    for steps in populations["small_lawn"]:
+        x = np.array([s.x for s in steps], float)
+        y = np.array([s.y for s in steps], float)
+        on = np.array([bool(s.on_lawn) for s in steps])
+        rows.append(statistics(x, y, on))
+        labels["seconds"] += int(on.sum())
+        labels["reversal"] += int(sum(1 for s, o in zip(steps, on, strict=True) if o and s.primitive == "reversal"))
+    return {"pooled": pooled(rows), "label_reversal_share": labels["reversal"] / max(labels["seconds"], 1)}
+
+
+if __name__ == "__main__":
+    with ProcessPoolExecutor(max_workers=len(CONTROLLERS) + 1) as pool:
+        real_future = pool.submit(real)
+        sims = dict(zip(CONTROLLERS, pool.map(simulated, CONTROLLERS), strict=True))
+        record = {"real": real_future.result(), "simulated": sims, "floors_mm": list(FLOORS_MM), "seeds": f"{BASE:,} + 200·c + i"}
+    OUT.write_text(json.dumps(record, indent=1, default=float) + "\n")
+    print("written", OUT)
