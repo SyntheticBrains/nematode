@@ -252,7 +252,15 @@ class BrainContainerConfig(BaseModel):
             return data
         config_cls = BRAIN_CONFIG_MAP.get(data.get("name"))  # type: ignore[arg-type]
         raw = data.get("config")
-        if config_cls is None or not isinstance(raw, dict):
+        if config_cls is None:
+            return data
+        if isinstance(raw, BaseModel) and not isinstance(raw, config_cls):
+            msg = (
+                f"brain {data.get('name')!r} takes a {config_cls.__name__}, but its config is a "
+                f"{type(raw).__name__}"
+            )
+            raise ValueError(msg)  # noqa: TRY004 - a validation error, reported by pydantic
+        if not isinstance(raw, dict):
             return data
         return {**data, "config": config_cls.model_validate(raw)}
 

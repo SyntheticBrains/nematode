@@ -503,15 +503,17 @@ def read_encoder(brain: object) -> np.ndarray:
     """Return the unit-box vector an encoded connectome brain carries."""
     topology = brain.topology  # type: ignore[attr-defined]
     encoder: CompactEncoder = topology.encoder
+    # Every tensor comes to the CPU before it is widened: some devices hold no float64.
     with torch.no_grad():
         if encoder.tying == "per_couple":
             fixed, fitted = _fixed_and_fitted_rows(encoder.spec)
             strengths = torch.zeros(len(encoder.spec.rows), dtype=torch.float64)
-            strengths[fixed] = nn.functional.softplus(topology.modulator_layer_rho.double()).cpu()
-            strengths[fitted] = topology.modulator_layer_w.double().cpu()
+            rho = topology.modulator_layer_rho.detach().cpu().double()
+            strengths[fixed] = nn.functional.softplus(rho)
+            strengths[fitted] = topology.modulator_layer_w.detach().cpu().double()
         else:
-            tied = encoder.tied_strength.double()
-            strengths = torch.where(encoder.group_fixed, nn.functional.softplus(tied), tied).cpu()
+            tied = encoder.tied_strength.detach().cpu().double()
+            strengths = torch.where(encoder.group_fixed.cpu(), nn.functional.softplus(tied), tied)
         parts = [
             encoder.wiring,
             encoder.unsigned,
@@ -522,7 +524,7 @@ def read_encoder(brain: object) -> np.ndarray:
             strengths,
             encoder.timescales_s,
         ]
-        values = np.concatenate([p.double().cpu().numpy().ravel() for p in parts])
+        values = np.concatenate([p.detach().cpu().double().numpy().ravel() for p in parts])
     return np.array(
         [entry.unit(float(v)) for entry, v in zip(encoder.entries, values, strict=True)],
     )

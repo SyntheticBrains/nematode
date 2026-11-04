@@ -140,6 +140,22 @@ def test_a_config_its_named_class_refuses_is_not_loaded_as_another(tmp_path: Pat
     assert valid.brain.config.modulators  # type: ignore[union-attr]
 
 
+def test_a_config_instance_of_another_class_is_refused() -> None:
+    """A brain's config given as an instance of a class its name does not select is refused."""
+    from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrainConfig
+    from quantumnematode.brain.arch.mlpppo import MLPPPOBrainConfig
+    from quantumnematode.utils.config_loader import SimulationConfig
+
+    with pytest.raises(ValueError, match="brain 'mlpppo' takes a MLPPPOBrainConfig"):
+        SimulationConfig.model_validate(
+            {"brain": {"name": "mlpppo", "config": ConnectomePPOBrainConfig()}},
+        )
+    matching = MLPPPOBrainConfig(sensory_modules=["food_chemotaxis"])  # type: ignore[list-item]
+    loaded = SimulationConfig.model_validate({"brain": {"name": "mlpppo", "config": matching}})
+    assert loaded.brain is not None
+    assert loaded.brain.config is matching
+
+
 class TestContinuousActionConfigParsing:
     """The continuous-action config fields parse, validate, and build end-to-end."""
 

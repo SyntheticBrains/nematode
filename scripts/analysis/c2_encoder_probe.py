@@ -1110,7 +1110,11 @@ def _staged_pilot(workers: int) -> int:
         record: dict[str, Any] = {
             "description": DESCRIPTION + " The staged pilot.",
             "names_stage1": list(REDUCED_NAMES),
-            "stage1": {**_summary(first_points), "points": first_points},
+            "stage1": {
+                **_summary(first_points),
+                "points": first_points,
+                "seconds_per_generation_median": float(np.median(first["seconds"])),
+            },
         }
         record["stage1"]["holds_lawn"] = record["stage1"]["final_time_on_lawn"] >= HOLDS_LAWN
         start = embed(first["answers"][-1])
@@ -1136,6 +1140,7 @@ def _staged_pilot(workers: int) -> int:
                 **_summary(second_points),
                 "points": second_points,
                 "answer": second["answers"][-1],
+                "seconds_per_generation_median": float(np.median(second["seconds"])),
             }
             summary = record["stage2"]
             record["passes"] = (
@@ -1189,6 +1194,7 @@ def _stage2_anyway(workers: int) -> int:
         "points": second_points,
         "answer": second["answers"][-1],
         "ran_although_stage1_missed_its_bar": True,
+        "seconds_per_generation_median": float(np.median(second["seconds"])),
     }
     summary = record["stage2"]
     record["stage2_would_pass"] = (
@@ -1256,6 +1262,7 @@ def _extend_stage2(workers: int) -> int:
         "medians": second["medians"],
         "sigmas": second["sigmas"],
         "answer": second["answers"][-1],
+        "seconds_per_generation_median": float(np.median(second["seconds"])),
     }
     _write(STAGED_PILOT_PATH, record)
     summary = record["stage2_extended"]
@@ -1444,12 +1451,11 @@ def _sizing() -> int:
     """
     cost = json.loads(COST_PATH.read_text())
     staged = json.loads(STAGED_PILOT_PATH.read_text())
-    root = BUILD / "readiness" / "staged"
-    pace = {
-        stage: float(np.median(json.loads((root / stage / "fit0.json").read_text())["seconds"]))
-        for stage in ("stage1", "stage2")
-    }
     extended = staged["stage2_extended"]
+    pace = {
+        "stage1": staged["stage1"]["seconds_per_generation_median"],
+        "stage2": extended["seconds_per_generation_median"],
+    }
     fit_hours = {
         f"stage2_to_{cap}": (PILOT_CAP * pace["stage1"] + cap * pace["stage2"]) / 3600.0
         for cap in (STAGE2_EXTENDED_CAP, CAP)

@@ -351,7 +351,8 @@
       0.5,
       0.5,
       0.5
-    ]
+    ],
+    "seconds_per_generation_median": 28.318034145515412
   },
   "passes": false,
   "stage2": {
@@ -685,7 +686,8 @@
       0.0939174425202655,
       0.001536376314336118
     ],
-    "ran_although_stage1_missed_its_bar": true
+    "ran_although_stage1_missed_its_bar": true,
+    "seconds_per_generation_median": 25.102216603932902
   },
   "stage2_would_pass": true,
   "stage2_extended": {
@@ -2320,6 +2322,7 @@
       0.7422642789531111,
       0.9845057557783145,
       0.11163078963858807
-    ]
+    ],
+    "seconds_per_generation_median": 26.311341874999925
   }
 }

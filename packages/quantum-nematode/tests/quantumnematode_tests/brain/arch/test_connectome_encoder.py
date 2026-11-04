@@ -545,10 +545,56 @@ class TestMutants:
         np.testing.assert_allclose(enc.read_encoder(mutant), z, atol=1e-6)
 
 
+def _assert_chemical_weights(
+    brain: ConnectomePPOBrain,
+    connectome: Any,
+    signs: dict[tuple[str, str], int],
+    z: np.ndarray,
+) -> None:
+    """Assert each edge's encoded weight from this connectome's own counts, signs and groups."""
+    entries = brain.topology.encoder.entries  # type: ignore[union-attr]
+    value = {e.name: e.value(u) for e, u in zip(entries, z, strict=True)}
+    norm: dict[str, float] = {}
+    for syn in connectome.chemical_synapses:
+        norm[syn.post] = norm.get(syn.post, 0.0) + float(syn.weight) ** 2
+    groups = {"DA": "dopamine", "5-HT": "serotonin", "octopamine": "octopamine", None: "none"}
+    idx = brain.topology._idx
+    with torch.no_grad():
+        chem = brain.topology.encoder.chemical().numpy()  # type: ignore[union-attr]
+    for syn in connectome.chemical_synapses:
+        base = float(syn.weight) / np.sqrt(norm[syn.post])
+        sign = signs[syn.pre, syn.post]
+        if sign > 0:
+            expected = value["wiring.excitatory"] * base
+        elif sign < 0:
+            expected = -value["wiring.inhibitory"] * base
+        else:
+            group = groups[connectome.neurons[syn.pre].neurotransmitter]
+            expected = value[f"wiring.unsigned.{group}"] * base
+        assert chem[idx[syn.pre], idx[syn.post]] == pytest.approx(expected, rel=1e-5, abs=1e-7)
+
+
 class TestNulls:
     @pytest.mark.parametrize("wiring", NULL_WIRINGS)
-    def test_a_null_is_encoded_with_the_wild_types_parameters(self, wiring: str) -> None:
-        """Covers "A null is encoded with the wild type's parameters", and its mutants build."""
+    def test_a_null_is_encoded_with_the_wild_types_parameters(
+        self,
+        wiring: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Covers "A null is encoded with the wild type's parameters", and its mutants build.
+
+        Each edge's weight follows the null's own counts and normalisations, its origin's sign, and
+        its presynaptic neuron's transmitter group.
+        """
+        captured: dict[str, Any] = {}
+        rewire = cp.rewire_degree_preserving
+
+        def capture(*args: Any, **kwargs: Any) -> Any:
+            null_connectome = rewire(*args, **kwargs)
+            captured["connectome"], captured["origins"] = null_connectome, kwargs["origins"]
+            return null_connectome
+
+        monkeypatch.setattr(cp, "rewire_degree_preserving", capture)
         wild = _brain()
         names = enc.encoder_parameters(wild.topology.modulator_spec)
         z = _vector(wild)
@@ -566,6 +612,30 @@ class TestNulls:
             | encoder.chem_grouped.any(0)
         )
         assert torch.equal(placed, null.topology.m_chem)
+        enc.write_encoder(null, z)
+        signs = cp._per_connection_edge_signs(
+            load_emmons_2024_hermaphrodite(),
+            captured["connectome"],
+            captured["origins"],
+        )
+        _assert_chemical_weights(null, captured["connectome"], signs, z)
+
+    def test_the_boundary_held_null_holds_the_encoded_boundary(self) -> None:
+        """Every edge leaving an encoded sensor or entering a pooled motor neuron is kept."""
+        connectome = load_emmons_2024_hermaphrodite()
+        sensory, motor = cp.boundary_neurons(connectome, encoded=True)
+        default_sensory, _ = cp.boundary_neurons(connectome)
+        assert {"ASHL", "ASHR", "CEPDL", "PDER"} <= sensory
+        assert sensory != default_sensory
+        wild = _brain()
+        null = _brain(wiring="rewired_boundary_held", rewire_seed=5)
+        idx = wild.topology._idx
+        rows = [idx[name] for name in sorted(sensory)]
+        cols = [idx[name] for name in sorted(motor)]
+        wild_mask, null_mask = wild.topology.m_chem, null.topology.m_chem
+        assert torch.equal(null_mask[rows], wild_mask[rows])
+        assert torch.equal(null_mask[:, cols], wild_mask[:, cols])
+        assert not torch.equal(null_mask, wild_mask)
 
     def test_the_receptor_placement_null_is_encoded(self) -> None:
         wild = _brain()

@@ -60,12 +60,13 @@ ARRAYS = (
 )
 # Per-animal totals the trajectories return beside their per-step arrays.
 TOTALS = ("final_satiety", "total_intake")
-# What a record's source digest covers: the package that runs, the configs the jobs read, and this
-# script.
+# What a record's source digest covers: the package that runs, the configs the jobs read, this
+# script and the harness it builds the brains with.
 SOURCE_PATHS = (
     "packages/quantum-nematode/quantumnematode",
     "configs/scenarios/foraging",
     "scripts/analysis/connectome_identity_check.py",
+    "scripts/analysis/body_kinematics_eval.py",
 )
 
 

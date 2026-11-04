@@ -79,6 +79,8 @@ from quantumnematode.brain.arch._std_head import (
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome.encoder import (
+    AMPHID_CLASSES,
+    CONTACT_CLASSES,
     CompactEncoder,
     Tying,
     box_centre,
@@ -211,21 +213,29 @@ def boundary_neurons(
     connectome: Connectome,
     *,
     body_drive: bool = False,
+    encoded: bool = False,
 ) -> tuple[frozenset[str], frozenset[str]]:
     """Return ``(sensory, motor)``: where sensation is injected, and what the brain reads out.
 
     The sensory side is every neuron a projection targets -- food, thermal and predator alike, so
-    the set is the same on every cell. The motor side is every motor-class neuron of the four
-    classes the readout pools, matched as the readout matches them. Under the body drive it is
-    every cell the drive reads instead: the cells with neuromuscular junctions, which include every
-    motor-class neuron the direction channel reads.
+    the set is the same on every cell. Under the compact encoder it is the encoder's targets
+    instead: both neurons of every encoded amphid class and the food-contact neurons, the encoder
+    refusing the thermal and predator projections. The motor side is every motor-class neuron of
+    the four classes the readout pools, matched as the readout matches them. Under the body drive
+    it is every cell the drive reads instead: the cells with neuromuscular junctions, which include
+    every motor-class neuron the direction channel reads.
     """
-    sensory = frozenset(
-        _SENSOR_NEURONS_FOOD
-        + _SENSOR_NEURONS_THERMOTAXIS
-        + _SENSOR_NEURONS_PREDATOR_DISTAL
-        + _SENSOR_NEURONS_PREDATOR_ANTERIOR
-        + _SENSOR_NEURONS_PREDATOR_POSTERIOR,
+    sensory = (
+        frozenset(f"{cls}{side}" for cls in AMPHID_CLASSES for side in "LR")
+        | frozenset(name for members in CONTACT_CLASSES.values() for name in members)
+        if encoded
+        else frozenset(
+            _SENSOR_NEURONS_FOOD
+            + _SENSOR_NEURONS_THERMOTAXIS
+            + _SENSOR_NEURONS_PREDATOR_DISTAL
+            + _SENSOR_NEURONS_PREDATOR_ANTERIOR
+            + _SENSOR_NEURONS_PREDATOR_POSTERIOR,
+        )
     )
     motor = frozenset(
         name
@@ -3821,7 +3831,11 @@ class ConnectomePPOBrain(ClassicalBrain):
                 preserve_autapses=config.wiring
                 in ("rewired_chemical_only", "rewired_boundary_held"),
                 hold_boundary=(
-                    boundary_neurons(connectome, body_drive=config.action_space == "body_drive")
+                    boundary_neurons(
+                        connectome,
+                        body_drive=config.action_space == "body_drive",
+                        encoded=config.encoder != "none",
+                    )
                     if config.wiring == "rewired_boundary_held"
                     else None
                 ),
