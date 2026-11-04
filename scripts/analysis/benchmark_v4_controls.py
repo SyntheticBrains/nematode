@@ -830,10 +830,11 @@ def verdict(
             for name in NEGATIVE_ORDER
         ),
     }
+    # Beside each family's check the record holds its bar and its count of statistics.
     reported = {
         family: bool(check["passes"])
         for family, check in record["checks"][key].items()
-        if family != "activity"
+        if isinstance(check, dict) and family != "activity"
     }
     return {
         "checks": checks,

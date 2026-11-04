@@ -31,13 +31,13 @@
 
   Return to the maintainer if the answer is caught in fewer than 3 of 5, or if the oracle cannot bring the pause share and the flip fraction within the bar. Commit `preflight.json` in `supporting/124-benchmark-v4/`.
 
-- [ ] 3.1 Launch record 124, Part A (rules, seeds, the validity map, the disclosure), committed.
+- [x] 3.1 Launch record 124, Part A (rules, seeds, the validity map, the disclosure), committed.
 
-- [ ] 3.2 Bands built; the rule check; the round trip; the oracle's fit (CMA 9431–9432, cap 100).
+- [x] 3.2 Bands built; the rule check; the round trip; the oracle's fit (CMA 9431–9432, cap 100).
 
-- [ ] 3.3 Part B: the oracle's answer, committed. Then `oracle-check`: the 40 populations, `oracle_check.json`; it stops the change if the pause share or the flip fraction is unreachable. Then `benchmark_bands.py --version v4 --onset …` sets `activity_graded`, and Part C (the onset decision) is committed with the check and the decided bands.
+- [x] 3.3 Part B: the oracle's answer, committed. Then `oracle-check`: the 40 populations, `oracle_check.json`; it stops the change if the pause share or the flip fraction is unreachable. Then `benchmark_bands.py --version v4 --onset …` sets `activity_graded`, and Part C (the onset decision) is committed with the check and the decided bands.
 
-- [ ] 3.4 Then the read (`read.json`), and the verdict in `controls_v4.json`:
+- [x] 3.4 Then the read (`read.json`), and the verdict in `controls_v4.json`:
 
   - fresh N2;
   - the adversary;
@@ -47,5 +47,5 @@
 
 ## 4. Close-out
 
-- [ ] 4.1 Logbook 124. The tracker (B v4; C.1's refit if v4 fails it; C.2's next change against v4; the seed-band table's v4 rows: 600–607 M and 610–612.32 M, generators 2045–2047, CMA 9431–9433), `data/benchmark/IMPORT.md`, AGENTS.md and the CHANGELOG.
-- [ ] 4.2 Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.
+- [x] 4.1 Logbook 124. The tracker (B v4; C.1's refit if v4 fails it; C.2's next change against v4; the seed-band table's v4 rows: 600–607 M and 610–612.32 M, generators 2045–2047, CMA 9431–9433), `data/benchmark/IMPORT.md`, AGENTS.md and the CHANGELOG.
+- [x] 4.2 Full suite; `pre-commit run --all-files` after `git add -A`; `openspec validate --strict`; archive; PR.

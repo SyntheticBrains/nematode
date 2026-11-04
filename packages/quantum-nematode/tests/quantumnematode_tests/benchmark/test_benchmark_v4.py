@@ -82,6 +82,27 @@ def _reverses_from_standstill(n: int) -> np.ndarray:
     return np.concatenate(([0.0], np.cumsum(step)))
 
 
+def _track_manifest(tmp_path: Path, animals: int = 64) -> Path:
+    """Write one band-cohort Scheer animal as a CSV track; list it ``animals`` times."""
+    import track_import_check as tic  # pyright: ignore[reportMissingImports]
+
+    tracks = refs.load_scheer_tracks()
+    row = int(bb.band_rows(tracks, bb.WILD_TYPE)[0])
+    t = np.arange(tracks.x.shape[1], dtype=float)
+    path = tic.write_track(
+        tmp_path,
+        "animal",
+        "csv",
+        t,
+        tracks.x[row],
+        tracks.y[row],
+        tic._lawn_metadata("small_lawn", tracks.boundary_radius[row]),
+    )
+    manifest = tmp_path / "manifest.txt"
+    manifest.write_text(f"small_lawn {path}\n" * animals)
+    return manifest
+
+
 def test_the_pause_floor_is_the_instruments() -> None:
     """The floor derived from the real tracker's still-worm readings is the graded 0.02 mm."""
     still = bb.still_worm_displacements()
@@ -212,8 +233,21 @@ def test_v4_is_the_default_only_once_valid(
     assert bg.v4_is_valid() is False
     controls.write_text(json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bands)}))
     assert bg.v4_is_valid() is True
+    out = tmp_path / "grade.json"
+    assert bg.main(["tracks", "--manifest", str(_track_manifest(tmp_path)), "--out", str(out)]) == 0
+    graded = json.loads(out.read_text())
+    assert graded["bands"] == "v4"
+    assert "activity" in graded["families"]
     bands.write_text(bands.read_text() + " ")
     assert bg.v4_is_valid() is False
+
+
+def test_the_vendored_v4_is_the_default() -> None:
+    """The committed verdict reads VALID for the committed bands, whose onset rate is graded."""
+    assert bg.v4_is_valid() is True
+    vendored = bg.load_bands_v4()
+    assert vendored["activity_graded"] == list(g.ACTIVITY_STATISTICS)
+    assert vendored["bars"]["wild_type"] == pytest.approx(3.0781, abs=1e-4)
 
 
 def test_the_v4_build_refuses_before_part_a(
@@ -241,3 +275,42 @@ def test_the_v4_build_refuses_before_part_a(
         assert bb.main() == 1
     assert not out.exists()
     assert not record.exists()
+
+
+def test_the_verdict_needs_every_registered_check() -> None:
+    """Covers "B v4 is valid only if ...": VALID only when every registered item holds."""
+    import benchmark_v4_controls as c4  # pyright: ignore[reportMissingImports]
+
+    def check(passes: bool) -> dict[str, Any]:  # noqa: FBT001 - one check's outcome
+        return {"joint_pass_rate": 0.95, "passes": passes}
+
+    record = {
+        "checks": {
+            "graded": {
+                "bar": 3.0781,
+                "statistics": 24,
+                **{f: check(passes=True) for f in ("activity", "small_lawn", "kinematics")},
+                "local_search": check(passes=False),
+            },
+        },
+    }
+    read = {
+        "n2_control": {"passes": True},
+        "adversary": {"caught_3_of_5": True},
+        "negatives": {name: {"fails_wild_type_3_of_5": True} for name in c4.NEGATIVE_ORDER},
+    }
+    oracle = {"onset_graded": True, "activity_reachable": True}
+    valid = c4.verdict(record, {"passes": True}, oracle, read)
+    assert valid["verdict"] == "VALID"
+    assert valid["reported_rule_checks"] == {
+        "small_lawn": True,
+        "kinematics": True,
+        "local_search": False,
+    }
+    no_adversary = {**read, "adversary": {"caught_3_of_5": False}}
+    assert c4.verdict(record, {"passes": True}, oracle, no_adversary)["verdict"] == "VOID"
+    one_negative_short = {
+        **read,
+        "negatives": {name: {"fails_wild_type_3_of_5": True} for name in c4.NEGATIVE_ORDER[1:]},
+    }
+    assert c4.verdict(record, {"passes": True}, oracle, one_negative_short)["verdict"] == "VOID"
