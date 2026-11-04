@@ -1,0 +1,54 @@
+"""The stage-2 answer's actions over four 1,800-s reference episodes on Scheer's small lawn.
+
+Seeds 88,200,000-88,200,003. Pass --old for the wiring it was fitted on (the López-Cruz overrides
+excluded); without it, the corrected wiring. Reports each output's sampled and mean raw action, the
+primitive shares, each output's pre-squash mean and the four pooled motor rates over one episode.
+Run from the repository root; the output is actions_profile_old.txt and actions_profile_new.txt.
+"""
+import json, sys
+from pathlib import Path
+import numpy as np
+import quantumnematode.agent  # noqa: F401
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as probe
+from quantumnematode.connectome import encoder as enc
+from quantumnematode.evaluation.reference import run_reference
+from quantumnematode.utils.config_loader import load_simulation_config
+
+z = json.loads(probe.STAGED_PILOT_PATH.read_text())["stage2_extended"]["answer"]
+path = probe.FORAGING / f"{probe.bg.ARMS[probe.ARM]}_assay_scheer_lawn.yml"
+settings = {"encoder_modulator_tying": "per_couple"}
+if "--old" in sys.argv: settings["sign_override_exclude"] = ["lopezcruz2019"]
+brain, _, _ = probe.harness.build_brain(path, 1, settings)
+enc.write_encoder(brain, z)
+config = load_simulation_config(str(path))
+steps = []
+for seed in range(88_200_000, 88_200_004):
+    ep = run_reference(config, brain, seed, 1800, record_density=False)
+    steps.append(ep)
+acts = np.concatenate([np.asarray(e.actions) for e in steps])
+means = np.concatenate([np.asarray(e.means) for e in steps])
+prim = np.concatenate([[str(s.primitive) for s in e.behaviour] for e in steps])
+print("raw speed action (sampled): pct", np.percentile(acts[:, 0], [5, 25, 50, 75, 95]).round(3))
+print("raw speed mean (squashed):   pct", np.percentile(means[:, 0], [5, 25, 50, 75, 95]).round(3))
+print("speed mm/s = (raw+1)/2*0.2:  median", round(float(np.median((acts[:, 0] + 1) / 2 * 0.2)), 4))
+print("raw curvature:               pct", np.percentile(acts[:, 1], [5, 25, 50, 75, 95]).round(3))
+print("primitive shares:", {k: round(float(np.mean(prim == k)), 3) for k in sorted(set(prim))})
+
+# The pooled motor activations and each output's pre-squash mean, over one episode's states.
+import torch
+ep = steps[0]
+feats = np.asarray(ep.features, dtype=np.float32)
+topo = brain.topology
+with torch.no_grad():
+    states = torch.from_numpy(feats)
+    mean, hidden = topo.forward_with_hidden_batched(states[:, : topo.n_food_features], modulators=brain._unpack_modulators(states))
+    pooled = topo._pool_motor_classes(hidden)
+print("pre-squash mean per output: pct 5/50/95")
+for k, name in enumerate(("speed", "curvature", "reversal", "omega", "delta")):
+    print(f"  {name:10s}", np.percentile(mean[:, k].numpy(), [5, 50, 95]).round(2))
+if pooled is not None:
+    for k, name in enumerate(("VB", "DB", "VA", "DA")):
+        print(f"  pool {name}", np.percentile(pooled[:, k].numpy(), [5, 50, 95]).round(3))
+else:
+    print("  hidden |h|>0.99 share", float((hidden.abs() > 0.99).float().mean()))

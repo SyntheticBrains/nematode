@@ -81,7 +81,10 @@ __all__ = [
     "categorical_sample_torch",
     "clamp_continuous_log_std",
     "continuous_evaluate_tanh_gaussian",
+    "continuous_evaluate_tanh_gaussian_ou",
     "continuous_sample_tanh_gaussian",
+    "continuous_sample_tanh_gaussian_ou",
+    "ou_noise_step",
     "ppo_clip_policy_loss",
     "reinforce_policy_loss",
 ]
@@ -518,6 +521,137 @@ def continuous_evaluate_tanh_gaussian(
     """
     std = torch.exp(clamp_continuous_log_std(log_std))
     base = torch.distributions.Normal(mean, std)
+    _, half_range = _affine_center_half_range(action_low, action_high)
+    log_probs = _tanh_gaussian_log_prob(base, pre_tanh, half_range)
+    mean_entropy = base.entropy().sum(-1).mean()
+    return log_probs, mean_entropy
+
+
+# ---------------------------------------------------------------------------------------------
+# Slow speed noise: an Ornstein-Uhlenbeck process on the first output's standardised noise
+# ---------------------------------------------------------------------------------------------
+
+
+def ou_noise_step(eps: torch.Tensor, previous: torch.Tensor, rho: float) -> torch.Tensor:
+    """Return the next standardised noise, ``rho * previous + sqrt(1 - rho**2) * eps``.
+
+    The process keeps unit variance, so the output's log-std keeps its meaning as the marginal
+    spread, and its lag-1 autocorrelation is ``rho``.
+    """
+    return rho * previous + math.sqrt(1.0 - rho * rho) * eps
+
+
+def _ou_loc_scale(
+    mean: torch.Tensor,
+    std: torch.Tensor,
+    shift: torch.Tensor,
+    factor: torch.Tensor | float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the conditional Normal's loc and scale: the first output shifted and narrowed."""
+    std = std.expand_as(mean)
+    loc = torch.cat([mean[..., :1] + shift.unsqueeze(-1), mean[..., 1:]], dim=-1)
+    scale = torch.cat([std[..., :1] * factor, std[..., 1:]], dim=-1)
+    return loc, scale
+
+
+def continuous_sample_tanh_gaussian_ou(  # noqa: PLR0913 - the sampler's inputs and its noise state
+    mean: torch.Tensor,
+    log_std: torch.Tensor,
+    action_low: torch.Tensor,
+    action_high: torch.Tensor,
+    previous: torch.Tensor | None,
+    rho: float,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Sample a tanh-squashed Gaussian action whose first output's noise is slow.
+
+    Draws the same standard normals as :func:`continuous_sample_tanh_gaussian` and steps the first
+    output's through :func:`ou_noise_step`; the others are unchanged. With ``previous`` None, an
+    episode's first step, the sample equals the independent sampler's on the same draws.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+        ``(action, log_prob, entropy, pre_tanh, noise)``: as the independent sampler's, the
+        log-prob and entropy those of the first output's conditional Normal given ``previous``, and
+        ``noise`` the first output's standardised noise, the next step's ``previous``.
+    """
+    std = torch.exp(clamp_continuous_log_std(log_std))
+    eps = torch.randn(mean.shape, dtype=mean.dtype, device=mean.device)
+    if previous is None:
+        noise = eps[..., 0]
+        loc, scale = mean, std.expand_as(mean)
+    else:
+        noise = ou_noise_step(eps[..., 0], previous, rho)
+        loc, scale = _ou_loc_scale(
+            mean,
+            std,
+            std.expand_as(mean)[..., 0] * rho * previous,
+            math.sqrt(1.0 - rho * rho),
+        )
+    pre_tanh = torch.cat(
+        [
+            (mean[..., :1] + std[..., :1] * noise.unsqueeze(-1)),
+            mean[..., 1:] + std[..., 1:] * eps[..., 1:],
+        ],
+        dim=-1,
+    )
+    base = torch.distributions.Normal(loc, scale)
+    center, half_range = _affine_center_half_range(action_low, action_high)
+    action = center + half_range * torch.tanh(pre_tanh)
+    log_prob = _tanh_gaussian_log_prob(base, pre_tanh, half_range)
+    entropy = base.entropy().sum(-1)
+    return action, log_prob, entropy, pre_tanh.detach(), noise.detach()
+
+
+def continuous_evaluate_tanh_gaussian_ou(  # noqa: PLR0913 - the policy's terms and the previous step's
+    mean: torch.Tensor,
+    log_std: torch.Tensor,
+    pre_tanh: torch.Tensor,
+    action_low: torch.Tensor,
+    action_high: torch.Tensor,
+    previous_mean: torch.Tensor,
+    previous_speed: torch.Tensor,
+    live: torch.Tensor,
+    rho: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Re-score stored samples under slow first-output noise, by the exact conditional density.
+
+    Given the previous step's pre-squash first output ``u`` and its mean ``m`` under the current
+    parameters, the first output's pre-squash density is
+    ``N(mean + rho * (u - m), std**2 * (1 - rho**2))``. Where ``live`` is false, an episode's first
+    step, it is the marginal ``N(mean, std**2)``. The other outputs keep their independent density.
+
+    Parameters
+    ----------
+    mean, log_std, pre_tanh, action_low, action_high
+        As :func:`continuous_evaluate_tanh_gaussian`.
+    previous_mean : torch.Tensor
+        The previous step's first-output mean under the current parameters, shape ``(batch,)``.
+    previous_speed : torch.Tensor
+        The previous step's stored pre-squash first output, shape ``(batch,)``.
+    live : torch.Tensor
+        Whether each step has a previous step, shape ``(batch,)``, boolean.
+    rho : float
+        The noise's per-step correlation.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor]
+        ``(log_probs, mean_entropy)``.
+    """
+    std = torch.exp(clamp_continuous_log_std(log_std))
+    shift = torch.where(
+        live,
+        rho * (previous_speed - previous_mean),
+        torch.zeros_like(previous_mean),
+    )
+    factor = torch.where(
+        live,
+        torch.full_like(previous_mean, math.sqrt(1.0 - rho * rho)),
+        torch.ones_like(previous_mean),
+    ).unsqueeze(-1)
+    loc, scale = _ou_loc_scale(mean, std, shift, factor)
+    base = torch.distributions.Normal(loc, scale)
     _, half_range = _affine_center_half_range(action_low, action_high)
     log_probs = _tanh_gaussian_log_prob(base, pre_tanh, half_range)
     mean_entropy = base.entropy().sum(-1).mean()

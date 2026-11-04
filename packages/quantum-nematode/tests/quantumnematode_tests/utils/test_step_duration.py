@@ -485,13 +485,15 @@ _PINNED_FIELD_COUNTS = {
 # are structure; its timescales are in worm-seconds, its decay taken at the converted
 # ``modulator_step_seconds``, which the loader refuses unless it comes to the configured step.
 # Audited 2026-11-04: ``sign_override_exclude`` chooses which cited overrides the per-connection
-# sign table applies, structure, so it is not step-coupled.
+# sign table applies, structure, so it is not step-coupled. ``encoder_speed_noise`` chooses the
+# speed noise's process; its timescale is the encoder's, in worm-seconds, its correlation taken at
+# the converted ``modulator_step_seconds``, which the loader refuses unless it comes to the step.
 _EXPECTED_FIELD_COUNTS = {
     "ForagingConfig": 22,
     "LawnConfig": 14,
     "SensingConfig": 20,
     "RewardConfig": 15,
-    "ConnectomePPOBrainConfig": 96,
+    "ConnectomePPOBrainConfig": 97,
     "MLPPPOBrainConfig": 68,
 }
 

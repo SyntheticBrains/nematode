@@ -639,11 +639,13 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     score of 10.6), and lawn-holders that never roam leave 7 statistics undefined. A **staged fit**
     (the 18-parameter lawn subset, then all 196 from its answer at σ₀ 0.1) holds the lawn (99%),
     roams and dwells, and reaches a score of 3.43 at 500 generations, still improving. It misses on
-    the speed distributions, for want of a state-dependent speed spread (C.1's gap before Logbook
-    121).
+    the speed distributions, ~~for want of a state-dependent speed spread (C.1's gap before Logbook
+    121)~~ *(corrected 2026-11-04, [Logbook 123](../../../docs/experiments/logbooks/123-c2-speed-noise.md):
+    its speed output is pinned at zero, so it does not run)*.
   - **The plateau guard** that C.1 asked for proved insufficient: in 196 dimensions the population
     median goes flat while nothing improves. C.2 reads its answer's re-simulated checkpoints.
-  - **Next, in its own change:** a state-dependent speed spread; the staged procedure registered (stage
+  - **Next, in its own change:** ~~a state-dependent speed spread~~ *(corrected 2026-11-04: slow speed
+    noise is built, Logbook 123, and the run mode comes first)*; the staged procedure registered (stage
     1's bar, each stage's objective and σ₀, stage 2's cap and stopping rule); then the readiness
     restarts for F.0b-ii's truths.
 
@@ -761,6 +763,14 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     excitatory. Every W arm inherits them; a null's moved edges carry them. The 13 untested inputs stay
     on the rule, a stated limit. The planned held-out perturbation family (López-Cruz's cell-level rows)
     grades against this wiring.
+  - *(Added 2026-11-04; Logbook 123.)* **Slow speed noise is built** (`encoder_speed_noise: ou`), and **the stage-2
+    answer does not run.** Its speed output is pinned at zero and its curvature at the maximum, so every behaviour
+    passes through the reversal hazard (reversals 30–47% of seconds). W would compare wirings through that one
+    channel. The next change fixes the run mode first (each output's pre-squash range reported, speed and
+    curvature kept responsive, a stage 1 that holds the lawn by running slowly), then re-runs slow noise's
+    positive control on a fit whose speed responds, then the readiness restarts. Slow noise comes from outside
+    the network, so every W arm gets the same handle on the kinematics family; W's registration reads that
+    family with this in mind.
   - **Still to build:** the class-preserving left–right-symmetric null. *(The loader guard landed
     with PR #514's review: a brain config its own class refuses now fails at load, rather than
     loading as another class's fields on defaults.)*
@@ -781,9 +791,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **The mutants are ungraded on a fitted encoder answer.** The fixed-sign strengths are log-scaled
     about 0.055, so tph-1 and pdfr-1 may change nothing. They are graded at the readiness restarts,
     before W reads them; the receptor-placement null is read through them.
-  - **The speed misses come first.** The staged fit misses its speed distributions for want of a
-    state-dependent speed spread, and every arm would share that failure, which would mask a wiring
-    effect. No fit runs past 500 generations until the spread is in.
+  - **The run mode comes first.** *(Corrected 2026-11-04, Logbook 123.)* The staged fit's answer does
+    not run: its speed output is pinned at zero and its curvature at the maximum, so it moves only by
+    reversals and delta turns, and its speed misses follow from that, not from a missing speed spread.
+    Every arm would share that failure, which would mask a wiring effect. The next change fixes the run
+    mode first, and no fit runs past 500 generations until it is fixed.
   - **Equal budget.** Every arm runs a fixed generation count, not the plateau rule, set from the
     readiness restarts' convergence (checkpoints at 250, 500 and 750 of a 1,000 cap).
   - **Stage 1 is fixed.** Its 18-parameter lawn subset was chosen on the wild type. It is registered

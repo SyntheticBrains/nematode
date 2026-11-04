@@ -55,6 +55,8 @@ def test_the_seed_blocks_do_not_overlap() -> None:
         (probe.TRAJECTORY_BASE, probe.TRAJECTORY_BASE + probe.ANIMALS * (last_trajectory + 1)),
     )
     blocks.append((probe.PEEK_BASE, probe.PEEK_BASE + probe.ANIMALS * 2_000))
+    blocks += list(probe.DIAGNOSIS_BLOCKS)
+    blocks.append((probe.SPEED_NOISE_BASE, probe.SPEED_NOISE_REFERENCE_SEED + 1))
     pilot = cr.POPSIZE * probe.PILOT_CAP
     blocks.append((probe.PILOT_BASE, probe.PILOT_BASE + probe.ANIMALS * pilot))
     pilot_trajectory = probe.trajectory_k(0, probe.PILOT_CAP, 1) + 1
@@ -199,3 +201,31 @@ def test_the_reduced_subset_embeds_at_the_box_centre() -> None:
         assert z[names.index(name)] == value
     others = [v for n, v in zip(names, z, strict=True) if n not in probe.REDUCED_NAMES]
     assert others == [0.5] * (len(names) - 18)
+
+
+def test_the_speed_noise_control_reads_undefined_statistics_as_failing() -> None:
+    """An undefined statistic fails the check that needs it; a pinned speed fails the control."""
+    names = ("dwelling_speed_median", "roaming_speed_p90")
+    scales = dict.fromkeys(names, 0.01)
+    kinematics: list[tuple[float | None, dict[str, float | None]]] = [
+        (None, {"dwelling_speed_median": 0.02, "roaming_speed_p90": 0.05}),
+        (0.25, {"dwelling_speed_median": 0.02, "roaming_speed_p90": 0.05}),
+        (30.0, {"dwelling_speed_median": 0.02, "roaming_speed_p90": 0.09}),
+        (300.0, {"dwelling_speed_median": None, "roaming_speed_p90": None}),
+    ]
+    reading = probe.read_speed_noise_control(kinematics, scales, speed_median=-0.5)
+    assert reading["roaming_p90_rise_scales"]["300.0"] is None
+    assert reading["best_tau_s"] == 30.0
+    assert reading["passes"]
+    pinned = probe.read_speed_noise_control(kinematics, scales, speed_median=-3.9)
+    assert not pinned["speed_responsive"]
+    assert not pinned["passes"]
+    undefined = [
+        (None, {"dwelling_speed_median": None, "roaming_speed_p90": 0.05}),
+        *kinematics[1:],
+    ]
+    assert not probe.read_speed_noise_control(undefined, scales, -0.5)["passes_nested"]
+    none = [kinematics[0], (0.25, {"dwelling_speed_median": 0.02, "roaming_speed_p90": None})]
+    reading = probe.read_speed_noise_control(none, scales, -0.5)
+    assert reading["best_tau_s"] is None
+    assert not reading["passes_rise"]

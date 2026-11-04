@@ -31,6 +31,7 @@ from quantumnematode.brain.arch import _telemetry as tm
 from quantumnematode.brain.arch._policy import (
     categorical_evaluate_torch,
     continuous_evaluate_tanh_gaussian,
+    continuous_evaluate_tanh_gaussian_ou,
     ppo_clip_policy_loss,
 )
 from quantumnematode.brain.arch._rule import RuleStepReport
@@ -78,6 +79,9 @@ class ConnectomePPOBatch:
     # ``ChunkedRolloutBuffer`` and the update replays contiguous chunks of this many steps from
     # their stored starting states. ``None`` keeps the shuffled single-step replay.
     chunk_length: int | None = None
+    # Set when the policy's speed noise is slow: its per-step correlation. The buffer then carries
+    # each step's previous step, and the speed is scored by its conditional density given it.
+    speed_noise_rho: float | None = None
 
 
 @dataclass
@@ -364,13 +368,37 @@ class ConnectomePPORule:
             )
             if topo.state_dependent_std:
                 update_log_stds.append(log_std_b.detach())
-            new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
-                new_head_out,
-                log_std_b,
-                minibatch["actions"],
-                self.action_low,
-                self.action_high,
-            )
+            if ppo_batch.speed_noise_rho is not None:
+                # The speed's exact conditional density: the previous step's mean is recomputed
+                # under the current parameters from its stored state. The forward would overwrite
+                # the topology's captured penultimate rates, which telemetry reads for the current
+                # states, so they are kept.
+                penultimate = topo.penultimate
+                previous_head, _ = self._forward_states(
+                    topo,
+                    ppo_batch,
+                    minibatch["previous_states"],
+                )
+                topo.penultimate = penultimate
+                new_log_probs, entropy = continuous_evaluate_tanh_gaussian_ou(
+                    new_head_out,
+                    log_std_b,
+                    minibatch["actions"],
+                    self.action_low,
+                    self.action_high,
+                    previous_head[:, 0],
+                    minibatch["previous_speeds"],
+                    minibatch["previous_live"],
+                    ppo_batch.speed_noise_rho,
+                )
+            else:
+                new_log_probs, entropy = continuous_evaluate_tanh_gaussian(
+                    new_head_out,
+                    log_std_b,
+                    minibatch["actions"],
+                    self.action_low,
+                    self.action_high,
+                )
         else:
             new_log_probs, entropy = categorical_evaluate_torch(
                 new_head_out,
@@ -435,6 +463,25 @@ class ConnectomePPORule:
             advantages,
         )
 
+    @staticmethod
+    def _forward_states(
+        topo: ConnectomeTopology,
+        ppo_batch: ConnectomePPOBatch,
+        states: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Run stored single-step states through the topology from zero: ``(head, hidden)``."""
+        food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = ppo_batch.unpack_batched(states)
+        return topo.forward_with_hidden_batched(
+            food_b,
+            predator_distal_features=distal_b,
+            predator_mechano_features=mechano_b,
+            contact_zone_onehot=zone_onehot_b,
+            thermotaxis_features=thermo_b,
+            modulators=(
+                None if ppo_batch.unpack_modulators is None else ppo_batch.unpack_modulators(states)
+            ),
+        )
+
     def _replay(
         self,
         topo: ConnectomeTopology,
@@ -448,21 +495,7 @@ class ConnectomePPORule:
         out of the padding, so the loss sees one row per step either way.
         """
         if ppo_batch.chunk_length is None:
-            food_b, distal_b, mechano_b, zone_onehot_b, thermo_b = ppo_batch.unpack_batched(
-                minibatch["states"],
-            )
-            head_out, hidden = topo.forward_with_hidden_batched(
-                food_b,
-                predator_distal_features=distal_b,
-                predator_mechano_features=mechano_b,
-                contact_zone_onehot=zone_onehot_b,
-                thermotaxis_features=thermo_b,
-                modulators=(
-                    None
-                    if ppo_batch.unpack_modulators is None
-                    else ppo_batch.unpack_modulators(minibatch["states"])
-                ),
-            )
+            head_out, hidden = self._forward_states(topo, ppo_batch, minibatch["states"])
             return head_out, hidden, minibatch
         states = minibatch["states"]
         chunks, length = states.shape[:2]

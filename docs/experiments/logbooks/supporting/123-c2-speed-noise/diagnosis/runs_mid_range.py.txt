@@ -1,0 +1,77 @@
+"""Descriptive check: does slow speed noise reach the 10-s window statistics once runs carry speed?
+
+The stage-2 answer's speed and curvature outputs are pinned (pre-squash medians about -3.9 and +9.5),
+so its runs carry no speed. Here its speed and curvature readout biases are moved, outside the
+encoder's box, so each output's pre-squash median over a reference episode is 0; every other
+parameter is the answer's, on the wiring it was fitted on. Independent noise and slow noise at 2,
+8.7, 30 and 100 s are graded by c2_encoder_probe.grade_seeds on the same 200 animals of seed block
+88,300,000. Description, not a registered check. Run from the repository root.
+"""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+OUT = Path(sys.argv[1])
+SEEDS = [88_300_000 + i for i in range(200)]
+TAUS = (None, 2.0, 75 ** 0.5, 30.0, 100.0)
+
+
+def _shifts() -> dict[str, float]:
+    """Return the bias shifts that put speed's and curvature's pre-squash medians at 0."""
+    import quantumnematode.agent  # noqa: F401
+    import torch
+    import c2_encoder_probe as p
+    from quantumnematode.connectome import encoder as enc
+    from quantumnematode.evaluation.reference import run_reference
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    z = json.loads(p.STAGED_PILOT_PATH.read_text())["stage2_extended"]["answer"]
+    path = p.FORAGING / f"{p.bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+    settings = {"encoder_modulator_tying": p.TYING, "sign_override_exclude": ["lopezcruz2019"]}
+    brain, _, _ = p.harness.build_brain(path, 1, settings)
+    enc.write_encoder(brain, z)
+    ep = run_reference(load_simulation_config(str(path)), brain, 88_299_999, 1800)
+    states = torch.from_numpy(np.asarray(ep.features, dtype=np.float32))
+    topo = brain.topology
+    with torch.no_grad():
+        mean, _ = topo.forward_with_hidden_batched(
+            states[:, : topo.n_food_features],
+            modulators=brain._unpack_modulators(states),
+        )
+    return {"speed": -float(mean[:, 0].median()), "curvature": -float(mean[:, 1].median())}
+
+
+def point(args: tuple[float | None, dict[str, float]]) -> dict:
+    tau, shifts = args
+    import torch
+    import c2_encoder_probe as p
+    from quantumnematode.connectome import encoder as enc
+
+    p._BRAIN_SETTINGS["sign_override_exclude"] = ["lopezcruz2019"]
+    z = list(json.loads(p.STAGED_PILOT_PATH.read_text())["stage2_extended"]["answer"])
+    if tau is not None:
+        p._BRAIN_SETTINGS["encoder_speed_noise"] = "ou"
+        z.append(p.entries(speed_noise=True)[-1].unit(tau))
+    write = enc.write_encoder
+
+    def write_then_shift(brain, vector):  # type: ignore[no-untyped-def]
+        write(brain, vector)
+        with torch.no_grad():
+            brain.topology.readout_bias[0] += shifts["speed"]
+            brain.topology.readout_bias[1] += shifts["curvature"]
+
+    enc.write_encoder = write_then_shift
+    return {"tau_s": tau, "graded": p.grade_seeds(z, SEEDS)}
+
+
+if __name__ == "__main__":
+    shifts = _shifts()
+    with ProcessPoolExecutor(max_workers=len(TAUS)) as pool:
+        points = list(pool.map(point, [(tau, shifts) for tau in TAUS]))
+    OUT.write_text(json.dumps({"shifts": shifts, "seeds": "88,300,000 + i, i < 200", "points": points}, indent=1, default=float) + "\n")
+    print("written", OUT)

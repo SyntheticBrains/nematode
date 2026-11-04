@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Protocol
 import numpy as np
 import torch
 
-from quantumnematode.brain.arch._policy import clamp_continuous_log_std
+from quantumnematode.brain.arch._policy import clamp_continuous_log_std, ou_noise_step
 from quantumnematode.brain.modules import ModuleName
 from quantumnematode.env.primitives import load_kinematics
 
@@ -186,10 +186,13 @@ class BatchedConnectome:
         self.brain = brain
         self.width = brain._n_concentrations  # noqa: SLF001
         self.concentrations = np.zeros((0, self.width), dtype=np.float32)
+        # Each animal's standardised speed noise under slow speed noise; None before its first draw.
+        self.speed_noise: torch.Tensor | None = None
 
     def reset(self, n: int) -> None:
-        """Start every animal's modulator concentrations at zero."""
+        """Start every animal's modulator concentrations at zero, and its speed noise afresh."""
         self.concentrations = np.zeros((n, self.width), dtype=np.float32)
+        self.speed_noise = None
 
     def state(self, senses: BatchedSenses) -> np.ndarray:
         """Return the brain's state vectors: food features, then the modulators if it has them.
@@ -230,7 +233,40 @@ class BatchedConnectome:
                 self.concentrations = (
                     decay * self.concentrations + (1.0 - decay) * release
                 ).astype(np.float32)
-            return _sample(mean, topology.log_std, brain._action_low, brain._action_high, noise)  # noqa: SLF001
+            rho = brain._speed_noise_rho  # noqa: SLF001
+            if rho is None or noise is None:
+                return _sample(mean, topology.log_std, brain._action_low, brain._action_high, noise)  # noqa: SLF001
+            return self._sample_slow_speed(mean, topology.log_std, noise, rho)
+
+    def _sample_slow_speed(
+        self,
+        mean: torch.Tensor,
+        log_std: torch.Tensor,
+        noise: list[torch.Generator],
+        rho: float,
+    ) -> np.ndarray:
+        """Draw as :func:`_sample` does, each animal's speed noise stepped by its own slow process.
+
+        The same draws and the same arithmetic as the per-step runner's slow-noise sampler, so an
+        animal behaves the same alone or in any batch.
+        """
+        brain = self.brain
+        std = torch.exp(clamp_continuous_log_std(log_std))
+        eps = torch.stack([torch.randn(mean.shape[1], generator=g) for g in noise])
+        speed = (
+            eps[:, 0]
+            if self.speed_noise is None
+            else ou_noise_step(eps[:, 0], self.speed_noise, rho)
+        )
+        self.speed_noise = speed
+        pre = torch.cat(
+            [mean[:, :1] + std[:1] * speed.unsqueeze(-1), mean[:, 1:] + std[1:] * eps[:, 1:]],
+            dim=1,
+        )
+        low, high = brain._action_low, brain._action_high  # noqa: SLF001
+        center = (high + low) / 2.0
+        half = (high - low) / 2.0
+        return (center + half * torch.tanh(pre)).double().numpy()
 
 
 def _raw_hazards(rates: np.ndarray) -> np.ndarray:

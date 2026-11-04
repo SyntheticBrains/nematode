@@ -9,6 +9,7 @@ buffers.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -16,6 +17,19 @@ import torch
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+
+@dataclass(frozen=True)
+class PreviousStep:
+    """The previous step, for a policy whose first output's noise is slow.
+
+    ``speed`` is its pre-squash first output and ``state`` its state; ``live`` is false on an
+    episode's first step, which has none, and the two are then placeholders.
+    """
+
+    speed: float
+    state: np.ndarray
+    live: bool
 
 
 class RolloutBuffer:
@@ -46,6 +60,11 @@ class RolloutBuffer:
         self.values: list[torch.Tensor] = []
         self.rewards: list[float] = []
         self.dones: list[bool] = []
+        # The previous step's first pre-squash output and state, for a policy whose first output's
+        # noise is slow; filled only by such a brain, so every other buffer is unchanged.
+        self.previous_speeds: list[float] = []
+        self.previous_states: list[np.ndarray] = []
+        self.previous_live: list[bool] = []
         self.position = 0
 
     def add(  # noqa: PLR0913
@@ -56,8 +75,17 @@ class RolloutBuffer:
         value: torch.Tensor,
         reward: float,
         done: bool,  # noqa: FBT001
+        *,
+        previous: PreviousStep | None = None,
     ) -> None:
-        """Add a single experience to the buffer."""
+        """Add a single experience to the buffer.
+
+        ``previous`` is passed only by a policy whose first output's noise is slow.
+        """
+        if previous is not None:
+            self.previous_speeds.append(previous.speed)
+            self.previous_states.append(previous.state)
+            self.previous_live.append(previous.live)
         self.states.append(state)
         self.actions.append(action)
         self.log_probs.append(log_prob.detach())
@@ -120,6 +148,28 @@ class RolloutBuffer:
         else:
             actions = torch.tensor(self.actions, dtype=torch.long, device=self.device)
         old_log_probs = torch.stack(self.log_probs)
+        previous: dict[str, torch.Tensor] | None = None
+        if self.previous_live:
+            if len(self.previous_live) != batch_size:
+                msg = "a buffer holds steps with and without a previous step's record"
+                raise ValueError(msg)
+            previous = {
+                "previous_speeds": torch.tensor(
+                    self.previous_speeds,
+                    dtype=torch.float32,
+                    device=self.device,
+                ),
+                "previous_states": torch.tensor(
+                    np.array(self.previous_states),
+                    dtype=torch.float32,
+                    device=self.device,
+                ),
+                "previous_live": torch.tensor(
+                    self.previous_live,
+                    dtype=torch.bool,
+                    device=self.device,
+                ),
+            }
 
         # Normalize advantages
         if len(advantages) > 1:
@@ -132,13 +182,16 @@ class RolloutBuffer:
             end = start + minibatch_size
             mb_indices = indices[start:end]
 
-            yield {
+            minibatch = {
                 "states": states[mb_indices],
                 "actions": actions[mb_indices],
                 "old_log_probs": old_log_probs[mb_indices],
                 "returns": returns[mb_indices],
                 "advantages": advantages[mb_indices],
             }
+            if previous is not None:
+                minibatch |= {key: value[mb_indices] for key, value in previous.items()}
+            yield minibatch
 
 
 class ChunkedRolloutBuffer(RolloutBuffer):
@@ -164,8 +217,17 @@ class ChunkedRolloutBuffer(RolloutBuffer):
         reward: float,
         done: bool,  # noqa: FBT001
         start_state: torch.Tensor | None = None,
+        *,
+        previous: PreviousStep | None = None,
     ) -> None:
-        """Add one step's experience and the state the step started from."""
+        """Add one step's experience and the state the step started from.
+
+        A previous step's record is refused: chunked replay runs through time from each chunk's
+        start, and no policy that replays this way scores its actions by the previous step.
+        """
+        if previous is not None:
+            msg = "ChunkedRolloutBuffer does not hold a previous step's record"
+            raise ValueError(msg)
         if start_state is None:
             msg = "ChunkedRolloutBuffer.add needs the step's start_state"
             raise ValueError(msg)

@@ -9,12 +9,17 @@ the same", with a lawn-blind evaluator failing. The statistic-level layer is in
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 from quantumnematode.evaluation.batched import BatchedEvaluator, UnsupportedConfigError
 from quantumnematode.validation import roaming_dwelling as rd
 
 from . import _parity as p
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _STEPS = 300
 _STATE_STEPS = 50
@@ -235,3 +240,101 @@ def test_an_encoded_animal_is_the_same_alone_and_in_a_batch() -> None:
         alone, _ = p.run_batched(config, batched, [seeds[i]], _STEPS)
         assert np.array_equal(alone.primitive[0], crowd.primitive[i])
         assert np.allclose(alone.x[0], crowd.x[i], atol=1e-9)
+
+
+@pytest.mark.slow
+def test_the_slow_noise_brain_matches_the_per_step_brain() -> None:
+    """Covers the batched-evaluation scenario "The two runners agree under slow noise".
+
+    The encoded wild type with slow speed noise on Scheer's small lawn, seeds 5001-5032: features,
+    action means and derivatives within 1e-5 over 50 steps, the sampled actions themselves within
+    1e-5, and trajectories over 300. The speed's draws are correlated from second to second.
+    """
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain, config = p.encoded_brain("scheer_lawn", encoder_speed_noise="ou")
+    assert brain._speed_noise_rho is not None
+    assert brain._speed_noise_rho > 0.5
+    refs = p.references(config, brain, _STEPS, _ENCODED_SEEDS)
+    batched = BatchedConnectome(brain)
+    actions = p.logging_actions(batched)
+    trajectories, log = p.run_batched(config, batched, _ENCODED_SEEDS, _STEPS)
+    assert p.state_mismatches(refs, log, _STATE_STEPS) == []
+    assert p.action_mismatches(refs, actions, _STATE_STEPS) == []
+    assert p.trajectory_mismatches(refs, trajectories, log) == []
+    speed = np.array([np.asarray(a)[0] for a in refs[0].actions])
+    assert np.corrcoef(speed[:-1], speed[1:])[0, 1] > 0.5
+
+
+def test_a_slow_noise_animal_is_the_same_alone_and_in_a_batch() -> None:
+    """Covers the batched-evaluation scenario "An animal alone matches the animal in a batch".
+
+    The encoded brain with slow speed noise: each of three seeds alone and inside a batch of 64
+    makes the same bouts over 300 steps, so each animal's noise state is its own.
+    """
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain, config = p.encoded_brain("uniform_lawn_scheer", encoder_speed_noise="ou")
+    batched = BatchedConnectome(brain)
+    seeds = list(range(5001, 5065))
+    crowd, _ = p.run_batched(config, batched, seeds, _STEPS)
+    for i in (0, 33, 63):
+        alone, _ = p.run_batched(config, batched, [seeds[i]], _STEPS)
+        assert np.array_equal(alone.primitive[0], crowd.primitive[i])
+        assert np.allclose(alone.x[0], crowd.x[i], atol=1e-9)
+
+
+def _short_food_removal(tmp_path: Path) -> Path:
+    """Write López-Cruz's food removal with a 100-s fed phase and a 200-s assay phase."""
+    source = p.config_path("encoded", "food_removal_lopezcruz")
+    text = source.read_text().replace("max_steps: 1080", "max_steps: 60", 1)
+    text = text.replace("duration_s: 2700.0", "duration_s: 100.0", 1)
+    text = text.replace("duration_s: 2700.0", "duration_s: 200.0", 1)
+    path = tmp_path / source.name
+    path.write_text(text)
+    return path
+
+
+_PHASE_START = 100
+
+
+@pytest.mark.slow
+def test_a_phase_start_keeps_the_slow_noise_state(tmp_path: Path) -> None:
+    """Covers the batched-evaluation scenario "A phase start keeps the noise state".
+
+    Food removal at 100 s, seeds 5001-5004: both runners carry the speed noise across the phase
+    start and sample the same actions throughout. A batched controller that restarts the noise at
+    the phase, or draws it independently, fails the same check.
+    """
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    path = _short_food_removal(tmp_path)
+    brain, config = p.encoded_brain(
+        "food_removal_lopezcruz",
+        path=path,
+        encoder_speed_noise="ou",
+    )
+    steps = 2 * _PHASE_START
+    refs = p.references(config, brain, steps)
+    batched = BatchedConnectome(brain)
+    actions = p.logging_actions(batched)
+    p.run_batched(config, batched, list(p.PARITY_SEEDS), steps)
+    assert p.action_mismatches(refs, actions, steps) == []
+
+    class RestartsAtThePhase(BatchedConnectome):
+        calls = 0
+
+        def act(self, senses, noise):  # type: ignore[no-untyped-def]
+            if self.calls == _PHASE_START:
+                self.speed_noise = None
+            self.calls += 1
+            return super().act(senses, noise)
+
+    class Independent(BatchedConnectome):
+        def _sample_slow_speed(self, mean, log_std, noise, rho):  # type: ignore[no-untyped-def]
+            return super()._sample_slow_speed(mean, log_std, noise, 0.0)
+
+    for tampered in (RestartsAtThePhase(brain), Independent(brain)):
+        logged = p.logging_actions(tampered)
+        p.run_batched(config, tampered, list(p.PARITY_SEEDS), steps)
+        assert p.action_mismatches(refs, logged, steps) != []
