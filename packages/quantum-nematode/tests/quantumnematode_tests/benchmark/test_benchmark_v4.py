@@ -18,6 +18,7 @@ import pytest
 from quantumnematode.benchmark import grading as g
 from quantumnematode.benchmark import measurement as mm
 from quantumnematode.benchmark import references as refs
+from quantumnematode.benchmark.readouts import OFF_FOOD_DETECTOR, reversal_onsets
 from quantumnematode.report.behaviour import BehaviourStep
 
 _REPO = Path(__file__).resolve().parents[5]
@@ -108,6 +109,8 @@ def test_the_pause_floor_is_the_instruments() -> None:
     still = bb.still_worm_displacements()
     assert g.pause_floor(still) == g.PAUSE_FLOOR_MM == 0.02
     assert np.mean(still[np.isfinite(still)] < g.PAUSE_FLOOR_MM) >= g.PAUSE_FLOOR_COVERAGE
+    with pytest.raises(ValueError, match="finite displacement"):
+        g.pause_floor(np.array([np.nan, np.inf]))
 
 
 def test_the_tally_counts_on_lawn_seconds_only() -> None:
@@ -120,6 +123,17 @@ def test_the_tally_counts_on_lawn_seconds_only() -> None:
     assert tally["seconds"] == 4
     assert tally["pauses"] == 1
     assert (tally["flips"], tally["pairs"]) == (1, 2)
+    # Runs of 10 s at 0.1 mm/s, back and forth, leaving the lawn at sample 25: the detector finds
+    # onsets at 10 and 30, and only the one whose sample is on the lawn counts.
+    step = np.concatenate([np.full(10, 0.1), np.full(10, -0.1)] * 2)
+    x = np.concatenate(([0.0], np.cumsum(step)))
+    y = np.zeros_like(x)
+    on = np.arange(len(x)) < 25
+    detected = reversal_onsets(x, y, OFF_FOOD_DETECTOR, floor=g.ON_LAWN_REVERSAL_FLOOR_MM)
+    assert detected.tolist() == [10, 30]
+    tally = dict(zip(g.ACTIVITY_FIELDS, g.activity_tally(x, y, on), strict=True))
+    assert tally["onsets"] == sum(bool(on[o]) for o in detected) == 1
+    assert tally["onset_seconds"] == tally["seconds"] == 24
 
 
 def test_a_worm_that_does_not_run_forward_fails() -> None:
@@ -275,6 +289,54 @@ def test_the_v4_build_refuses_before_part_a(
         assert bb.main() == 1
     assert not out.exists()
     assert not record.exists()
+
+
+def test_the_onset_decision_needs_the_checked_bands(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--onset follows the oracle's check only on the bands it read, and only for v4."""
+    launch = tmp_path / "launch.md"
+    launch.write_text("# Launch\n\n## Part B\n")
+    bands = tmp_path / "bands_v4.json"
+    bands.write_text(json.dumps(_undecided()) + "\n")
+    check = tmp_path / "oracle_check.json"
+    check.write_text(
+        json.dumps(
+            {
+                "bands_sha256": mm.file_sha256(bands),
+                "onset_graded": True,
+                "activity_reachable": True,
+            },
+        ),
+    )
+    monkeypatch.setattr(bb, "V4_LAUNCH_PATH", launch)
+    monkeypatch.setattr(bb, "V4_ORACLE_CHECK_PATH", check)
+    assert bb.onset_refusal(onset_graded=True, bands_path=bands) is None
+    against = bb.onset_refusal(onset_graded=False, bands_path=bands)
+    assert against is not None
+    assert "reached the onset rate" in against
+    bands.write_text(bands.read_text() + " ")
+    other = bb.onset_refusal(onset_graded=True, bands_path=bands)
+    assert other is not None
+    assert "other bands" in other
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "benchmark_bands.py",
+            "--version",
+            "v3",
+            "--onset",
+            "graded",
+            "--out",
+            "o",
+            "--record",
+            "r",
+        ],
+    )
+    with pytest.raises(SystemExit):
+        bb.main()
 
 
 def test_the_verdict_needs_every_registered_check() -> None:

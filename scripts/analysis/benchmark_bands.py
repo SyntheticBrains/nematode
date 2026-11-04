@@ -1154,6 +1154,8 @@ def main() -> int:
         help="v4 only, after Part B: record whether the on-lawn onset rate is graded",
     )
     args = parser.parse_args()
+    if args.onset is not None and args.version != "v4":
+        parser.error("--onset records v4's onset decision: it needs --version v4")
     if args.version == "v2":
         return _main_v2(args)
     if args.version == "v3":
@@ -1636,17 +1638,21 @@ def decide_onset(bands: dict[str, Any], onset_graded: bool) -> dict[str, Any]:  
     }
 
 
-def onset_refusal(onset_graded: bool) -> str | None:  # noqa: FBT001 - the one decision
+def onset_refusal(onset_graded: bool, bands_path: Path) -> str | None:  # noqa: FBT001 - the one decision
     """Return why the onset decision cannot be recorded, or None if the oracle's check supports it.
 
-    The decision follows from the oracle's 40 populations alone, read after Part B: the onset rate
-    is graded only if that reading reached it.
+    The decision follows from the oracle's 40 populations alone, read after Part B on the very
+    bands at ``bands_path``: the onset rate is graded only if that reading reached it.
     """
+    from quantumnematode.benchmark import measurement as mm
+
     if "\n## Part B" not in V4_LAUNCH_PATH.read_text():
         return "Part B is not in B v4's launch record"
     if not V4_ORACLE_CHECK_PATH.exists():
         return f"{V4_ORACLE_CHECK_PATH.name} does not exist: the oracle's check comes first"
     check = json.loads(V4_ORACLE_CHECK_PATH.read_text())
+    if not bands_path.exists() or check["bands_sha256"] != mm.file_sha256(bands_path):
+        return f"the oracle's check was read on other bands than {bands_path}"
     if not check["activity_reachable"]:
         return "the oracle did not reach the pause share and the flip fraction"
     if bool(check["onset_graded"]) != onset_graded:
@@ -1664,7 +1670,7 @@ def _main_v4(args: argparse.Namespace) -> int:
         print("B v4's launch record is not committed, or has changed", file=sys.stderr)
         return 1
     if args.onset is not None:
-        refusal = onset_refusal(args.onset == "graded")
+        refusal = onset_refusal(args.onset == "graded", args.out)
         if refusal is not None:
             print(f"{refusal}; the onset is not decided", file=sys.stderr)
             return 1

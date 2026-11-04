@@ -16,6 +16,7 @@
   },
   "verdict": "VALID",
   "c1_v3_passes_wild_type_v4": false,
+  "c1_v3_values_equal": true,
   "w_minimum": {
     "fitted": {
       "families": [

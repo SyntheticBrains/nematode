@@ -412,9 +412,17 @@ def pause_floor(displacements: np.ndarray) -> float:
     """Return the smallest floor step below which the coverage of a still worm's steps fall.
 
     ``displacements`` are a still worm's 1-s displacements as the tracker reads them.
+
+    Raises
+    ------
+    ValueError
+        If no displacement is finite: there is no reading to set the floor from.
     """
     d = np.asarray(displacements, dtype=float)
     d = d[np.isfinite(d)]
+    if d.size == 0:
+        msg = "the pause floor needs at least one finite displacement"
+        raise ValueError(msg)
     k = 1
     while float(np.mean(d < k * PAUSE_FLOOR_STEP_MM)) < PAUSE_FLOOR_COVERAGE:
         k += 1

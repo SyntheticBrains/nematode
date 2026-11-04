@@ -346,6 +346,10 @@ def _oracle_fit(args: argparse.Namespace) -> int:
     if refusal is not None:
         print(f"{refusal}; the oracle is not fitted", file=sys.stderr)
         return 1
+    if ORACLE_FIT_PATH.exists():
+        # A stopped fit resumes from its state before this file is written; once written, it stays.
+        print(f"{ORACLE_FIT_PATH} exists: the oracle is fitted once", file=sys.stderr)
+        return 1
     with ProcessPoolExecutor(max_workers=args.workers, initializer=nr._worker_setup) as pool:
         histories = [
             v2c._cma_restart(
@@ -867,6 +871,8 @@ def _verdict(_args: argparse.Namespace) -> int:
         "bands_sha256": mm.file_sha256(bg.BANDS_V4_PATH),
         **verdict(*parts),
         "c1_v3_passes_wild_type_v4": read["c1_v3_answer"]["passes_wild_type_v4"],
+        # Reported, not gated: whether that grade is like for like with its stored v3 grade.
+        "c1_v3_values_equal": read["c1_v3_answer"]["v3_values_equal"],
         "w_minimum": read["w_minimum"],
         "three_of_five": read["three_of_five"],
     }
