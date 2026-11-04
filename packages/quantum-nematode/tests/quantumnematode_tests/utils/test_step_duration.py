@@ -302,7 +302,11 @@ def test_another_brain_is_refused(tmp_path: Path) -> None:
     data = _raw(_MLP)
     data["brain"] = {
         "name": "lstmppo",
-        "config": {"action_mode": "continuous", "signed_speed": True},
+        "config": {
+            "action_mode": "continuous",
+            "signed_speed": True,
+            "sensory_modules": data["brain"]["config"]["sensory_modules"],
+        },
     }
     _refused(tmp_path, data, "the brain is 'lstmppo'")
 
@@ -477,12 +481,15 @@ _PINNED_FIELD_COUNTS = {
 # knockout genes) or already in worm-seconds (``modulator_timescales_s``; the per-step decay comes
 # from ``modulator_step_seconds``, which is converted). ``Continuous2DConfig.reversal_kinematics``,
 # added 2026-10-24, picks between kinematics already in seconds and mm/s, so it is not step-coupled.
+# Audited 2026-11-03: the compact encoder's two fields (``encoder``, ``encoder_modulator_tying``)
+# are structure; its timescales are in worm-seconds, its decay taken at the converted
+# ``modulator_step_seconds``, which the loader refuses unless it comes to the configured step.
 _EXPECTED_FIELD_COUNTS = {
     "ForagingConfig": 22,
     "LawnConfig": 14,
     "SensingConfig": 20,
     "RewardConfig": 15,
-    "ConnectomePPOBrainConfig": 93,
+    "ConnectomePPOBrainConfig": 95,
     "MLPPPOBrainConfig": 68,
 }
 

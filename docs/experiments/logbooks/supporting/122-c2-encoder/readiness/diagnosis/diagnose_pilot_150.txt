@@ -1,0 +1,16 @@
+kinematics/dwelling_speed_median         value    0.01599642700245773 centre     0.0128 z 4.34
+kinematics/dwelling_speed_p90            value    0.03808987292802253 centre     0.0282 z 8.54
+kinematics/roaming_speed_median          value    0.03506331240536397 centre     0.0373 z -2.27
+kinematics/roaming_speed_p90             value     0.0577494189695642 centre     0.0733 z -3.82
+kinematics/roaming_survival_5min         value     0.0789142815380242 centre     0.1939 z -2.61
+small_lawn/dwelling_bout_s               value      2253.777777777778 centre  1067.9270 z 5.27
+small_lawn/exits_per_on_lawn_hour        value     15.150775011742603 centre     0.7105 z 73.0
+small_lawn/pre_exit_enrichment           value   0.005280601926227382 centre     0.2953 z -4.16
+small_lawn/roaming_bout_s                value     111.77777777777777 centre   216.6667 z -4.62
+small_lawn/roaming_fraction              value    0.04725223109441052 centre     0.1694 z -3.37
+small_lawn/time_on_lawn                  value    0.22542936405412847 centre     0.9781 z -121.96
+uniform_lawn/dwelling_bout_s             value     1837.0901639344263 centre  1263.8889 z 1.04
+uniform_lawn/roaming_bout_s              value                93.4375 centre   327.5532 z -7.97
+uniform_lawn/roaming_fraction            value     0.0506597200160959 centre     0.2130 z -1.8
+{'wiring': (0.369, 2), 'sensory': (0.271, 6), 'readout': (0.245, 0), 'noise': (0.334, 1), 'modulator': (0.279, 11), 'timescale': (0.27, 1)}
+  wiring.excitatory                 1.404

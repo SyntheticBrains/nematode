@@ -1,0 +1,53 @@
+"""The encoded network's operating point against its wiring scales (forward passes, description).
+
+For a common scale s on the excitatory, inhibitory and gap terms, unsigned gains at 0, and sensory
+gains of 1 on every class: the fraction of neurons saturated (|h| > 0.95) after settling, and how
+far the four motor pools move between no food and a unit of each sense.
+"""
+
+import json
+import sys
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.connectome import encoder as enc
+
+brain = p.encoded_brain()
+t = brain.topology
+table = p.entries()
+rng = np.random.default_rng(0)
+
+
+def vector(scale, sensory):
+    values = {e.name: 0.0 for e in table}
+    for name in ("wiring.excitatory", "wiring.inhibitory", "wiring.gap"):
+        values[name] = scale
+    for e in table:
+        if e.block == "sensory":
+            values[e.name] = sensory
+        if e.block == "modulator" and e.low > 0:
+            values[e.name] = e.low
+        if e.block == "timescale":
+            values[e.name] = 173.0
+        if e.block == "noise":
+            values[e.name] = -1.5
+    return np.clip([e.unit(values[e.name]) for e in table], 0, 1)
+
+
+rows = []
+for sensory in (1.0, 5.0):
+    for scale in (0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0):
+        enc.write_encoder(brain, vector(scale, sensory))
+        with torch.no_grad():
+            mods = torch.zeros(1, brain._n_concentrations + 1)
+            x = torch.tensor(rng.uniform(0, 1, size=(256, 4)), dtype=torch.float32)
+            x[:, 1:3] = x[:, 1:3] * 2 - 1
+            _, hid = t.forward_with_hidden_batched(x, modulators=mods.expand(256, -1))
+            sat = float((hid.abs() > 0.95).float().mean())
+            pools = t._pool_motor(hid)
+            spread = float(pools.std(0).mean())
+        rows.append({"sensory_gain": sensory, "scale": scale, "saturated_fraction": round(sat, 3), "motor_pool_sd_across_senses": round(spread, 3)})
+        print(json.dumps(rows[-1]))

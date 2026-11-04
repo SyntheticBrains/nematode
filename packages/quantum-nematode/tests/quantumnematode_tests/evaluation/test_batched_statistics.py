@@ -84,3 +84,43 @@ def test_graded_statistics_agree(controller: str, protocol: str) -> None:
             continue
         low, high = _bootstrap_interval(diff)
         assert low <= 0.0 <= high, (name, low, high)
+
+
+# The encoded connectome's two wirings on two assays make a family of their own: five statistics in
+# each of four tests, twenty checks at a family-wise 5%.
+_ENCODED_ALPHA = 0.05 / 20
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
+@pytest.mark.parametrize("wiring", ["wild_type", "rewired_degree_preserving"])
+def test_the_encoded_brains_graded_statistics_agree(wiring: str, protocol: str) -> None:
+    """The encoded connectome's paired statistics agree over full Scheer and Flavell assays.
+
+    On seeds 5001-5032, each difference's corrected interval contains zero, on the wild type and on
+    the degree-preserving null.
+    """
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain, config = p.encoded_brain(protocol, wiring)
+    lawns = config.environment.foraging.lawns
+    max_satiety = config.satiety.initial_satiety
+    trajectories = p.BatchedEvaluator(config, BatchedConnectome(brain), _SEEDS).run()
+    refs = [p.run_reference(config, brain, seed) for seed in _SEEDS]
+    reference = [_statistics(r.behaviour, lawns.intake_fraction, max_satiety) for r in refs]
+    batched_stats = [
+        _statistics(trajectories.to_behaviour_steps(i), lawns.intake_fraction, max_satiety)
+        for i in range(len(_SEEDS))
+    ]
+    scale = max(np.mean([r["intake"] for r in reference]), 1e-12)
+    rng = np.random.default_rng(5001)
+    tail = 100.0 * _ENCODED_ALPHA / 2.0
+    for name in reference[0]:
+        a = np.array([r[name] for r in reference])
+        b = np.array([s[name] for s in batched_stats])
+        diff = (b - a) / scale if name == "intake" else b - a
+        if np.all(np.abs(diff) < _IDENTICAL):
+            continue
+        means = rng.choice(diff, (_RESAMPLES, len(diff))).mean(axis=1)
+        low, high = np.percentile(means, tail), np.percentile(means, 100.0 - tail)
+        assert low <= 0.0 <= high, (name, low, high)

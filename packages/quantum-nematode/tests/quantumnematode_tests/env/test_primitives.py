@@ -289,7 +289,11 @@ def test_a_primitives_brain_on_another_architecture_is_refused(tmp_path: Path) -
     data = _raw(_MLP)
     data["brain"] = {
         "name": "lstmppo",
-        "config": {"action_mode": "continuous", "action_space": "primitives"},
+        "config": {
+            "action_mode": "continuous",
+            "action_space": "primitives",
+            "sensory_modules": data["brain"]["config"]["sensory_modules"],
+        },
     }
     _refused(tmp_path, data, "lstmppo")
 

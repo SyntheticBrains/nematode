@@ -1,0 +1,60 @@
+"""How much the encoded brain's outputs move with its food senses: initial-state against held input.
+
+Description: no simulation, one forward pass per sense vector, modulators at zero.
+"""
+
+import json
+import sys
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.connectome import encoder as enc
+
+h = json.loads((p.BUILD / "readiness" / "r0" / "fit0.json").read_text())
+brain = p.encoded_brain()
+t = brain.topology
+senses = {
+    "none": [0.0, 0.0, 0.0, 0.0],
+    "contact": [0.0, 0.0, 0.0, 1.0],
+    "concentration": [1.0, 0.0, 0.0, 0.0],
+    "lateral": [0.0, 0.7, 0.0, 0.0],
+    "derivative": [0.0, 0.0, 0.7, 0.0],
+}
+
+
+def outputs(z, held_input):
+    enc.write_encoder(brain, z)
+    rows = {}
+    with torch.no_grad():
+        mods = torch.zeros(1, brain._n_concentrations + 1)
+        for name, f in senses.items():
+            x = torch.tensor([f])
+            if held_input:
+                inj = x @ t.encoder.injection()
+                recurrent = t.encoder.chemical() + t.g_gap * t.encoder.gap_scale()
+                hh = inj
+                for _ in range(t.forward_pass_depth):
+                    hh = torch.tanh(hh @ recurrent + inj)
+                mean = t._pool_motor(hh) @ t.readout.T + t.readout_bias
+                pools = t._pool_motor(hh)
+            else:
+                mean, hid = t.forward_with_hidden_batched(x, modulators=mods)
+                pools = t._pool_motor(hid)
+            rows[name] = (mean[0].numpy(), pools[0].numpy())
+    base_mean, base_pools = rows["none"]
+    return {
+        name: {
+            "output_change": np.round(np.abs(m - base_mean).max(), 4).item(),
+            "pool_change": np.round(np.abs(q - base_pools).max(), 4).item(),
+        }
+        for name, (m, q) in rows.items()
+        if name != "none"
+    }
+
+
+for label, z in (("box centre", [0.5] * len(p.entries())), ("generation 300", h["answers"][299])):
+    for held in (False, True):
+        print(label, "held" if held else "initial", json.dumps(outputs(z, held)))

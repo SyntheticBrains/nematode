@@ -78,7 +78,9 @@ def test_build_birth_metadata_with_schema_returns_dump() -> None:
 
 def test_build_birth_metadata_no_schema_returns_empty() -> None:
     """When ``hyperparam_schema is None``, the helper SHALL return an empty dict."""
-    cfg = SimulationConfig.model_validate({"brain": {"name": "mlpppo", "config": {}}})
+    cfg = SimulationConfig.model_validate(
+        {"brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}}},
+    )
     assert cfg.hyperparam_schema is None
     md = build_birth_metadata(cfg)
     assert md == {}
@@ -123,7 +125,9 @@ def test_initial_genome_dim_matches_schema_length() -> None:
 
 def test_initial_genome_no_schema_raises() -> None:
     """No schema → clear error, not silent garbage."""
-    cfg = SimulationConfig.model_validate({"brain": {"name": "mlpppo", "config": {}}})
+    cfg = SimulationConfig.model_validate(
+        {"brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}}},
+    )
     enc = HyperparameterEncoder()
     with pytest.raises(ValueError, match="hyperparam_schema"):
         enc.initial_genome(cfg, rng=np.random.default_rng(0))
@@ -463,7 +467,9 @@ def test_genome_stds_categorical_scales_to_n_values() -> None:
 
 def test_genome_stds_no_schema_raises() -> None:
     """No schema → clear error from genome_stds."""
-    cfg = SimulationConfig.model_validate({"brain": {"name": "mlpppo", "config": {}}})
+    cfg = SimulationConfig.model_validate(
+        {"brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}}},
+    )
     enc = HyperparameterEncoder()
     with pytest.raises(ValueError, match="hyperparam_schema"):
         enc.genome_stds(cfg)
@@ -537,11 +543,15 @@ def test_select_encoder_with_hyperparam_schema_returns_hyperparam_encoder() -> N
 
 def test_select_encoder_without_schema_falls_back_to_brain_encoder() -> None:
     """Without ``hyperparam_schema``, ``select_encoder`` SHALL return brain-keyed encoder."""
-    cfg = SimulationConfig.model_validate({"brain": {"name": "mlpppo", "config": {}}})
+    cfg = SimulationConfig.model_validate(
+        {"brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}}},
+    )
     enc = select_encoder(cfg)
     assert isinstance(enc, MLPPPOEncoder)
     # And lstmppo
-    cfg_lstm = SimulationConfig.model_validate({"brain": {"name": "lstmppo", "config": {}}})
+    cfg_lstm = SimulationConfig.model_validate(
+        {"brain": {"name": "lstmppo", "config": {"sensory_modules": ["food_chemotaxis"]}}},
+    )
     enc_lstm = select_encoder(cfg_lstm)
     assert isinstance(enc_lstm, LSTMPPOEncoder)
 

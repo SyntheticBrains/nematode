@@ -1,0 +1,53 @@
+"""How far food contact can move the encoded brain's speed and reversal outputs (forward passes).
+
+Over random settings of the reduced subset (every other parameter at the box centre), the change in
+each output's mean, pre-squash, between contact 0 and contact 1 with every other sense at zero.
+"""
+
+import json
+import sys
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.connectome import encoder as enc
+
+brain = p.encoded_brain()
+t = brain.topology
+rng = np.random.default_rng(7)
+mods = torch.zeros(2, brain._n_concentrations + 1)
+x = torch.tensor([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+answer = json.load(open(p.REDUCED_PATH))["answer"]
+names = [e.name for e in p.entries()]
+where = [names.index(n) for n in p.REDUCED_NAMES]
+
+
+def embed(sub):
+    z = [0.5] * len(names)
+    for i, v in zip(where, sub):
+        z[i] = float(v)
+    return z
+
+
+rows = []
+for trial in range(4001):
+    sub = answer if trial == 0 else rng.uniform(0, 1, size=len(p.REDUCED_NAMES))
+    enc.write_encoder(brain, embed(sub))
+    with torch.no_grad():
+        mean, hidden = t.forward_with_hidden_batched(x, modulators=mods)
+        pools = t._pool_motor(hidden)
+    rows.append(
+        {
+            "speed": float(mean[1, 0] - mean[0, 0]),
+            "reversal": float(mean[1, 2] - mean[0, 2]),
+            "pools": float((pools[1] - pools[0]).abs().max()),
+        },
+    )
+first = rows[0]
+rest = rows[1:]
+print("the reduced answer:", json.dumps({k: round(v, 4) for k, v in first.items()}))
+for key in ("speed", "reversal", "pools"):
+    values = np.abs([r[key] for r in rest])
+    print(key, "|change| median", round(float(np.median(values)), 4), "90th", round(float(np.quantile(values, 0.9)), 4), "max", round(float(values.max()), 4))

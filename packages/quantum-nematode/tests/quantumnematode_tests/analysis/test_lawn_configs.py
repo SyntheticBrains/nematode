@@ -203,3 +203,22 @@ def test_the_committed_data_layer_config_is_the_generators() -> None:
         if parent.brain.config.model_dump().get(key) != value
     }
     assert changed == {"modulator_layer"}
+
+
+def test_the_committed_encoded_config_is_the_generators() -> None:
+    """The encoded arm is the data-layer arm with the encoder and the wiring it fixes, and loads."""
+    path, text = gen.derive_encoded()
+    assert path.read_text() == text
+    config = load_simulation_config(str(path))
+    assert config.brain is not None
+    brain = config.brain.config
+    assert getattr(brain, "encoder", None) == "compact"
+    assert getattr(brain, "modulator_step_seconds", None) == pytest.approx(1.0)
+    parent = load_simulation_config(str(gen.derive_data_layer()[0]))
+    assert parent.brain is not None
+    changed = {
+        key
+        for key, value in brain.model_dump().items()
+        if parent.brain.config.model_dump().get(key) != value
+    }
+    assert changed == set(gen.ENCODED_SETTINGS)

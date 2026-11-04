@@ -1,0 +1,41 @@
+"""The encoded settling's tanh: NumPy's float32 kernel against torch's, timed on one D_fit simulation.
+
+One process, one thread, alternating the two kernels twice on the same simulation (53,000,000,
+the cost pilot's seeds), with the brain built and warmed first. The statistics are compared too.
+"""
+
+import json
+import sys
+import time
+
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+import npe_recovery as nr
+from quantumnematode.brain.arch import connectome_ppo as cp
+
+nr._worker_setup()
+z = p.cost_points()[0]
+numpy_tanh = cp._settling_tanh
+p.simulate(9000, z, p.COST_BASE)
+runs = {"numpy": [], "torch": []}
+stats = {}
+for _ in range(2):
+    for name, fn in (("torch", torch.tanh), ("numpy", numpy_tanh)):
+        cp._settling_tanh = fn
+        start = time.perf_counter()
+        record = p.simulate(9001, z, p.COST_BASE)
+        runs[name].append(time.perf_counter() - start)
+        stats[name] = record["statistics"]
+cp._settling_tanh = numpy_tanh
+differing = sorted(k for k in stats["numpy"] if stats["numpy"][k] != stats["torch"][k])
+out = {
+    "description": "Description: one D_fit simulation of the encoded brain in one process and one thread, "
+    "the settling's tanh taken by torch and by NumPy's float32 kernel, alternated twice.",
+    "seconds": {k: [round(v, 3) for v in vs] for k, vs in runs.items()},
+    "speedup": round(min(runs["torch"]) / min(runs["numpy"]), 3),
+    "statistics_differing": differing,
+}
+print(json.dumps(out, indent=1))
+(p.SUPPORT / "tanh_speedup.json").write_text(json.dumps(out, indent=2) + "\n")

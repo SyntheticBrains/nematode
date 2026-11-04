@@ -1,0 +1,54 @@
+kinematics/dwelling_speed_median         value   0.018576569522288432 centre     0.0128 z 7.89
+kinematics/dwelling_speed_p90            value   0.040343096658867844 centre     0.0282 z 10.49
+kinematics/roaming_speed_median          value    0.03390737095968877 centre     0.0373 z -3.47
+kinematics/roaming_speed_p90             value    0.05700899647598593 centre     0.0733 z -4.01
+kinematics/roaming_survival_5min         value    0.03645800068874475 centre     0.1939 z -3.58
+small_lawn/dwelling_bout_s               value     2022.8070175438597 centre  1067.9270 z 4.24
+small_lawn/exits_per_on_lawn_hour        value     13.602015113350127 centre     0.7105 z 65.17
+small_lawn/pre_exit_enrichment           value   0.017639564488519832 centre     0.2953 z -3.98
+small_lawn/roaming_bout_s                value     136.31578947368422 centre   216.6667 z -3.54
+small_lawn/roaming_fraction              value    0.06313480133257496 centre     0.1694 z -2.93
+small_lawn/time_on_lawn                  value     0.2611564986737401 centre     0.9781 z -116.17
+uniform_lawn/dwelling_bout_s             value     1408.6038961038962 centre  1263.8889 z 0.26
+uniform_lawn/roaming_bout_s              value     123.35526315789474 centre   327.5532 z -6.96
+uniform_lawn/roaming_fraction            value    0.07955871433117641 centre     0.2130 z -1.48
+{'wiring': (0.316, 1), 'sensory': (0.267, 4), 'readout': (0.292, 2), 'noise': (0.276, 0), 'modulator': (0.248, 10), 'timescale': (0.226, 0)}
+  wiring.excitatory                 2.110
+  wiring.inhibitory                 2.202
+  wiring.gap                        2.873
+  wiring.unsigned.dopamine          1.459
+  wiring.unsigned.serotonin         0.182
+  wiring.unsigned.octopamine       -1.984
+  wiring.unsigned.none              1.632
+  readout.speed.VB                 -1.458
+  readout.speed.DB                 -0.508
+  readout.speed.VA                  2.983
+  readout.speed.DA                  0.728
+  readout.curvature.VB              2.810
+  readout.curvature.DB             -0.121
+  readout.curvature.VA              2.841
+  readout.curvature.DA             -2.405
+  readout.reversal.VB              -2.752
+  readout.reversal.DB              -2.752
+  readout.reversal.VA               0.738
+  readout.reversal.DA               2.844
+  readout.omega.VB                  1.457
+  readout.omega.DB                 -0.066
+  readout.omega.VA                  0.982
+  readout.omega.DA                  1.617
+  readout.delta.VB                 -1.444
+  readout.delta.DB                 -2.824
+  readout.delta.VA                 -0.759
+  readout.delta.DA                  2.324
+  readout.speed.bias                2.411
+  readout.curvature.bias           -2.974
+  readout.reversal.bias             1.574
+  readout.omega.bias               -1.919
+  readout.delta.bias               -0.454
+  noise.speed                      -1.312
+  noise.curvature                  -0.313
+  noise.reversal                    0.397
+  noise.omega                       0.004
+  noise.delta                       0.632
+  timescale.monoamine               506.960
+  timescale.neuropeptide            38.356

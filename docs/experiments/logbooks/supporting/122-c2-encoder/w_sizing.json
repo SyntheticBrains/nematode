@@ -1,0 +1,49 @@
+{
+  "description": "C.2's encoder before F.0b-ii: its cost, a slow decay's feasibility, its readiness. What F.0b-ii's and W's registrations are sized from.",
+  "measured": {
+    "cost_pilot_generation_seconds": {
+      "d_fit_assays": 21.237008583266288,
+      "all_four_assays": 55.558772458694875
+    },
+    "staged_fit_generation_seconds": {
+      "stage1": 28.318034145515412,
+      "stage2": 26.311341874999925
+    },
+    "compute_path": {
+      "animals": 3200,
+      "repeats": 30,
+      "cpu_1_thread_seconds": 0.004896854516118765,
+      "cpu_18_threads_seconds": 0.0054222289472818375,
+      "mps_seconds": 0.0012570207472890615,
+      "mps_max_abs_difference_from_cpu": 2.205371856689453e-06
+    },
+    "compute_path_decision": "CPU: MPS speeds only the settling, and the rest of a simulation would then run serially in one process",
+    "staged_fit": {
+      "stage1_generations": 150,
+      "stage2_generations": 500,
+      "stage2_best_generation": 500,
+      "stage2_best_answer_score": 3.4341574600538487,
+      "converged_by_cap": false
+    },
+    "hours_per_staged_fit": {
+      "stage2_to_500": 4.83427112759091,
+      "stage2_to_1000": 8.488624165785344
+    }
+  },
+  "projection_hours_for_w": {
+    "6_arms_x_8_draws": {
+      "stage2_to_500": 232.04501412436366,
+      "stage2_to_1000": 407.4539599576965
+    },
+    "6_arms_x_16_draws": {
+      "stage2_to_500": 464.0900282487273,
+      "stage2_to_1000": 814.907919915393
+    }
+  },
+  "not_measured": [
+    "the generations a staged fit needs to converge (stage 2 improved at its cap of 500)",
+    "the restart-to-restart spread of the held-out families and mutant differences, against W's minimum (2.97 fitted, 2.05 held-out)",
+    "the tying (per_couple against per_ligand)",
+    "the draws per arm"
+  ]
+}

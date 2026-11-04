@@ -78,6 +78,14 @@ from quantumnematode.brain.arch._std_head import (
 )
 from quantumnematode.brain.arch.dtypes import BrainConfig, BrainType, DeviceType
 from quantumnematode.brain.weights import WeightComponent
+from quantumnematode.connectome.encoder import (
+    AMPHID_CLASSES,
+    CONTACT_CLASSES,
+    CompactEncoder,
+    Tying,
+    box_centre,
+    write_encoder,
+)
 from quantumnematode.connectome.loader import (
     load_cook_2019_hermaphrodite,
     load_emmons_2024_hermaphrodite,
@@ -205,21 +213,29 @@ def boundary_neurons(
     connectome: Connectome,
     *,
     body_drive: bool = False,
+    encoded: bool = False,
 ) -> tuple[frozenset[str], frozenset[str]]:
     """Return ``(sensory, motor)``: where sensation is injected, and what the brain reads out.
 
     The sensory side is every neuron a projection targets -- food, thermal and predator alike, so
-    the set is the same on every cell. The motor side is every motor-class neuron of the four
-    classes the readout pools, matched as the readout matches them. Under the body drive it is
-    every cell the drive reads instead: the cells with neuromuscular junctions, which include every
-    motor-class neuron the direction channel reads.
+    the set is the same on every cell. Under the compact encoder it is the encoder's targets
+    instead: both neurons of every encoded amphid class and the food-contact neurons, the encoder
+    refusing the thermal and predator projections. The motor side is every motor-class neuron of
+    the four classes the readout pools, matched as the readout matches them. Under the body drive
+    it is every cell the drive reads instead: the cells with neuromuscular junctions, which include
+    every motor-class neuron the direction channel reads.
     """
-    sensory = frozenset(
-        _SENSOR_NEURONS_FOOD
-        + _SENSOR_NEURONS_THERMOTAXIS
-        + _SENSOR_NEURONS_PREDATOR_DISTAL
-        + _SENSOR_NEURONS_PREDATOR_ANTERIOR
-        + _SENSOR_NEURONS_PREDATOR_POSTERIOR,
+    sensory = (
+        frozenset(f"{cls}{side}" for cls in AMPHID_CLASSES for side in "LR")
+        | frozenset(name for members in CONTACT_CLASSES.values() for name in members)
+        if encoded
+        else frozenset(
+            _SENSOR_NEURONS_FOOD
+            + _SENSOR_NEURONS_THERMOTAXIS
+            + _SENSOR_NEURONS_PREDATOR_DISTAL
+            + _SENSOR_NEURONS_PREDATOR_ANTERIOR
+            + _SENSOR_NEURONS_PREDATOR_POSTERIOR,
+        )
     )
     motor = frozenset(
         name
@@ -549,6 +565,17 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
     # classes of the same size, drawn with modulator_layer_null_seed.
     modulator_layer_null: Literal["none", "receptor_placement"] = "none"
     modulator_layer_null_seed: int | None = None
+    # The compact encoder. "compact" fixes the wiring from data and makes the brain a function of a
+    # few hundred named parameters, written from a unit-box vector (quantumnematode.connectome
+    # .encoder): the excitatory, inhibitory and gap scales and the unsigned edges' group gains;
+    # class-tied sensory gains, food contact among them; the pooled readout with a bias per output;
+    # the log-SDs; the data layer's strengths; and a monoamine and a neuropeptide timescale. Under
+    # PPO those are the policy's learnable parameters, the timescales held. Default "none" is
+    # byte-identical to the pre-option brain.
+    encoder: Literal["none", "compact"] = "none"
+    # The encoder only. "per_couple" gives each data-layer row its own strength; "per_ligand" ties
+    # them by ligand, a ligand's fixed-sign and fitted rows each sharing one.
+    encoder_modulator_tying: Tying = "per_couple"
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
@@ -588,6 +615,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
             _body_drive_refusal,
             _freeze_wiring_refusal,
             _modulators_refusal,
+            _encoder_refusal,
         ):
             if (refusal := refusal_of(self)) is not None:
                 raise ValueError(refusal)
@@ -1133,6 +1161,84 @@ def _modulators_refusal(config: ConnectomePPOBrainConfig) -> str | None:  # noqa
     return None
 
 
+# The settings the encoder fixes, each at the value it requires: the wiring it composes is the
+# grounded-sign, count-normalised chemical graph with strength-normalised additive gaps, and every
+# other weight it would replace or bypass is left at its default rather than accepted unread.
+_ENCODER_FIXED: tuple[tuple[str, object], ...] = (
+    ("dynamics", "settling"),
+    ("sensing_mode", "klinotaxis"),
+    ("action_mode", "continuous"),
+    ("action_space", "primitives"),
+    ("continuous_std_mode", "state_independent"),
+    ("initial_log_std", 0.0),
+    ("learning_rule", "ppo"),
+    ("modulators", True),
+    ("modulator_layer", "data"),
+    ("modulator_satiety_link", True),
+    ("modulator_timescales_s", None),
+    ("modulator_layer_sensitivity", "none"),
+    ("modulator_layer_sources", None),
+    ("synapse_signs", "per_connection"),
+    ("enforce_synapse_signs", False),
+    ("weight_prior", "random"),
+    ("weight_init", "degree_scaled"),
+    ("weight_draw", "edge_order"),
+    ("measured_weight_scale", 1.0),
+    ("chemical_weight_scale", 1.0),
+    ("chemical_mask_mode", "strict"),
+    ("freeze_wiring", False),
+    ("enable_gap_junctions", True),
+    ("gap_weight_mode", "count"),
+    ("gap_weight_scale", 1.0),
+    ("gap_normalisation", "strength"),
+    ("gap_coupling", "additive"),
+    ("plastic_gaps", False),
+    ("readout_width", "pooled"),
+    ("enable_predator_projection", False),
+    ("enable_thermotaxis_projection", False),
+    ("enable_activity_traces", False),
+    ("plasticity_node_noise", 0.0),
+)
+# The longest step the encoder accepts: the primitives worm's. Its timescales are in worm-seconds,
+# so the layer's decay must be computed at the step the worm actually takes.
+_ENCODER_MAX_STEP_S = 1.0
+
+
+def _encoder_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why the compact encoder cannot run here, or ``None`` when it can."""
+    if config.encoder == "none":
+        if config.encoder_modulator_tying != "per_couple":
+            return "encoder_modulator_tying is read only with encoder='compact'."
+        return None
+    if config.encoder != "compact":
+        return f"Unsupported encoder: {config.encoder!r}"
+    if config.encoder_modulator_tying not in ("per_couple", "per_ligand"):
+        return f"Unsupported encoder_modulator_tying: {config.encoder_modulator_tying!r}"
+    wrong = [
+        f"{key}={getattr(config, key)!r} (requires {value!r})"
+        for key, value in _ENCODER_FIXED
+        if getattr(config, key) != value
+    ]
+    if wrong:
+        return f"encoder='compact' fixes these settings: {'; '.join(wrong)}."
+    return None
+
+
+def _encoder_step_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why the encoder cannot run at this modulator step, or ``None`` when it can.
+
+    Checked at construction only: a config file is parsed at its reference step, before the loader
+    converts ``modulator_step_seconds`` to the configured one.
+    """
+    if config.encoder != "none" and config.modulator_step_seconds > _ENCODER_MAX_STEP_S:
+        return (
+            "encoder='compact' requires modulator_step_seconds at the worm's step, at most "
+            f"{_ENCODER_MAX_STEP_S:g} s on the primitives worm; got "
+            f"{config.modulator_step_seconds}."
+        )
+    return None
+
+
 def _data_layer_spec(config: ConnectomePPOBrainConfig, names: list[str]) -> LayerSpec:
     """Build the data layer a config names, with its sensitivity, sources and null."""
     spec = load_data_layer(
@@ -1175,6 +1281,8 @@ def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     if (refusal := _freeze_wiring_refusal(config)) is not None:
         raise ValueError(refusal)
     if (refusal := _gap_coupling_refusal(config)) is not None:
+        raise ValueError(refusal)
+    if (refusal := _encoder_refusal(config) or _encoder_step_refusal(config)) is not None:
         raise ValueError(refusal)
 
 
@@ -1325,6 +1433,19 @@ class PerturbationDimension(TypedDict):
     causally_connected_draws: int
 
 
+def _settling_tanh(x: torch.Tensor) -> torch.Tensor:
+    """Return ``tanh(x)``, through NumPy's kernel wherever no gradient is taken on the CPU.
+
+    Where torch's CPU tanh is not vectorised, NumPy's float32 tanh is several times faster and
+    agrees with it to within one float32 ulp. Each element's value depends on that element alone,
+    not on the array's size or layout, so a network settles the same alone or in any batch. A
+    gradient, or a tensor on another device, takes torch's tanh.
+    """
+    if x.device.type != "cpu" or (torch.is_grad_enabled() and x.requires_grad):
+        return torch.tanh(x)
+    return torch.from_numpy(np.tanh(x.detach().numpy()))
+
+
 class ConnectomeTopology(nn.Module):
     """Forward-pass network whose connectivity is the Cook 2019 connectome.
 
@@ -1382,6 +1503,7 @@ class ConnectomeTopology(nn.Module):
     modulator_row_order: torch.Tensor
     _serotonin_release_indices: torch.Tensor
     _pdf_release_indices: torch.Tensor
+    readout_bias: nn.Parameter
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one-time topology construction
         self,
@@ -1437,6 +1559,8 @@ class ConnectomeTopology(nn.Module):
     ) -> None:
         super().__init__()
         self.dynamics = dynamics
+        # The compact encoder, attached by the brain once the topology is built; None without it.
+        self.encoder: CompactEncoder | None = None
         # Set by update telemetry: the batched settling then keeps its second-to-last iterate,
         # detached, so the settled state's distance from a fixed point can be read. Off, nothing
         # is kept; on, the forward computes exactly what it computes off.
@@ -2197,8 +2321,60 @@ class ConnectomeTopology(nn.Module):
         )
         self.modulator_layer_w = nn.Parameter(torch.zeros(len(fitted), device=device))
 
+    def attach_encoder(self, connectome: Connectome, tying: Tying) -> None:
+        """Fix the wiring from data and hand the policy to the compact encoder.
+
+        Built on this topology's own wiring and signs, and drawing no random number. The drawn
+        chemical weights and food gains are left in place unread, and take no gradient; the readout
+        gains a bias per output. Per-ligand tying takes the layer's strengths over too.
+        """
+        if self.modulator_layer != "data":
+            msg = "the compact encoder needs the data neuromodulator layer"
+            raise ValueError(msg)
+        device = self.g_gap.device
+        self.encoder = CompactEncoder(
+            connectome,
+            self._idx,
+            cast("torch.Tensor", self.chem_sign),
+            self.modulator_spec,
+            tying,
+        ).to(device)
+        self.readout_bias = nn.Parameter(torch.zeros(self.readout.shape[0], device=device))
+        unread = [self.w_chem, self.food_gains]
+        if tying == "per_ligand":
+            unread += [self.modulator_layer_rho, self.modulator_layer_w]
+        for tensor in unread:
+            tensor.requires_grad = False
+
+    def _forward_encoded(
+        self,
+        h: torch.Tensor,
+        modulators: torch.Tensor | None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Settle an encoded network from its injected sensors, ``(N,)`` or ``(B, N)``.
+
+        The chemical and gap terms act through one matrix, their sum, so a settling step is one
+        product; the readout adds its bias.
+        """
+        encoder = cast("CompactEncoder", self.encoder)
+        recurrent = encoder.chemical() + self.g_gap * encoder.gap_scale()
+        held = self._held_current(modulators)
+        previous = h
+        for _ in range(self.forward_pass_depth):
+            previous = h
+            preact = h @ recurrent
+            if held is not None:
+                preact = preact + held
+            h = _settling_tanh(preact)
+        if self.capture_penultimate:
+            self.penultimate = previous.detach()
+        mean = self._pool_motor(h) @ self.readout.T + self.readout_bias
+        return mean, h
+
     def modulator_layer_strengths(self) -> torch.Tensor:
         """Return each row's strength: softplus for fixed rows, the free value for fitted ones."""
+        if self.encoder is not None and self.encoder.tying == "per_ligand":
+            return self.encoder.row_strengths()
         joined = torch.cat(
             [nn.functional.softplus(self.modulator_layer_rho), self.modulator_layer_w],
         )
@@ -2324,6 +2500,8 @@ class ConnectomeTopology(nn.Module):
         """
         if not self.enable_gap_junctions:
             return torch.zeros_like(self.g_gap)
+        if self.encoder is not None:
+            return self.g_gap * self.encoder.gap_scale()
         if self.plastic_gaps:
             log_scale = self.gap_log_multiplier
             symmetric = ((log_scale + log_scale.T) / 2.0).clamp(
@@ -2359,6 +2537,8 @@ class ConnectomeTopology(nn.Module):
 
         Settling dynamics uses it as the initial state; leaky dynamics holds it as a current.
         """
+        if self.encoder is not None:
+            return food_features @ self.encoder.injection()
         h = torch.zeros(self.n_neurons, device=food_features.device, dtype=food_features.dtype)
         food_injection = food_features @ self.food_gains  # shape (6,)
         h = h.index_add(0, self._food_neuron_indices, food_injection)
@@ -2382,6 +2562,8 @@ class ConnectomeTopology(nn.Module):
         thermotaxis_features: torch.Tensor | None,
     ) -> torch.Tensor:
         """Batched :meth:`_sensor_current`: ``(B, F)`` features to a ``(B, N)`` injection."""
+        if self.encoder is not None:
+            return food_features @ self.encoder.injection()
         h = torch.zeros(
             food_features.shape[0],
             self.n_neurons,
@@ -3090,7 +3272,7 @@ class ConnectomeTopology(nn.Module):
             h = h.index_add(0, self._thermotaxis_neuron_indices, thermo_inj)
         return h
 
-    def forward_with_hidden(  # noqa: C901, PLR0912, PLR0913 — one input per sensory projection
+    def forward_with_hidden(  # noqa: C901, PLR0912, PLR0913, PLR0915 — one input per sensory projection
         self,
         food_features: torch.Tensor,
         predator_distal_features: torch.Tensor | None = None,
@@ -3152,6 +3334,8 @@ class ConnectomeTopology(nn.Module):
         )
         if self.dynamics == "leaky":
             return self._forward_leaky(self.input_gain * h)
+        if self.encoder is not None:
+            return self._forward_encoded(h, modulators)
 
         # K recurrent updates through chemical + gap-junction connectivity.
         # Each neuron's pre-activation = sum_pre(W[pre, post] * h[pre]) = (W.T @ h)[post].
@@ -3367,6 +3551,8 @@ class ConnectomeTopology(nn.Module):
             contact_zone_onehot,
             thermotaxis_features,
         )
+        if self.encoder is not None:
+            return self._forward_encoded(h, modulators)
 
         # K recurrent updates. Single-sample uses ``chem_mat.T @ h`` for a
         # 302-vec ``h``; for a ``(B, 302)`` batch the equivalent is
@@ -3505,6 +3691,12 @@ class ConnectomeTopology(nn.Module):
         Foraging-only configs allocate neither, so the optimiser sees
         byte-identical parameter sets to pre-projection builds.
         """
+        if self.encoder is not None:
+            # The encoder's parameters and nothing else: its timescales are held.
+            params = [*self.encoder.own_parameters(), self.readout, self.readout_bias, self.log_std]
+            if self.encoder.tying == "per_couple":
+                params.extend([self.modulator_layer_rho, self.modulator_layer_w])
+            return params
         # A frozen wiring keeps the chemical weights out of the optimiser, at their initial draw.
         params = [] if self.freeze_wiring else [self.w_chem]
         params.append(self.food_gains)
@@ -3639,7 +3831,11 @@ class ConnectomePPOBrain(ClassicalBrain):
                 preserve_autapses=config.wiring
                 in ("rewired_chemical_only", "rewired_boundary_held"),
                 hold_boundary=(
-                    boundary_neurons(connectome, body_drive=config.action_space == "body_drive")
+                    boundary_neurons(
+                        connectome,
+                        body_drive=config.action_space == "body_drive",
+                        encoded=config.encoder != "none",
+                    )
                     if config.wiring == "rewired_boundary_held"
                     else None
                 ),
@@ -3658,6 +3854,10 @@ class ConnectomePPOBrain(ClassicalBrain):
 
         # Derive the per-mode food-feature count.
         self._n_food_features = _N_FOOD_FEATURES_BY_MODE[config.sensing_mode]
+        # The encoder also reads food contact, the density of the lawn under the worm.
+        self._encoded = config.encoder == "compact"
+        if self._encoded:
+            self._n_food_features += 1
 
         # Topology owns weight tensors + forward pass. ``enforce_strict_mask``
         # is the structural choice that pins gradient flow to wild-type edges
@@ -3763,6 +3963,12 @@ class ConnectomePPOBrain(ClassicalBrain):
                 else 1.0
             )
         )
+        if self._encoded:
+            # Before the rule is built, so its optimiser holds the encoder's parameters; written at
+            # the unit box's centre, so a fresh encoded brain does not depend on its seed.
+            tying = config.encoder_modulator_tying
+            self.topology.attach_encoder(connectome, tying)
+            write_encoder(self, box_centre(self.topology.modulator_spec, tying))
 
         # Learning rule: owns the critic (constructed inside the rule at this
         # exact point — same torch-RNG draw order as the pre-extraction
@@ -4034,6 +4240,9 @@ class ConnectomePPOBrain(ClassicalBrain):
         lateral = float(np.tanh(raw_lateral * params.lateral_scale))
         raw_deriv = float(params.food_dconcentration_dt or 0.0)
         dcdt = float(np.tanh(raw_deriv * params.derivative_scale))
+        if self._encoded:
+            contact = float(np.clip(params.food_contact or 0.0, 0.0, 1.0))
+            return np.array([strength, lateral, dcdt, contact], dtype=np.float32)
         return np.array([strength, lateral, dcdt], dtype=np.float32)
 
     def _extract_predator_features(self, params: BrainParams) -> np.ndarray:
@@ -4494,6 +4703,13 @@ class ConnectomePPOBrain(ClassicalBrain):
                 },
             ),
         }
+        if self._encoded:
+            # Recorded only with the encoder on, so a default brain saves exactly what it did
+            # before the option existed. The encoder's tensors are in the topology's state.
+            all_components["training_state"].state["encoder"] = self.config.encoder
+            all_components["training_state"].state["encoder_modulator_tying"] = (
+                self.config.encoder_modulator_tying
+            )
         if self.config.gap_normalisation != "degree":
             # Recorded only off the default, so a default brain saves exactly what it did before
             # the option existed. A mismatch on load is refused by the gap-matrix wiring check.
@@ -4703,6 +4919,11 @@ class ConnectomePPOBrain(ClassicalBrain):
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
             self._load_topology_state(topology_state)
+            if self.topology.encoder is not None:
+                # The decay follows the loaded timescales.
+                self._modulator_decay = self.topology.encoder.decay(
+                    self.config.modulator_step_seconds,
+                )
         if self._ppo_rule is not None:
             if "value" in components:
                 self._ppo_rule.critic.load_state_dict(components["value"].state)

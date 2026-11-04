@@ -1,0 +1,68 @@
+"""Existence, the fixed-sign modulator strengths at their floor: does contact-slowing hold the lawn?
+
+From random settings of the reduced subset (every other parameter at the box centre), the few
+where contact slows the run speed most without raising the reversal output, each run on the small
+lawn with 200 animals on discarded seeds (70,000,000).
+"""
+
+import json
+import sys
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import npe_recovery as nr
+from quantumnematode.benchmark import grading as g
+from quantumnematode.connectome import encoder as enc
+
+nr._worker_setup()
+brain = p.encoded_brain()
+t = brain.topology
+names = [e.name for e in p.entries()]
+where = [names.index(n) for n in p.REDUCED_NAMES]
+
+
+fixed = [i for i, e in enumerate(p.entries()) if e.block == "modulator" and e.low > 0]
+
+
+def embed(sub):
+    z = [0.5] * len(names)
+    for i in fixed:
+        z[i] = 0.0
+    for i, v in zip(where, sub):
+        z[i] = float(v)
+    return z
+
+
+rng = np.random.default_rng(7)
+mods = torch.zeros(2, brain._n_concentrations + 1)
+x = torch.tensor([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+found = []
+for trial in range(4000):
+    sub = rng.uniform(0, 1, size=len(p.REDUCED_NAMES))
+    enc.write_encoder(brain, embed(sub))
+    with torch.no_grad():
+        mean, _ = t.forward_with_hidden_batched(x, modulators=mods)
+    off_speed, on_speed = float(mean[0, 0]), float(mean[1, 0])
+    reversal_change = float(mean[1, 2] - mean[0, 2])
+    found.append((on_speed - off_speed, off_speed, reversal_change, sub))
+# Contact slows most, off-lawn speed at least mid-range, reversals not raised on the lawn.
+picks = sorted((f for f in found if f[1] > 0.0 and f[2] <= 0.0), key=lambda f: f[0])[:4]
+bands = bg.load_bands_v3()
+clf = bg.classifier(bands)
+for k, (dspeed, off_speed, drev, sub) in enumerate(picks):
+    seeds = p.population_seeds(70_100_000, k)
+    populations, _ = bg.simulate_v2(p.ARM, p.controller(embed(sub)), seeds, bands, assays=("small_lawn",))
+    values = bg.family_values("small_lawn", populations["small_lawn"], clf)
+    print(json.dumps({
+        "pick": k,
+        "speed_change_on_contact": round(dspeed, 3),
+        "off_lawn_speed_output": round(off_speed, 3),
+        "reversal_change": round(drev, 3),
+        "time_on_lawn": round(values["time_on_lawn"], 3),
+        "exits_per_on_lawn_hour": round(values["exits_per_on_lawn_hour"], 2),
+        "roaming_fraction": round(values["roaming_fraction"], 3),
+    }), flush=True)

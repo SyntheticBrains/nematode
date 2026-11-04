@@ -53,10 +53,39 @@ POSITION_HORIZON = 150
 SATIETY_TOLERANCE = 1e-6
 
 
+# The encoded connectome: the data layer on the strength-normalised, grounded-sign wiring, with a
+# fixed vector inside the box so every block is away from its centre.
+ENCODED: dict[str, object] = {
+    "modulator_layer": "data",
+    "modulator_satiety_link": True,
+    "synapse_signs": "per_connection",
+    "gap_normalisation": "strength",
+    "encoder": "compact",
+}
+ENCODED_VECTOR_SEED = 3
+
+
 def config_path(controller: str, protocol: str) -> Path:
     """Return the assay config a controller runs on: the connectome's, or the MLP's for the rest."""
-    stem = CONNECTOME_STEM if controller == "connectome" else MLP_STEM
+    stem = CONNECTOME_STEM if controller in ("connectome", "encoded") else MLP_STEM
     return FORAGING / f"{stem}_assay_{protocol}.yml"
+
+
+def encoded_brain(protocol: str, wiring: str = "wild_type") -> tuple[Any, Any]:
+    """Return an encoded connectome brain with the fixed vector written, and its config."""
+    from quantumnematode.connectome.encoder import write_encoder
+
+    overrides = {**ENCODED, "wiring": wiring}
+    if wiring != "wild_type":
+        overrides["rewire_seed"] = 5
+    brain, config, _ = harness.build_brain(
+        config_path("encoded", protocol),
+        PARITY_SEEDS[0],
+        overrides,
+    )
+    n = len(brain.topology.encoder.entries)
+    write_encoder(brain, np.random.default_rng(ENCODED_VECTOR_SEED).uniform(0.15, 0.85, size=n))
+    return brain, config
 
 
 def build(controller: str, protocol: str) -> tuple[Any, Any, Any]:
@@ -71,6 +100,9 @@ def build(controller: str, protocol: str) -> tuple[Any, Any, Any]:
             PirouetteHazards(0.15, HAZARDS, beta=3.0),
             BatchedPirouetteHazards(0.15, HAZARDS, beta=3.0),
         )
+    if controller == "encoded":
+        brain, _ = encoded_brain(protocol)
+        return config, brain, BatchedConnectome(brain)
     brain, _, _ = harness.build_brain(path, PARITY_SEEDS[0])
     batched = BatchedMLP(brain) if controller == "mlp" else BatchedConnectome(brain)
     return config, brain, batched
@@ -137,11 +169,14 @@ def run_batched(
     return trajectories, log
 
 
-def references(config: Any, controller: Any, steps: int) -> list[ReferenceEpisode]:
-    """Run the per-step reference for every parity seed."""
-    return [
-        run_reference(config, controller, seed, steps, record_density=True) for seed in PARITY_SEEDS
-    ]
+def references(
+    config: Any,
+    controller: Any,
+    steps: int,
+    seeds: tuple[int, ...] | list[int] = PARITY_SEEDS,
+) -> list[ReferenceEpisode]:
+    """Run the per-step reference for every seed, the parity seeds by default."""
+    return [run_reference(config, controller, seed, steps, record_density=True) for seed in seeds]
 
 
 def state_mismatches(refs: list[ReferenceEpisode], log: BatchedLog, steps: int) -> list[str]:

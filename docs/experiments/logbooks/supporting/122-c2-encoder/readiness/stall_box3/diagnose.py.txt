@@ -1,0 +1,30 @@
+"""What the measured restart's generation-300 answer gets wrong, and what its parameters look like."""
+
+import json
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+import npe_recovery as nr
+
+nr._worker_setup()
+g = int(sys.argv[1])
+h = json.loads((p.BUILD / "readiness" / "r0" / "fit0.json").read_text())
+z = h["answers"][g - 1]
+rec = p.simulate(2 * g + 1000, z, 61_000_000)
+obj = p.FitObjective()
+for key in sorted(obj.truth["statistics"]):
+    v = rec["statistics"].get(key)
+    c = obj.truth["statistics"][key]
+    zz = None if v is None else (v - c) / obj.scales[key]
+    print(f"{key:40s} value {v!s:>22s} centre {c:10.4f} z {zz if zz is None else round(zz, 2)}")
+table = p.entries()
+vals = {e.name: e.value(u) for e, u in zip(table, z, strict=True)}
+blocks = {}
+for e, u in zip(table, z, strict=True):
+    blocks.setdefault(e.block, []).append(u)
+print({b: (round(float(np.mean(np.abs(np.array(us) - 0.5))), 3), sum(1 for u in us if u < 0.01 or u > 0.99)) for b, us in blocks.items()})
+for name in [e.name for e in table if e.block in ("wiring", "readout", "noise", "timescale")]:
+    print(f"  {name:32s} {vals[name]: .3f}")

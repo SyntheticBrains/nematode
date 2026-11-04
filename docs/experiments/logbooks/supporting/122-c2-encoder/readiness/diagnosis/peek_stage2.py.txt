@@ -1,0 +1,20 @@
+"""A mid-run read of stage 2's current answer, re-simulated once on D_fit (83,000,000; description)."""
+
+import json
+import sys
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+import npe_recovery as nr
+
+nr._worker_setup()
+h = json.loads((p.BUILD / "readiness" / "staged" / "stage2" / "fit0.json").read_text())
+g = len(h["answers"])
+record = p.simulate(g, h["answers"][-1], 83_000_000)
+objective = p.FitObjective()
+stats = record["statistics"]
+print(json.dumps({"generation": g, "score": round(objective(record), 2), "D_fit": round(record["D_fit"], 2), "time_on_lawn": round(stats["small_lawn/time_on_lawn"], 3)}))
+for key in sorted(objective.truth["statistics"]):
+    v = stats.get(key)
+    z = None if v is None else (v - objective.truth["statistics"][key]) / objective.scales[key]
+    print(f"  {key:38s} z {z if z is None else round(z, 2)}")
