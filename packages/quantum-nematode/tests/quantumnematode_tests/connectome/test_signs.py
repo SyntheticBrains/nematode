@@ -49,10 +49,28 @@ SECONDARY_SET_ASIDE = {
 }  # fmt: skip
 
 
+# The glutamatergic edges onto AIA and ADE that López-Cruz et al. 2019's cell-specific knockouts
+# cover, signed inhibitory by their overrides: the tax-4 chemosensory cells onto AIA and the mec-3
+# mechanosensory cells onto ADE.
+LOPEZCRUZ_EDGES = {
+    ("ASEL", "AIAL"), ("ASER", "AIAL"), ("ASGL", "AIAL"), ("ASKL", "AIAL"), ("ASKR", "AIAL"),
+    ("AWCL", "AIAL"), ("AWCR", "AIAL"), ("ASER", "AIAR"), ("ASGR", "AIAR"), ("ASKR", "AIAR"),
+    ("AWCL", "AIAR"), ("AWCR", "AIAR"), ("FLPL", "ADEL"), ("AVM", "ADER"), ("FLPL", "ADER"),
+    ("FLPR", "ADER"),
+}  # fmt: skip
+_AIA_ADE = {"AIAL", "AIAR", "ADEL", "ADER"}
+
+
 @pytest.fixture(scope="module")
 def table() -> dict[tuple[str, str], sg.ConnectionSign]:
     """Build the Cook 2019 table once for the module; reading both sheets takes seconds."""
     return sg.per_connection_signs()
+
+
+@pytest.fixture(scope="module")
+def earlier() -> dict[tuple[str, str], sg.ConnectionSign]:
+    """Build the table without the López-Cruz overrides: the table before they were added."""
+    return sg.per_connection_signs(exclude_citations=("lopezcruz2019",))
 
 
 def _write_overrides(path: Path, rows: list[str]) -> Path:
@@ -171,7 +189,7 @@ class TestVendoredFiles:
     def test_the_physiology_table_is_recorded(self) -> None:
         assert sg.PHYSIOLOGY_OVERRIDES_PATH.name in PROVENANCE.read_text(encoding="utf-8")
         overrides = sg.read_physiology_overrides()
-        assert len(overrides) == 51
+        assert len(overrides) == 67
         assert {o.citation for o in overrides} == set(sg.PHYSIOLOGY_CITATIONS)
 
 
@@ -185,17 +203,17 @@ class TestComposition:
 
     def test_sources_and_signs(self, table) -> None:
         assert Counter(entry.source for entry in table.values()) == {
-            "physiology": 51,
+            "physiology": 67,
             "expression": 1676,
-            "rule": 1449,
+            "rule": 1433,
             "none": 533,
         }
         assert Counter((entry.source, entry.sign) for entry in table.values()) == {
             ("physiology", 1): 19,
-            ("physiology", -1): 32,
+            ("physiology", -1): 48,
             ("expression", 1): 1291,
             ("expression", -1): 385,
-            ("rule", 1): 1324,
+            ("rule", 1): 1308,
             ("rule", -1): 125,
             ("none", 0): 533,
         }
@@ -204,7 +222,7 @@ class TestComposition:
         sections: Counter[str] = Counter()
         for synapse in load_cook_2019_hermaphrodite().chemical_synapses:
             sections[table[(synapse.pre, synapse.post)].source] += synapse.weight
-        assert sections == {"physiology": 850, "expression": 10962, "rule": 7098, "none": 2055}
+        assert sections == {"physiology": 1080, "expression": 10962, "rule": 6868, "none": 2055}
 
     def test_awc_to_aiy_is_inhibitory_where_the_rule_says_excitatory(self, table) -> None:
         entry = table[("AWCL", "AIYL")]
@@ -217,7 +235,7 @@ class TestComposition:
             for (pre, _post), entry in table.items()
             if sg.sign_for(sg.NEURON_CLASSIFICATION[pre][1]) not in (None, entry.sign)
         )
-        assert opposite == {"physiology": 32, "expression": 310}
+        assert opposite == {"physiology": 48, "expression": 310}
 
     def test_sheet_coverage(self, table) -> None:
         edges = set(table)
@@ -241,13 +259,58 @@ class TestComposition:
         assert sg.per_connection_signs(load_emmons_2024_hermaphrodite()) == table
 
 
+class TestTheLocalSearchPathways:
+    """Scenario: The local-search pathways onto AIA and ADE are inhibitory."""
+
+    def test_the_16_edges_are_inhibitory_by_physiology(self, table) -> None:
+        cited = {edge for edge, e in table.items() if e.citation == "lopezcruz2019"}
+        assert cited == LOPEZCRUZ_EDGES
+        assert {(table[e].sign, table[e].source) for e in LOPEZCRUZ_EDGES} == {(-1, "physiology")}
+
+    def test_the_13_other_glutamatergic_inputs_keep_the_rule(self, table) -> None:
+        others = {
+            edge
+            for edge in table
+            if edge[1] in _AIA_ADE
+            and sg.NEURON_CLASSIFICATION[edge[0]][1] == "Glu"
+            and edge not in LOPEZCRUZ_EDGES
+        }
+        assert len(others) == 13
+        assert {(table[e].sign, table[e].source) for e in others} == {(1, "rule")}
+
+
+class TestTheEarlierTable:
+    """Scenario: The earlier table is reproducible."""
+
+    def test_excluding_the_overrides_gives_the_earlier_composition(self, earlier) -> None:
+        assert Counter(entry.source for entry in earlier.values()) == {
+            "physiology": 51,
+            "expression": 1676,
+            "rule": 1449,
+            "none": 533,
+        }
+
+    def test_it_differs_from_the_full_table_on_exactly_the_16_edges(self, table, earlier) -> None:
+        differ = {edge for edge in table if table[edge] != earlier[edge]}
+        assert differ == LOPEZCRUZ_EDGES
+        assert {(earlier[e].sign, earlier[e].source) for e in differ} == {(1, "rule")}
+
+    def test_an_unknown_key_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="does not cite: \\['nobody2099'\\]"):
+            sg.per_connection_signs(exclude_citations=("nobody2099",))
+
+
 class TestWormlightAgreement:
     """Scenario: The table matches Wormlight's."""
 
-    def test_every_other_edge_matches_its_sign_and_source(self, table) -> None:
+    def test_every_other_edge_matches_its_sign_and_source(self, earlier) -> None:
+        """Compare the table without the López-Cruz rows: Wormlight's overrides are its first 51.
+
+        The full table differs from it on their 16 edges alone.
+        """
         rows = sorted(
             f"{pre}>{post}:{e.sign}:{e.source}"
-            for (pre, post), e in table.items()
+            for (pre, post), e in earlier.items()
             if (pre, post) not in SECONDARY_SET_ASIDE
         )
         digest = hashlib.sha256("\n".join(rows).encode()).hexdigest()

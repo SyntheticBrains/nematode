@@ -105,7 +105,7 @@ from quantumnematode.connectome.neuromodulators import ModulatorCircuit, load_ci
 from quantumnematode.connectome.neuromuscular import neuromuscular_drive_map
 from quantumnematode.connectome.neurotransmitters import instructed_neurons, sign_for
 from quantumnematode.connectome.rewiring import rewire_degree_preserving
-from quantumnematode.connectome.signs import per_connection_signs
+from quantumnematode.connectome.signs import PHYSIOLOGY_CITATIONS, per_connection_signs
 from quantumnematode.env.body import N_SEGMENTS as N_BODY_SEGMENTS
 from quantumnematode.env.env import ContactZone
 from quantumnematode.logging_config import logger
@@ -436,10 +436,15 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
     # sign, which the post-synaptic receptor actually sets — see the connectome package's
     # neurotransmitters module. "per_connection" signs each synapse from the vendored per-connection
     # table instead -- a physiology measurement first, then receptor-expression polarity, then the
-    # per-neuron rule -- which grounds the same synapses as "atlas" and corrects 342 of their signs;
+    # per-neuron rule -- which grounds the same synapses as "atlas" and corrects 358 of their signs;
     # a rewired null's edges carry the sign of the wild-type edge whose place they took. Default
     # "random" is byte-identical to the pre-option brain.
     synapse_signs: SynapseSignModel = "random"
+    # Citation keys of the per-connection table's physiology overrides to ignore, each of their
+    # connections then signed by the next step that gives it a sign; excluding a set of overrides
+    # rebuilds the table as it stood before they were added. Requires synapse_signs:
+    # per_connection. Default empty is the full table.
+    sign_override_exclude: list[str] = Field(default_factory=list)
     # Dale's law: project every plastic update, and under PPO every optimiser step, back onto its
     # synapse's grounded sign, leaving synapses without one unconstrained. Requires grounded signs,
     # synapse_signs: atlas or per_connection — constraining drawn signs would only freeze noise.
@@ -623,6 +628,20 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
             msg = (
                 "enforce_synapse_signs=true requires synapse_signs='atlas' or 'per_connection': "
                 "enforcing signs that were drawn at random would constrain noise, not biology."
+            )
+            raise ValueError(msg)
+        if self.sign_override_exclude and self.synapse_signs != "per_connection":
+            msg = (
+                f"sign_override_exclude={self.sign_override_exclude!r} requires "
+                f"synapse_signs='per_connection', not {self.synapse_signs!r}: only the "
+                "per-connection table has physiology overrides to exclude."
+            )
+            raise ValueError(msg)
+        unknown = sorted(set(self.sign_override_exclude) - set(PHYSIOLOGY_CITATIONS))
+        if unknown:
+            msg = (
+                f"sign_override_exclude names keys the physiology table does not cite: {unknown}; "
+                f"it cites {sorted(PHYSIOLOGY_CITATIONS)}."
             )
             raise ValueError(msg)
         if self.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
@@ -1082,14 +1101,22 @@ def _per_connection_edge_signs(
     wild_type: Connectome,
     wiring: Connectome,
     origins: Mapping[tuple[str, str], tuple[str, str]],
+    exclude_citations: tuple[str, ...] = (),
 ) -> dict[tuple[str, str], int]:
     """Sign each edge of ``wiring`` from the per-connection table defined on ``wild_type``.
 
     On the wild type each edge takes its own sign. On a rewired null each edge takes the sign of
     its origin, the wild-type edge whose place it took, so every neuron keeps its outgoing signs and
-    only their placement differs. An edge the table gives no sign to maps to 0.
+    only their placement differs. An edge the table gives no sign to maps to 0. The table ignores
+    the physiology overrides of ``exclude_citations``.
     """
-    table = {edge: entry.sign for edge, entry in per_connection_signs(wild_type).items()}
+    table = {
+        edge: entry.sign
+        for edge, entry in per_connection_signs(
+            wild_type,
+            exclude_citations=exclude_citations,
+        ).items()
+    }
     return {
         (syn.pre, syn.post): table[origins.get((syn.pre, syn.post), (syn.pre, syn.post))]
         for syn in wiring.chemical_synapses
@@ -3895,7 +3922,12 @@ class ConnectomePPOBrain(ClassicalBrain):
             draw_rng=get_rng(self.seed),
             synapse_signs=config.synapse_signs,
             edge_signs=(
-                _per_connection_edge_signs(wild_type, connectome, origins)
+                _per_connection_edge_signs(
+                    wild_type,
+                    connectome,
+                    origins,
+                    tuple(config.sign_override_exclude),
+                )
                 if config.synapse_signs == "per_connection"
                 else None
             ),

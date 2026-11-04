@@ -222,25 +222,37 @@ the full attribution chain:
 
 ### `sign_overrides_physiology.csv`
 
-- **Description**: 51 chemical connections whose sign has been measured, each with a citation key and
+- **Description**: 67 chemical connections whose sign has been measured, each with a citation key and
   a quoted line of evidence: `pre,post,sign,citation,evidence`, sign `1` (excitatory) or `-1`
   (inhibitory). The per-connection signs take these before any prediction. Among them is AWC → AIY,
   inhibitory through a glutamate-gated chloride channel (Chalasani et al. 2007), which the per-neuron
   transmitter rule signs excitatory.
-- **Origin**: Wormlight (<https://github.com/chrisjz/wormlight>), `data/sign-overrides.csv`, last
-  changed at commit `057dd23` and copied at `1190b3e`, unchanged. Wormlight is Apache-2.0 and has the
-  same maintainer as this repository, so the table is vendored under this repository's Apache-2.0
-  licence. Its evidence column quotes short passages from the cited papers.
+- **Origin**: the first 51 rows are Wormlight's (<https://github.com/chrisjz/wormlight>),
+  `data/sign-overrides.csv`, last changed at commit `057dd23` and copied at `1190b3e`, unchanged.
+  Wormlight is Apache-2.0 and has the same maintainer as this repository, so the table is vendored
+  under this repository's Apache-2.0 licence. Its evidence column quotes short passages from the cited
+  papers.
+- **Added here (2026-11-04)**: 16 rows citing López-Cruz et al. 2019, each inhibitory. They sign the
+  glutamatergic edges from the tax-4 chemosensory cells ASE, ASG, ASK and AWC onto AIA, and from the
+  mec-3 mechanosensory cells FLP and AVM onto ADE, which the per-neuron rule signs excitatory. The
+  paper's chemosensory and mechanosensory glutamate knockouts cover "all tax-4 chemosensory neurons"
+  and "all mec-3 mechanosensory neurons", and it concludes that "Glutamatergic chemosensory and
+  mechanosensory neurons generate local search by suppressing MGL-1-expressing neurons". The quotes
+  are from the PMC text of the published paper (PMC9161785). The 13 other glutamatergic edges onto AIA
+  and ADE come from cells none of its cell-specific manipulations covered, and keep the rule's sign.
+  `per_connection_signs(exclude_citations=("lopezcruz2019",))` gives the table without these rows.
 - **Citation keys**, as `PHYSIOLOGY_CITATIONS` in `quantumnematode.connectome.signs` names them:
   `chalasani2007` (Chalasani et al. 2007, *Nature* 450:63), `huo2024` (Huo et al. 2024, *PNAS*
   121:e2410789121), `li2014` (Li et al. 2014, *Cell* 159:751), `lin2024` (Lin et al. 2024, *Nat.
   Commun.* 15:297), `piggott2011` (Piggott et al. 2011, *Cell* 147:922), `roberts2016` (Roberts et al.
-  2016, *eLife* 5:e12572), `wang2020` (Wang et al. 2020, *eLife* 9:e56942) and `zhang2025` (Zhang et
-  al. 2025, *Nat. Commun.* 16:4405). The module carries each DOI.
-- **Cross-check**: with these overrides and the two Fenyves files, the loader reproduces the chemical
-  signs and their sources in Wormlight's export at `1190b3e` on 3,686 of the 3,709 edges. The other 23
-  are a deliberate difference: their expression prediction rests on a secondary transmitter the atlas
-  does not give the cell, which Wormlight does not check, so this loader signs them by the rule.
+  2016, *eLife* 5:e12572), `wang2020` (Wang et al. 2020, *eLife* 9:e56942), `zhang2025` (Zhang et
+  al. 2025, *Nat. Commun.* 16:4405) and `lopezcruz2019` (López-Cruz et al. 2019, *Neuron* 102:407).
+  The module carries each DOI.
+- **Cross-check**: with Wormlight's 51 overrides (the López-Cruz rows excluded) and the two Fenyves
+  files, the loader reproduces the chemical signs and their sources in Wormlight's export at `1190b3e`
+  on 3,686 of the 3,709 edges. The other 23 are a deliberate difference: their expression prediction
+  rests on a secondary transmitter the atlas does not give the cell, which Wormlight does not check, so
+  this loader signs them by the rule. The full table differs from that on the 16 López-Cruz edges.
 - **Consumed by** `quantumnematode.connectome.signs.per_connection_signs()`.
 
 ### The Randi et al. 2023 signal-propagation atlas, and other Creamer artefacts

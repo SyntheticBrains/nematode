@@ -11,7 +11,9 @@ The jobs cover the hand-placed and the data-layer connectome arms, untrained:
   well, López-Cruz's food removal, Chen's chemotaxis), 16 animals over the whole assay: every
   trajectory array;
 - the per-step runner on Scheer's small lawn for 300 steps: its features, action means, actions,
-  modulator concentrations and behaviour.
+  modulator concentrations and behaviour;
+- a built brain's every weight and buffer, for each per-connection config whose runs are recorded
+  and for one encoded config, since the jobs above do not read the per-connection sign table.
 
 Usage::
 
@@ -57,6 +59,19 @@ ARRAYS = (
     "on_lawn",
     "primitive",
     "phase",
+)
+# Configs whose built brains are compared whole: the per-connection configs behind recorded runs,
+# and one encoded config.
+_LAWN = "foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_"
+_THERMAL = "thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_"
+BRAIN_CONFIGS = (
+    *(f"{_LAWN}modulated_perconn{v}.yml" for v in ("", "_frozen", "_pdfr1", "_satiety", "_tph1")),
+    *(
+        f"{_THERMAL}{null}per_connection_signs{v}_t35.yml"
+        for null in ("", "rewired_chemical_null_")
+        for v in ("_frozen", "")
+    ),
+    f"{_LAWN}encoded_s1_primitives_assay_scheer_lawn.yml",
 )
 # Per-animal totals the trajectories return beside their per-step arrays.
 TOTALS = ("final_satiety", "total_intake")
@@ -128,16 +143,26 @@ def per_step_job(arm: str) -> str:
     return _digest(parts)
 
 
+def brain_job(config: str) -> str:
+    """Build one config's brain at the fixed seed; return the digest of its weights and buffers."""
+    brain, _, _ = harness.build_brain(_REPO / "configs" / "scenarios" / config, BRAIN_SEED)
+    state = brain.topology.state_dict()  # type: ignore[attr-defined]
+    return _digest([state[name].detach().cpu().numpy() for name in sorted(state)])
+
+
 def jobs() -> list[tuple[str, str, str]]:
     """Return every job as (kind, arm, assay)."""
     out = [("batched", arm, assay) for arm in ARMS for assay in ASSAYS]
     out += [("per_step", arm, "scheer_lawn") for arm in ARMS]
+    out += [("brain", config, "-") for config in BRAIN_CONFIGS]
     return out
 
 
 def run_job(job: tuple[str, str, str]) -> str:
     """Return one job's digest."""
     kind, arm, assay = job
+    if kind == "brain":
+        return brain_job(arm)
     return batched_job(arm, assay) if kind == "batched" else per_step_job(arm)
 
 

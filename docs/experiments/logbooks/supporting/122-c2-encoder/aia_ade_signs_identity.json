@@ -1,0 +1,102 @@
+{
+  "description": "Description: every connectome output in the baseline re-run at ba8beb75f5 with uncommitted edits (source aa7bb69636c0), against the baseline recorded at ba8beb75f5 with uncommitted edits (source ba1848b921b9).",
+  "baseline_code": "ba8beb75f56b5514b18516759c000de7dbcd664d",
+  "baseline_source": {
+    "head": "ba8beb75f56b5514b18516759c000de7dbcd664d",
+    "uncommitted_edits": true,
+    "source_sha256": "ba1848b921b9cff5d0c3cb1722055b9bc9b79233f8e775ef7a81d694548e6295",
+    "files": 573
+  },
+  "code": "ba8beb75f56b5514b18516759c000de7dbcd664d",
+  "source": {
+    "head": "ba8beb75f56b5514b18516759c000de7dbcd664d",
+    "uncommitted_edits": true,
+    "source_sha256": "aa7bb69636c0239e6c16a957d6584bdc1ff82a94fc9729f547e69a97fe83fdbe",
+    "files": 573
+  },
+  "jobs": 20,
+  "identical": 19,
+  "all_identical": false,
+  "rows": [
+    {
+      "job": "batched/hand_placed/scheer_lawn",
+      "identical": true
+    },
+    {
+      "job": "batched/hand_placed/uniform_lawn_scheer",
+      "identical": true
+    },
+    {
+      "job": "batched/hand_placed/food_removal_lopezcruz",
+      "identical": true
+    },
+    {
+      "job": "batched/hand_placed/chemotaxis_chen",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/scheer_lawn",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/uniform_lawn_scheer",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/food_removal_lopezcruz",
+      "identical": true
+    },
+    {
+      "job": "batched/data_layer/chemotaxis_chen",
+      "identical": true
+    },
+    {
+      "job": "per_step/hand_placed/scheer_lawn",
+      "identical": true
+    },
+    {
+      "job": "per_step/data_layer/scheer_lawn",
+      "identical": true
+    },
+    {
+      "job": "brain/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_perconn.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_perconn_frozen.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_perconn_pdfr1.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_perconn_satiety.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_perconn_tph1.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_per_connection_signs_frozen_t35.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_per_connection_signs_t35.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_rewired_chemical_null_per_connection_signs_frozen_t35.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_rewired_chemical_null_per_connection_signs_t35.yml/-",
+      "identical": true
+    },
+    {
+      "job": "brain/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives_assay_scheer_lawn.yml/-",
+      "identical": false
+    }
+  ]
+}

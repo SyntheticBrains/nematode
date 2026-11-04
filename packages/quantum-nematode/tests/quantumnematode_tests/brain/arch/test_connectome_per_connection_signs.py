@@ -3,7 +3,9 @@
 Covers the connectome-ppo-brain requirement "Per-connection synapse signs": a measured inhibitory
 connection is inhibitory; magnitudes match the random-sign build; the models differ only where the
 table corrects the rule; a null's signs travel with its edges; the atlas model is unchanged on a
-null; PPO holds per-connection signs.
+null; PPO holds per-connection signs. Also the requirement "Sign overrides excluded by
+citation": excluding the López-Cruz overrides rebuilds the earlier signs, an unknown or misplaced
+key is refused, and the configs behind recorded runs exclude them.
 """
 
 # pyright: reportPrivateUsage=false
@@ -85,7 +87,7 @@ class TestWildType:
         self,
         wild: dict[str, ConnectomePPOBrain],
     ) -> None:
-        """Scenario "The models differ only where the table corrects the rule": the 342."""
+        """Scenario "The models differ only where the table corrects the rule": the 358."""
         per, atlas = _edge_signs(wild["per_connection"]), _edge_signs(wild["atlas"])
         differ = {edge for edge in per if per[edge] != atlas[edge]}
         table = per_connection_signs(load_cook_2019_hermaphrodite())
@@ -95,7 +97,7 @@ class TestWildType:
             if entry.sign and entry.sign != (sign_for(NEURON_CLASSIFICATION[edge[0]][1]) or 0)
         }
         assert differ == corrected
-        assert len(differ) == 342
+        assert len(differ) == 358
         assert sum(1 for s in per.values() if s) == sum(1 for s in atlas.values() if s) == 3176
 
 
@@ -175,6 +177,66 @@ class TestEnforcement:
             wild["per_connection"].load_weight_components(
                 wild["atlas"].get_weight_components(),
             )
+
+
+_LAWN = "foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_"
+_THERMAL = "thermal_foraging/connectomeppo_small_continuous2d_thermal_klinotaxis_"
+# The per-connection configs behind recorded runs, which keep the table they ran with.
+_RECORDED = (
+    *(f"{_LAWN}modulated_perconn{v}.yml" for v in ("", "_frozen", "_pdfr1", "_satiety", "_tph1")),
+    *(
+        f"{_THERMAL}{null}per_connection_signs{v}_t35.yml"
+        for null in ("", "rewired_chemical_null_")
+        for v in ("", "_frozen")
+    ),
+)
+
+
+class TestSignOverrideExclude:
+    def test_excluding_the_lopez_cruz_overrides_rebuilds_the_earlier_signs(
+        self,
+        wild: dict[str, ConnectomePPOBrain],
+    ) -> None:
+        """Scenario "Excluding the López-Cruz overrides reproduces the earlier brain"."""
+        excluded = _edge_signs(
+            _brain(synapse_signs="per_connection", sign_override_exclude=["lopezcruz2019"]),
+        )
+        earlier = per_connection_signs(
+            load_cook_2019_hermaphrodite(),
+            exclude_citations=("lopezcruz2019",),
+        )
+        assert excluded == {edge: earlier[edge].sign for edge in excluded}
+        full = _edge_signs(wild["per_connection"])
+        differ = {edge for edge in full if full[edge] != excluded[edge]}
+        assert len(differ) == 16
+        assert {(full[e], excluded[e]) for e in differ} == {(-1, 1)}
+
+    @pytest.mark.parametrize(
+        ("changes", "match"),
+        [
+            (
+                {"synapse_signs": "per_connection", "sign_override_exclude": ["nobody2099"]},
+                "nobody",
+            ),
+            ({"synapse_signs": "atlas", "sign_override_exclude": ["lopezcruz2019"]}, "requires"),
+            ({"sign_override_exclude": ["lopezcruz2019"]}, "requires"),
+        ],
+    )
+    def test_an_unknown_or_misplaced_key_is_refused(
+        self,
+        changes: dict[str, object],
+        match: str,
+    ) -> None:
+        """Scenario "An unknown or misplaced key is refused"."""
+        with pytest.raises(ValueError, match=match):
+            ConnectomePPOBrainConfig(**changes)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("config", _RECORDED)
+    def test_the_configs_behind_recorded_runs_exclude_them(self, config: str) -> None:
+        container = load_simulation_config(str(_REPO / "configs/scenarios" / config)).brain
+        assert container is not None
+        assert isinstance(container.config, ConnectomePPOBrainConfig)
+        assert container.config.sign_override_exclude == ["lopezcruz2019"]
 
 
 class TestChemicalWeightScale:

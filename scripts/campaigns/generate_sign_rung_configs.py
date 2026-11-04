@@ -34,10 +34,13 @@ SIGNS: dict[str, dict[str, Any]] = {
         "enforce_synapse_signs": True,
         "chemical_weight_scale": 0.35,
     },
+    # The per-connection table as it stood when the rung ran and was calibrated: the López-Cruz
+    # overrides added since are excluded.
     "per_connection": {
         "synapse_signs": "per_connection",
         "enforce_synapse_signs": True,
         "chemical_weight_scale": 0.42,
+        "sign_override_exclude": ["lopezcruz2019"],
     },
 }
 _TAG = {"random": "", "atlas": "_atlas_signs", "per_connection": "_per_connection_signs"}
