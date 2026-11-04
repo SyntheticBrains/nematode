@@ -245,3 +245,31 @@ From the preflights, on 16 workers:
 It is fitted to the three activity statistics alone, on the small lawn, so it says nothing about the other families: it dwells faster than it roams, and it reverses and turns far more often than C.1's v3 answer. It witnesses only that C.1's model can reach the activity statistics.
 
 **Next, under the guard:** `oracle-check` (the 40 populations, which decide the onset rate), then `--onset` and Part C, then `read` and `verdict`.
+
+## Part C: the onset decision
+
+*Added 2026-11-05, after the oracle's check and before the read. It changes no rule.*
+
+### The oracle's check
+
+`oracle_check.json`: the answer of Part B on 40 populations of 200 at 602 M, on the undecided bands (`324445d9…`).
+
+| Statistic | Bar | Mean z | z range | Within the bar | Rule |
+|---|---|---|---|---|---|
+| onset rate | 3.0781 | +0.105 | −0.39 to +0.82 | 100% | passes |
+| pause share | 3.0781 | −0.095 | −0.73 to +0.32 | 100% | passes |
+| flip fraction | 3.0781 | +0.043 | −0.47 to +0.81 | 100% | passes |
+
+- **The onset rate is reached,** so it is graded: v4 grades **24 statistics at z\* = 3.0781**.
+- **Activity is reachable:** the pause share and the flip fraction pass at that bar, so the read runs.
+- Described beside it: the populations' z's spread by an SD of 0.21–0.32, well under 1. The bands' scales include the spread between recording dates, which one parameter set's populations do not have.
+
+### The decided bands
+
+`benchmark_bands.py --version v4 --onset graded` set `activity_graded` to all three statistics, the bar to 3.0781, the six families and their weights, and D_fit's (small lawn, uniform well, kinematics and activity), and changed nothing else. It refuses `--onset reported` against this check. `data/benchmark/bands_v4.json` is now SHA-256 `355177a6…`. `controls_v4.json` will pin it.
+
+### The N2 control's chance of failing
+
+At the decided bar the activity check's pass rate is 0.985, so a faithful N2 half fails with probability 0.015. Both halves fail by chance with probability 0.015² = **0.000225**, so a failure of both points to the bands or the measurement.
+
+**Next, under the guard:** `read`, then `verdict`.

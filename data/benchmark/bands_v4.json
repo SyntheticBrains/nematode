@@ -5,7 +5,44 @@
     64,
     200
   ],
-  "families": null,
+  "families": {
+    "small_lawn": [
+      "roaming_fraction",
+      "roaming_bout_s",
+      "dwelling_bout_s",
+      "exits_per_on_lawn_hour",
+      "pre_exit_enrichment",
+      "time_on_lawn"
+    ],
+    "uniform_lawn": [
+      "roaming_fraction",
+      "roaming_bout_s",
+      "dwelling_bout_s"
+    ],
+    "local_search": [
+      "gamma_per_min",
+      "log_early_late_ratio"
+    ],
+    "kinematics": [
+      "dwelling_speed_median",
+      "dwelling_speed_p90",
+      "roaming_speed_median",
+      "roaming_speed_p90",
+      "roaming_survival_5min"
+    ],
+    "chemotaxis": [
+      "drift_mm_s",
+      "log_quintile_ratio",
+      "weathervane_deg_s",
+      "onset_per_min",
+      "flip_fraction"
+    ],
+    "activity": [
+      "pause_share",
+      "flip_fraction",
+      "onset_rate_per_min"
+    ]
+  },
   "fit_families": [
     "small_lawn",
     "uniform_lawn",
@@ -14,13 +51,56 @@
   ],
   "z_cap": 10.0,
   "bars": {
-    "wild_type": null,
+    "wild_type": 3.0780880728421605,
     "tph-1": 2.2414027276049464,
     "pdfr-1": 2.2414027276049464,
     "tax-4": 2.2414027276049464
   },
-  "weights": null,
-  "fit_weights": null,
+  "weights": {
+    "small_lawn/roaming_fraction": 0.027777777777777776,
+    "small_lawn/roaming_bout_s": 0.027777777777777776,
+    "small_lawn/dwelling_bout_s": 0.027777777777777776,
+    "small_lawn/exits_per_on_lawn_hour": 0.027777777777777776,
+    "small_lawn/pre_exit_enrichment": 0.027777777777777776,
+    "small_lawn/time_on_lawn": 0.027777777777777776,
+    "uniform_lawn/roaming_fraction": 0.05555555555555555,
+    "uniform_lawn/roaming_bout_s": 0.05555555555555555,
+    "uniform_lawn/dwelling_bout_s": 0.05555555555555555,
+    "local_search/gamma_per_min": 0.08333333333333333,
+    "local_search/log_early_late_ratio": 0.08333333333333333,
+    "kinematics/dwelling_speed_median": 0.03333333333333333,
+    "kinematics/dwelling_speed_p90": 0.03333333333333333,
+    "kinematics/roaming_speed_median": 0.03333333333333333,
+    "kinematics/roaming_speed_p90": 0.03333333333333333,
+    "kinematics/roaming_survival_5min": 0.03333333333333333,
+    "chemotaxis/drift_mm_s": 0.03333333333333333,
+    "chemotaxis/log_quintile_ratio": 0.03333333333333333,
+    "chemotaxis/weathervane_deg_s": 0.03333333333333333,
+    "chemotaxis/onset_per_min": 0.03333333333333333,
+    "chemotaxis/flip_fraction": 0.03333333333333333,
+    "activity/pause_share": 0.05555555555555555,
+    "activity/flip_fraction": 0.05555555555555555,
+    "activity/onset_rate_per_min": 0.05555555555555555
+  },
+  "fit_weights": {
+    "small_lawn/roaming_fraction": 0.041666666666666664,
+    "small_lawn/roaming_bout_s": 0.041666666666666664,
+    "small_lawn/dwelling_bout_s": 0.041666666666666664,
+    "small_lawn/exits_per_on_lawn_hour": 0.041666666666666664,
+    "small_lawn/pre_exit_enrichment": 0.041666666666666664,
+    "small_lawn/time_on_lawn": 0.041666666666666664,
+    "uniform_lawn/roaming_fraction": 0.08333333333333333,
+    "uniform_lawn/roaming_bout_s": 0.08333333333333333,
+    "uniform_lawn/dwelling_bout_s": 0.08333333333333333,
+    "kinematics/dwelling_speed_median": 0.05,
+    "kinematics/dwelling_speed_p90": 0.05,
+    "kinematics/roaming_speed_median": 0.05,
+    "kinematics/roaming_speed_p90": 0.05,
+    "kinematics/roaming_survival_5min": 0.05,
+    "activity/pause_share": 0.08333333333333333,
+    "activity/flip_fraction": 0.08333333333333333,
+    "activity/onset_rate_per_min": 0.08333333333333333
+  },
   "arms": {
     "small_lawn": {
       "arm": "PD1074_od2_Data",
@@ -5944,7 +6024,11 @@
       "frames": 2048900
     }
   },
-  "activity_graded": null,
+  "activity_graded": [
+    "pause_share",
+    "flip_fraction",
+    "onset_rate_per_min"
+  ],
   "activity_kappa": {
     "pause_share": 1.2207865901320902,
     "flip_fraction": 1.2067676751745338,
