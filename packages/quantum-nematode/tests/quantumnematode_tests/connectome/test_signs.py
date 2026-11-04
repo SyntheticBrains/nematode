@@ -60,6 +60,23 @@ def _write_overrides(path: Path, rows: list[str]) -> Path:
     return path
 
 
+def _write_sign_sheet(path: Path, sheet: str, rows: list[tuple[str, str, str]]) -> None:
+    """Write a sign-prediction sheet of plain values: two header rows, then one row per edge."""
+    import openpyxl
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    assert worksheet is not None
+    worksheet.title = sheet
+    worksheet.append(["header"])
+    worksheet.append(["header"])
+    for pre, post, polarity in rows:
+        cells: list[object] = [None] * 17
+        cells[0], cells[1], cells[3], cells[5], cells[16] = pre, "Glu", post, "chemical", polarity
+        worksheet.append(cells)
+    workbook.save(path)
+
+
 class TestVendoredFiles:
     """Scenario: The vendored files are the ones recorded."""
 
@@ -91,7 +108,7 @@ class TestVendoredFiles:
                 set(),
             )
 
-    def test_the_workbook_is_closed_when_parsing_fails(self, monkeypatch) -> None:
+    def test_the_workbook_is_closed_when_reading_fails(self, monkeypatch) -> None:
         import openpyxl
 
         closed: list[bool] = []
@@ -108,21 +125,13 @@ class TestVendoredFiles:
             monkeypatch.setattr(workbook, "close", close)
             return workbook
 
-        def failing_parse(*args):
-            msg = "parse failed"
-            raise ValueError(msg)
-
         monkeypatch.setattr(openpyxl, "load_workbook", tracking_load)
-        monkeypatch.setattr(sg, "_parse_sheet", failing_parse)
         monkeypatch.setattr(sg, "_SHEET_ROWS", {})
-        with pytest.raises(ValueError, match="parse failed"):
-            sg.read_fenyves_sheet(
-                sg.FENYVES_S5_PATH,
-                sg.FENYVES_S5_SHEET,
-                sg.FENYVES_S5_SHA256,
-                set(),
-            )
+        # The workbook opens, then naming a sheet it lacks raises.
+        with pytest.raises(KeyError, match="no such sheet"):
+            sg.read_fenyves_sheet(sg.FENYVES_S5_PATH, "no such sheet", sg.FENYVES_S5_SHA256, set())
         assert closed == [True]
+        assert sg._SHEET_ROWS == {}
 
     def test_a_sheet_is_read_once_until_its_file_changes(self, tmp_path: Path, monkeypatch) -> None:
         import openpyxl
@@ -150,6 +159,14 @@ class TestVendoredFiles:
         read.append(read_copy())
         assert len(loads) == 2
         assert read[0] == read[1] == read[2]
+        # A replacement with a different prediction is read as it now stands.
+        edge = ("AWCL", "AIYL")
+        changed = "+" if read[0].predictions[edge] != "+" else "-"
+        _write_sign_sheet(copy, sg.FENYVES_S5_SHEET, [(*edge, changed)])
+        digest = hashlib.sha256(copy.read_bytes()).hexdigest()
+        replaced = sg.read_fenyves_sheet(copy, sg.FENYVES_S5_SHEET, digest, edges)
+        assert len(loads) == 3
+        assert replaced.predictions == {edge: changed}
 
     def test_the_physiology_table_is_recorded(self) -> None:
         assert sg.PHYSIOLOGY_OVERRIDES_PATH.name in PROVENANCE.read_text(encoding="utf-8")

@@ -1,7 +1,6 @@
 """Tests for the *C. elegans* connectome loader."""
 
 import os
-import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -155,7 +154,9 @@ class TestSheetCache:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """A sheet is parsed once until its file's modification time changes."""
+        """A sheet is parsed once until its file changes, and then read as it now stands."""
+        import openpyxl
+
         parses: list[str] = []
         real_read = pd.read_excel
 
@@ -163,15 +164,25 @@ class TestSheetCache:
             parses.append(kwargs["sheet_name"])
             return real_read(*args, **kwargs)
 
+        def write(value: int) -> None:
+            workbook = openpyxl.Workbook()
+            worksheet = workbook.active
+            assert worksheet is not None
+            worksheet.title = sheet
+            worksheet.append(["pre", "post"])
+            worksheet.append(["AWCL", value])
+            workbook.save(path)
+
         monkeypatch.setattr(loader, "_SHEETS", {})
         monkeypatch.setattr(loader.pd, "read_excel", counting_read)
-        copy = tmp_path / loader.WITVLIET_2021_ADULT_PATH.name
-        shutil.copyfile(loader.WITVLIET_2021_ADULT_PATH, copy)
-        sheet = pd.ExcelFile(copy, engine="openpyxl").sheet_names[0]
-        loader._read_sheet(copy, sheet)
-        loader._read_sheet(copy, sheet)
+        path, sheet = tmp_path / "adjacency.xlsx", "chemical"
+        write(1)
+        assert loader._read_sheet(path, sheet).iloc[1, 1] == 1
+        assert loader._read_sheet(path, sheet).iloc[1, 1] == 1
         assert parses == [sheet]
-        stat = copy.stat()
-        os.utime(copy, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
-        loader._read_sheet(copy, sheet)
+        stat = path.stat()
+        write(2)
+        # Saved within the same clock tick, a file can keep its time; move it on.
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+        assert loader._read_sheet(path, sheet).iloc[1, 1] == 2
         assert parses == [sheet, sheet]
