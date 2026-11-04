@@ -1,5 +1,5 @@
 {
-  "description": "Description: every connectome output in the baseline re-run at 12c580e1c8 (source 2d2b9bcd52a7), against the baseline recorded at c73feb221b with uncommitted edits (source bf49620273fe).",
+  "description": "Description: every connectome output in the baseline re-run at f654b02341 (source 992ccb9b7ec8), against the baseline recorded at c73feb221b with uncommitted edits (source bf49620273fe).",
   "baseline_code": "c73feb221baf334855e15d48eb79a1df41b60607",
   "baseline_source": {
     "head": "c73feb221baf334855e15d48eb79a1df41b60607",
@@ -7,12 +7,12 @@
     "source_sha256": "bf49620273fe47c367e995bbbf404620c4f628bf392bf48042447457dd9b9255",
     "files": 564
   },
-  "code": "12c580e1c8d150ea67c6eace5545a1d3eb1d75b8",
+  "code": "f654b023411f7f72fb78f0b847a3c46dbd5504cc",
   "source": {
-    "head": "12c580e1c8d150ea67c6eace5545a1d3eb1d75b8",
+    "head": "f654b023411f7f72fb78f0b847a3c46dbd5504cc",
     "uncommitted_edits": false,
-    "source_sha256": "2d2b9bcd52a7bd1f1c15a20a105371773495948a7a18b7e7469d546d530151de",
-    "files": 572
+    "source_sha256": "992ccb9b7ec80d696ff8dc4157116ab2a69ee8043a96ff9343ed88fdece39587",
+    "files": 573
   },
   "jobs": 10,
   "identical": 10,
