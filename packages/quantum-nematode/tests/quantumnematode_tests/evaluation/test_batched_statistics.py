@@ -86,21 +86,23 @@ def test_graded_statistics_agree(controller: str, protocol: str) -> None:
         assert low <= 0.0 <= high, (name, low, high)
 
 
-# The encoded connectome's two wirings make a family of their own, ten checks at a family-wise 5%.
-_ENCODED_ALPHA = 0.05 / 10
+# The encoded connectome's two wirings on two assays make a family of their own: five statistics in
+# each of four tests, twenty checks at a family-wise 5%.
+_ENCODED_ALPHA = 0.05 / 20
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
 @pytest.mark.parametrize("wiring", ["wild_type", "rewired_degree_preserving"])
-def test_the_encoded_brains_graded_statistics_agree(wiring: str) -> None:
-    """The encoded connectome's paired statistics agree over Scheer's full small-lawn assay.
+def test_the_encoded_brains_graded_statistics_agree(wiring: str, protocol: str) -> None:
+    """The encoded connectome's paired statistics agree over full Scheer and Flavell assays.
 
     On seeds 5001-5032, each difference's corrected interval contains zero, on the wild type and on
     the degree-preserving null.
     """
     from quantumnematode.evaluation.controllers import BatchedConnectome
 
-    brain, config = p.encoded_brain("scheer_lawn", wiring)
+    brain, config = p.encoded_brain(protocol, wiring)
     lawns = config.environment.foraging.lawns
     max_satiety = config.satiety.initial_satiety
     trajectories = p.BatchedEvaluator(config, BatchedConnectome(brain), _SEEDS).run()

@@ -239,6 +239,23 @@ class BrainContainerConfig(BaseModel):
     name: str
     config: BrainConfigType
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_config_as_named(cls, data: Any) -> Any:  # noqa: ANN401 - raw YAML
+        """Validate the brain's config against the class its name selects, before the union.
+
+        A config the named class refuses would otherwise be coerced into another member of the
+        union, and resolving it would copy only the fields the two classes share, every other
+        setting falling back to its default. The named class's own refusal is raised instead.
+        """
+        if not isinstance(data, dict):
+            return data
+        config_cls = BRAIN_CONFIG_MAP.get(data.get("name"))  # type: ignore[arg-type]
+        raw = data.get("config")
+        if config_cls is None or not isinstance(raw, dict):
+            return data
+        return {**data, "config": config_cls.model_validate(raw)}
+
 
 class LearningRateParameters(BaseModel):
     """Parameters for configuring the learning rate."""

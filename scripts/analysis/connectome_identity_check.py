@@ -58,6 +58,15 @@ ARRAYS = (
     "primitive",
     "phase",
 )
+# Per-animal totals the trajectories return beside their per-step arrays.
+TOTALS = ("final_satiety", "total_intake")
+# What a record's source digest covers: the package that runs, the configs the jobs read, and this
+# script.
+SOURCE_PATHS = (
+    "packages/quantum-nematode/quantumnematode",
+    "configs/scenarios/foraging",
+    "scripts/analysis/connectome_identity_check.py",
+)
 
 
 def _digest(parts: list[np.ndarray]) -> str:
@@ -90,7 +99,7 @@ def batched_job(arm: str, assay: str) -> str:
         field = chen_field()
         extra = {"odour_field": field, "field_starts": chen_starts(seeds, field)}
     trajectories = BatchedEvaluator(config, BatchedConnectome(brain), seeds, **extra).run()  # type: ignore[arg-type]
-    return _digest([np.asarray(getattr(trajectories, name)) for name in ARRAYS])
+    return _digest([np.asarray(getattr(trajectories, name)) for name in (*ARRAYS, *TOTALS)])
 
 
 def per_step_job(arm: str) -> str:
@@ -131,14 +140,46 @@ def run_job(job: tuple[str, str, str]) -> str:
     return batched_job(arm, assay) if kind == "batched" else per_step_job(arm)
 
 
-def _head() -> str:
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"],  # noqa: S607 - the repository's own git
+def _git(*args: str) -> str:
+    return subprocess.run(  # noqa: S603 - fixed git subcommands and this repository's paths
+        ["git", *args],  # noqa: S607 - the repository's own git
         capture_output=True,
         text=True,
         check=True,
         cwd=_REPO,
-    ).stdout.strip()
+    ).stdout
+
+
+def source_state() -> dict[str, Any]:
+    """Return the checked source: its commit, whether it carries uncommitted edits, and a digest.
+
+    The digest covers every tracked or untracked, non-ignored file under :data:`SOURCE_PATHS` as
+    it stands in the working tree, so it describes the code that ran, edits included.
+    """
+    files = sorted(
+        set(
+            _git("ls-files", "--cached", "--others", "--exclude-standard", "--", *SOURCE_PATHS)
+            .strip()
+            .splitlines(),
+        ),
+    )
+    h = hashlib.sha256()
+    for name in files:
+        path = _REPO / name
+        if path.is_file():
+            h.update(name.encode() + b"\0" + path.read_bytes() + b"\0")
+    status = _git("status", "--porcelain", "--", *SOURCE_PATHS).strip()
+    return {
+        "head": _git("rev-parse", "HEAD").strip(),
+        "uncommitted_edits": bool(status),
+        "source_sha256": h.hexdigest(),
+        "files": len(files),
+    }
+
+
+def _describe(state: dict[str, Any]) -> str:
+    edits = " with uncommitted edits" if state["uncommitted_edits"] else ""
+    return f"{state['head'][:10]}{edits} (source {state['source_sha256'][:12]})"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -155,20 +196,30 @@ def main(argv: list[str] | None = None) -> int:
     baseline_path = args.build / "baseline.json"
     if args.stage == "baseline":
         args.build.mkdir(parents=True, exist_ok=True)
-        record = {"code": _head(), "digests": digests}
+        state = source_state()
+        record = {"code": state["head"], "source": state, "digests": digests}
         baseline_path.write_text(json.dumps(record, indent=2) + "\n")
-        print(f"{len(digests)} jobs recorded at {record['code'][:10]}")
+        print(f"{len(digests)} jobs recorded at {_describe(state)}")
         return 0
     baseline = json.loads(baseline_path.read_text())
     rows = [
         {"job": job, "identical": digests[job] == baseline["digests"][job]}
         for job in baseline["digests"]
     ]
+    state = source_state()
+    baseline_state = baseline.get("source", {"head": baseline["code"]})
+    baseline_described = (
+        _describe(baseline_state) if "source_sha256" in baseline_state else baseline["code"][:10]
+    )
     record = {
-        "description": "Description: every existing connectome output re-run after the change, "
-        "against a baseline from the code before it.",
+        "description": (
+            f"Description: every connectome output in the baseline re-run at {_describe(state)}, "
+            f"against the baseline recorded at {baseline_described}."
+        ),
         "baseline_code": baseline["code"],
-        "code": _head(),
+        "baseline_source": baseline_state,
+        "code": state["head"],
+        "source": state,
         "jobs": len(rows),
         "identical": sum(r["identical"] for r in rows),
         "all_identical": all(r["identical"] for r in rows),

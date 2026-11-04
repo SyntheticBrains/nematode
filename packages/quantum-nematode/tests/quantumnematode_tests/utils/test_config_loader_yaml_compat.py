@@ -112,6 +112,34 @@ def test_scenario_yaml_loads_via_registry(config_path: Path) -> None:
     )
 
 
+_MODULATED_LAWN = (
+    _CONFIGS_DIR
+    / "foraging"
+    / "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_modulated_s1_primitives.yml"
+)
+
+
+def test_a_config_its_named_class_refuses_is_not_loaded_as_another(tmp_path: Path) -> None:
+    """A brain config its own class refuses raises that refusal, not another class's defaults.
+
+    The union of brain config classes would otherwise accept the YAML as another member, and
+    resolving it would copy only the shared fields: ``modulators: true`` came back ``False``.
+    """
+    text = _MODULATED_LAWN.read_text().replace(
+        "    modulators: true\n",
+        "    modulators: true\n    enforce_synapse_signs: true\n",
+    )
+    assert "enforce_synapse_signs: true" in text
+    path = tmp_path / "refused.yml"
+    path.write_text(text)
+    with pytest.raises(ValueError, match="enforce_synapse_signs=true requires"):
+        load_simulation_config(str(path))
+    valid = load_simulation_config(str(_MODULATED_LAWN))
+    assert valid.brain is not None
+    assert type(valid.brain.config).__name__ == "ConnectomePPOBrainConfig"
+    assert valid.brain.config.modulators  # type: ignore[union-attr]
+
+
 class TestContinuousActionConfigParsing:
     """The continuous-action config fields parse, validate, and build end-to-end."""
 

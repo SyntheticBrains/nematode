@@ -63,8 +63,8 @@ differences from their wild type; an answer is ready when D_fit's three families
 **read** writes the readiness record and the W sizing record from the stored histories and grades.
 
 Seeds: the restarts at 40,000,000 + 200·(20,000·r + 16·(n - 1) + m) + i; the warm restart at
-55,000,000 + 200·(16·(n - 1) + m) + i; the grading at 52,000,000 + 200·(5r + g) + i, its mutants on
-their wild type's animals; the cost pilot at 53,000,000; the feasibility check at 54,000,000; the
+55,000,000 + 200·(16·(n - 1) + m) + i; the grading at 52,000,000 + 200·g + i, every restart on the same five
+populations and its mutants on their wild type's animals; the cost pilot at 53,000,000; the feasibility check at 54,000,000; the
 smoke at 59,000,000; the first box's early reads at 61,000,000; the pilot at 62,000,000 and its
 trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,000,000 +
 200·(2,100·r + 2g + q) + i; the second pilot at 66,000,000 and its trajectory at 67,000,000; the reachability probe at
@@ -754,6 +754,15 @@ def feasibility_vector(values: dict[str, float] | None = None) -> np.ndarray:
     if unknown:
         msg = f"no encoder parameters named {unknown}"
         raise KeyError(msg)
+    by_name = {e.name: e for e in table}
+    outside = sorted(
+        f"{name}={value} (range {by_name[name].low}-{by_name[name].high})"
+        for name, value in values.items()
+        if not by_name[name].low <= value <= by_name[name].high
+    )
+    if outside:
+        msg = f"hand-set values outside their parameters' ranges: {outside}"
+        raise ValueError(msg)
     out = []
     for e in table:
         value = values.get(e.name, min(max(0.0, e.low), e.high))
@@ -1269,17 +1278,20 @@ def _restart(
         state_dir=_restart_dir(r),
         factory=start_warm if warm else start_centre,
     )
-    if str(r) not in grades:
-        answer = history["answers"][-1]
-        ks = [GRADE_POPULATIONS * r + g for g in range(GRADE_POPULATIONS)]
-        grades[str(r)] = list(
-            pool.map(grade_answer, ks, [answer] * len(ks), [GRADE_BASE] * len(ks)),
-        )
-        _write(_grades_path(), grades)
+    # The trajectory first: a restart's grades mark it done, and the reading needs both.
     path = _restart_dir(r) / "trajectory.json"
     if not path.exists():
         points = trajectory(history, pool, base=TRAJECTORY_BASE, restart=r, every=TRAJECTORY_EVERY)
         _write(path, {"restart": r, "points": points})
+    if str(r) not in grades:
+        answer = history["answers"][-1]
+        # Every restart on the same populations, so the spread compares restarts on one set of
+        # animals.
+        ks = list(range(GRADE_POPULATIONS))
+        grades[str(r)] = list(
+            pool.map(grade_answer, ks, [answer] * len(ks), [GRADE_BASE] * len(ks)),
+        )
+        _write(_grades_path(), grades)
 
 
 def _readiness(workers: int) -> int:

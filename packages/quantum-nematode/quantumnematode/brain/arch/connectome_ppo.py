@@ -1160,6 +1160,7 @@ _ENCODER_FIXED: tuple[tuple[str, object], ...] = (
     ("action_mode", "continuous"),
     ("action_space", "primitives"),
     ("continuous_std_mode", "state_independent"),
+    ("initial_log_std", 0.0),
     ("learning_rule", "ppo"),
     ("modulators", True),
     ("modulator_layer", "data"),
@@ -1201,6 +1202,8 @@ def _encoder_refusal(config: ConnectomePPOBrainConfig) -> str | None:
         return None
     if config.encoder != "compact":
         return f"Unsupported encoder: {config.encoder!r}"
+    if config.encoder_modulator_tying not in ("per_couple", "per_ligand"):
+        return f"Unsupported encoder_modulator_tying: {config.encoder_modulator_tying!r}"
     wrong = [
         f"{key}={getattr(config, key)!r} (requires {value!r})"
         for key, value in _ENCODER_FIXED

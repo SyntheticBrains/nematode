@@ -10,6 +10,7 @@ and "tax-4 keeps the non-tax-4 classes", and the encoder's refusals.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -142,6 +143,7 @@ class TestRefusals:
             ("readout_width", "per_neuron"),
             ("modulator_timescales_s", {"dopamine": 30.0}),
             ("enable_thermotaxis_projection", True),
+            ("initial_log_std", -1.0),
         ],
     )
     def test_a_setting_the_encoder_fixes_is_refused(self, key: str, value: object) -> None:
@@ -172,6 +174,39 @@ class TestRefusals:
         path.write_text(text.replace("    modulator_step_seconds: 1.0\n", ""))
         loaded = load_simulation_config(str(path))
         assert loaded.brain.config.modulator_step_seconds == pytest.approx(1.0)  # type: ignore[union-attr]
+
+    def test_an_unknown_tying_is_refused(self) -> None:
+        """A tying copied in past the field's validation is refused at construction."""
+        with pytest.raises(ValueError, match="Unsupported encoder_modulator_tying"):
+            _brain(encoder_modulator_tying="per_receptor")
+
+    def test_a_modulator_step_off_a_one_second_reference_step_is_refused(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """With the reference step 1 s nothing is converted, and 0.5 s is refused at load."""
+        text = (
+            _ASSAY.read_text()
+            .replace("    max_step_mm: 1.0\n", "    max_step_mm: 0.2\n")
+            .replace("max_steps: 720\n", "max_steps: 3600\n")
+            .replace(
+                "    action_space: primitives\n",
+                "    action_space: primitives\n"
+                "    modulator_layer: data\n"
+                "    modulator_satiety_link: true\n"
+                "    synapse_signs: per_connection\n"
+                "    gap_normalisation: strength\n"
+                "    encoder: compact\n"
+                "    modulator_step_seconds: 0.5\n",
+            )
+        )
+        path = tmp_path / "reference_step.yml"
+        path.write_text(text)
+        with pytest.raises(ValueError, match=re.escape("come to the 1-s step; it comes to 0.5 s")):
+            load_simulation_config(str(path))
+        path.write_text(text.replace("modulator_step_seconds: 0.5", "modulator_step_seconds: 1.0"))
+        loaded = load_simulation_config(str(path))
+        assert loaded.brain.config.modulator_step_seconds == 1.0  # type: ignore[union-attr]
 
     def test_the_validator_refuses_too(self) -> None:
         with pytest.raises(ValueError, match="encoder='compact' fixes"):

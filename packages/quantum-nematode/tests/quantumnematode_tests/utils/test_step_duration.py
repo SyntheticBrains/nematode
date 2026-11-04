@@ -302,7 +302,11 @@ def test_another_brain_is_refused(tmp_path: Path) -> None:
     data = _raw(_MLP)
     data["brain"] = {
         "name": "lstmppo",
-        "config": {"action_mode": "continuous", "signed_speed": True},
+        "config": {
+            "action_mode": "continuous",
+            "signed_speed": True,
+            "sensory_modules": data["brain"]["config"]["sensory_modules"],
+        },
     }
     _refused(tmp_path, data, "the brain is 'lstmppo'")
 

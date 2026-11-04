@@ -14,7 +14,8 @@ sys.path.insert(0, "scripts/analysis")
 import c2_encoder_probe as p
 import npe_recovery as nr
 
-BASE = p.FEASIBILITY_VALUES
+# The base the trials ran from: FEASIBILITY_VALUES as they then stood, the reversal bias -2.0.
+BASE = {**p.FEASIBILITY_VALUES, "readout.reversal.bias": -2.0}
 
 
 def trial(item):

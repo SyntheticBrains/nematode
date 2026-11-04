@@ -198,6 +198,45 @@ def _refuse_outside_surface(config: SimulationConfig) -> None:  # noqa: C901, PL
                 refuse(f"reward.{key} is {getattr(config.reward, key)}, and has no rule")
 
 
+def _refuse_encoder_modulator_step(encoder: str, modulator_step: float, step: float) -> None:
+    """Refuse an encoded connectome whose modulator step is not the worm's step.
+
+    The encoder's timescales are in worm-seconds, so its pools' decay must be taken per step.
+    """
+    if encoder != "none" and not math.isclose(modulator_step, step, rel_tol=1e-12):
+        msg = (
+            f"brain.config.encoder={encoder!r} requires modulator_step_seconds to come to the "
+            f"{step:g}-s step; it comes to {modulator_step:g} s"
+        )
+        raise ValueError(msg)
+
+
+def _refuse_encoder_step(config: SimulationConfig) -> None:
+    """Refuse an encoded connectome's modulator step where no conversion applies.
+
+    With no step configured, or one equal to the reference step, nothing is converted, so the
+    written modulator step must already be the worm's step: the configured one, or the reference.
+    """
+    from quantumnematode.utils.config_loader import BRAIN_CONFIG_MAP, _resolve_brain_config
+
+    brain = config.brain
+    environment = config.environment
+    if brain is None or brain.name != "connectomeppo" or environment is None:
+        return
+    if environment.env_type != "continuous_2d":
+        return
+    brain_config: Any = _resolve_brain_config(
+        brain.config,
+        BRAIN_CONFIG_MAP[brain.name],
+        brain.name,
+    )
+    max_step_mm = environment.get_continuous_config().max_step_mm
+    if max_step_mm <= 0.0:
+        return
+    step = config.step_seconds or step_worm_seconds(max_step_mm)
+    _refuse_encoder_modulator_step(brain_config.encoder, brain_config.modulator_step_seconds, step)
+
+
 def _rebuilt[M: BaseModel](model: M, updates: dict[str, Any]) -> M:
     """Return ``model`` with ``updates`` applied, re-validated so every field bound still holds."""
     return type(model).model_validate({**dict(model), **updates})
@@ -221,6 +260,7 @@ def derive_step_coupled(config: SimulationConfig) -> SimulationConfig:
 
     ratio = step_ratio(config)
     if ratio is None or ratio == 1:
+        _refuse_encoder_step(config)
         return config
     _refuse_outside_surface(config)
     step = config.step_seconds
@@ -368,18 +408,11 @@ def derive_step_coupled(config: SimulationConfig) -> SimulationConfig:
             brain_config.modulator_step_seconds,
             amount_per_step(brain_config.modulator_step_seconds, k),
         )
-        if brain_config.encoder != "none" and not math.isclose(
+        _refuse_encoder_modulator_step(
+            brain_config.encoder,
             brain_updates["modulator_step_seconds"],
             step,
-            rel_tol=1e-12,
-        ):
-            # The encoder's timescales are in worm-seconds, so its decay must be taken per step.
-            msg = (
-                f"brain.config.encoder={brain_config.encoder!r} requires modulator_step_seconds to "
-                f"come to the {step:g}-s step; it comes to "
-                f"{brain_updates['modulator_step_seconds']:g} s"
-            )
-            raise ValueError(msg)
+        )
         if brain_config.dynamics == "leaky":
             brain_updates["membrane_tau_steps"] = convert(
                 "brain.config.membrane_tau_steps",

@@ -169,11 +169,14 @@ def run_batched(
     return trajectories, log
 
 
-def references(config: Any, controller: Any, steps: int) -> list[ReferenceEpisode]:
-    """Run the per-step reference for every parity seed."""
-    return [
-        run_reference(config, controller, seed, steps, record_density=True) for seed in PARITY_SEEDS
-    ]
+def references(
+    config: Any,
+    controller: Any,
+    steps: int,
+    seeds: tuple[int, ...] | list[int] = PARITY_SEEDS,
+) -> list[ReferenceEpisode]:
+    """Run the per-step reference for every seed, the parity seeds by default."""
+    return [run_reference(config, controller, seed, steps, record_density=True) for seed in seeds]
 
 
 def state_mismatches(refs: list[ReferenceEpisode], log: BatchedLog, steps: int) -> list[str]:

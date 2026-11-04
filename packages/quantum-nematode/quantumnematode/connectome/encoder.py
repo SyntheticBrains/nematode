@@ -485,8 +485,13 @@ def write_encoder(brain: object, z: Sequence[float] | np.ndarray) -> None:
             topology.modulator_layer_w.copy_(strengths[fitted])
         else:
             strengths = take(len(encoder.group_fixed))
+            device = encoder.group_fixed.device
             encoder.tied_strength.copy_(
-                torch.where(encoder.group_fixed, _softplus_inverse(strengths), strengths),
+                torch.where(
+                    encoder.group_fixed,
+                    _softplus_inverse(strengths).to(device),
+                    strengths.to(device),
+                ),
             )
         encoder.timescales_s.copy_(
             torch.tensor(values[cursor : cursor + len(TIMESCALE_POOLS)], dtype=torch.float32),

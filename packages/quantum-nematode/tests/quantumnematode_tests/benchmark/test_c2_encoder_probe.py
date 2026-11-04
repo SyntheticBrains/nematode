@@ -43,8 +43,7 @@ def test_the_seed_blocks_do_not_overlap() -> None:
         for r in range(probe.RESTARTS)
     ]
     blocks.append((probe.WARM_BASE, probe.WARM_BASE + probe.ANIMALS * (last_k + 1)))
-    grades = probe.GRADE_POPULATIONS * (probe.WARM_RESTART + 1)
-    blocks.append((probe.GRADE_BASE, probe.GRADE_BASE + probe.ANIMALS * grades))
+    blocks.append((probe.GRADE_BASE, probe.GRADE_BASE + probe.ANIMALS * probe.GRADE_POPULATIONS))
     blocks.append((probe.COST_BASE, probe.COST_BASE + probe.ANIMALS * 2_002))
     blocks.append((probe.FEASIBILITY_BASE, probe.FEASIBILITY_BASE + probe.ANIMALS))
     trials = probe.ANIMALS * probe.FEASIBILITY_TRIALS
@@ -128,6 +127,8 @@ def test_the_hand_set_vector_names_its_mechanism() -> None:
     assert values["modulator.serotonin:mod-1"] == pytest.approx(0.001)
     with pytest.raises(KeyError, match="no encoder parameters"):
         probe.feasibility_vector({"modulator.nothing": 1.0})
+    with pytest.raises(ValueError, match="outside their parameters' ranges"):
+        probe.feasibility_vector({**probe.FEASIBILITY_VALUES, "readout.reversal.VA": 3.5})
 
 
 @pytest.mark.smoke
@@ -147,6 +148,13 @@ def test_an_encoded_population_is_graded() -> None:
     assert set(graded["mutants"]) == set(probe.MUTANTS)
     for reading in graded["mutants"].values():
         assert set(reading["statistics"]) == {"roaming_fraction", "exits_per_on_lawn_hour"}
+    from quantumnematode.connectome import encoder as enc
+
+    probe.controller(z, "tax-4")
+    written = enc.read_encoder(probe.encoded_brain())
+    spec = probe.encoded_brain().topology.modulator_spec
+    assert not np.allclose(written, z)
+    np.testing.assert_allclose(written, enc.tax4_vector(spec, z), atol=1e-6)
 
 
 def test_the_converged_generation_is_the_first_within_five_percent() -> None:

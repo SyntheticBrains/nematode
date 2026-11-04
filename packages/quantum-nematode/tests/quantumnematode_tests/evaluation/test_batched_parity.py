@@ -192,23 +192,28 @@ def test_the_data_layer_matches_the_per_step_brain() -> None:
     assert np.max(np.abs(np.asarray(refs[0].modulators))) > 0
 
 
+_ENCODED_SEEDS = list(range(5001, 5033))
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_scheer"])
 @pytest.mark.parametrize("wiring", ["wild_type", "rewired_degree_preserving"])
 def test_the_encoded_brain_matches_the_per_step_brain(wiring: str, protocol: str) -> None:
     """Covers the batched-evaluation scenario "The encoded brain matches the per-step runner".
 
     An encoded connectome with a vector away from the box's centre, on the wild type and on the
-    degree-preserving null: features (which carry food contact and every ligand's concentration),
-    action means and derivatives within 1e-5 over 50 steps, and trajectories over 300.
+    degree-preserving null, on seeds 5001-5032: features (which carry food contact and every
+    ligand's concentration), action means and derivatives within 1e-5 over 50 steps, and
+    trajectories over 300.
     """
     from quantumnematode.evaluation.controllers import BatchedConnectome
 
     brain, config = p.encoded_brain(protocol, wiring)
-    refs = p.references(config, brain, _STEPS)
+    refs = p.references(config, brain, _STEPS, _ENCODED_SEEDS)
     trajectories, log = p.run_batched(
         config,
         BatchedConnectome(brain),
-        list(p.PARITY_SEEDS),
+        _ENCODED_SEEDS,
         _STEPS,
     )
     assert p.state_mismatches(refs, log, _STATE_STEPS) == []
