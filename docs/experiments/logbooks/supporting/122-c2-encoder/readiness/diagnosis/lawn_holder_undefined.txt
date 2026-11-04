@@ -1,0 +1,18 @@
+{
+ "small_lawn/roaming_fraction": 0.0,
+ "small_lawn/roaming_bout_s": null,
+ "small_lawn/dwelling_bout_s": null,
+ "small_lawn/exits_per_on_lawn_hour": 0.3454,
+ "small_lawn/pre_exit_enrichment": 0.0,
+ "small_lawn/time_on_lawn": 0.9251,
+ "kinematics/dwelling_speed_median": 0.0039,
+ "kinematics/dwelling_speed_p90": 0.0075,
+ "kinematics/roaming_speed_median": null,
+ "kinematics/roaming_speed_p90": null,
+ "kinematics/roaming_survival_5min": null,
+ "uniform_lawn/roaming_fraction": 0.0,
+ "uniform_lawn/roaming_bout_s": null,
+ "uniform_lawn/dwelling_bout_s": null
+}
+undefined: ['kinematics/roaming_speed_median', 'kinematics/roaming_speed_p90', 'kinematics/roaming_survival_5min', 'small_lawn/dwelling_bout_s', 'small_lawn/roaming_bout_s', 'uniform_lawn/dwelling_bout_s', 'uniform_lawn/roaming_bout_s']
+registered score 7005.04 uncompressed 7000006.2

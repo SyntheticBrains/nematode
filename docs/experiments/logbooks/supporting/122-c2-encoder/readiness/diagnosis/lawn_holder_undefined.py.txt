@@ -1,0 +1,42 @@
+"""Which D_fit statistics the best random lawn-holder leaves undefined (description, 70,300,000)."""
+
+import json
+import sys
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+import npe_recovery as nr
+from quantumnematode.connectome import encoder as enc
+
+nr._worker_setup()
+brain = p.encoded_brain()
+t = brain.topology
+names = [e.name for e in p.entries()]
+where = [names.index(n) for n in p.REDUCED_NAMES]
+
+
+def embed(sub):
+    z = [0.5] * len(names)
+    for i, v in zip(where, sub):
+        z[i] = float(v)
+    return z
+
+
+rng = np.random.default_rng(7)
+mods = torch.zeros(2, brain._n_concentrations + 1)
+x = torch.tensor([[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+found = []
+for trial in range(4000):
+    sub = rng.uniform(0, 1, size=len(p.REDUCED_NAMES))
+    enc.write_encoder(brain, embed(sub))
+    with torch.no_grad():
+        mean, _ = t.forward_with_hidden_batched(x, modulators=mods)
+    found.append((float(mean[1, 0] - mean[0, 0]), float(mean[0, 0]), float(mean[1, 2] - mean[0, 2]), sub))
+picks = sorted((f for f in found if f[1] > 0.0 and f[2] <= 0.0), key=lambda f: f[0])[:4]
+record = p.simulate(0, embed(picks[2][3]), 70_300_000)
+print(json.dumps({k: (None if v is None else round(v, 4)) for k, v in record["statistics"].items()}, indent=1))
+print("undefined:", sorted(k for k, v in record["statistics"].items() if v is None))
+print("registered score", round(p.FitObjective()(record), 2), "uncompressed", round(p.UncompressedObjective()(record), 1))
