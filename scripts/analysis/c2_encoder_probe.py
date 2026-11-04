@@ -45,7 +45,9 @@ lawn subset at the new box's centre hold the lawn (0.93).
 (CMA 5989), which must hold the lawn, then every parameter from its answer at sigma0 0.1 on the
 registered ranking score (CMA 5990); it passes as the second pilot does. Stage 1 reached the best
 answer of any fit (score 10.0, 0.34 of the assay on the lawn) without holding the lawn at 0.75;
-**stage2-anyway** runs stage 2 from it regardless, recorded as a deviation from that rule.
+**stage2-anyway** runs stage 2 from it regardless, recorded as a deviation from that rule; it held
+the lawn (0.99 of the assay on it, score 4.1 at generation 125). **stage2-extend** resumes it to
+500 generations to see where it converges.
 
 **readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
 score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
@@ -67,7 +69,8 @@ trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,0
 200·(2,100·r + 2g + q) + i; the second pilot at 66,000,000 and its trajectory at 67,000,000; the reachability probe at
 68,000,000 and its trajectory at 69,000,000; the existence tests at 70,000,000 and 70,100,000; the
 third pilot at 71,000,000 and its trajectory at 72,000,000; the staged pilot's stage 1 at 73,000,000
-(trajectory 74,000,000) and stage 2 at 75,000,000 (trajectory 76,000,000).
+(trajectory 74,000,000) and stage 2 at 75,000,000 (trajectory 76,000,000); stage 2's resumed
+generations 151-500 at 80,000,000 + 200·(k - 2,400) + i and their checkpoints at 82,000,000.
 
 Usage::
 
@@ -79,6 +82,7 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py pilot-log
     uv run python scripts/analysis/c2_encoder_probe.py pilot-staged
     uv run python scripts/analysis/c2_encoder_probe.py stage2-anyway
+    uv run python scripts/analysis/c2_encoder_probe.py stage2-extend
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -212,6 +216,11 @@ STAGE2_BASE = 75_000_000
 STAGE2_CMA = 5990
 STAGE2_TRAJECTORY_BASE = 76_000_000
 STAGE2_SIGMA0 = 0.1
+# Stage 2 resumed from its 150th generation to here, to see where the staged fit converges. The
+# resumed generations draw their animals from a block of their own, starting at generation 151.
+STAGE2_EXTENDED_CAP = 500
+STAGE2_EXTENSION_BASE = 80_000_000
+STAGE2_EXTENSION_TRAJECTORY_BASE = 82_000_000
 # Each readiness restart's answer at every 50th generation, re-simulated twice.
 TRAJECTORY_BASE = 64_000_000
 TRAJECTORY_EVERY = 50
@@ -1187,6 +1196,62 @@ def _stage2_anyway(workers: int) -> int:
     return 0
 
 
+def _extend_stage2(workers: int) -> int:
+    """Resume stage 2 from its last generation to 500, its answer read every 25 generations.
+
+    The saved history's cap stop is cleared, and the fit resumes from its checkpointed strategy under
+    the same simulation, start and seeds, so its first 150 generations are those already run.
+    """
+    root = BUILD / "readiness" / "staged" / "stage2"
+    history_path = root / "fit0.json"
+    saved = json.loads(history_path.read_text())
+    if saved["stop"] is not None and saved["stop"]["generation"] < STAGE2_EXTENDED_CAP:
+        saved["stop"] = None
+        history_path.write_text(json.dumps(saved))
+    record = json.loads(STAGED_PILOT_PATH.read_text())
+    # Stage 2 first stopped at its cap; a resumed extension keeps the same seed mapping.
+    resumed_from = PILOT_CAP
+    # Generation g's member m is simulation k = 16(g - 1) + m, so the first resumed generation's
+    # animals start at the extension's own base.
+    seed_base = STAGE2_EXTENSION_BASE - ANIMALS * cr.POPSIZE * resumed_from
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        second = _fit(
+            pool,
+            cma_seed=STAGE2_CMA,
+            seed_base=seed_base,
+            cap=STAGE2_EXTENDED_CAP,
+            state_dir=root,
+            factory=start_stage2,
+        )
+        points = trajectory(
+            second,
+            pool,
+            base=STAGE2_EXTENSION_TRAJECTORY_BASE,
+            restart=0,
+            every=PILOT_EVERY,
+        )
+    record["stage2_extended"] = {
+        **_summary(points),
+        "cap": STAGE2_EXTENDED_CAP,
+        "resumed_from_generation": resumed_from,
+        "seeds": (
+            f"generations 1-{resumed_from} at {STAGE2_BASE:,} + 200k + i; generations "
+            f"{resumed_from + 1}-{STAGE2_EXTENDED_CAP} at {STAGE2_EXTENSION_BASE:,} + "
+            f"200(k - {cr.POPSIZE * resumed_from:,}) + i; checkpoints at "
+            f"{STAGE2_EXTENSION_TRAJECTORY_BASE:,} + 200(2g + q) + i"
+        ),
+        "converged_generation": converged_generation(points),
+        "points": points,
+        "medians": second["medians"],
+        "sigmas": second["sigmas"],
+        "answer": second["answers"][-1],
+    }
+    _write(STAGED_PILOT_PATH, record)
+    summary = record["stage2_extended"]
+    print(json.dumps({k: v for k, v in summary.items() if k.startswith(("best", "final", "conv"))}))
+    return 0
+
+
 def _restart(
     r: int,
     pool: ProcessPoolExecutor,
@@ -1445,6 +1510,7 @@ def main(argv: list[str] | None = None) -> int:
             "pilot-log",
             "pilot-staged",
             "stage2-anyway",
+            "stage2-extend",
             "readiness",
             "read",
             "smoke",
@@ -1461,6 +1527,7 @@ def main(argv: list[str] | None = None) -> int:
         "pilot-log": lambda: _log_pilot(args.workers),
         "pilot-staged": lambda: _staged_pilot(args.workers),
         "stage2-anyway": lambda: _stage2_anyway(args.workers),
+        "stage2-extend": lambda: _extend_stage2(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),

@@ -98,6 +98,17 @@ def test_the_seed_blocks_do_not_overlap() -> None:
     ):
         blocks.append((base, base + probe.ANIMALS * pilot))
         blocks.append((trajectory_base, trajectory_base + probe.ANIMALS * pilot_trajectory))
+    extension = cr.POPSIZE * (probe.STAGE2_EXTENDED_CAP - probe.PILOT_CAP)
+    blocks.append(
+        (probe.STAGE2_EXTENSION_BASE, probe.STAGE2_EXTENSION_BASE + probe.ANIMALS * extension),
+    )
+    extended_trajectory = probe.trajectory_k(0, probe.STAGE2_EXTENDED_CAP, 1) + 1
+    blocks.append(
+        (
+            probe.STAGE2_EXTENSION_TRAJECTORY_BASE,
+            probe.STAGE2_EXTENSION_TRAJECTORY_BASE + probe.ANIMALS * extended_trajectory,
+        ),
+    )
     assert last_k < probe.RESTART_BLOCK
     ordered = sorted(blocks)
     for (_, end), (start, _) in itertools.pairwise(ordered):

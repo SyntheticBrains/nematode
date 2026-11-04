@@ -132,6 +132,8 @@
 
     *(Amended 2026-11-04, the maintainer's decision.)* **Stage 1 reached the best answer of any fit** (registered score 10.0, below the stall's 10.6; 0.34 of the assay on the lawn) **without holding the lawn at 0.75**, so stage 2 did not run under the stated rule. The lawn-holders found by random draws never roam: the best (0.925 on the lawn) leaves 7 of D_fit's 14 statistics undefined. The score needs lawn-holding together with roaming and dwelling bouts, and the encoder has no stochastic source of state switching beyond the action noise after its readout. Stage 2 runs from stage 1's answer regardless, recorded as a deviation from the stated rule, and this change then closes with the switching question taken to a plan review before F.0b-ii.
 
+    *(Amended 2026-11-04, the maintainer's decision.)* **Stage 2 held the lawn.** From stage 1's answer, the full fit reached a registered score of 4.1 by generation 125 (D_fit 4.4) with the worm on the lawn 99% of the assay, roaming 15% and dwelling in bouts, every statistic defined: the encoder switches between roaming and dwelling in closed loop, and the switching question is answered. What misses is kinematics (the dwelling speeds high, the roaming speeds low) and the roaming bouts' length. Stage 2 is resumed to 500 generations, its answer read every 25 generations, to see where the staged fit converges; this change then closes, and the staged procedure and the readiness restarts go to the next change.
+
 07. **The vector interface:**
 
     - `encoder_parameters()` gives the 196 names in a fixed order;
