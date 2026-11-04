@@ -222,16 +222,26 @@ def load_cook_2019_hermaphrodite() -> Connectome:
     )
 
 
+# Parsed sheets by file, sheet, size and modification time: parsing a workbook takes about a second,
+# so each sheet is parsed once per process, and every read returns its own copy.
+_SHEETS: dict[tuple[str, str, int, int], pd.DataFrame] = {}
+
+
 def _read_sheet(path: Path, name: str) -> pd.DataFrame:
     """Read one sheet of an adjacency-matrix workbook, with no header row."""
-    df = pd.read_excel(path, engine="openpyxl", sheet_name=name, header=None)
-    # pd.read_excel can return a dict when sheet_name is a list; with a
-    # single string it always returns a single DataFrame, but pyright
-    # can't narrow that, so assert it here.
-    if not isinstance(df, pd.DataFrame):
-        msg = f"Expected DataFrame from sheet {name!r}, got {type(df).__name__}"
-        raise TypeError(msg)
-    return df
+    stat = path.stat()
+    key = (str(path.resolve()), name, stat.st_size, stat.st_mtime_ns)
+    df = _SHEETS.get(key)
+    if df is None:
+        df = pd.read_excel(path, engine="openpyxl", sheet_name=name, header=None)
+        # pd.read_excel can return a dict when sheet_name is a list; with a
+        # single string it always returns a single DataFrame, but pyright
+        # can't narrow that, so assert it here.
+        if not isinstance(df, pd.DataFrame):
+            msg = f"Expected DataFrame from sheet {name!r}, got {type(df).__name__}"
+            raise TypeError(msg)
+        _SHEETS[key] = df
+    return df.copy()
 
 
 def _load_hermaphrodite(
