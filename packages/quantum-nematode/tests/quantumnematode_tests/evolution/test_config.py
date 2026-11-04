@@ -227,7 +227,7 @@ def test_param_schema_entry_valid_examples() -> None:
 def test_hyperparam_schema_yaml_parses(tmp_path: Path) -> None:
     """A YAML with mixed-type ``hyperparam_schema`` SHALL load into ``ParamSchemaEntry``."""
     yaml_content = {
-        "brain": {"name": "mlpppo", "config": {}},
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
         "hyperparam_schema": [
             {"name": "actor_hidden_dim", "type": "int", "bounds": [32, 256]},
             {
@@ -256,7 +256,7 @@ def test_hyperparam_schema_rejects_typo(tmp_path: Path) -> None:
     Must list valid alternatives so the user can correct the typo.
     """
     yaml_content = {
-        "brain": {"name": "mlpppo", "config": {}},
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
         "hyperparam_schema": [
             {"name": "actor_hidden_dimm", "type": "int", "bounds": [32, 256]},
         ],
@@ -532,7 +532,7 @@ def test_inheritance_lamarckian_without_hyperparam_schema_raises(tmp_path: Path)
     """
     yaml_content = {
         "max_steps": 100,
-        "brain": {"name": "mlpppo", "config": {}},
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
         "evolution": {
             "inheritance": "lamarckian",
             "learn_episodes_per_eval": 10,
@@ -554,7 +554,7 @@ def test_inheritance_lamarckian_with_architecture_field_in_schema_raises(
     """
     yaml_content = {
         "max_steps": 100,
-        "brain": {"name": "mlpppo", "config": {}},
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
         "evolution": {
             "inheritance": "lamarckian",
             "learn_episodes_per_eval": 10,
@@ -607,7 +607,7 @@ def test_inheritance_lamarckian_happy_path_loads(tmp_path: Path) -> None:
     """A well-formed lamarckian YAML SHALL load without error."""
     yaml_content = {
         "max_steps": 100,
-        "brain": {"name": "mlpppo", "config": {}},
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
         "evolution": {
             "algorithm": "tpe",
             "inheritance": "lamarckian",
@@ -662,7 +662,7 @@ def test_inheritance_baldwin_without_hyperparam_schema_raises(tmp_path: Path) ->
     """``inheritance: baldwin`` requires ``hyperparam_schema`` SHALL raise."""
     yaml_content = {
         "max_steps": 100,
-        "brain": {"name": "mlpppo", "config": {}},
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
         "evolution": {
             "inheritance": "baldwin",
             "learn_episodes_per_eval": 10,
@@ -687,7 +687,7 @@ def test_inheritance_baldwin_permits_architecture_changing_schema_entries(
     """
     yaml_content = {
         "max_steps": 100,
-        "brain": {"name": "mlpppo", "config": {}},
+        "brain": {"name": "mlpppo", "config": {"sensory_modules": ["food_chemotaxis"]}},
         "evolution": {
             "inheritance": "baldwin",
             "learn_episodes_per_eval": 10,

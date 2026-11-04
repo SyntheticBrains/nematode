@@ -755,9 +755,9 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     this machine, beyond what it can run as planned. The registration needs a stopping rule on the
     draws, fewer draws, or a cheaper fit.
   - **Not yet measured:** convergence, the restart-to-restart spread against W's minimum, the tying.
-  - **Still to build:** the class-preserving left–right-symmetric null, and a loader guard: a
-    connectome YAML that one of the brain config's validators refuses loads silently as another
-    brain class's fields on defaults.
+  - **Still to build:** the class-preserving left–right-symmetric null. *(The loader guard landed
+    with PR #514's review: a brain config its own class refuses now fails at load, rather than
+    loading as another class's fields on defaults.)*
   - **dropped:** surrogate-assisted CMA. The objective is noisy, and it would need its own
     recovery control.
 

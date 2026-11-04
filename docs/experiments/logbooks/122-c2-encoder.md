@@ -77,7 +77,7 @@ C.2 is the connectome controller fitted to the real wild type ([roadmap](../../r
 
 ## The checks
 
-- **Identity** (`identity.json`): `connectome_identity_check.py` ran ten jobs on discarded seeds, before any edit and at the final code, and every one is byte-identical. The jobs: the hand-placed and data-layer arms in the batched evaluator on v3's four assays, and the per-step runner on the small lawn.
+- **Identity** (`identity.json`): `connectome_identity_check.py` ran ten jobs on discarded seeds, on the code before any edit and at the final code, and every one is byte-identical. The jobs: the hand-placed and data-layer arms in the batched evaluator on v3's four assays (every trajectory array and each animal's final satiety and total intake), and the per-step runner on the small lawn. After review the baseline was re-recorded on the pre-change code (`c73feb22`) in a worktree, and each record now states its checked source: the commit, any uncommitted edits, and a digest of the package, the configs and the script.
 - **Parity** (`test_batched_parity.py`, `test_batched_statistics.py`): on the wild type and on the degree-preserving null, a vector inside the box gives:
   - features, action means and derivatives within 1e-5 over 50 steps;
   - bouts identical over 300 steps;
@@ -203,7 +203,7 @@ Time on the lawn (z +2.0), exits (z −2.8), roaming survival (z −1.7), the un
    - each stage's objective and σ₀;
    - stage 2's cap, with a stopping rule read on the answer's checkpoints, not on the population median.
 3. **The readiness restarts under it,** for F.0b-ii's truths and W's spread.
-4. **A loader guard.** A connectome YAML that one of the brain config's validators refuses silently loads as another brain class's fields copied onto defaults: `modulators: true` came back `False`. It touched no committed config. W's arms are configs, so a guard that parses `brain.config` against the class `name` selects should land first.
+4. ~~**A loader guard.**~~ *(Landed with this change's review.)* A brain config that its own class refuses used to load silently as another class's fields copied onto defaults (`modulators: true` came back `False`). The loader now validates `brain.config` against the class `name` selects first. Seven committed configs that already could not build their brain now fail at load: two foraging configs the config-loading test lists as stale, and five hybrid-cortex specials.
 
 ## Corrections and lessons
 

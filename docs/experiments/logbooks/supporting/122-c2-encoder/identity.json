@@ -1,7 +1,19 @@
 {
-  "description": "Description: every existing connectome output re-run after the change, against a baseline from the code before it.",
+  "description": "Description: every connectome output in the baseline re-run at 12c580e1c8 (source 2d2b9bcd52a7), against the baseline recorded at c73feb221b with uncommitted edits (source bf49620273fe).",
   "baseline_code": "c73feb221baf334855e15d48eb79a1df41b60607",
-  "code": "3480483eaf0e98289dad96ba3df5f0cc1d203e43",
+  "baseline_source": {
+    "head": "c73feb221baf334855e15d48eb79a1df41b60607",
+    "uncommitted_edits": true,
+    "source_sha256": "bf49620273fe47c367e995bbbf404620c4f628bf392bf48042447457dd9b9255",
+    "files": 564
+  },
+  "code": "12c580e1c8d150ea67c6eace5545a1d3eb1d75b8",
+  "source": {
+    "head": "12c580e1c8d150ea67c6eace5545a1d3eb1d75b8",
+    "uncommitted_edits": false,
+    "source_sha256": "2d2b9bcd52a7bd1f1c15a20a105371773495948a7a18b7e7469d546d530151de",
+    "files": 572
+  },
   "jobs": 10,
   "identical": 10,
   "all_identical": true,
