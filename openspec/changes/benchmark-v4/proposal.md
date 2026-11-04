@@ -42,7 +42,7 @@ The maintainer's decisions (2026-11-05):
   - W's minimum and the 3-of-5 probability recomputed.
 - **`benchmark_grade.py --bands v1|v2|v3|v4`**, with v4 the default once VALID; v1–v3 stay byte-identical.
 - **Reported beside it:** C.1's v3 answer graded on v4, which decides whether C.1 is refitted.
-- **Launch record 124** (Part A before any reading; Part B after the oracle's fit) and **Logbook 124**.
+- **Launch record 124** (Part A before any reading; Part B after the oracle's fit; Part C, the onset decision, after its check) and **Logbook 124**.
 
 ## Capabilities
 

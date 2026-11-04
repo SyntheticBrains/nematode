@@ -61,7 +61,7 @@
 5. **The onset rate is conditional.** It is graded if, and only if, the oracle (decision 7.3) brings it within the bar. Otherwise it is reported beside the grade and v4 grades 23 statistics. The bar is z\* = 3.0781 for 24 statistics and 3.0654 for 23.
 
    - `bands_v4.json` holds all three activity bands with `activity_graded: null` when it is built.
-   - After Part B, `benchmark_bands.py --version v4 --onset graded|reported` sets the field and nothing else.
+   - After the oracle's check (decision 7.3), `benchmark_bands.py --version v4 --onset graded|reported` sets the field and nothing else. It refuses a choice the check's record does not support.
    - Every v4 grade refuses while the field is null, so no reading uses a provisional bar.
    - The bands' SHA-256 is final after that step, and `controls_v4.json` pins it.
 
@@ -79,11 +79,11 @@
    3. **The reachability oracle.**
       - The fit: `BatchedMechanistic` with C.1's 25 parameters, fitted on discarded seeds to the three activity statistics alone (the RMS of their z, capped at 10), on the small lawn. Sep-CMA from the box centre at σ 0.2, CMA seeds 9431 and 9432, cap 100. The better restart is taken.
       - The check: on 40 populations of 200, the pause share's and the flip fraction's mean z must each lie in [−1, 1], with |z| ≤ z\* in at least 90% of populations.
-      - The onset rate is read by the same rule, and decides decision 5 alone.
-      - Part B records the fitted answer before the 40 populations run.
+      - The onset rate is read by the same rule at the bar it would be graded at (3.0781), and decides decision 5 alone. The pause share and the flip fraction are then read at the bar that decision gives.
+      - Part B records the fitted answer before the 40 populations run. The check (`oracle-check`) writes `oracle_check.json` once.
    4. **Fresh N2:**
       - The units: v2's 26 N2 held-out dates (the same halves, `default_rng(2035)`), each half graded on the activity family against N2's own activity bands from its 42 band dates, on `default_rng([2047, n])`. That gives 2 units.
-      - The gate: at most 1 of the 2 units fails, as v2's N2 control allowed 1 of 4. A systematic fault in the bands or the measurement fails both halves. Part B states the chance that both fail by chance, from the rule check's family pass rate.
+      - The gate: at most 1 of the 2 units fails, as v2's N2 control allowed 1 of 4. A systematic fault in the bands or the measurement fails both halves. Part C states the chance that both fail by chance, from the rule check's family pass rate at the decided bar.
    5. **The adversary:** C.2's stage-2 answer on the wiring it was fitted on, on 5 fresh populations, must fail at least one graded activity statistic in at least 3 of 5, v3's rule.
    6. **The negatives:** v3's (B.4's six, v2's blind worm, C.1's v1 answer) each fail the wild type at 3 of 5 at v4's bar.
    7. **Reported:**
@@ -101,7 +101,8 @@
 8. **The registration** (launch record 124):
 
    - **Part A** fixes every rule above and is committed before the bands are built or any control is read. `benchmark_bands.py --version v4` and `benchmark_v4_controls.py` refuse until then.
-   - **Part B,** after the oracle's fit, records its answer and the onset rate's status before its populations and the reading run.
+   - **Part B,** after the oracle's fit, records its answer before its 40 populations run.
+   - **Part C,** after the oracle's check, records the onset decision the check gives, committed with `oracle_check.json` and the decided bands. The read and the verdict refuse until then. The bands' SHA-256 changes once, at this step: Part B binds the undecided bands, Part C the decided ones.
    - **Preflights before Part A** (discarded seeds, disclosed):
      - the adversary gate: C.2's stage-2 answer on 5 populations against provisional bands, built in process through the library functions by Part A's rules, since `benchmark_bands.py --version v4` refuses before Part A;
      - one 60-generation oracle restart, which must bring the pause share and the flip fraction within the bar.
@@ -112,13 +113,13 @@
    | Base | Use |
    |---|---|
    | 600,000,000 | the planning probe, used (200·c + i) |
-   | 601,000,000 | the oracle's fit, k = 10,000·r + 16·(n − 1) + p, CMA 9431 + r |
+   | 610,000,000 | the oracle's fit, k = 10,000·r + 16·(n − 1) + p, CMA 9431 + r: restart 0 spans 610.0–610.32 M and restart 1 612.0–612.32 M. *(Moved from 601 M before Part A: there restart 1 would have spanned 603.0–603.32 M, the adversary's block, the overlap v3's erratum records.)* |
    | 602,000,000 | the oracle's 40 check populations |
    | 603,000,000 | the adversary, 5 populations |
    | 604,000,000 | the negatives, k = 5·i + g for entry i in the registered order |
    | 525,000,000 | C.1's v3 answer, re-read on its own registered populations |
    | 606,000,000 | the adversary preflight, discarded |
-   | 607,000,000 | the oracle preflight, discarded (CMA 9433) |
+   | 607,000,000 | the oracle preflight, discarded (CMA 9433): its restart at 607.0–607.19 M, its answer's 5 populations at k = 9,000 + p (608.8 M) |
    | generators 2045–2047 | κ, the rule check, N2's activity bands |
 
 ## Risks / Trade-offs

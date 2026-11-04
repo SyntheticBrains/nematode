@@ -54,6 +54,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import math
 import sys
@@ -1145,12 +1146,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--record", type=Path, required=True)
-    parser.add_argument("--version", choices=("v1", "v2", "v3"), default="v1")
+    parser.add_argument("--version", choices=("v1", "v2", "v3", "v4"), default="v1")
+    parser.add_argument(
+        "--onset",
+        choices=("graded", "reported"),
+        default=None,
+        help="v4 only, after Part B: record whether the on-lawn onset rate is graded",
+    )
     args = parser.parse_args()
     if args.version == "v2":
         return _main_v2(args)
     if args.version == "v3":
         return _main_v3(args)
+    if args.version == "v4":
+        return _main_v4(args)
     bands, record = build(refs.load_scheer_tracks(), refs.load_lopezcruz())
     print(json.dumps(record["checks"], indent=2))
     failed = [name for name, check in record["checks"].items() if not check["passes"]]
@@ -1395,6 +1404,286 @@ def _main_v3(args: argparse.Namespace) -> int:
             f"The rule's own check failed for {failed}; the bands were not written.",
             file=sys.stderr,
         )
+        return 1
+    args.out.write_text(json.dumps(bands, indent=2, allow_nan=False) + "\n")
+    return 0
+
+
+# ---------------------------------------------------------------------------------------------
+# B v4: the on-lawn activity family
+# ---------------------------------------------------------------------------------------------
+
+V4_SUPPORT_PATH = _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "124-benchmark-v4"
+V4_LAUNCH_PATH = V4_SUPPORT_PATH / "launch.md"
+V4_ORACLE_CHECK_PATH = V4_SUPPORT_PATH / "oracle_check.json"
+BANDS_V3_PATH = _REPO / "data" / "benchmark" / "bands_v3.json"
+V3_RECORD_PATH = V3_SUPPORT_PATH / "bands_v3_record.json"
+ACTIVITY_INDEX = 6  # the activity family's band generator, after kinematics
+V4_KAPPA_SEED = 2045
+V4_CHECK_SEED = 2046
+V4_FIT_FAMILIES = ("small_lawn", "uniform_lawn", "kinematics", "activity")
+ONSET = "onset_rate_per_min"
+
+
+def per_date_activity_tallies(
+    tracks: refs.ScheerTracks,
+    arm: str,
+    rows: np.ndarray | None = None,
+) -> dict[int, np.ndarray]:
+    """Return each date's animals' activity tallies on the small lawn, ``(animals, fields)``.
+
+    By default over the arm's band rows; ``rows`` names other animals, as a control's units do.
+    """
+    out: dict[int, list[np.ndarray]] = {}
+    for i in band_rows(tracks, arm) if rows is None else rows:
+        lawn = g.real_on_lawn(tracks.x[i], tracks.y[i], tracks.boundary_radius[i])
+        out.setdefault(int(tracks.date[i]), []).append(
+            g.activity_tally(tracks.x[i], tracks.y[i], lawn),
+        )
+    return {d: np.vstack(v) for d, v in sorted(out.items())}
+
+
+def activity_graded(onset_graded: bool) -> tuple[str, ...]:  # noqa: FBT001 - the one decision
+    """Return the activity statistics v4 grades: all three, or all but the onset rate."""
+    return tuple(s for s in g.ACTIVITY_STATISTICS if onset_graded or s != ONSET)
+
+
+def v4_families(onset_graded: bool) -> dict[str, tuple[str, ...]]:  # noqa: FBT001 - the one decision
+    """Return B v4's families: v3's, with the activity family's graded statistics."""
+    return {**v3_families(), "activity": activity_graded(onset_graded)}
+
+
+def v4_statistics(onset_graded: bool) -> int:  # noqa: FBT001 - the one decision
+    """Return B v4's count of wild-type statistics."""
+    return sum(len(statistics) for statistics in v4_families(onset_graded).values())
+
+
+def still_worm_displacements() -> np.ndarray:
+    """Return the real tracker's 1-s displacements of a still worm, within each noise stretch."""
+    from quantumnematode.benchmark import measurement as mm
+
+    library = mm.load_noise_library(LAWN_NOISE_LIBRARY)
+    ends = np.concatenate(([0], np.cumsum(library.lengths)))
+    return np.concatenate(
+        [
+            np.hypot(np.diff(library.x_mm[a:b]), np.diff(library.y_mm[a:b]))
+            for a, b in itertools.pairwise(ends)
+        ],
+    )
+
+
+def activity_bands_v4(
+    tracks: refs.ScheerTracks,
+) -> tuple[dict[int, np.ndarray], dict[str, Any], dict[str, dict[str, Any]]]:
+    """Return the wild type's per-date activity tallies, their kappa, and the bands at each size.
+
+    Kappa is measured on its own generator; each size's bands on ``[BAND_SEED, 6, n]``.
+    """
+    activity = per_date_activity_tallies(tracks, WILD_TYPE)
+    kappa = measure_kappa(
+        activity,
+        g.ACTIVITY_STATISTICS,
+        g.activity_statistics,
+        seed=V4_KAPPA_SEED,
+    )
+    bands = {}
+    for n in SIZES:
+        band = lawn_bands(
+            activity,
+            g.ACTIVITY_STATISTICS,
+            n,
+            np.random.default_rng([BAND_SEED, ACTIVITY_INDEX, n]),
+            kappa=kappa["kappa"],
+            statistic=g.activity_statistics,
+        )
+        bands[str(n)] = {k: _band_dict(v) for k, v in band.items()}
+    return activity, kappa, bands
+
+
+def undecided_bands_v4(
+    v3: dict[str, Any],
+    activity_bands: dict[str, dict[str, Any]],
+    kappa: dict[str, float],
+    band_dates: int,
+    floor: float,
+) -> dict[str, Any]:
+    """Return B v4's bands file before the onset decision: v3's, with the activity bands."""
+    bands = json.loads(json.dumps(v3["bands"]))
+    for n, band in activity_bands.items():
+        bands[n]["activity"] = band
+    return {
+        **v3,
+        "description": "B v4's bands: v3's, with the on-lawn activity family (the pause share, "
+        "the direction-flip fraction and the onset rate) from Scheer's small-lawn band cohorts.",
+        "version": 4,
+        "activity_graded": None,
+        "families": None,
+        "fit_families": list(V4_FIT_FAMILIES),
+        "bars": {**v3["bars"], "wild_type": None},
+        "weights": None,
+        "fit_weights": None,
+        "bands": bands,
+        "activity_kappa": kappa,
+        "arms": {**v3["arms"], "activity": {"arm": WILD_TYPE, "band_dates": band_dates}},
+        "pause_floor_mm": floor,
+    }
+
+
+def provisional_bands_v4(*, onset_graded: bool = True) -> dict[str, Any]:
+    """Return v4's bands built in process by the registered rules, for preflights before Part A.
+
+    The same functions and generators as the registered build, without its rule checks; nothing is
+    written, and no registered reading may use them.
+    """
+    activity, kappa, activity_bands = activity_bands_v4(refs.load_scheer_tracks())
+    undecided = undecided_bands_v4(
+        json.loads(BANDS_V3_PATH.read_text()),
+        activity_bands,
+        kappa["kappa"],
+        len(activity),
+        g.pause_floor(still_worm_displacements()),
+    )
+    return decide_onset(_finite(undecided), onset_graded)
+
+
+def build_v4(
+    tracks: refs.ScheerTracks,
+    lopezcruz: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return B v4's bands file, before the onset decision, and its record.
+
+    Every v3 band is copied unchanged. The activity bands are built from the wild type's band
+    dates for all three statistics, with kappa from half-splits. Every rule check is read at both
+    bars v4 can have, with the onset rate graded and without it; the decision picks one.
+    """
+    from quantumnematode.benchmark import measurement as mm
+
+    still = still_worm_displacements()
+    floor = g.pause_floor(still)
+    if floor != g.PAUSE_FLOOR_MM:
+        msg = f"the still-worm library's floor is {floor} mm, not the graded {g.PAUSE_FLOOR_MM}"
+        raise ValueError(msg)
+    classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(CLASSIFIER_PATH))
+    v3 = json.loads(BANDS_V3_PATH.read_text())
+    v2 = json.loads(BANDS_V2_PATH.read_text())
+    activity, kappa, activity_bands = activity_bands_v4(tracks)
+    wild = per_date_tallies(tracks, WILD_TYPE, classifier)
+    kinematic = per_date_kinematic_tallies(tracks, WILD_TYPE, classifier)
+    lawn_kappa = json.loads(RECORD_PATH.read_text())["calibration"]["kappa"]
+    search_stats = list(search_band_batches_v3(lopezcruz).values())
+    checks = {}
+    for onset_graded in (True, False):
+        bar = g.z_star(v4_statistics(onset_graded))
+        checks["graded" if onset_graded else "reported"] = {
+            "bar": bar,
+            "statistics": v4_statistics(onset_graded),
+            "activity": check_small_lawn(
+                activity,
+                bar,
+                kappa["kappa"],
+                activity_graded(onset_graded),
+                g.activity_statistics,
+                seed=V4_CHECK_SEED,
+            ),
+            "small_lawn": check_small_lawn(wild, bar, lawn_kappa, seed=V2_CHECK_SEED),
+            "kinematics": check_small_lawn(
+                kinematic,
+                bar,
+                v2["kinematics_kappa"],
+                g.KINEMATIC_STATISTICS,
+                g.kinematic_statistics,
+                seed=V2_CHECK_SEED,
+            ),
+            "local_search": check_local_search(search_stats, bar, search_band_v3),
+        }
+    bands_file = undecided_bands_v4(v3, activity_bands, kappa["kappa"], len(activity), floor)
+    record = {
+        "description": "B v4's bands record: the pause floor, the activity family's kappa and "
+        "every rule check at both bars v4 can have, from band cohorts only.",
+        "bands_v3_sha256": mm.file_sha256(BANDS_V3_PATH),
+        "pause_floor": {
+            "mm": floor,
+            "step_mm": g.PAUSE_FLOOR_STEP_MM,
+            "coverage": g.PAUSE_FLOOR_COVERAGE,
+            "still_seconds": int(np.isfinite(still).sum()),
+            "share_below": float(np.mean(still[np.isfinite(still)] < floor)),
+        },
+        "activity_kappa": kappa,
+        "checks": checks,
+        "chemotaxis_leave_one_out": {
+            **json.loads(V3_RECORD_PATH.read_text())["chemotaxis_leave_one_out"],
+            "carried": "from v3: the chemotaxis bands are v3's, and v4's bar is wider",
+        },
+    }
+    return _finite(bands_file), _finite(record)
+
+
+def decide_onset(bands: dict[str, Any], onset_graded: bool) -> dict[str, Any]:  # noqa: FBT001 - the one decision
+    """Return v4's bands with the onset decision recorded: the families, the bar and the weights."""
+    if bands.get("version") != 4 or bands.get("activity_graded") is not None:
+        msg = "only v4 bands whose onset rate is not yet decided can be decided"
+        raise ValueError(msg)
+    families = v4_families(onset_graded)
+    return {
+        **bands,
+        "activity_graded": list(activity_graded(onset_graded)),
+        "families": {f: list(st) for f, st in families.items()},
+        "bars": {**bands["bars"], "wild_type": g.z_star(v4_statistics(onset_graded))},
+        "weights": {f"{f}/{st}": w for (f, st), w in g.weights(list(families), families).items()},
+        "fit_weights": {
+            f"{f}/{st}": w for (f, st), w in g.weights(list(V4_FIT_FAMILIES), families).items()
+        },
+    }
+
+
+def onset_refusal(onset_graded: bool) -> str | None:  # noqa: FBT001 - the one decision
+    """Return why the onset decision cannot be recorded, or None if the oracle's check supports it.
+
+    The decision follows from the oracle's 40 populations alone, read after Part B: the onset rate
+    is graded only if that reading reached it.
+    """
+    if "\n## Part B" not in V4_LAUNCH_PATH.read_text():
+        return "Part B is not in B v4's launch record"
+    if not V4_ORACLE_CHECK_PATH.exists():
+        return f"{V4_ORACLE_CHECK_PATH.name} does not exist: the oracle's check comes first"
+    check = json.loads(V4_ORACLE_CHECK_PATH.read_text())
+    if not check["activity_reachable"]:
+        return "the oracle did not reach the pause share and the flip fraction"
+    if bool(check["onset_graded"]) != onset_graded:
+        reached = "reached" if check["onset_graded"] else "did not reach"
+        return f"the oracle's check {reached} the onset rate"
+    return None
+
+
+def _main_v4(args: argparse.Namespace) -> int:
+    """Build B v4's bands after Part A, or record the onset decision after Part B."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import cma_recovery as cr
+
+    if not cr.launch_committed(launch_path=V4_LAUNCH_PATH):
+        print("B v4's launch record is not committed, or has changed", file=sys.stderr)
+        return 1
+    if args.onset is not None:
+        refusal = onset_refusal(args.onset == "graded")
+        if refusal is not None:
+            print(f"{refusal}; the onset is not decided", file=sys.stderr)
+            return 1
+        decided = decide_onset(json.loads(args.out.read_text()), args.onset == "graded")
+        args.out.write_text(json.dumps(decided, indent=2, allow_nan=False) + "\n")
+        print(f"activity graded: {decided['activity_graded']}; bar {decided['bars']['wild_type']}")
+        return 0
+    if args.out.exists():
+        print(f"{args.out} exists: v4's bands are built once", file=sys.stderr)
+        return 1
+    bands, record = build_v4(refs.load_scheer_tracks(), refs.load_lopezcruz())
+    args.record.parent.mkdir(parents=True, exist_ok=True)
+    args.record.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+    print(json.dumps({k: record[k] for k in ("pause_floor", "checks")}, indent=2))
+    activity_fails = [
+        bar for bar, check in record["checks"].items() if not check["activity"]["passes"]
+    ]
+    if len(activity_fails) == len(record["checks"]):
+        print("The activity family's rule check failed at both bars; no bands", file=sys.stderr)
         return 1
     args.out.write_text(json.dumps(bands, indent=2, allow_nan=False) + "\n")
     return 0

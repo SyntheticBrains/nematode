@@ -391,10 +391,16 @@ def answer_parameters(name: str) -> dict[str, float]:
     return nr.parameters_from_unit(np.asarray(z))
 
 
-def negative_graded(name: str, seeds: list[int], bands: dict[str, Any]) -> dict[str, Any]:
+def negative_graded(
+    name: str,
+    seeds: list[int],
+    bands: dict[str, Any],
+    grade: Any = None,  # noqa: ANN401 - a grader, v3's by default
+) -> dict[str, Any]:
     """Run one negative, or one of the two answers, on the given animals; grade it on v3.
 
-    The untrained networks are B.4's, each driving an equal block of the animals.
+    The untrained networks are B.4's, each driving an equal block of the animals. ``grade`` grades
+    on another version's bands instead.
     """
     from quantumnematode.evaluation.controllers import (
         BatchedConnectome,
@@ -434,7 +440,7 @@ def negative_graded(name: str, seeds: list[int], bands: dict[str, Any]) -> dict[
             for family, part in pops.items():
                 populations.setdefault(family, []).extend(part)
             chemotaxis.extend(chem)
-    return bg.grade_populations_v3(populations, chemotaxis, bands)
+    return (bg.grade_populations_v3 if grade is None else grade)(populations, chemotaxis, bands)
 
 
 def _negative_population(item: tuple[str, int, int]) -> dict[str, Any]:
