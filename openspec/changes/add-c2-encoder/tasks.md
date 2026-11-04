@@ -35,7 +35,7 @@
 
 ## 3. Configs
 
-- [ ] 3.1 `generate_assay_configs.py`: the `datalayer` arm with the encoder; the four v3 assay configs; `benchmark_grade.ARMS["connectome_c2"]`; a smoke that grades one encoded population.
+- [x] 3.1 `generate_assay_configs.py`: the `datalayer` arm with the encoder; the four v3 assay configs; `benchmark_grade.ARMS["connectome_c2"]`; a smoke that grades one encoded population.
 
 ## 4. The probes (description, discarded seeds)
 
@@ -46,17 +46,17 @@
   - the settling step at 3,200 animals on CPU and on MPS;
   - projections for F.0b-ii, C.2 and W.
 - [x] 4.3 The feasibility check: a hand-set vector's post-removal decay constant against 6–12 min.
-- [ ] 4.4 The readiness probe *(amended 2026-11-03: the first box stalled; rescaled wiring scales, a 150-generation pilot that must beat 10.6, then restarts through the cap with trajectories)*:
+- [x] 4.4 The readiness probe *(amended 2026-11-03 and 2026-11-04, the maintainer's decisions: the first box stalled, and every one-stage fit from the box centre stalled off the lawn; the box was rescaled twice and a staged fit found, which holds the lawn at a score of 3.43; the restarts below move to the change that registers the staged procedure)*:
   - up to 3 restarts against v3's D_fit (CMA 5980–5982), stopping after 2 pass, with the tightened guard and a cap of 1,000;
   - each answer graded with presence on 5 populations, on all five families and the three mutants;
   - families, bounds, reversal share and timescales reported;
   - the restart-to-restart spread of held-out families and mutant differences against W's minimum;
   - a warm-start existence test if only one passes.
-- [ ] 4.5 The W sizing record (`supporting/122-c2-encoder/w_sizing.json`): the measured generations per fit, seconds per generation, spread and draws per arm, the compute path, and the tying the evidence favours, for F.0b-ii's and W's registrations.
+- [x] 4.5 The W sizing record (`supporting/122-c2-encoder/w_sizing.json`): the measured generations per fit, seconds per generation, spread and draws per arm, the compute path, and the tying the evidence favours, for F.0b-ii's and W's registrations. *(Written with what the probes measured: the pace, the compute path, the staged fit's generations and W's projected cost; the spread, the tying and convergence are named as not measured.)*
 
 ## 5. Close-out
 
-- [ ] 5.1 Logbook 122; the tracker:
+- [x] 5.1 Logbook 122; the tracker *(the open question, the tying, is not answered: the restarts that would measure it did not run)*:
 
   - F.0b-ii and C.2;
   - design.md's open question answered;

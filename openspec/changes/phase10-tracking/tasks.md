@@ -488,7 +488,9 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - **For W:** two restarts on the same data differ by a median D of 1.12 (0.48–1.92), close to
       W's minimum of 1.42, so W's arms need several fits each.
     - **For C.1:** keep at least two restarts. The registered plateau rule carries over.
-    - **Still open:** F.0b-ii, C.2's encoder and its recovery.
+    - **Still open:** F.0b-ii, C.2's encoder and its recovery. *(2026-11-04: the encoder is built,
+      [Logbook 122](../../../docs/experiments/logbooks/122-c2-encoder.md); F.0b-ii waits for its
+      staged procedure and the readiness restarts that give it truths.)*
 
   *(2026-10-29: change `rerun-cma-recovery-v2`; [Logbook 116](../../../docs/experiments/logbooks/116-cma-recovery-v2.md).)*
   **F.0b-i on v2 fails its gate**, with a median gain of 0.690 against 0.75. sep-CMA recovers the two
@@ -620,6 +622,31 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   controller that leaves the lawn a little reaches the z cap of 10 there, and an unweighted D_fit is
   dominated by it. C.2's registration states its weights and cap with that in view.
 
+  *(Added 2026-11-04: change `add-c2-encoder`;
+  [Logbook 122](../../../docs/experiments/logbooks/122-c2-encoder.md).)* **C.2's encoder is built
+  and checked**, and a staged fit brings it toward the wild type; nothing is registered.
+
+  - **The encoder:** `encoder: compact`, 196 named parameters (132 tied per ligand), the wiring fixed
+    from data with strength-normalised gaps. It is byte-identical when off (10 of 10), meets parity
+    on the wild type and the degree-preserving null, and builds on every null with the wild type's
+    names.
+  - **Its slow variable:** the 55 ligand pools, under a monoamine and a neuropeptide timescale. A
+    hand-set vector decays 9.0 min after food removal (6–12 required).
+  - **The box:** the wiring scales are [0, 1.5], since the first box's centre saturated the network.
+    The fixed-sign strengths are log-scaled (centre 0.055), since at 1.5 their held currents swamped
+    the senses on food.
+  - **The fit:** no one-stage fit from the box centre held the small lawn (every one stalled near a
+    score of 10.6), and lawn-holders that never roam leave 7 statistics undefined. A **staged fit**
+    (the 18-parameter lawn subset, then all 196 from its answer at σ₀ 0.1) holds the lawn (99%),
+    roams and dwells, and reaches a score of 3.43 at 500 generations, still improving. It misses on
+    the speed distributions, for want of a state-dependent speed spread (C.1's gap before Logbook
+    121).
+  - **The plateau guard** that C.1 asked for proved insufficient: in 196 dimensions the population
+    median goes flat while nothing improves. C.2 reads its answer's re-simulated checkpoints.
+  - **Next, in its own change:** a state-dependent speed spread; the staged procedure registered (stage
+    1's bar, each stage's objective and σ₀, stage 2's cap and stopping rule); then the readiness
+    restarts for F.0b-ii's truths.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 
@@ -715,6 +742,22 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     10–15% of their time);
   - **in W's registration:** a registered sequential stopping rule for the null draws, and W's
     cost re-sized from v2 timings rather than v1's;
+
+  *(Added 2026-11-04, C.2's encoder;
+  [Logbook 122](../../../docs/experiments/logbooks/122-c2-encoder.md).)* **What W inherits from the
+  encoder.**
+
+  - **Settled:** the strength-normalised gap model for every arm; the null encoding (counts with
+    edges, signs from origins); the CPU compute path (MPS speeds only the settling); the box; x₀ the
+    box centre; the staged procedure, which applies identically to every arm.
+  - **The cost** (`supporting/122-c2-encoder/w_sizing.json`): a staged fit takes about 4.8 h at stage
+    2's 500 generations, or 8.5 h at 1,000. At 6 arms × 8–16 draws, W projects to **232–815 h** on
+    this machine, beyond what it can run as planned. The registration needs a stopping rule on the
+    draws, fewer draws, or a cheaper fit.
+  - **Not yet measured:** convergence, the restart-to-restart spread against W's minimum, the tying.
+  - **Still to build:** the class-preserving left–right-symmetric null, and a loader guard: a
+    connectome YAML that one of the brain config's validators refuses loads silently as another
+    brain class's fields on defaults.
   - **dropped:** surrogate-assisted CMA. The objective is noisy, and it would need its own
     recovery control.
 

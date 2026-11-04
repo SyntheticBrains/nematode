@@ -128,10 +128,10 @@ Before F.0b-ii's registration, on discarded seeds:
 
 - a cost pilot SHALL time a generation on D_fit's assays and on all four;
 - a feasibility check SHALL show whether a hand-set vector carries a post-removal decay of 6–12 min without reading López-Cruz's data;
-- a readiness probe SHALL fit up to 3 restarts to v3's band centres on D_fit's families, stopping once 2 pass D_fit's families in 3 of 5 populations. Each plateau SHALL wait until every median in the last 40 generations is below 100. Each answer SHALL be graded with presence on 5 populations on all five families and the three mutants;
-- *(amended 2026-11-03)* the readiness restarts SHALL run only after a 150-generation pilot in the rescaled box beats the first box's stalled answer score of 10.6, and each SHALL run through its cap with its answer re-simulated twice every 50 generations, the plateau rule recorded but not stopping it;
-- the restart-to-restart spread of the held-out families and of the mutant differences SHALL be recorded against W's minimum;
-- the cost pilot SHALL be profiled, and SHALL time a whole generation's settling step on CPU and on MPS.
+- a readiness probe SHALL establish whether sep-CMA from the box centre reaches the wild type on D_fit's families, each fit's answer re-simulated at checkpoints on fresh animals, and SHALL record what stops it. Its plateau rule SHALL wait until every median in the last 40 generations is below 100;
+- *(amended 2026-11-04)* the readiness restarts (up to 3, each answer graded with presence on 5 populations on all five families and the three mutants, with their restart-to-restart spread recorded against W's minimum) SHALL run under the fitting procedure the probe establishes, in the change that registers it;
+- the cost pilot SHALL be profiled, and SHALL time a whole generation's settling step on CPU and on MPS;
+- a W sizing record SHALL state what is measured and what is not.
 
 Each check's result SHALL be recorded.
 
