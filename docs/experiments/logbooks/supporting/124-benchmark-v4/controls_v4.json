@@ -1,0 +1,60 @@
+{
+  "description": "B v4's verdict: the bands record, the round trip, the oracle and the read.",
+  "bands_sha256": "355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448",
+  "checks": {
+    "activity_rule_check": true,
+    "round_trip": true,
+    "reachability": true,
+    "n2_control": true,
+    "adversary_caught": true,
+    "negatives_fail_wild_type": true
+  },
+  "reported_rule_checks": {
+    "small_lawn": true,
+    "kinematics": true,
+    "local_search": true
+  },
+  "verdict": "VALID",
+  "c1_v3_passes_wild_type_v4": false,
+  "c1_v3_values_equal": true,
+  "w_minimum": {
+    "fitted": {
+      "families": [
+        "small_lawn",
+        "kinematics",
+        "activity"
+      ],
+      "source": "halves of N2's 26 unread held-out dates, on PD1074's band scales",
+      "splits": 1000,
+      "seed": 2034,
+      "median": 1.3891436799624313,
+      "minimum_95th": 2.5968817246072917,
+      "v3_minimum_95th": 2.9666951987001497
+    },
+    "held_out": {
+      "families": [
+        "local_search",
+        "chemotaxis"
+      ],
+      "source": "halves of L\u00f3pez-Cruz's 17 band batches (1000 splits) crossed with every 3-against-3 split of Chen's 6 recordings (10)",
+      "seed": 2036,
+      "pairs": 10000,
+      "median": 1.2865433101028039,
+      "minimum_95th": 2.046569770948831,
+      "reported_local_search_95th": 2.326399838992743,
+      "reported_chemotaxis_95th": 2.1395989070750447
+    }
+  },
+  "three_of_five": {
+    "failure_rates": {
+      "small_lawn": 0.050000000000000044,
+      "uniform_lawn": 0.05,
+      "local_search": 0.008333333333333304,
+      "kinematics": 0.020000000000000018,
+      "chemotaxis": 0.011848207376375486,
+      "activity": 0.015000000000000013
+    },
+    "population_passes": 0.8536874461062488,
+    "three_of_five": 0.9751501594849517
+  }
+}

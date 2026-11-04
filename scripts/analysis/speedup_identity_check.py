@@ -10,7 +10,9 @@ The jobs cover each path the changed code serves:
 
 - benchmark v2 without presence (a fit's objective), and with presence (registered gradings and the
   candidates' observations);
-- benchmark v1 (``npe_recovery.simulate``), which C.1's v1 fit and the v1 recoveries used.
+- benchmark v1 (``npe_recovery.simulate``), which C.1's v1 fit and the v1 recoveries used;
+- benchmark v3 without presence (``c1_v3_fit.simulate``) and with it (``c1_v3_fit.grade_answer``),
+  for C.1's 25-parameter model at its box centre and at its chosen v3 answer.
 
 Usage::
 
@@ -31,6 +33,7 @@ from typing import Any
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import c1_v3_fit as v3
 import cma_recovery_v2 as v2
 import npe_recovery as nr
 
@@ -44,7 +47,19 @@ BASELINE_BASE = 99_700_000
 F0A_VECTORS = (0, 1)
 STORED_V1 = (0, 1, 2)
 STORED_CANDIDATES = 3
-COMPARED = ("statistics", "D", "D_fit", "presence")
+COMPARED = (
+    "statistics",
+    "families",
+    "D",
+    "D_fit",
+    "presence",
+    "local_search_presence",
+    "chemotaxis_presence",
+    "reversal_share",
+)
+C1_V3_FIT = (
+    _REPO / "docs" / "experiments" / "logbooks" / "supporting" / "121-c1-v3-fit" / "fit.json"
+)
 
 
 def _vectors() -> list[tuple[str, list[float]]]:
@@ -54,13 +69,26 @@ def _vectors() -> list[tuple[str, list[float]]]:
     ]
 
 
+def _v3_vectors() -> list[tuple[str, list[float]]]:
+    """Return C.1 (v3)'s box centre and its chosen answer."""
+    fit = json.loads(C1_V3_FIT.read_text())
+    answer = fit["restarts"][fit["chosen_restart"]]["answer"]
+    return [("centre", [0.5] * v3.DIMENSION), ("c1_v3_answer", list(answer))]
+
+
 def baseline_jobs() -> list[dict[str, Any]]:
-    """Return the baseline's jobs: three paths at the box centre and two F.0a vectors."""
-    return [
+    """Return the baseline's jobs: v1 and v2 at the box centre and two F.0a vectors, and v3."""
+    jobs = [
         {"name": f"{path}/{name}", "path": path, "k": j, "z": z}
         for j, (name, z) in enumerate(_vectors())
         for path in ("v2", "v2_presence", "v1")
     ]
+    jobs += [
+        {"name": f"{path}/{name}", "path": path, "k": j, "z": z}
+        for j, (name, z) in enumerate(_v3_vectors())
+        for path in ("v3", "v3_presence")
+    ]
+    return jobs
 
 
 def _encode(value: Any) -> Any:  # noqa: ANN401 - any JSON-shaped value
@@ -88,6 +116,10 @@ def run(job: dict[str, Any]) -> dict[str, Any]:
     base = job.get("seed_base", BASELINE_BASE)
     if job["path"] == "v1":
         record = nr.simulate(job["k"], job["z"], base)
+    elif job["path"] == "v3":
+        record = v3.simulate(job["k"], job["z"], base)
+    elif job["path"] == "v3_presence":
+        record = v3.grade_answer(job["k"], job["z"], base)
     else:
         record = v2.simulate_v2(job["k"], job["z"], base, presence=job["path"] == "v2_presence")
     return _encode({key: record[key] for key in COMPARED if key in record})

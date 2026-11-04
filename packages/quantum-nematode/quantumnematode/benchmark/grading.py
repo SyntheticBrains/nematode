@@ -393,6 +393,75 @@ def kinematic_statistics(total: np.ndarray) -> dict[str, float]:
 
 
 # ---------------------------------------------------------------------------------------------
+# On-lawn activity: what a worm does on the lawn second to second, from positions alone
+# ---------------------------------------------------------------------------------------------
+
+# A pause is an on-lawn second whose displacement is shorter than the floor. The floor is the
+# instrument's: the smallest multiple of PAUSE_FLOOR_STEP_MM below which at least
+# PAUSE_FLOOR_COVERAGE of the real tracker's 1-s readings of a still worm fall, so a still worm
+# reads as paused through the tracker's own noise.
+PAUSE_FLOOR_STEP_MM = 0.0025
+PAUSE_FLOOR_COVERAGE = 0.95
+PAUSE_FLOOR_MM = 0.02
+ACTIVITY_STATISTICS = ("pause_share", "flip_fraction", "onset_rate_per_min")
+ACTIVITY_FIELDS = ("seconds", "pauses", "flips", "pairs", "onsets", "onset_seconds")
+_A = {name: k for k, name in enumerate(ACTIVITY_FIELDS)}
+
+
+def pause_floor(displacements: np.ndarray) -> float:
+    """Return the smallest floor step below which the coverage of a still worm's steps fall.
+
+    ``displacements`` are a still worm's 1-s displacements as the tracker reads them.
+
+    Raises
+    ------
+    ValueError
+        If no displacement is finite: there is no reading to set the floor from.
+    """
+    d = np.asarray(displacements, dtype=float)
+    d = d[np.isfinite(d)]
+    if d.size == 0:
+        msg = "the pause floor needs at least one finite displacement"
+        raise ValueError(msg)
+    k = 1
+    while float(np.mean(d < k * PAUSE_FLOOR_STEP_MM)) < PAUSE_FLOOR_COVERAGE:
+        k += 1
+    return round(k * PAUSE_FLOOR_STEP_MM, 10)
+
+
+def activity_tally(x: np.ndarray, y: np.ndarray, on_lawn: np.ndarray) -> np.ndarray:
+    """Return one track's on-lawn activity counts, in :data:`ACTIVITY_FIELDS` order.
+
+    A second counts when both its samples are present and on the lawn. Its displacement is a pause
+    below :data:`PAUSE_FLOOR_MM`. Direction flips are counted on the track with every off-lawn
+    sample blanked, by the chemotaxis rule; reversal onsets by :func:`on_lawn_reversals`.
+    """
+    from quantumnematode.benchmark import chemotaxis as ch
+
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    on = np.asarray(on_lawn, dtype=bool)
+    step = np.hypot(np.diff(x), np.diff(y))
+    valid = np.isfinite(step) & on[1:] & on[:-1]
+    flips, pairs = ch.direction_flips(np.where(on, x, np.nan), np.where(on, y, np.nan))
+    onsets, onset_seconds = on_lawn_reversals(x, y, on)
+    out = np.zeros(len(ACTIVITY_FIELDS))
+    out[_A["seconds"]] = valid.sum()
+    out[_A["pauses"]] = (valid & (step < PAUSE_FLOOR_MM)).sum()
+    out[_A["flips"]], out[_A["pairs"]] = flips, pairs
+    out[_A["onsets"]], out[_A["onset_seconds"]] = onsets, onset_seconds
+    return out
+
+
+def activity_statistics(total: np.ndarray) -> dict[str, float]:
+    """Return the activity statistics from a population's summed activity tallies."""
+    return {
+        "pause_share": _ratio(total[_A["pauses"]], total[_A["seconds"]]),
+        "flip_fraction": _ratio(total[_A["flips"]], total[_A["pairs"]]),
+        "onset_rate_per_min": _ratio(60.0 * total[_A["onsets"]], total[_A["onset_seconds"]]),
+    }
+
+
+# ---------------------------------------------------------------------------------------------
 # Readers
 # ---------------------------------------------------------------------------------------------
 

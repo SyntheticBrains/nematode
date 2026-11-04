@@ -310,3 +310,13 @@ integers, a stated unit times a fixed factor, with the integer type's minimum ma
 - **The record:** the rule checks and the chemotaxis leave-one-out are in `docs/experiments/logbooks/supporting/120-benchmark-v3/bands_v3_record.json`.
 - **Licence:** CC0-1.0 for the parts from Scheer & Bargmann and Roberts et al., and CC BY 4.0 for the parts from López-Cruz et al. and Chen et al.
 - **Checksum:** SHA-256 `8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b` as written.
+
+## `bands_v4.json`
+
+- **Derived by** `scripts/analysis/benchmark_bands.py --version v4` from the files above, on band cohorts only, then `--onset graded`, which records the onset decision from the reachability oracle's check. It holds:
+  - every v3 band, its measurement models and its reference, unchanged;
+  - the activity family's bands on the pause share (below 0.02 mm, the still-worm library's floor), the on-lawn direction-flip fraction and the on-lawn onset rate, from Scheer & Bargmann's 41 PD1074 OD 2 band dates, with each statistic's κ;
+  - the six families, the 24-statistic bar (z\* 3.0781) and the weights.
+- **The record:** the pause floor, κ and the rule checks at both bars are in `docs/experiments/logbooks/supporting/124-benchmark-v4/bands_v4_record.json`.
+- **Licence:** CC0-1.0 for the parts from Scheer & Bargmann and Roberts et al., and CC BY 4.0 for the parts from López-Cruz et al. and Chen et al.
+- **Checksum:** SHA-256 `355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448` as written.

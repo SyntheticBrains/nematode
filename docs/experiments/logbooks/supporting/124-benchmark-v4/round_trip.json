@@ -1,0 +1,27 @@
+{
+  "description": "B v4's round trip: Scheer's wild-type band animals through CSV and WCON, their activity tallies against the native path's.",
+  "arm": "PD1074_od2_Data",
+  "animals": 1013,
+  "native_statistics": {
+    "pause_share": 0.4818525557599297,
+    "flip_fraction": 0.13212425108160816,
+    "onset_rate_per_min": 2.2840783215998797
+  },
+  "csv": {
+    "statistics": {
+      "pause_share": 0.4818525557599297,
+      "flip_fraction": 0.13212425108160816,
+      "onset_rate_per_min": 2.2840783215998797
+    },
+    "tallies_equal": true
+  },
+  "wcon": {
+    "statistics": {
+      "pause_share": 0.4818525557599297,
+      "flip_fraction": 0.13212425108160816,
+      "onset_rate_per_min": 2.2840783215998797
+    },
+    "tallies_equal": true
+  },
+  "passes": true
+}

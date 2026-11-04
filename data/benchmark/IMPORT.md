@@ -10,7 +10,19 @@ Each manifest line is `<family> <file>`. A file is a CSV with its metadata sidec
 
 ## The benchmark's versions
 
-`benchmark_grade.py --bands v1|v2|v3` picks the rule. v1 (`bands.json`) and v2 (`bands_v2.json`) are frozen for every verdict read on them. The default is the newest version whose controls find it VALID: v3 (`bands_v3.json`) since 2026-11-01.
+`benchmark_grade.py --bands v1|v2|v3|v4` picks the rule. v1 (`bands.json`) and v2 (`bands_v2.json`) are frozen for every verdict read on them. v3 (`bands_v3.json`) is frozen too. The default is the newest version whose controls find it VALID: v4 (`bands_v4.json`) since 2026-11-05 (`docs/experiments/logbooks/supporting/124-benchmark-v4/controls_v4.json`).
+
+**What v4 adds for imported tracks:**
+
+- **The activity family**, read on the small-lawn animals from positions alone, over each animal's on-lawn seconds (both samples present and on the lawn):
+
+  - the pause share: 1-s displacements shorter than 0.02 mm;
+  - the direction-flip fraction: pairs of 1-s displacements, both at least 0.03 mm, turning more than 135°;
+  - the onset rate: reversal onsets per on-lawn minute at the 0.03 mm floor, graded because v4's reachability oracle reached it.
+
+  An imported small-lawn track is tallied the way a real one is, and the round trip is exact (`round_trip.json` in v4's supporting directory).
+
+- **The bar:** z\* over v4's 24 statistics (3.0781).
 
 **What v3 changes for imported tracks:**
 

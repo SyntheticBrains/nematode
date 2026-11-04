@@ -414,6 +414,30 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **Next:** C.1 refitted on v3, its own change. Its registration carries the 3-of-5 probability
     0.977.
 
+- [x] **B v4 On-lawn activity graded from positions** (change `benchmark-v4`), after C.2's stage-2
+  answer was found not to run and C.1's v3 answer to reverse about 3% of the time.
+
+  *(Closed 2026-11-05: [Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md).)*
+  **B v4 is VALID**, and `benchmark_grade.py` defaults to it.
+
+  - **Added:** a sixth family, **activity**, on Scheer's small lawn, from 1-s positions over on-lawn
+    seconds:
+    - the pause share at the instrument's 0.02 mm floor;
+    - the direction-flip fraction;
+    - the on-lawn onset rate, graded because the oracle reached it;
+    - **24 statistics,** z\* 3.0781; activity in D_fit.
+  - **Every registered check holds:**
+    - the activity rule check (0.985) and the round trip (exact on 1,013 animals);
+    - reachability: C.1's model, fitted to activity alone, reaches all three on 40 of 40 populations;
+    - fresh N2, 0 of 2 units failing;
+    - C.2's stage-2 answer caught 5 of 5;
+    - the eight negatives, each failing 5 of 5.
+  - **C.1's v3 answer fails v4** (0 of 5, against 3 of 5 on v3, on the same animals): its onset rate
+    is 0.78–0.85 per minute against 2.28.
+  - **Reported:** W's minimum on the fitted families is 2.597 (v3: 2.967); the 3-of-5 probability
+    0.975.
+  - **Next:** C.1 refitted on v4, its own change; C.2's next change fits against v4.
+
 ## N — the neuromodulator layer from data (MUST)
 
 - [x] **N.1 Licences confirmed**: Bentley 2016 (CC BY, S1 Dataset) and Ripoll-Sánchez 2023 (unstated on
@@ -609,6 +633,12 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **The guarded plateau let two stuck restarts stop** (a median near 507; a score of 5.7). C.2's
     registration tightens the guard and adds a readiness probe.
 
+  *(Added 2026-11-05, B v4.)* **C.1's v3 answer fails B v4** at 0 of 5
+  ([Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)), on its own registered
+  populations: it reverses too rarely on the lawn (onset rate z −6.4 to −6.7), and its pause share
+  (+2.6 to +3.0) and flip fraction (−2.8) sit near the bar. **C.1 is refitted on v4 next,** in its own
+  change (about 12–18 h), carrying the 3-of-5 probability 0.975.
+
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
@@ -649,12 +679,23 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     1's bar, each stage's objective and σ₀, stage 2's cap and stopping rule); then the readiness
     restarts for F.0b-ii's truths.
 
+  *(Added 2026-11-05, B v4.)* **C.2's next change fits against B v4**
+  ([Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)). The activity family is in
+  D_fit, so a worm that does not run forward fails its own objective: the stage-2 answer is caught by
+  all three activity statistics in 5 of 5 populations. That change carries the readout box and the
+  saturation report, the staged procedure, the readiness restarts against v4, and slow noise's
+  positive control re-run on a fit whose speed responds.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 
 - [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(Added 2026-11-05, B v4.)* **On v4, C.1's v3 answer fails the wild type** (0 of 5;
+  [Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)). C.1 enters the table from
+  its refit on v4.
 
   *(Added 2026-11-03, C.1 on v3.)* **C.1 (v3) enters as passing the wild type**
   ([Logbook 121](../../../docs/experiments/logbooks/121-c1-v3-fit.md)). Its wild-type-passing
@@ -795,7 +836,9 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     not run: its speed output is pinned at zero and its curvature at the maximum, so it moves only by
     reversals and delta turns, and its speed misses follow from that, not from a missing speed spread.
     Every arm would share that failure, which would mask a wiring effect. The next change fixes the run
-    mode first, and no fit runs past 500 generations until it is fixed.
+    mode first, and no fit runs past 500 generations until it is fixed. *(Added 2026-11-05.)* B v4
+    grades that failure ([Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)): the
+    activity family is in D_fit, and W's minimum on v4's fitted families is 2.597.
   - **Equal budget.** Every arm runs a fixed generation count, not the plateau rule, set from the
     readiness restarts' convergence (checkpoints at 250, 500 and 750 of a 1,000 cap).
   - **Stage 1 is fixed.** Its 18-parameter lawn subset was chosen on the wild type. It is registered

@@ -360,10 +360,14 @@ def test_v3_is_the_default_only_once_valid(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Covers "v3 becomes the default": a VALID verdict for v3's very bands makes it the default."""
+    """Covers "v3 becomes the default": a VALID verdict for v3's very bands makes it the default.
+
+    v4 is ruled out, as it was before its controls read VALID.
+    """
     bands = _write_bands_v3(tmp_path, monkeypatch)
     controls = tmp_path / "controls_v3.json"
     monkeypatch.setattr(bg, "CONTROLS_V3_PATH", controls)
+    monkeypatch.setattr(bg, "CONTROLS_V4_PATH", tmp_path / "no_controls_v4.json")
     assert bg.v3_is_valid() is False
     controls.write_text(json.dumps({"verdict": "VOID", "bands_sha256": mm.file_sha256(bands)}))
     assert bg.v3_is_valid() is False
