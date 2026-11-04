@@ -370,12 +370,16 @@ class ConnectomePPORule:
                 update_log_stds.append(log_std_b.detach())
             if ppo_batch.speed_noise_rho is not None:
                 # The speed's exact conditional density: the previous step's mean is recomputed
-                # under the current parameters from its stored state.
+                # under the current parameters from its stored state. The forward would overwrite
+                # the topology's captured penultimate rates, which telemetry reads for the current
+                # states, so they are kept.
+                penultimate = topo.penultimate
                 previous_head, _ = self._forward_states(
                     topo,
                     ppo_batch,
                     minibatch["previous_states"],
                 )
+                topo.penultimate = penultimate
                 new_log_probs, entropy = continuous_evaluate_tanh_gaussian_ou(
                     new_head_out,
                     log_std_b,

@@ -8,7 +8,7 @@ The compact encoder makes the connectome brain a function of a few hundred named
 
 ### Requirement: C.2's compact encoder behind a byte-identical default
 
-`ConnectomePPOBrainConfig` SHALL accept `encoder: compact`, default `none`. With it unset, every tensor, draw and action SHALL be unchanged. With it set, the brain SHALL be a function of 196 named parameters:
+`ConnectomePPOBrainConfig` SHALL accept `encoder: compact`, default `none`. With it unset, every tensor, draw and action SHALL be unchanged. With it set, the brain SHALL be a function of 196 named parameters (197 with `encoder_speed_noise: ou`, which appends the speed noise's timescale):
 
 - the wiring: excitatory, inhibitory and gap scales, and a signed gain for each of 4 presynaptic transmitter groups;
 - the sensory inputs: 36 class-tied gains;
@@ -80,12 +80,14 @@ Food contact SHALL reach only CEP, ADE and PDE, through one gain per class.
 
 ### Requirement: A unit box and a vector interface
 
-The encoder SHALL expose its parameters' names in a fixed order and each one's range. It SHALL write a unit-box vector into a brain in place and read it back, and `BatchedConnectome` SHALL act on the written values without a rebuild. The box's centre SHALL be the registered start for C.2's fits. Under PPO the policy's learnable parameters SHALL be exactly the encoder's, its two timescales held, with the PPO rule's critic unchanged.
+The encoder SHALL expose its parameters' names in a fixed order and each one's range. It SHALL write a unit-box vector into a brain in place and read it back, and `BatchedConnectome` SHALL act on the written values without a rebuild. The box's centre SHALL be the registered start for C.2's fits. Under PPO the policy's learnable parameters SHALL be exactly the encoder's, its two timescales held (three with `encoder_speed_noise: ou`, the speed noise's among them), with the PPO rule's critic unchanged.
 
 `encoder_modulator_tying` SHALL choose between:
 
 - `per_couple`, 196 parameters;
 - `per_ligand`, one signed gain per fitted ligand and one strength per fixed-sign ligand: 132 parameters.
+
+With `encoder_speed_noise: ou` each count is one more: 197 and 133.
 
 #### Scenario: A vector round-trips
 

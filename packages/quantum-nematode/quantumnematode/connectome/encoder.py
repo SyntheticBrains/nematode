@@ -469,10 +469,23 @@ class CompactEncoder(nn.Module):
         return np.exp(-step_seconds / timescale.cpu().double().numpy()).astype(np.float32)
 
     def speed_noise_rho(self, step_seconds: float) -> float | None:
-        """Return the speed noise's per-step correlation, ``exp(-step / timescale)``, or None."""
+        """Return the speed noise's per-step correlation, ``exp(-step / timescale)``, or None.
+
+        Refuses a step so short against the timescale that the correlation rounds to 1, which would
+        freeze the noise and leave its innovation no spread.
+        """
         if not self.speed_noise:
             return None
-        return math.exp(-step_seconds / float(self.speed_noise_timescale_s))
+        timescale = float(self.speed_noise_timescale_s)
+        rho = math.exp(-step_seconds / timescale)
+        if rho >= 1.0:
+            floor = timescale * 2.0**-52
+            msg = (
+                f"a {step_seconds!r}-s step against the speed noise's {timescale:g}-s timescale "
+                f"rounds its correlation to 1; the step must be at least {floor:.3g} s"
+            )
+            raise ValueError(msg)
+        return rho
 
     def own_parameters(self) -> list[nn.Parameter]:
         """Return the learnable tensors this module holds."""

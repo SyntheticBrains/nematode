@@ -114,7 +114,7 @@ import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -270,6 +270,11 @@ SPEED_NOISE_TAUS_S = (0.25, 2.0, math.sqrt(0.25 * 300.0), 30.0, 100.0, 300.0)
 # and at the shortest every kinematics statistic is within this many of independent noise.
 SPEED_NOISE_RISE_SCALES = 3.0
 SPEED_NOISE_NESTED_SCALES = 2.0
+# The control is read only on an answer whose speed output responds: its pre-squash median over one
+# reference episode, on the animal after the control's own, within this bound of zero.
+SPEED_NOISE_RESPONSIVE = 2.0
+SPEED_NOISE_REFERENCE_SEED = SPEED_NOISE_BASE + ANIMALS
+SPEED_NOISE_REFERENCE_STEPS = 1_800
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1626,6 +1631,76 @@ def _speed_noise_point(tau_s: float | None) -> dict[str, Any]:
     return {"tau_s": tau_s, "graded": grade_seeds(z, seeds)}
 
 
+def _speed_median(z: list[float]) -> float:
+    """Return the answer's speed output's pre-squash median over one reference episode."""
+    import torch
+    from quantumnematode.connectome import encoder as enc
+    from quantumnematode.evaluation.reference import run_reference
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    _BRAIN_SETTINGS["sign_override_exclude"] = ["lopezcruz2019"]
+    brain = encoded_brain()
+    enc.write_encoder(brain, z)
+    path = FORAGING / f"{bg.ARMS[ARM]}_assay_scheer_lawn.yml"
+    config = load_simulation_config(str(path))
+    episode = run_reference(config, brain, SPEED_NOISE_REFERENCE_SEED, SPEED_NOISE_REFERENCE_STEPS)
+    states = torch.from_numpy(np.asarray(episode.features, dtype=np.float32))
+    topology = brain.topology
+    with torch.no_grad():
+        mean, _ = topology.forward_with_hidden_batched(
+            states[:, : topology.n_food_features],
+            modulators=brain._unpack_modulators(states),
+        )
+    return float(mean[:, 0].median())
+
+
+def _defined(value: float | None) -> bool:
+    return value is not None and math.isfinite(value)
+
+
+def read_speed_noise_control(
+    kinematics: list[tuple[float | None, dict[str, float | None]]],
+    scales: dict[str, float],
+    speed_median: float,
+) -> dict[str, Any]:
+    """Read the positive control from each point's kinematics: independent noise first.
+
+    A rise or a nested difference that needs an undefined statistic is undefined, and fails its
+    check; the control passes only on an answer whose speed output responds.
+    """
+    (_, independent), *slow = kinematics
+    shortest = slow[0][1]
+
+    def scaled(a: float | None, b: float | None, name: str) -> float | None:
+        if not (_defined(a) and _defined(b)):
+            return None
+        return (cast("float", a) - cast("float", b)) / scales[name]
+
+    name = "roaming_speed_p90"
+    rise = {str(tau): scaled(k[name], shortest[name], name) for tau, k in slow}
+    nested = {
+        stat: (None if (d := scaled(shortest[stat], value, stat)) is None else abs(d))
+        for stat, value in independent.items()
+    }
+    finite = {tau: v for tau, v in rise.items() if v is not None}
+    best = max(finite, key=lambda tau: finite[tau]) if finite else None
+    at_best = None if best is None else dict(slow[list(rise).index(best)][1])
+    responsive = abs(speed_median) <= SPEED_NOISE_RESPONSIVE
+    passes_rise = best is not None and finite[best] >= SPEED_NOISE_RISE_SCALES
+    passes_nested = all(v is not None and v <= SPEED_NOISE_NESTED_SCALES for v in nested.values())
+    return {
+        "speed_pre_squash_median": speed_median,
+        "speed_responsive": responsive,
+        "roaming_p90_rise_scales": rise,
+        "best_tau_s": None if best is None else float(best),
+        "dwelling_p90_at_best": None if at_best is None else at_best.get("dwelling_speed_p90"),
+        "nested_scales": nested,
+        "passes_rise": passes_rise,
+        "passes_nested": passes_nested,
+        "passes": bool(responsive and passes_rise and passes_nested),
+    }
+
+
 def _speed_noise_control(workers: int) -> int:
     """Grade the stage-2 answer at each timescale and read the positive control's bar."""
     from concurrent.futures import ProcessPoolExecutor
@@ -1635,50 +1710,38 @@ def _speed_noise_control(workers: int) -> int:
         graded = list(pool.map(_speed_noise_point, points))
     bands = bg.load_bands_v3()
     scales = {k: v["scale"] for k, v in bands["bands"][str(ANIMALS)]["kinematics"].items()}
-
-    def kinematics(row: dict[str, Any]) -> dict[str, float]:
-        return {k: v["value"] for k, v in row["graded"]["families"]["kinematics"].items()}
-
-    independent, *slow = graded
-    shortest = kinematics(slow[0])
-    rise = {
-        str(row["tau_s"]): (kinematics(row)["roaming_speed_p90"] - shortest["roaming_speed_p90"])
-        / scales["roaming_speed_p90"]
-        for row in slow
-    }
-    nested = {
-        name: abs(shortest[name] - value) / scales[name]
-        for name, value in kinematics(independent).items()
-    }
-    best = max(rise, key=lambda tau: rise[tau])
+    kinematics = [
+        (row["tau_s"], {k: v["value"] for k, v in row["graded"]["families"]["kinematics"].items()})
+        for row in graded
+    ]
+    staged = json.loads(STAGED_PILOT_PATH.read_text())
+    reading = read_speed_noise_control(
+        kinematics,
+        scales,
+        _speed_median(list(staged["stage2_extended"]["answer"])),
+    )
     record = {
         "description": (
             "Description: slow speed noise's positive control. C.2's stage-2 answer on the wiring it "
             "was fitted on (the López-Cruz overrides excluded), graded with presence and the mutants "
             f"on {ANIMALS} animals of seed block {SPEED_NOISE_BASE:,}, the same animals with "
-            "independent noise and at each timescale. It passes when the roaming speed's 90th "
-            f"percentile rises by at least {SPEED_NOISE_RISE_SCALES:g} band scales above its value "
-            "at the shortest timescale at some timescale, and at the shortest every kinematics "
-            f"statistic is within {SPEED_NOISE_NESTED_SCALES:g} band scales of independent noise."
+            "independent noise and at each timescale. It passes when the answer's speed output "
+            f"responds (its pre-squash median over one {SPEED_NOISE_REFERENCE_STEPS}-step episode, "
+            f"seed {SPEED_NOISE_REFERENCE_SEED:,}, within ±{SPEED_NOISE_RESPONSIVE:g}), the roaming "
+            f"speed's 90th percentile rises by at least {SPEED_NOISE_RISE_SCALES:g} band scales "
+            "above its value at the shortest timescale at some timescale, and at the shortest every "
+            f"kinematics statistic is within {SPEED_NOISE_NESTED_SCALES:g} band scales of "
+            "independent noise. An undefined statistic fails the check that needs it."
         ),
-        "seeds": f"{SPEED_NOISE_BASE:,} + i, i < {ANIMALS}",
+        "seeds": f"{SPEED_NOISE_BASE:,} + i, i < {ANIMALS}; reference {SPEED_NOISE_REFERENCE_SEED:,}",
         "taus_s": list(SPEED_NOISE_TAUS_S),
-        "roaming_p90_rise_scales": rise,
-        "best_tau_s": float(best),
-        "dwelling_p90_at_best": kinematics(slow[[str(r["tau_s"]) for r in slow].index(best)])[
-            "dwelling_speed_p90"
-        ],
-        "nested_scales": nested,
-        "passes_rise": rise[best] >= SPEED_NOISE_RISE_SCALES,
-        "passes_nested": all(v <= SPEED_NOISE_NESTED_SCALES for v in nested.values()),
+        **reading,
         "points": graded,
     }
-    record["passes"] = bool(record["passes_rise"] and record["passes_nested"])
     SPEED_NOISE_PATH.parent.mkdir(parents=True, exist_ok=True)
     SPEED_NOISE_PATH.write_text(json.dumps(nr._finite(record), indent=2, allow_nan=False) + "\n")
-    print(
-        json.dumps({k: record[k] for k in ("roaming_p90_rise_scales", "nested_scales", "passes")}),
-    )
+    shown = ("speed_pre_squash_median", "roaming_p90_rise_scales", "nested_scales", "passes")
+    print(json.dumps({k: record[k] for k in shown}))
     return 0 if record["passes"] else 1
 
 

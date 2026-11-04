@@ -24,7 +24,7 @@ With both outputs moved mid-range by hand, slow noise does reach the window stat
 > | An animal alone and in a batch of 64; a phase start crossed; two tampered controllers fail | pass |
 > | The process: variance 1, lag-1 autocorrelation ρ; the first step and outputs 2–5 equal independent noise | pass |
 > | PPO: every ratio 1 before an update; the exact conditional and its gradient; τ held | pass |
-> | **Positive control on the stage-2 answer** (roaming p90 to rise ≥ 3 band scales) | **fails**: at most +0.02 |
+> | **Positive control on the stage-2 answer** (roaming p90 to rise ≥ 3 band scales) | **fails**: at most +0.02; its speed output unresponsive (pre-squash median −3.89) |
 > | Nested at τ = 0.25 s (every kinematics statistic within 2 scales of independent noise) | pass, at most 0.36 |
 > | Descriptive: runs moved mid-range by hand | roaming p90 +3.7 scales at 30 s |
 
@@ -103,7 +103,7 @@ The stage-2 answer on the wiring it was fitted on was graded on 200 animals of s
 
 Real worms: dwelling median 0.0128 and p90 0.0282; roaming median 0.0373 and p90 0.0733.
 
-**The rise fails:** at most +0.02 band scales against 3. **The nesting passes:** at 0.25 s every kinematics statistic is within 0.36 scales of independent noise.
+**The rise fails:** at most +0.02 band scales against 3. **The nesting passes:** at 0.25 s every kinematics statistic is within 0.36 scales of independent noise. **The answer's speed output does not respond:** its pre-squash median over one 1,800-step reference episode (seed 88,100,200) is −3.89, outside the ±2 the revised requirement reads the control within. The record carries all three; its graded points were re-run once, when the reading was revised, and repeated exactly.
 
 ## Why: the answer does not run
 

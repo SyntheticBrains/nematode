@@ -1,6 +1,6 @@
 {
-  "description": "Description: slow speed noise's positive control. C.2's stage-2 answer on the wiring it was fitted on (the L\u00f3pez-Cruz overrides excluded), graded with presence and the mutants on 200 animals of seed block 88,100,000, the same animals with independent noise and at each timescale. It passes when the roaming speed's 90th percentile rises by at least 3 band scales above its value at the shortest timescale at some timescale, and at the shortest every kinematics statistic is within 2 band scales of independent noise.",
-  "seeds": "88,100,000 + i, i < 200",
+  "description": "Description: slow speed noise's positive control. C.2's stage-2 answer on the wiring it was fitted on (the L\u00f3pez-Cruz overrides excluded), graded with presence and the mutants on 200 animals of seed block 88,100,000, the same animals with independent noise and at each timescale. It passes when the answer's speed output responds (its pre-squash median over one 1800-step episode, seed 88,100,200, within \u00b12), the roaming speed's 90th percentile rises by at least 3 band scales above its value at the shortest timescale at some timescale, and at the shortest every kinematics statistic is within 2 band scales of independent noise. An undefined statistic fails the check that needs it.",
+  "seeds": "88,100,000 + i, i < 200; reference 88,100,200",
   "taus_s": [
     0.25,
     2.0,
@@ -9,6 +9,8 @@
     100.0,
     300.0
   ],
+  "speed_pre_squash_median": -3.8876845836639404,
+  "speed_responsive": false,
   "roaming_p90_rise_scales": {
     "0.25": 0.0,
     "2.0": -0.040740672716925275,
@@ -28,6 +30,7 @@
   },
   "passes_rise": false,
   "passes_nested": true,
+  "passes": false,
   "points": [
     {
       "tau_s": null,
@@ -1618,6 +1621,5 @@
         "reversal_share": 0.20732111111111112
       }
     }
-  ],
-  "passes": false
+  ]
 }

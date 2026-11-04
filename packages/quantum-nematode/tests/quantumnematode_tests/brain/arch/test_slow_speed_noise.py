@@ -10,6 +10,7 @@ evaluates the exact conditional, tau is held under PPO, and unsupported settings
 from __future__ import annotations
 
 import math
+from typing import cast
 
 import numpy as np
 import pytest
@@ -19,6 +20,7 @@ from quantumnematode.brain.arch._ppo_buffer import PreviousStep, RolloutBuffer
 from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrain
 from quantumnematode.brain.arch.dtypes import DeviceType
 from quantumnematode.connectome import encoder as enc
+from quantumnematode.learning_rules.ppo import ConnectomePPOBatch
 
 from .test_connectome_encoder import _brain, _config, _params, _vector
 
@@ -253,8 +255,6 @@ class TestUnderPPO:
         assert all(math.isfinite(loss) for loss in brain.history_data.losses)
 
     def test_before_an_update_every_ratio_is_one(self) -> None:
-        from quantumnematode.learning_rules.ppo import ConnectomePPOBatch
-
         brain = _brain(freeze_updates=False, rollout_buffer_size=64, **_SLOW)
         enc.write_encoder(brain, _vector(brain))
         brain.prepare_episode()
@@ -292,3 +292,105 @@ class TestRefusals:
         with pytest.raises(ValueError, match="encoder_speed_noise"):
             on.load_weight_components(off.get_weight_components())
         on.load_weight_components(_brain(**_SLOW).get_weight_components())
+
+
+def _filled(brain: ConnectomePPOBrain, steps: range) -> None:
+    for t in steps:
+        brain.run_brain(_params(t), top_only=False, top_randomize=False)
+        brain.learn(_params(t), reward=0.1 * (t % 3) - 0.1)
+
+
+def _batch(brain: ConnectomePPOBrain) -> ConnectomePPOBatch:
+    return ConnectomePPOBatch(
+        buffer=brain.buffer,
+        unpack_batched=brain._unpack_state_batched,
+        unpack_modulators=brain._unpack_modulators,
+        last_value=torch.tensor(0.0),
+        speed_noise_rho=brain._speed_noise_rho,
+    )
+
+
+def _minibatch(brain: ConnectomePPOBrain) -> dict[str, torch.Tensor]:
+    returns, advantages = brain.buffer.compute_returns_and_advantages(torch.tensor(0.0), 0.99, 0.95)
+    return next(iter(brain.buffer.get_minibatches(1, returns, advantages)))
+
+
+class TestAcrossAnUpdate:
+    """Scenario: PPO evaluates the exact conditional, on the first step after an update too."""
+
+    def test_the_first_step_after_an_update_is_scored_as_it_was_drawn(self) -> None:
+        brain = _brain(
+            freeze_updates=False,
+            rollout_buffer_size=8,
+            num_minibatches=2,
+            num_epochs=4,
+            learning_rate=0.05,
+            **_SLOW,
+        )
+        enc.write_encoder(brain, _vector(brain))
+        brain.prepare_episode()
+        before = enc.read_encoder(brain)
+        _filled(brain, range(8))
+        assert not np.allclose(before, enc.read_encoder(brain), atol=1e-3)
+        _filled(brain, range(8, 14))
+        assert len(brain.buffer) == 6
+        assert all(brain.buffer.previous_live)
+        rule = brain._ppo_rule
+        assert rule is not None
+        minibatch = _minibatch(brain)
+        evaluated = rule._evaluate(brain.topology, _batch(brain), minibatch, [])
+        assert torch.allclose(evaluated.new_log_probs, minibatch["old_log_probs"], atol=1e-4)
+
+    def test_the_previous_mean_carries_its_gradient_through_the_rule(self, monkeypatch) -> None:
+        brain = _brain(freeze_updates=False, rollout_buffer_size=64, **_SLOW)
+        enc.write_encoder(brain, _vector(brain))
+        brain.prepare_episode()
+        _filled(brain, range(12))
+        rule = brain._ppo_rule
+        assert rule is not None
+        heads: list[torch.Tensor] = []
+        forward = rule._forward_states
+
+        def keeping(topo, batch, states):  # type: ignore[no-untyped-def]
+            head, hidden = forward(topo, batch, states)
+            head.retain_grad()
+            heads.append(head)
+            return head, hidden
+
+        monkeypatch.setattr(rule, "_forward_states", keeping)
+        minibatch = _minibatch(brain)
+        evaluated = rule._evaluate(brain.topology, _batch(brain), minibatch, [])
+        current, previous = heads
+        k = int(torch.nonzero(minibatch["previous_live"])[0])
+        evaluated.new_log_probs[k].backward()
+        rho = cast("float", brain._speed_noise_rho)
+        std = torch.exp(pol.clamp_continuous_log_std(brain.topology.log_std.detach()))[0]
+        loc = current[k, 0] + rho * (minibatch["previous_speeds"][k] - previous[k, 0])
+        score = (minibatch["actions"][k, 0] - loc) / (std**2 * (1 - rho * rho))
+        assert current.grad is not None
+        assert previous.grad is not None
+        assert previous.grad[k, 0].item() == pytest.approx((-rho * score).item(), rel=1e-3)
+        assert current.grad[k, 0].item() == pytest.approx(score.item(), rel=1e-3)
+
+    def test_the_captured_penultimate_rates_stay_the_current_states(self) -> None:
+        brain = _brain(freeze_updates=False, rollout_buffer_size=64, **_SLOW)
+        enc.write_encoder(brain, _vector(brain))
+        brain.prepare_episode()
+        _filled(brain, range(6))
+        rule = brain._ppo_rule
+        assert rule is not None
+        topo = brain.topology
+        topo.capture_penultimate = True
+        minibatch = _minibatch(brain)
+        rule._forward_states(topo, _batch(brain), minibatch["states"])
+        expected = cast("torch.Tensor", topo.penultimate).clone()
+        rule._evaluate(topo, _batch(brain), minibatch, [])
+        assert torch.equal(cast("torch.Tensor", topo.penultimate), expected)
+
+
+def test_a_step_too_short_for_the_timescale_is_refused() -> None:
+    """A correlation that would round to 1 freezes the noise, so its step is refused."""
+    encoder = _brain(**_SLOW).topology.encoder
+    assert encoder is not None
+    with pytest.raises(ValueError, match="rounds its correlation to 1"):
+        encoder.speed_noise_rho(1e-20)

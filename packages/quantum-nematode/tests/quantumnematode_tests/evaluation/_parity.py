@@ -212,7 +212,7 @@ def action_mismatches(
     for i, ref in enumerate(refs):
         for t in range(steps):
             diff = float(np.max(np.abs(np.asarray(ref.actions[t]) - actions[t][i])))
-            if diff > FEATURE_TOLERANCE:
+            if not math.isfinite(diff) or diff > FEATURE_TOLERANCE:
                 problems.append(f"animal {i} step {t}: sampled actions differ by {diff:.2e}")
     return problems
 

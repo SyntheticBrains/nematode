@@ -57,6 +57,7 @@ from quantumnematode.brain.arch._policy import (
     BODY_DRIVE_DIM,
     CONTINUOUS_ACTION_DIM,
     categorical_sample_torch,
+    clamp_continuous_log_std,
     continuous_action_bounds,
     continuous_action_dim,
     continuous_deterministic_action,
@@ -4741,6 +4742,7 @@ class ConnectomePPOBrain(ClassicalBrain):
             if report.policy_loss is not None:
                 self.latest_data.loss = report.policy_loss
                 self.history_data.losses.append(report.policy_loss)
+            self._restandardise_speed_noise()
             if LOG_STD_CLAMPED_MEAN_KEY in report.extra:
                 self.history_data.log_std_clamped_mean.append(
                     report.extra[LOG_STD_CLAMPED_MEAN_KEY],
@@ -4751,6 +4753,35 @@ class ConnectomePPOBrain(ClassicalBrain):
             self.buffer.reset()
 
         self.history_data.rewards.append(reward)
+
+    def _restandardise_speed_noise(self) -> None:
+        """Re-read the carried speed noise under the current parameters, after they change.
+
+        The policy's speed density given the previous step is defined through that step's mean
+        under the parameters scoring it, and PPO scores it so. The carried noise was standardised
+        under the parameters that drew it, so after an update it is re-read from the previous
+        step's stored pre-squash speed and state; within a rollout the two agree.
+        """
+        if self._speed_noise_rho is None or self._previous_state is None:
+            return
+        if self._previous_speed is None or self._speed_noise_x is None:
+            return
+        states = torch.from_numpy(np.asarray(self._previous_state, dtype=np.float32))[None, :]
+        food, distal, mechano, zone, thermo = self._unpack_state_batched(states)
+        with torch.no_grad():
+            penultimate = self.topology.penultimate
+            head, _ = self.topology.forward_with_hidden_batched(
+                food,
+                predator_distal_features=distal,
+                predator_mechano_features=mechano,
+                contact_zone_onehot=zone,
+                thermotaxis_features=thermo,
+                modulators=self._unpack_modulators(states),
+            )
+            self.topology.penultimate = penultimate
+            std = torch.exp(clamp_continuous_log_std(self.topology.log_std))
+            noise = (self._previous_speed - head[0, 0]) / std[0]
+        self._speed_noise_x = noise.to(self._speed_noise_x.dtype)
 
     def _learn_plastic(self, reward: float) -> None:
         """Apply one reward-modulated plasticity update for this step.

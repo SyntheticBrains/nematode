@@ -15,6 +15,14 @@ REPO = Path.cwd()  # run from the repository root
 sys.path.insert(0, str(REPO / "scripts/analysis"))
 SEEDS = [88_000_000 + i for i in range(200)]
 RECORD = REPO / "docs/experiments/logbooks/supporting/122-c2-encoder/readiness/pilot_staged.json"
+DESCRIPTION = (
+    "Description: C.2's stage-2 answer (Logbook 122, readiness/pilot_staged.json "
+    "stage2_extended.answer) graded by c2_encoder_probe.grade_seeds on 200 animals of seed "
+    "block 88,000,000 with presence and the three mutants. A: on the wiring it was fitted on "
+    "(sign_override_exclude: [lopezcruz2019]). B: as A with the speed output's per-second "
+    "noise at its floor (noise.speed unit 0, log-SD -4; the answer's is +0.116). C: on the "
+    "corrected wiring. The script is stage2_answer_variants.py.txt."
+)
 
 
 def variant(name: str) -> dict:
@@ -42,5 +50,10 @@ if __name__ == "__main__":
     out = Path(sys.argv[1])
     with ProcessPoolExecutor(max_workers=3) as pool:
         results = list(pool.map(variant, ["A", "B", "C"]))
-    out.write_text(json.dumps(results, indent=1, default=float) + "\n")
+    record = {
+        "description": DESCRIPTION,
+        "seeds": "88,000,000 + i, i < 200",
+        "variants": results,
+    }
+    out.write_text(json.dumps(record, indent=1, default=float) + "\n")
     print("written", out)
