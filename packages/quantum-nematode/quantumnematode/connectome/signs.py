@@ -39,7 +39,7 @@ from quantumnematode.connectome.neurons import NEURON_CLASSIFICATION, NEURON_CO_
 from quantumnematode.connectome.neurotransmitters import sign_for
 
 if TYPE_CHECKING:  # pragma: no cover - import-time typing only
-    from collections.abc import Iterator
+    from collections.abc import Collection, Iterator
 
     from quantumnematode.connectome.model import Connectome
 
@@ -78,6 +78,7 @@ PHYSIOLOGY_CITATIONS: dict[str, str] = {
     "roberts2016": "Roberts et al. 2016, eLife 5:e12572, doi:10.7554/eLife.12572",
     "wang2020": "Wang et al. 2020, eLife 9:e56942, doi:10.7554/eLife.56942",
     "zhang2025": "Zhang et al. 2025, Nature Communications 16:4405, doi:10.1038/s41467-025-59668-4",
+    "lopezcruz2019": "López-Cruz et al. 2019, Neuron 102:407, doi:10.1016/j.neuron.2019.01.053",
 }
 
 SignSource = Literal["physiology", "expression", "rule", "none"]
@@ -371,10 +372,37 @@ def _rests_on_release_identities(edge: tuple[str, str], sheets: list[FenyvesShee
     )
 
 
+def _overrides_by_edge(
+    path: Path,
+    edge_set: set[tuple[str, str]],
+    exclude_citations: Collection[str],
+) -> dict[tuple[str, str], PhysiologyOverride]:
+    """Return the table's overrides by edge, without the excluded citations'.
+
+    Refuses an override that names an edge twice, or one the wiring does not have, excluded or not,
+    so whether the table is valid does not depend on which citations are excluded.
+    """
+    seen: set[tuple[str, str]] = set()
+    overrides: dict[tuple[str, str], PhysiologyOverride] = {}
+    for override in read_physiology_overrides(path):
+        key = (override.pre, override.post)
+        if key in seen:
+            msg = f"the physiology table lists {key[0]}>{key[1]} twice"
+            raise ValueError(msg)
+        if key not in edge_set:
+            msg = f"the physiology table signs {key[0]}>{key[1]}, which the wiring does not have"
+            raise ValueError(msg)
+        seen.add(key)
+        if override.citation not in exclude_citations:
+            overrides[key] = override
+    return overrides
+
+
 def per_connection_signs(
     connectome: Connectome | None = None,
     *,
     overrides_path: Path = PHYSIOLOGY_OVERRIDES_PATH,
+    exclude_citations: Collection[str] = (),
 ) -> dict[tuple[str, str], ConnectionSign]:
     """Sign every chemical connection of ``connectome``, by the first step that gives a sign.
 
@@ -385,6 +413,10 @@ def per_connection_signs(
         Emmons 2024 release has the same chemical edges, so it gives the same table.
     overrides_path
         The table of cited per-connection signs.
+    exclude_citations
+        Citation keys whose overrides are ignored, so each of their connections is signed by the
+        next step that gives it a sign. Excluding a set of overrides reproduces the table as it
+        stood before they were added.
 
     Returns
     -------
@@ -395,26 +427,20 @@ def per_connection_signs(
     ------
     ValueError
         If a vendored file's digest is not the recorded one, the two Fenyves files disagree on a
-        connection's sign or a cell's transmitters, or an override names a connection the wiring
-        does not have or names one twice.
+        connection's sign or a cell's transmitters, an override names a connection the wiring does
+        not have or names one twice, or ``exclude_citations`` names a key the table does not cite.
     """
+    unknown = sorted(set(exclude_citations) - set(PHYSIOLOGY_CITATIONS))
+    if unknown:
+        msg = f"exclude_citations names keys the physiology table does not cite: {unknown}"
+        raise ValueError(msg)
     if connectome is None:
         from quantumnematode.connectome.loader import load_cook_2019_hermaphrodite
 
         connectome = load_cook_2019_hermaphrodite()
     edges = [(synapse.pre, synapse.post) for synapse in connectome.chemical_synapses]
     edge_set = set(edges)
-
-    overrides: dict[tuple[str, str], PhysiologyOverride] = {}
-    for override in read_physiology_overrides(overrides_path):
-        key = (override.pre, override.post)
-        if key in overrides:
-            msg = f"the physiology table lists {key[0]}>{key[1]} twice"
-            raise ValueError(msg)
-        if key not in edge_set:
-            msg = f"the physiology table signs {key[0]}>{key[1]}, which the wiring does not have"
-            raise ValueError(msg)
-        overrides[key] = override
+    overrides = _overrides_by_edge(overrides_path, edge_set, exclude_citations)
 
     sheets = [
         read_fenyves_sheet(FENYVES_S1_PATH, FENYVES_S1_SHEET, FENYVES_S1_SHA256, edge_set),

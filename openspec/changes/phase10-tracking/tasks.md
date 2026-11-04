@@ -755,6 +755,12 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     this machine, beyond what it can run as planned. The registration needs a stopping rule on the
     draws, fewer draws, or a cheaper fit.
   - **Not yet measured:** convergence, the restart-to-restart spread against W's minimum, the tying.
+  - *(Added 2026-11-04.)* **The wild type's AIA and ADE glutamate signs, corrected** before the
+    readiness restarts (Logbook 122, addendum). Sixteen overrides citing López-Cruz et al. 2019 sign
+    the tax-4 → AIA and mec-3 → ADE glutamatergic edges inhibitory, where the rule had signed them
+    excitatory. Every W arm inherits them; a null's moved edges carry them. The 13 untested inputs stay
+    on the rule, a stated limit. The planned held-out perturbation family (López-Cruz's cell-level rows)
+    grades against this wiring.
   - **Still to build:** the class-preserving left–right-symmetric null. *(The loader guard landed
     with PR #514's review: a brain config its own class refuses now fails at load, rather than
     loading as another class's fields on defaults.)*

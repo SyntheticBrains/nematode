@@ -212,3 +212,50 @@ Time on the lawn (z +2.0), exits (z −2.8), roaming survival (z −1.7), the un
 - **Feasibility by random draws is not reachability by the fit.** The random lawn-holders never roam, and the score ranks them below everything. A target must be met as the benchmark defines it, every statistic defined.
 - **Stopping a pool run's parent orphans its workers.** Two stopped runs left 34 idle workers (about 16 GB) for 15 hours. They are found by parent PID 1 and stopped by PID.
 - **A first draft of the cost pilot crashed moving the encoder to MPS** on a float64 buffer. The timescales are float32 now, and the encoder moves to MPS.
+
+## Addendum (2026-11-04): the glutamate signs onto AIA and ADE
+
+**What was wrong.** The per-connection table signed all 29 glutamatergic chemical edges onto AIA and ADE excitatory. None had a physiology override, and the expression step gave none of them a sign, so each fell to the per-neuron rule, which signs glutamate positive.
+
+López-Cruz et al. 2019 (*Neuron* 102:407) show the opposite for the pathways local search runs through: "Glutamatergic chemosensory and mechanosensory neurons generate local search by suppressing MGL-1-expressing neurons". The chemosensory set is "a set of glutamatergic chemosensory neurons that synapse onto the AIA interneurons", and the mechanosensory set "a set of glutamatergic mechanosensory neurons that synapse onto the ADE sensory-inter neurons". The paper's knockouts cover "all tax-4 chemosensory neurons" and "all mec-3 mechanosensory neurons". The quotes are from the PMC text of the published paper (PMC9161785).
+
+So the wild type above was wired with the opposite sign on these pathways. Every readiness figure in this logbook is on that earlier wiring, and none is re-read as the corrected wiring's.
+
+**The evidence, in the vendored rows** (`data/benchmark/lopezcruz2019_reorientations.json`; early reorientations are the mean per 2-min bin summed over bins 2–5, 6–14 min after removal). The two modules are redundant:
+
+| Row | Early reorientations | Its experiment's control |
+|---|---|---|
+| glutamate lost in the tax-4 cells (Fig. 4F) | 5.7 | 7.5 |
+| glutamate lost in the mec-3 cells (Fig. 4F) | 6.3 | 7.5 |
+| glutamate lost in both (Fig. 4F) | 2.3 | 7.5 |
+| mgl-1 (Fig. 4F) | 2.0 | 7.5 |
+| glutamate lost in AWC, ASK, ASG alone (Figs. 4C–E) | 6.2, 4.1, 6.7 | 5.7, 5.2, 7.2 |
+
+So each override's evidence is the paper's conclusion for its pathway, drawn from:
+
+- the double knockout;
+- mgl-1's loss, and its rescue in AIA and ADE;
+- silencing AIA or ADE in mgl-1 mutants.
+
+It is not a single-pathway measurement. That is the same standard as the AWC → AIY override.
+
+**The correction.** Sixteen overrides, sign −1, citing `lopezcruz2019`, in `data/connectome/sign_overrides_physiology.csv`:
+
+- the glutamatergic tax-4 cells onto AIA: ASE, ASG, ASK and AWC, 12 edges and 195 synapse units;
+- the glutamatergic mec-3 cells onto ADE: FLP and AVM, 4 edges and 35 units.
+
+The table now has 67 physiology signs, 1,676 by expression, 1,433 by the rule and 533 with none, and it corrects 358 of the atlas's signs.
+
+**A limit: 13 glutamatergic inputs stay excitatory.** These are ASH, ADL, AIZ, AIM, ADA and AIB onto AIA, and OLL and IL1 onto ADE. None of the paper's cell-specific manipulations covered these cells, so only the receptor's location argues for flipping them, which is weaker than the table's standard. ASH and ADL are large inputs onto AIA (24 and 19 units onto AIAL), so AIA's glutamatergic input is now mixed.
+
+**A second limit: the sign is a fast stand-in for MGL-1.** MGL-1 is metabotropic and slow; the fast sign captures its direction only.
+
+**Reproducing the earlier table.** `sign_override_exclude: [lopezcruz2019]` on the connectome brain ignores these rows. The nine committed per-connection configs behind recorded runs set it, through their generators: five lawn configs and four thermal target-35 configs. `sign_scale_calibration.py`, which builds per-connection brains in code for the thermal rung's recorded calibration, sets it too. The seven encoded configs take the corrected table.
+
+**The identity check** (`supporting/122-c2-encoder/aia_ade_signs_identity.json`): 19 of 20 jobs are byte-identical to a baseline recorded before the change. Those are every batched and per-step connectome job and the nine excluded configs' built brains, compared on their topology state (every weight, gain and wiring buffer; not the PPO critic, which no sign reaches). The one that differs is the encoded brain. Its normalised counts move from the excitatory matrix to the inhibitory one in exactly the 16 entries, at the same magnitude (`test_the_encoded_brain_changes_only_on_the_corrected_edges`).
+
+**For the next steps.**
+
+- The readiness restarts run on the corrected wiring.
+- The perturbation family (planned) grades López-Cruz's cell-level rows against it.
+- Its pan-neuronal rows will read the 13 inputs left on the rule.

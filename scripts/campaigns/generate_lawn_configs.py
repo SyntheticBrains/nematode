@@ -74,9 +74,14 @@ _MODULATED_ROLES: dict[str, dict[str, object]] = {
 MODULATED_SUBSTRATES: dict[str, dict[str, object]] = {
     "modulated": {},
     "modulated_atlas": {"synapse_signs": "atlas", "enforce_synapse_signs": True},
-    # The same with each synapse signed from the per-connection table, which corrects 342 of the
-    # atlas's signs, AWC -> AIY among them.
-    "modulated_perconn": {"synapse_signs": "per_connection", "enforce_synapse_signs": True},
+    # The same with each synapse signed from the per-connection table as it stood when these arms
+    # ran, which corrects 342 of the atlas's signs, AWC -> AIY among them: the López-Cruz overrides
+    # added since are excluded.
+    "modulated_perconn": {
+        "synapse_signs": "per_connection",
+        "enforce_synapse_signs": True,
+        "sign_override_exclude": ["lopezcruz2019"],
+    },
 }
 MODULATED_ARMS: dict[str, dict[str, object]] = {
     f"{base}{role}": {**signs, **settings}

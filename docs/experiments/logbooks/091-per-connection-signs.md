@@ -52,6 +52,11 @@ is real. Synapse signs were the connectome brain's nearest unrun fidelity step.
 - **Against the atlas:** it grounds the same 3,176 synapses and **corrects 342 of the atlas's
   signs**, AWC → AIY among them.
 
+*(Note, 2026-11-04.)* The table has since gained 16 overrides citing López-Cruz et al. 2019, which
+sign the glutamatergic tax-4 → AIA and mec-3 → ADE edges inhibitory ([Logbook 122](122-c2-encoder.md),
+addendum). With them it has 67 physiology signs, 1,433 by the rule, and corrects 358 of the atlas's.
+This rung's configs and its sign-scale calibration exclude them (`sign_override_exclude: [lopezcruz2019]`), so every figure here reproduces.
+
 **The rung's question:** does grounding the signs, and correcting them, make the wild type's
 **chemical** wiring matter?
 

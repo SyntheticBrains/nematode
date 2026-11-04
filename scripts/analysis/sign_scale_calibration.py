@@ -87,6 +87,10 @@ def level_statistic(signs: str, scale: float, probe: list[Any]) -> dict[str, flo
     changes: dict[str, Any] = {"chemical_weight_scale": scale}
     if signs != "random":
         changes |= {"synapse_signs": signs, "enforce_synapse_signs": True}
+    if signs == "per_connection":
+        # The table as it stood when the rung was calibrated: the López-Cruz overrides added since
+        # are excluded, so the recorded calibration reproduces.
+        changes["sign_override_exclude"] = ["lopezcruz2019"]
     values = [
         measure(base.model_copy(update={**changes, "seed": seed, "wiring": wiring}), probe)
         for seed in SEEDS

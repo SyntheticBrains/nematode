@@ -5,7 +5,8 @@ refused", "A null is encoded with the wild type's parameters", "Two seeds, one v
 drives the two sides oppositely", "Food contact reaches only the dopaminergic mechanosensors", "A
 vector round-trips", "A reused brain equals a fresh one", "Per-ligand tying shares a ligand's
 strengths", "The batched controller sees a write", "The monoamine timescale changes only monoamines"
-and "tax-4 keeps the non-tax-4 classes", and the encoder's refusals.
+and "tax-4 keeps the non-tax-4 classes", and the encoder's refusals. Also the connectome-ppo-brain
+scenario "The encoded brain changes only on the corrected edges".
 """
 
 from __future__ import annotations
@@ -268,6 +269,26 @@ class TestTheParameterTable:
 
 
 class TestTheWiring:
+    def test_the_encoded_brain_changes_only_on_the_corrected_edges(self) -> None:
+        """Only the López-Cruz edges move: to the inhibitory matrix, at their magnitude."""
+        full = _brain().topology
+        earlier = _brain(sign_override_exclude=["lopezcruz2019"]).topology
+        a, b = full.encoder, earlier.encoder
+        assert a is not None
+        assert b is not None
+        assert torch.equal(a.chem_grouped, b.chem_grouped)
+        moved = (a.chem_positive != b.chem_positive) | (a.chem_negative != b.chem_negative)
+        names = full.neuron_names
+        edges = {(names[i], names[j]) for i, j in moved.nonzero().tolist()}
+        assert len(edges) == 16
+        assert {post for _, post in edges} == {"AIAL", "AIAR", "ADEL", "ADER"}
+        i, j = moved.nonzero().unbind(1)
+        assert torch.all(a.chem_positive[i, j] == 0)
+        assert torch.all(b.chem_negative[i, j] == 0)
+        # The inhibitory matrix holds its counts negated, at the same normalised magnitude.
+        assert torch.equal(a.chem_negative[i, j], -b.chem_positive[i, j])
+        assert torch.all(b.chem_positive[i, j] > 0)
+
     def test_weights_follow_the_counts_signs_and_scales(self) -> None:
         brain = _brain()
         z = _vector(brain)
