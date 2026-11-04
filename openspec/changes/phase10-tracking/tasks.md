@@ -761,6 +761,32 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **dropped:** surrogate-assisted CMA. The objective is noisy, and it would need its own
     recovery control.
 
+  *(Added 2026-11-04, a prerequisite check after C.2's encoder.)* **Before W registers.** Each of
+  these is unplanned or under-planned, and each is settled before W's launch record.
+
+  - **The reconstruction check cannot run as written.** Witvliet's dataset 8
+    (`load_witvliet_2021_adult`) covers the nerve ring: 180 neurons, with none of VB, DB, VA and DA,
+    the four classes the encoder's readout pools, and no PDE, one of food contact's three classes.
+    `connectome_source` does not accept it. The check becomes M.2's chimera: Cook 2019's wiring and
+    gaps with dataset 8's nerve-ring chemical edges, under a registered transplant rule (roadmap open
+    item 20, not built).
+  - **Weight noise has no mechanism.** The registration defines what the 1% perturbs (the fixed
+    counts or the written parameters) and how.
+  - **The mutants are ungraded on a fitted encoder answer.** The fixed-sign strengths are log-scaled
+    about 0.055, so tph-1 and pdfr-1 may change nothing. They are graded at the readiness restarts,
+    before W reads them; the receptor-placement null is read through them.
+  - **The speed misses come first.** The staged fit misses its speed distributions for want of a
+    state-dependent speed spread, and every arm would share that failure, which would mask a wiring
+    effect. No fit runs past 500 generations until the spread is in.
+  - **Equal budget.** Every arm runs a fixed generation count, not the plateau rule, set from the
+    readiness restarts' convergence (checkpoints at 250, 500 and 750 of a 1,000 cap).
+  - **Stage 1 is fixed.** Its 18-parameter lawn subset was chosen on the wild type. It is registered
+    identical for every arm, and each arm's stage-1 result is reported as description.
+  - **F.0b-ii is sized under the staged procedure.** Each truth needs several staged fits of about
+    4.8 h, so its cost is piloted before it registers.
+  - **A pilot gate.** The wild type and the degree-preserving null, three fits each, before the full
+    panel; the stopping rule on draws is preflighted on it.
+
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 
 ## The synthesis (MUST)
