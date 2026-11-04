@@ -130,6 +130,8 @@
 
     *(Amended 2026-11-04, the maintainer's decision.)* **The third pilot failed** (best 10.69; the worm on the lawn 22–26%), yet random settings of the lawn subset at the new box's centre hold the lawn (0.93 of the assay on it, 0.27 exits per on-lawn hour): the encoder expresses lawn-holding near its start, and the full fit does not find it. **The fit becomes staged.** Stage 1 fits the 18-parameter lawn subset from the box centre on the uncompressed score and must hold the lawn (its final checkpoint's median time on it at least 0.75). Stage 2 fits every parameter from stage 1's answer at σ₀ 0.1 on the registered ranking score. It is one procedure, the same for every arm of W, with x₀ the box centre. A staged pilot (150 generations per stage) under the same pass rule gates the readiness restarts, and F.0b-ii would recover under the same two stages.
 
+    *(Amended 2026-11-04, the maintainer's decision.)* **Stage 1 reached the best answer of any fit** (registered score 10.0, below the stall's 10.6; 0.34 of the assay on the lawn) **without holding the lawn at 0.75**, so stage 2 did not run under the stated rule. The lawn-holders found by random draws never roam: the best (0.925 on the lawn) leaves 7 of D_fit's 14 statistics undefined. The score needs lawn-holding together with roaming and dwelling bouts, and the encoder has no stochastic source of state switching beyond the action noise after its readout. Stage 2 runs from stage 1's answer regardless, recorded as a deviation from the stated rule, and this change then closes with the switching question taken to a plan review before F.0b-ii.
+
 07. **The vector interface:**
 
     - `encoder_parameters()` gives the 196 names in a fixed order;

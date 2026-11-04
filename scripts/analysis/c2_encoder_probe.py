@@ -43,7 +43,9 @@ lawn subset at the new box's centre hold the lawn (0.93).
 
 **pilot-staged** fits in two stages: the lawn subset from the box centre on the uncompressed score
 (CMA 5989), which must hold the lawn, then every parameter from its answer at sigma0 0.1 on the
-registered ranking score (CMA 5990); it passes as the second pilot does.
+registered ranking score (CMA 5990); it passes as the second pilot does. Stage 1 reached the best
+answer of any fit (score 10.0, 0.34 of the assay on the lawn) without holding the lawn at 0.75;
+**stage2-anyway** runs stage 2 from it regardless, recorded as a deviation from that rule.
 
 **readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
 score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
@@ -76,6 +78,7 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py reduced
     uv run python scripts/analysis/c2_encoder_probe.py pilot-log
     uv run python scripts/analysis/c2_encoder_probe.py pilot-staged
+    uv run python scripts/analysis/c2_encoder_probe.py stage2-anyway
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -86,6 +89,7 @@ from __future__ import annotations
 import argparse
 import copy
 import cProfile
+import functools
 import itertools
 import json
 import os
@@ -259,6 +263,7 @@ def controller(z: list[float] | np.ndarray, mutant: str | None = None) -> Callab
     return lambda _path: BatchedConnectome(brain)
 
 
+@functools.cache
 def layer_spec() -> Any:  # noqa: ANN401 - a layer spec
     """Return the wild type's data layer, which names the encoder's parameters."""
     from quantumnematode.connectome.loader import load_emmons_2024_hermaphrodite
@@ -267,6 +272,7 @@ def layer_spec() -> Any:  # noqa: ANN401 - a layer spec
     return load_data_layer(sorted(load_emmons_2024_hermaphrodite().neurons))
 
 
+@functools.cache
 def entries() -> list[Any]:
     """Return the encoder's parameter table at this probe's tying."""
     from quantumnematode.connectome import encoder as enc
@@ -1134,6 +1140,53 @@ def _staged_pilot(workers: int) -> int:
     return 0
 
 
+def _stage2_anyway(workers: int) -> int:
+    """Run the staged pilot's stage 2 from stage 1's answer, although stage 1 missed its lawn bar.
+
+    A deviation from the pilot's stated rule, recorded as one: stage 1 reached the best answer of
+    any fit (below the stall's score) without holding the lawn at 0.75.
+    """
+    root = BUILD / "readiness" / "staged"
+    record = json.loads(STAGED_PILOT_PATH.read_text())
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        second = _fit(
+            pool,
+            cma_seed=STAGE2_CMA,
+            seed_base=STAGE2_BASE,
+            cap=PILOT_CAP,
+            state_dir=root / "stage2",
+            factory=start_stage2,
+        )
+        second_points = trajectory(
+            second,
+            pool,
+            base=STAGE2_TRAJECTORY_BASE,
+            restart=0,
+            every=PILOT_EVERY,
+        )
+    record["stage2"] = {
+        **_summary(second_points),
+        "points": second_points,
+        "answer": second["answers"][-1],
+        "ran_although_stage1_missed_its_bar": True,
+    }
+    summary = record["stage2"]
+    record["stage2_would_pass"] = (
+        summary["best_answer_score"] < STALL_SCORE
+        and summary["best_time_on_lawn"] > STALL_TIME_ON_LAWN
+    )
+    _write(STAGED_PILOT_PATH, record)
+    print(
+        json.dumps(
+            {
+                **{k: v for k, v in summary.items() if k.startswith(("best", "final"))},
+                "stage2_would_pass": record["stage2_would_pass"],
+            },
+        ),
+    )
+    return 0
+
+
 def _restart(
     r: int,
     pool: ProcessPoolExecutor,
@@ -1391,6 +1444,7 @@ def main(argv: list[str] | None = None) -> int:
             "reduced",
             "pilot-log",
             "pilot-staged",
+            "stage2-anyway",
             "readiness",
             "read",
             "smoke",
@@ -1406,6 +1460,7 @@ def main(argv: list[str] | None = None) -> int:
         "reduced": lambda: _reduced(args.workers),
         "pilot-log": lambda: _log_pilot(args.workers),
         "pilot-staged": lambda: _staged_pilot(args.workers),
+        "stage2-anyway": lambda: _stage2_anyway(args.workers),
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),
