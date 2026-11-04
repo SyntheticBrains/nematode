@@ -9,6 +9,9 @@ are then those of independent animals, so the check is for bias, not identity.
 The four tests make twenty checks, so each interval is Bonferroni-corrected to hold the family at a
 95% level: a 99.75% interval per check. At 95% per check, unbiased seed bands failed somewhere about
 half the time, and which pairs decorrelate differs between BLAS builds.
+
+The Flavell checks are marked nightly: the family and its correction are unchanged, and Scheer's
+half runs on every pull request.
 """
 
 from __future__ import annotations
@@ -33,6 +36,9 @@ _IDENTICAL = 1e-9
 _CHECKS = 20
 _ALPHA = 0.05 / _CHECKS
 _RESAMPLES = 20000
+# Flavell's 90-minute lawn is the suite's longest assay and grades no benchmark statistic, so its
+# checks run nightly; Scheer's run on every pull request.
+_PROTOCOLS = ["scheer_lawn", pytest.param("uniform_lawn_flavell", marks=pytest.mark.nightly)]
 
 
 def _statistics(steps: list, intake_fraction: float, max_satiety: float) -> dict[str, float]:  # type: ignore[type-arg]
@@ -61,7 +67,7 @@ def _bootstrap_interval(diff: np.ndarray) -> tuple[float, float]:
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
+@pytest.mark.parametrize("protocol", _PROTOCOLS)
 @pytest.mark.parametrize("controller", ["mlp", "pirouette"])
 def test_graded_statistics_agree(controller: str, protocol: str) -> None:
     """Paired per-animal statistics: each difference's corrected interval contains zero."""
@@ -92,7 +98,7 @@ _ENCODED_ALPHA = 0.05 / 20
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
+@pytest.mark.parametrize("protocol", _PROTOCOLS)
 @pytest.mark.parametrize("wiring", ["wild_type", "rewired_degree_preserving"])
 def test_the_encoded_brains_graded_statistics_agree(wiring: str, protocol: str) -> None:
     """The encoded connectome's paired statistics agree over full Scheer and Flavell assays.
