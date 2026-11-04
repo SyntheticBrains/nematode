@@ -179,3 +179,69 @@ From the preflights, on 16 workers:
 - `oracle-check` refuses unless this record is committed with Part B, and `bands_v4.json`, `bands_v4_record.json`, `round_trip.json` and `oracle_fit.json` are byte-identical to their versions in that commit. It runs once.
 - `--onset` refuses before Part B, without `oracle_check.json`, against its reading, or on bands already decided.
 - `read` and `verdict` refuse unless this record is committed with Part C, and the decided `bands_v4.json`, its record, the round trip, the fit and `oracle_check.json` are byte-identical to their versions in that commit, with the bands' decision matching the check's. `read` runs once: it refuses if `read.json` or its start marker exists.
+
+## Part B: the bands, the round trip and the oracle's answer
+
+*Added 2026-11-05, after the oracle's fit and before its 40 populations run. It changes no rule.*
+
+### The bands
+
+`data/benchmark/bands_v4.json`, SHA-256 `324445d9…`, built by the guarded builder with `activity_graded: null` (`bands_v4_record.json`). Every v3 band is carried byte-identical, and the activity bands equal the provisional build's.
+
+- **The pause floor:** 0.02 mm, with 95.4% of the library's 87,035 still-worm seconds below it.
+
+- **κ** (`default_rng(2045)`): the pause share 1.221, the flip fraction 1.207 and the onset rate 1.216.
+
+- **The activity bands** (centre ± scale):
+
+  | Statistic | n = 200 | n = 64 |
+  |---|---|---|
+  | pause share | 0.4819 ± 0.0322 | 0.4819 ± 0.0537 |
+  | flip fraction | 0.1321 ± 0.0125 | 0.1321 ± 0.0201 |
+  | onset rate (per min) | 2.284 ± 0.225 | 2.284 ± 0.372 |
+
+- **The rule checks,** gate 0.90, at both bars v4 can have:
+
+  | Check | at 3.0781 (24) | at 3.0654 (23) |
+  |---|---|---|
+  | activity | 0.985 | 0.985 |
+  | small lawn | 0.95 | 0.95 |
+  | kinematics | 0.98 | 0.975 |
+  | local search | 0.992 | 0.992 |
+
+  All pass. The activity check's failures: the pause share in 1 split of 200, the flip fraction in 2, and the onset rate in none.
+
+### The round trip
+
+`round_trip.json`: **passes.** All 1,013 PD1074 OD 2 band animals give activity tallies equal to the native path's, animal by animal, through CSV and through WCON.
+
+### The oracle's answer
+
+`oracle_fit.json`, on the bands above:
+
+| Restart | CMA seed | Stop | Final objective | σ at the stop |
+|---|---|---|---|---|
+| 0 | 9431 | cap, generation 100 | 0.831 | 0.061 |
+| 1 | 9432 | cap, generation 100 | 0.570 | 0.084 |
+
+**Restart 1 is taken.** Its answer, in C.1's 25 parameters:
+
+| Parameter | Value | Parameter | Value |
+|---|---|---|---|
+| a0 | −6.819 | r_dwell | 0.0623 |
+| a_intake | −0.516 | r_roam | 0.2955 |
+| a_satiety | −1.165 | beta_reversal | 4.914 |
+| b0 | −3.727 | edge | 4.375 |
+| b_intake | 3.112 | o_dwell | 0.2396 |
+| b_satiety | 1.049 | o_roam | 0.1776 |
+| v_dwell | 0.199 | beta_omega | 4.906 |
+| v_roam | 0.0935 | search_amplitude | 14.68 |
+| sigma_dwell | 22.72 | search_tau_s | 185.8 |
+| sigma_roam | 42.77 | v_off_food | 0.1025 |
+| kappa_weathervane | 49.99 | sigma_off_food | 48.19 |
+| speed_log_sd_dwell | 0.5375 | speed_log_sd_roam | 0.975 |
+| kappa_off_food | −38.42 | | |
+
+It is fitted to the three activity statistics alone, on the small lawn, so it says nothing about the other families: it dwells faster than it roams, and it reverses and turns far more often than C.1's v3 answer. It witnesses only that C.1's model can reach the activity statistics.
+
+**Next, under the guard:** `oracle-check` (the 40 populations, which decide the onset rate), then `--onset` and Part C, then `read` and `verdict`.

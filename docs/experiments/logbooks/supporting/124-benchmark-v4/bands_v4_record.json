@@ -1,0 +1,223 @@
+{
+  "description": "B v4's bands record: the pause floor, the activity family's kappa and every rule check at both bars v4 can have, from band cohorts only.",
+  "bands_v3_sha256": "8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b",
+  "pause_floor": {
+    "mm": 0.02,
+    "step_mm": 0.0025,
+    "coverage": 0.95,
+    "still_seconds": 87035,
+    "share_below": 0.9538346642155455
+  },
+  "activity_kappa": {
+    "seed": 2045,
+    "splits": 200,
+    "size": 200,
+    "z_sd": {
+      "pause_share": 1.2207865901320902,
+      "flip_fraction": 1.2067676751745338,
+      "onset_rate_per_min": 1.2157108531941332
+    },
+    "kappa": {
+      "pause_share": 1.2207865901320902,
+      "flip_fraction": 1.2067676751745338,
+      "onset_rate_per_min": 1.2157108531941332
+    }
+  },
+  "checks": {
+    "graded": {
+      "bar": 3.0780880728421605,
+      "statistics": 24,
+      "activity": {
+        "seed": 2046,
+        "splits": 200,
+        "size": 200,
+        "bar": 3.0780880728421605,
+        "joint_pass_rate": 0.985,
+        "failures_by_statistic": {
+          "pause_share": 1,
+          "flip_fraction": 2,
+          "onset_rate_per_min": 0
+        },
+        "gate": 0.9,
+        "passes": true
+      },
+      "small_lawn": {
+        "seed": 2040,
+        "splits": 200,
+        "size": 200,
+        "bar": 3.0780880728421605,
+        "joint_pass_rate": 0.95,
+        "failures_by_statistic": {
+          "roaming_fraction": 0,
+          "roaming_bout_s": 0,
+          "dwelling_bout_s": 5,
+          "exits_per_on_lawn_hour": 2,
+          "pre_exit_enrichment": 2,
+          "time_on_lawn": 1
+        },
+        "gate": 0.9,
+        "passes": true
+      },
+      "kinematics": {
+        "seed": 2040,
+        "splits": 200,
+        "size": 200,
+        "bar": 3.0780880728421605,
+        "joint_pass_rate": 0.98,
+        "failures_by_statistic": {
+          "dwelling_speed_median": 1,
+          "dwelling_speed_p90": 3,
+          "roaming_speed_median": 2,
+          "roaming_speed_p90": 0,
+          "roaming_survival_5min": 0
+        },
+        "gate": 0.9,
+        "passes": true
+      },
+      "local_search": {
+        "seed": 2034,
+        "splits": 200,
+        "bar": 3.0780880728421605,
+        "graded_batches": 1800,
+        "joint_pass_rate": 0.9916666666666667,
+        "gate": 0.9,
+        "passes": true
+      }
+    },
+    "reported": {
+      "bar": 3.0653831516447343,
+      "statistics": 23,
+      "activity": {
+        "seed": 2046,
+        "splits": 200,
+        "size": 200,
+        "bar": 3.0653831516447343,
+        "joint_pass_rate": 0.985,
+        "failures_by_statistic": {
+          "pause_share": 1,
+          "flip_fraction": 2
+        },
+        "gate": 0.9,
+        "passes": true
+      },
+      "small_lawn": {
+        "seed": 2040,
+        "splits": 200,
+        "size": 200,
+        "bar": 3.0653831516447343,
+        "joint_pass_rate": 0.95,
+        "failures_by_statistic": {
+          "roaming_fraction": 0,
+          "roaming_bout_s": 0,
+          "dwelling_bout_s": 5,
+          "exits_per_on_lawn_hour": 2,
+          "pre_exit_enrichment": 2,
+          "time_on_lawn": 1
+        },
+        "gate": 0.9,
+        "passes": true
+      },
+      "kinematics": {
+        "seed": 2040,
+        "splits": 200,
+        "size": 200,
+        "bar": 3.0653831516447343,
+        "joint_pass_rate": 0.975,
+        "failures_by_statistic": {
+          "dwelling_speed_median": 1,
+          "dwelling_speed_p90": 4,
+          "roaming_speed_median": 2,
+          "roaming_speed_p90": 0,
+          "roaming_survival_5min": 0
+        },
+        "gate": 0.9,
+        "passes": true
+      },
+      "local_search": {
+        "seed": 2034,
+        "splits": 200,
+        "bar": 3.0653831516447343,
+        "graded_batches": 1800,
+        "joint_pass_rate": 0.9916666666666667,
+        "gate": 0.9,
+        "passes": true
+      }
+    }
+  },
+  "chemotaxis_leave_one_out": {
+    "recordings": {
+      "20220830": {
+        "z": {
+          "drift_mm_s": -0.16888907117604904,
+          "log_quintile_ratio": -0.18560099574157843,
+          "weathervane_deg_s": 1.1536278527330985,
+          "onset_per_min": 0.7654346271310223,
+          "flip_fraction": 0.5785574882050036
+        },
+        "present": true,
+        "passes": true
+      },
+      "20220913": {
+        "z": {
+          "drift_mm_s": -0.15384932658729839,
+          "log_quintile_ratio": -0.0912285326925473,
+          "weathervane_deg_s": -0.26739501017530426,
+          "onset_per_min": -0.3091507023332368,
+          "flip_fraction": -0.37560326090570784
+        },
+        "present": true,
+        "passes": true
+      },
+      "20220922": {
+        "z": {
+          "drift_mm_s": -0.1241518015080465,
+          "log_quintile_ratio": -0.3480010658437733,
+          "weathervane_deg_s": 0.12897130760038963,
+          "onset_per_min": 0.5544472000903569,
+          "flip_fraction": 0.861522996398973
+        },
+        "present": true,
+        "passes": true
+      },
+      "20221108": {
+        "z": {
+          "drift_mm_s": -0.5619346677744022,
+          "log_quintile_ratio": -0.5423341698829856,
+          "weathervane_deg_s": 0.10560080095385516,
+          "onset_per_min": 0.018734374779426178,
+          "flip_fraction": -0.14914470492145204
+        },
+        "present": true,
+        "passes": true
+      },
+      "20230609": {
+        "z": {
+          "drift_mm_s": 0.11567691216759572,
+          "log_quintile_ratio": 0.9193619870047677,
+          "weathervane_deg_s": -0.792813233477606,
+          "onset_per_min": -0.40502193092216554,
+          "flip_fraction": -0.3010324317974239
+        },
+        "present": true,
+        "passes": true
+      },
+      "20230613": {
+        "z": {
+          "drift_mm_s": 1.8548156990005356,
+          "log_quintile_ratio": 0.4777615457940831,
+          "weathervane_deg_s": -0.08906178934708349,
+          "onset_per_min": -0.45965357447061683,
+          "flip_fraction": -0.34893460273683663
+        },
+        "present": true,
+        "passes": true
+      }
+    },
+    "unit_rate": 0.011848207376375486,
+    "allowance": 1,
+    "tail_at_allowance": 0.0020400514127605564,
+    "failures": 0,
+    "passes": true,
+    "carried": "from v3: the chemotaxis bands are v3's, and v4's bar is wider"
+  }
+}
