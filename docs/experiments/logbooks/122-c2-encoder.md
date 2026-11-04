@@ -252,7 +252,7 @@ The table now has 67 physiology signs, 1,676 by expression, 1,433 by the rule an
 
 **Reproducing the earlier table.** `sign_override_exclude: [lopezcruz2019]` on the connectome brain ignores these rows. The nine committed per-connection configs behind recorded runs set it, through their generators: five lawn configs and four thermal target-35 configs. `sign_scale_calibration.py`, which builds per-connection brains in code for the thermal rung's recorded calibration, sets it too. The seven encoded configs take the corrected table.
 
-**The identity check** (`supporting/122-c2-encoder/aia_ade_signs_identity.json`): 19 of 20 jobs are byte-identical to a baseline recorded before the change. Those are every batched and per-step connectome job and the nine excluded configs' built brains. The one that differs is the encoded brain. Its normalised counts move from the excitatory matrix to the inhibitory one in exactly the 16 entries, at the same magnitude (`test_the_encoded_brain_changes_only_on_the_corrected_edges`).
+**The identity check** (`supporting/122-c2-encoder/aia_ade_signs_identity.json`): 19 of 20 jobs are byte-identical to a baseline recorded before the change. Those are every batched and per-step connectome job and the nine excluded configs' built brains, compared on their topology state (every weight, gain and wiring buffer; not the PPO critic, which no sign reaches). The one that differs is the encoded brain. Its normalised counts move from the excitatory matrix to the inhibitory one in exactly the 16 entries, at the same magnitude (`test_the_encoded_brain_changes_only_on_the_corrected_edges`).
 
 **For the next steps.**
 

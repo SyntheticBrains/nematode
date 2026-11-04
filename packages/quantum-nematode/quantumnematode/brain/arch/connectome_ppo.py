@@ -621,6 +621,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
             _freeze_wiring_refusal,
             _modulators_refusal,
             _encoder_refusal,
+            _sign_override_refusal,
         ):
             if (refusal := refusal_of(self)) is not None:
                 raise ValueError(refusal)
@@ -628,20 +629,6 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
             msg = (
                 "enforce_synapse_signs=true requires synapse_signs='atlas' or 'per_connection': "
                 "enforcing signs that were drawn at random would constrain noise, not biology."
-            )
-            raise ValueError(msg)
-        if self.sign_override_exclude and self.synapse_signs != "per_connection":
-            msg = (
-                f"sign_override_exclude={self.sign_override_exclude!r} requires "
-                f"synapse_signs='per_connection', not {self.synapse_signs!r}: only the "
-                "per-connection table has physiology overrides to exclude."
-            )
-            raise ValueError(msg)
-        unknown = sorted(set(self.sign_override_exclude) - set(PHYSIOLOGY_CITATIONS))
-        if unknown:
-            msg = (
-                f"sign_override_exclude names keys the physiology table does not cite: {unknown}; "
-                f"it cites {sorted(PHYSIOLOGY_CITATIONS)}."
             )
             raise ValueError(msg)
         if self.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
@@ -696,6 +683,32 @@ def _weight_scale_refusal(config: ConnectomePPOBrainConfig) -> str | None:
             f"{sorted(_SCALED_PRIORS)} place a measured magnitude"
         )
     return None
+
+
+def _sign_override_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Say why a sign-override exclusion is refused, or return None if it is not.
+
+    One function behind both the validator and the construction guard, so the two cannot drift.
+    """
+    if config.sign_override_exclude and config.synapse_signs != "per_connection":
+        return (
+            f"sign_override_exclude={config.sign_override_exclude!r} requires "
+            f"synapse_signs='per_connection', not {config.synapse_signs!r}: only the "
+            "per-connection table has physiology overrides to exclude."
+        )
+    unknown = sorted(set(config.sign_override_exclude) - set(PHYSIOLOGY_CITATIONS))
+    if unknown:
+        return (
+            f"sign_override_exclude names keys the physiology table does not cite: {unknown}; "
+            f"it cites {sorted(PHYSIOLOGY_CITATIONS)}."
+        )
+    return None
+
+
+def _reject_sign_override_exclude(config: ConnectomePPOBrainConfig) -> None:
+    """Refuse a sign-override exclusion at construction; ``model_copy`` skips validators."""
+    if (refusal := _sign_override_refusal(config)) is not None:
+        raise ValueError(refusal)
 
 
 def _weight_prior_refusal(config: ConnectomePPOBrainConfig) -> str | None:
@@ -1394,6 +1407,7 @@ def _reject_unsupported_plasticity_modes(config: ConnectomePPOBrainConfig) -> No
             "enforcing signs that were drawn at random would constrain noise, not biology."
         )
         raise ValueError(msg)
+    _reject_sign_override_exclude(config)
     if config.plasticity_decorrelation == "anti_hebbian_inhibitory" and (
         config.synapse_signs == "random"
     ):

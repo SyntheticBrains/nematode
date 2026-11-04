@@ -295,6 +295,24 @@ class TestTheEarlierTable:
         assert differ == LOPEZCRUZ_EDGES
         assert {(earlier[e].sign, earlier[e].source) for e in differ} == {(1, "rule")}
 
+    @pytest.mark.parametrize(
+        ("rows", "match"),
+        [
+            (["AWCL,AIAL,-1,lopezcruz2019,x", "AWCL,AIAL,-1,lopezcruz2019,x"], "twice"),
+            (["AWCL,AIYL,-1,chalasani2007,x", "AWCL,AIYL,-1,lopezcruz2019,x"], "twice"),
+            (["AWCL,VB1,-1,lopezcruz2019,x"], "does not have"),
+        ],
+    )
+    def test_an_excluded_row_is_still_checked(
+        self,
+        tmp_path: Path,
+        rows: list[str],
+        match: str,
+    ) -> None:
+        path = _write_overrides(tmp_path / "o.csv", rows)
+        with pytest.raises(ValueError, match=match):
+            sg.per_connection_signs(overrides_path=path, exclude_citations=("lopezcruz2019",))
+
     def test_an_unknown_key_is_refused(self) -> None:
         with pytest.raises(ValueError, match="does not cite: \\['nobody2099'\\]"):
             sg.per_connection_signs(exclude_citations=("nobody2099",))

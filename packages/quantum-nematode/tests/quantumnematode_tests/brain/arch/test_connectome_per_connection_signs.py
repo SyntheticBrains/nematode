@@ -231,6 +231,17 @@ class TestSignOverrideExclude:
         with pytest.raises(ValueError, match=match):
             ConnectomePPOBrainConfig(**changes)  # type: ignore[arg-type]
 
+    def test_a_config_copied_past_its_validators_is_refused_at_construction(self) -> None:
+        """``model_copy`` skips validators, so the brain repeats the check when it is built."""
+        container = load_simulation_config(str(_T35)).brain
+        assert container is not None
+        assert isinstance(container.config, ConnectomePPOBrainConfig)
+        config = container.config.model_copy(
+            update={"seed": _SEED, "synapse_signs": "atlas", "sign_override_exclude": ["x"]},
+        )
+        with pytest.raises(ValueError, match="requires synapse_signs='per_connection'"):
+            ConnectomePPOBrain(config=config, device=DeviceType.CPU)
+
     @pytest.mark.parametrize("config", _RECORDED)
     def test_the_configs_behind_recorded_runs_exclude_them(self, config: str) -> None:
         container = load_simulation_config(str(_REPO / "configs/scenarios" / config)).brain

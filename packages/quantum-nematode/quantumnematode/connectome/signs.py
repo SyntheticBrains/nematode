@@ -379,20 +379,22 @@ def _overrides_by_edge(
 ) -> dict[tuple[str, str], PhysiologyOverride]:
     """Return the table's overrides by edge, without the excluded citations'.
 
-    Refuses an override that names an edge twice, or one the wiring does not have.
+    Refuses an override that names an edge twice, or one the wiring does not have, excluded or not,
+    so whether the table is valid does not depend on which citations are excluded.
     """
+    seen: set[tuple[str, str]] = set()
     overrides: dict[tuple[str, str], PhysiologyOverride] = {}
     for override in read_physiology_overrides(path):
-        if override.citation in exclude_citations:
-            continue
         key = (override.pre, override.post)
-        if key in overrides:
+        if key in seen:
             msg = f"the physiology table lists {key[0]}>{key[1]} twice"
             raise ValueError(msg)
         if key not in edge_set:
             msg = f"the physiology table signs {key[0]}>{key[1]}, which the wiring does not have"
             raise ValueError(msg)
-        overrides[key] = override
+        seen.add(key)
+        if override.citation not in exclude_citations:
+            overrides[key] = override
     return overrides
 
 

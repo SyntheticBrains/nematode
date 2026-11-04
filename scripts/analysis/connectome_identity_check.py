@@ -12,8 +12,10 @@ The jobs cover the hand-placed and the data-layer connectome arms, untrained:
   trajectory array;
 - the per-step runner on Scheer's small lawn for 300 steps: its features, action means, actions,
   modulator concentrations and behaviour;
-- a built brain's every weight and buffer, for each per-connection config whose runs are recorded
-  and for one encoded config, since the jobs above do not read the per-connection sign table.
+- a built brain's topology state (every chemical and gap weight, sensory gain, readout and wiring
+  buffer, the encoder's among them; not the PPO critic, which no sign reaches), for each
+  per-connection config whose runs are recorded and for one encoded config, since the jobs above
+  do not read the per-connection sign table.
 
 Usage::
 
@@ -144,7 +146,7 @@ def per_step_job(arm: str) -> str:
 
 
 def brain_job(config: str) -> str:
-    """Build one config's brain at the fixed seed; return the digest of its weights and buffers."""
+    """Build one config's brain at the fixed seed; return the digest of its topology state."""
     brain, _, _ = harness.build_brain(_REPO / "configs" / "scenarios" / config, BRAIN_SEED)
     state = brain.topology.state_dict()  # type: ignore[attr-defined]
     return _digest([state[name].detach().cpu().numpy() for name in sorted(state)])
