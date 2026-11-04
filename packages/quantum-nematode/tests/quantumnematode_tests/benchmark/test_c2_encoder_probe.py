@@ -55,6 +55,8 @@ def test_the_seed_blocks_do_not_overlap() -> None:
         (probe.TRAJECTORY_BASE, probe.TRAJECTORY_BASE + probe.ANIMALS * (last_trajectory + 1)),
     )
     blocks.append((probe.PEEK_BASE, probe.PEEK_BASE + probe.ANIMALS * 2_000))
+    blocks += list(probe.DIAGNOSIS_BLOCKS)
+    blocks.append((probe.SPEED_NOISE_BASE, probe.SPEED_NOISE_BASE + probe.ANIMALS))
     pilot = cr.POPSIZE * probe.PILOT_CAP
     blocks.append((probe.PILOT_BASE, probe.PILOT_BASE + probe.ANIMALS * pilot))
     pilot_trajectory = probe.trajectory_k(0, probe.PILOT_CAP, 1) + 1

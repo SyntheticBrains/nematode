@@ -71,15 +71,24 @@ def config_path(controller: str, protocol: str) -> Path:
     return FORAGING / f"{stem}_assay_{protocol}.yml"
 
 
-def encoded_brain(protocol: str, wiring: str = "wild_type") -> tuple[Any, Any]:
-    """Return an encoded connectome brain with the fixed vector written, and its config."""
+def encoded_brain(
+    protocol: str,
+    wiring: str = "wild_type",
+    *,
+    path: Path | None = None,
+    **extra: object,
+) -> tuple[Any, Any]:
+    """Return an encoded connectome brain with the fixed vector written, and its config.
+
+    ``path`` replaces the protocol's assay config, and ``extra`` adds brain settings.
+    """
     from quantumnematode.connectome.encoder import write_encoder
 
-    overrides = {**ENCODED, "wiring": wiring}
+    overrides = {**ENCODED, "wiring": wiring, **extra}
     if wiring != "wild_type":
         overrides["rewire_seed"] = 5
     brain, config, _ = harness.build_brain(
-        config_path("encoded", protocol),
+        path if path is not None else config_path("encoded", protocol),
         PARITY_SEEDS[0],
         overrides,
     )
@@ -177,6 +186,35 @@ def references(
 ) -> list[ReferenceEpisode]:
     """Run the per-step reference for every seed, the parity seeds by default."""
     return [run_reference(config, controller, seed, steps, record_density=True) for seed in seeds]
+
+
+def logging_actions(batched: Any) -> list[np.ndarray]:
+    """Wrap a batched controller's ``act`` to keep every step's sampled raw actions; return them."""
+    actions: list[np.ndarray] = []
+    act = batched.act
+
+    def logged(senses: BatchedSenses, noise: Any) -> np.ndarray:
+        out = act(senses, noise)
+        actions.append(np.array(out, copy=True))
+        return out
+
+    batched.act = logged
+    return actions
+
+
+def action_mismatches(
+    refs: list[ReferenceEpisode],
+    actions: list[np.ndarray],
+    steps: int,
+) -> list[str]:
+    """Return every sampled raw action that differs between the runners by more than 1e-5."""
+    problems: list[str] = []
+    for i, ref in enumerate(refs):
+        for t in range(steps):
+            diff = float(np.max(np.abs(np.asarray(ref.actions[t]) - actions[t][i])))
+            if diff > FEATURE_TOLERANCE:
+                problems.append(f"animal {i} step {t}: sampled actions differ by {diff:.2e}")
+    return problems
 
 
 def state_mismatches(refs: list[ReferenceEpisode], log: BatchedLog, steps: int) -> list[str]:

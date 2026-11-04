@@ -62,6 +62,12 @@ differences from their wild type; an answer is ready when D_fit's three families
 
 **read** writes the readiness record and the W sizing record from the stored histories and grades.
 
+**speed-noise** is slow speed noise's positive control (Logbook 123). It grades the stage-2 answer on
+the wiring it was fitted on, with independent noise and with slow noise at timescales 0.25, 2, 8.7,
+30, 100 and 300 s, on the same animals. It passes when the roaming speed's 90th percentile rises by
+at least 3 band scales above its value at 0.25 s at some timescale, and at 0.25 s every kinematics
+statistic is within 2 band scales of independent noise.
+
 Seeds: the restarts at 40,000,000 + 200·(20,000·r + 16·(n - 1) + m) + i; the warm restart at
 55,000,000 + 200·(16·(n - 1) + m) + i; the grading at 52,000,000 + 200·g + i, every restart on the same five
 populations and its mutants on their wild type's animals; the cost pilot at 53,000,000; the feasibility check at 54,000,000; the
@@ -71,7 +77,9 @@ trajectory at 63,000,000 + 200·(2g + q) + i; the restarts' trajectories at 64,0
 68,000,000 and its trajectory at 69,000,000; the existence tests at 70,000,000 and 70,100,000; the
 third pilot at 71,000,000 and its trajectory at 72,000,000; the staged pilot's stage 1 at 73,000,000
 (trajectory 74,000,000) and stage 2 at 75,000,000 (trajectory 76,000,000); stage 2's resumed
-generations 151-500 at 80,000,000 + 200·(k - 2,400) + i and their checkpoints at 82,000,000.
+generations 151-500 at 80,000,000 + 200·(k - 2,400) + i and their checkpoints at 82,000,000; the
+stage-2 answer's diagnoses at 88,000,000, 88,200,000 and 88,299,999; the speed-noise control at
+88,100,000.
 
 Usage::
 
@@ -84,6 +92,7 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py pilot-staged
     uv run python scripts/analysis/c2_encoder_probe.py stage2-anyway
     uv run python scripts/analysis/c2_encoder_probe.py stage2-extend
+    uv run python scripts/analysis/c2_encoder_probe.py speed-noise
     uv run python scripts/analysis/c2_encoder_probe.py sizing
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
@@ -98,6 +107,7 @@ import cProfile
 import functools
 import itertools
 import json
+import math
 import os
 import pstats
 import sys
@@ -239,6 +249,27 @@ UNCOMPRESSED_PILOT_PATH = SUPPORT / "readiness" / "pilot_uncompressed.json"
 REDUCED_PATH = SUPPORT / "readiness" / "reduced.json"
 LOG_PILOT_PATH = SUPPORT / "readiness" / "pilot_logbox.json"
 STAGED_PILOT_PATH = SUPPORT / "readiness" / "pilot_staged.json"
+SPEED_NOISE_PATH = (
+    _REPO
+    / "docs"
+    / "experiments"
+    / "logbooks"
+    / "supporting"
+    / "123-c2-speed-noise"
+    / "positive_control.json"
+)
+# The stage-2 answer's diagnoses (Logbook 123's supporting records), each read once: its variants on
+# 200 animals, its actions on four episodes, and its runs moved mid-range (one reference episode
+# and 200 animals). Declared so no stage reuses them.
+DIAGNOSIS_BLOCKS = ((88_000_000, 88_000_200), (88_200_000, 88_200_004), (88_299_999, 88_300_200))
+# Slow speed noise's positive control: the stage-2 answer on its own wiring, one population, the
+# same animals at every timescale and with independent noise.
+SPEED_NOISE_BASE = 88_100_000
+SPEED_NOISE_TAUS_S = (0.25, 2.0, math.sqrt(0.25 * 300.0), 30.0, 100.0, 300.0)
+# The bar: the roaming speed's 90th percentile rises by this many band scales at some timescale,
+# and at the shortest every kinematics statistic is within this many of independent noise.
+SPEED_NOISE_RISE_SCALES = 3.0
+SPEED_NOISE_NESTED_SCALES = 2.0
 
 
 # ---------------------------------------------------------------------------------------------
@@ -246,6 +277,8 @@ STAGED_PILOT_PATH = SUPPORT / "readiness" / "pilot_staged.json"
 # ---------------------------------------------------------------------------------------------
 
 _BRAINS: dict[tuple[Any, ...], Any] = {}
+# Brain settings a stage applies to every brain this process builds, part of the cache key.
+_BRAIN_SETTINGS: dict[str, Any] = {}
 
 
 def encoded_brain(genes: tuple[str, ...] = (), **overrides: object) -> Any:  # noqa: ANN401 - a brain
@@ -254,11 +287,12 @@ def encoded_brain(genes: tuple[str, ...] = (), **overrides: object) -> Any:  # n
     Built once and reused: a candidate's vector is written into it, and the reused brain acts as a
     fresh build with that vector does.
     """
-    key = (genes, tuple(sorted(overrides.items())))
+    merged = {**_BRAIN_SETTINGS, **overrides}
+    key = (genes, tuple(sorted((k, repr(v)) for k, v in merged.items())))
     if key not in _BRAINS:
         path = FORAGING / f"{bg.ARMS[ARM]}_assay_scheer_lawn.yml"
         settings = {"modulator_knockout_genes": list(genes), "encoder_modulator_tying": TYING}
-        brain, _, _ = harness.build_brain(path, BRAIN_SEED, {**settings, **overrides})
+        brain, _, _ = harness.build_brain(path, BRAIN_SEED, {**settings, **merged})
         _BRAINS[key] = brain
     return _BRAINS[key]
 
@@ -284,11 +318,11 @@ def layer_spec() -> Any:  # noqa: ANN401 - a layer spec
 
 
 @functools.cache
-def entries() -> list[Any]:
-    """Return the encoder's parameter table at this probe's tying."""
+def entries(*, speed_noise: bool = False) -> list[Any]:
+    """Return the encoder's parameter table at this probe's tying, with or without slow noise."""
     from quantumnematode.connectome import encoder as enc
 
-    return enc.encoder_entries(layer_spec(), TYING)
+    return enc.encoder_entries(layer_spec(), TYING, speed_noise=speed_noise)
 
 
 def population_seeds(base: int, k: int) -> list[int]:
@@ -1580,6 +1614,74 @@ def _write(path: Path, record: Any) -> None:  # noqa: ANN401 - any JSON-shaped r
     path.write_text(json.dumps(nr._finite(record), indent=2, allow_nan=False) + "\n")
 
 
+def _speed_noise_point(tau_s: float | None) -> dict[str, Any]:
+    """Grade the stage-2 answer on its own wiring with slow speed noise at ``tau_s``, or without."""
+    staged = json.loads(STAGED_PILOT_PATH.read_text())
+    z = list(staged["stage2_extended"]["answer"])
+    _BRAIN_SETTINGS["sign_override_exclude"] = ["lopezcruz2019"]
+    if tau_s is not None:
+        _BRAIN_SETTINGS["encoder_speed_noise"] = "ou"
+        z.append(entries(speed_noise=True)[-1].unit(tau_s))
+    seeds = [SPEED_NOISE_BASE + i for i in range(ANIMALS)]
+    return {"tau_s": tau_s, "graded": grade_seeds(z, seeds)}
+
+
+def _speed_noise_control(workers: int) -> int:
+    """Grade the stage-2 answer at each timescale and read the positive control's bar."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    points: list[float | None] = [None, *SPEED_NOISE_TAUS_S]
+    with ProcessPoolExecutor(max_workers=min(workers, len(points))) as pool:
+        graded = list(pool.map(_speed_noise_point, points))
+    bands = bg.load_bands_v3()
+    scales = {k: v["scale"] for k, v in bands["bands"][str(ANIMALS)]["kinematics"].items()}
+
+    def kinematics(row: dict[str, Any]) -> dict[str, float]:
+        return {k: v["value"] for k, v in row["graded"]["families"]["kinematics"].items()}
+
+    independent, *slow = graded
+    shortest = kinematics(slow[0])
+    rise = {
+        str(row["tau_s"]): (kinematics(row)["roaming_speed_p90"] - shortest["roaming_speed_p90"])
+        / scales["roaming_speed_p90"]
+        for row in slow
+    }
+    nested = {
+        name: abs(shortest[name] - value) / scales[name]
+        for name, value in kinematics(independent).items()
+    }
+    best = max(rise, key=lambda tau: rise[tau])
+    record = {
+        "description": (
+            "Description: slow speed noise's positive control. C.2's stage-2 answer on the wiring it "
+            "was fitted on (the López-Cruz overrides excluded), graded with presence and the mutants "
+            f"on {ANIMALS} animals of seed block {SPEED_NOISE_BASE:,}, the same animals with "
+            "independent noise and at each timescale. It passes when the roaming speed's 90th "
+            f"percentile rises by at least {SPEED_NOISE_RISE_SCALES:g} band scales above its value "
+            "at the shortest timescale at some timescale, and at the shortest every kinematics "
+            f"statistic is within {SPEED_NOISE_NESTED_SCALES:g} band scales of independent noise."
+        ),
+        "seeds": f"{SPEED_NOISE_BASE:,} + i, i < {ANIMALS}",
+        "taus_s": list(SPEED_NOISE_TAUS_S),
+        "roaming_p90_rise_scales": rise,
+        "best_tau_s": float(best),
+        "dwelling_p90_at_best": kinematics(slow[[str(r["tau_s"]) for r in slow].index(best)])[
+            "dwelling_speed_p90"
+        ],
+        "nested_scales": nested,
+        "passes_rise": rise[best] >= SPEED_NOISE_RISE_SCALES,
+        "passes_nested": all(v <= SPEED_NOISE_NESTED_SCALES for v in nested.values()),
+        "points": graded,
+    }
+    record["passes"] = bool(record["passes_rise"] and record["passes_nested"])
+    SPEED_NOISE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SPEED_NOISE_PATH.write_text(json.dumps(nr._finite(record), indent=2, allow_nan=False) + "\n")
+    print(
+        json.dumps({k: record[k] for k in ("roaming_p90_rise_scales", "nested_scales", "passes")}),
+    )
+    return 0 if record["passes"] else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: the cost pilot, the feasibility check, the readiness probe, its reading, a smoke."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -1595,6 +1697,7 @@ def main(argv: list[str] | None = None) -> int:
             "pilot-staged",
             "stage2-anyway",
             "stage2-extend",
+            "speed-noise",
             "sizing",
             "readiness",
             "read",
@@ -1613,6 +1716,7 @@ def main(argv: list[str] | None = None) -> int:
         "pilot-staged": lambda: _staged_pilot(args.workers),
         "stage2-anyway": lambda: _stage2_anyway(args.workers),
         "stage2-extend": lambda: _extend_stage2(args.workers),
+        "speed-noise": lambda: _speed_noise_control(args.workers),
         "sizing": _sizing,
         "readiness": lambda: _readiness(args.workers),
         "read": _read,

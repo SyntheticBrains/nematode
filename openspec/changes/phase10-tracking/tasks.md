@@ -761,6 +761,14 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     excitatory. Every W arm inherits them; a null's moved edges carry them. The 13 untested inputs stay
     on the rule, a stated limit. The planned held-out perturbation family (López-Cruz's cell-level rows)
     grades against this wiring.
+  - *(Added 2026-11-04; Logbook 123.)* **Slow speed noise is built** (`encoder_speed_noise: ou`), and **the stage-2
+    answer does not run.** Its speed output is pinned at zero and its curvature at the maximum, so every behaviour
+    passes through the reversal hazard (reversals 30–47% of seconds). W would compare wirings through that one
+    channel. The next change fixes the run mode first (each output's pre-squash range reported, speed and
+    curvature kept responsive, a stage 1 that holds the lawn by running slowly), then re-runs slow noise's
+    positive control on a fit whose speed responds, then the readiness restarts. Slow noise comes from outside
+    the network, so every W arm gets the same handle on the kinematics family; W's registration reads that
+    family with this in mind.
   - **Still to build:** the class-preserving left–right-symmetric null. *(The loader guard landed
     with PR #514's review: a brain config its own class refuses now fails at load, rather than
     loading as another class's fields on defaults.)*

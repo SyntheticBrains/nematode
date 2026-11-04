@@ -91,6 +91,10 @@ _NOISE_RANGE = (-4.0, 1.0)
 _SIGNED_STRENGTH_RANGE = (-3.0, 3.0)
 _FIXED_STRENGTH_RANGE = (0.001, 3.0)
 _TIMESCALE_RANGE_S = (10.0, 3000.0)
+# The speed noise's timescale: at a 1-s step its lower end is independent noise (rho 0.018) and its
+# upper end 0.997; the longest stays below every assay phase.
+_SPEED_NOISE_TIMESCALE_RANGE_S = (0.25, 300.0)
+SPEED_NOISE_ENTRY = "timescale.speed_noise"
 
 
 @dataclass(frozen=True)
@@ -147,8 +151,17 @@ def _tied_name(spec: LayerSpec, index: int) -> str:
     return f"{kind}.{spec.ligands[row.ligand]}"
 
 
-def encoder_entries(spec: LayerSpec, tying: Tying = "per_couple") -> list[EncoderEntry]:
-    """Return every encoder parameter, in the fixed order a vector carries them."""
+def encoder_entries(
+    spec: LayerSpec,
+    tying: Tying = "per_couple",
+    *,
+    speed_noise: bool = False,
+) -> list[EncoderEntry]:
+    """Return every encoder parameter, in the fixed order a vector carries them.
+
+    With ``speed_noise`` the speed noise's timescale is appended last, so a vector without it is a
+    prefix of one with it.
+    """
     entries = [
         EncoderEntry(f"wiring.{name}", "wiring", *_WIRING_RANGE)
         for name in ("excitatory", "inhibitory", "gap")
@@ -187,27 +200,48 @@ def encoder_entries(spec: LayerSpec, tying: Tying = "per_couple") -> list[Encode
         EncoderEntry(f"timescale.{pool}", "timescale", *_TIMESCALE_RANGE_S, kind="log")
         for pool in TIMESCALE_POOLS
     ]
+    if speed_noise:
+        entries.append(
+            EncoderEntry(
+                SPEED_NOISE_ENTRY,
+                "timescale",
+                *_SPEED_NOISE_TIMESCALE_RANGE_S,
+                kind="log",
+            ),
+        )
     return entries
 
 
-def encoder_parameters(spec: LayerSpec, tying: Tying = "per_couple") -> list[str]:
+def encoder_parameters(
+    spec: LayerSpec,
+    tying: Tying = "per_couple",
+    *,
+    speed_noise: bool = False,
+) -> list[str]:
     """Return the encoder parameters' names, in the order a vector carries them."""
-    return [entry.name for entry in encoder_entries(spec, tying)]
+    return [entry.name for entry in encoder_entries(spec, tying, speed_noise=speed_noise)]
 
 
-def box_centre(spec: LayerSpec, tying: Tying = "per_couple") -> np.ndarray:
+def box_centre(
+    spec: LayerSpec,
+    tying: Tying = "per_couple",
+    *,
+    speed_noise: bool = False,
+) -> np.ndarray:
     """Return the unit box's centre, every coordinate 0.5."""
-    return np.full(len(encoder_entries(spec, tying)), 0.5)
+    return np.full(len(encoder_entries(spec, tying, speed_noise=speed_noise)), 0.5)
 
 
 def tax4_vector(
     spec: LayerSpec,
     z: Sequence[float] | np.ndarray,
     tying: Tying = "per_couple",
+    *,
+    speed_noise: bool = False,
 ) -> np.ndarray:
     """Return a vector's tax-4 encoding: the tax-4 classes' sensory gains at 0, all else kept."""
     out = np.asarray(z, dtype=np.float64).copy()
-    for k, entry in enumerate(encoder_entries(spec, tying)):
+    for k, entry in enumerate(encoder_entries(spec, tying, speed_noise=speed_noise)):
         if entry.block == "sensory" and entry.name.split(".")[1] in TAX4_CLASSES:
             out[k] = entry.unit(0.0)
     return out
@@ -320,21 +354,25 @@ class CompactEncoder(nn.Module):
     group_fixed: torch.Tensor
     monoamine_mask: torch.Tensor
     timescales_s: torch.Tensor
+    speed_noise_timescale_s: torch.Tensor
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - the topology's wiring, its layer, the tying and the option
         self,
         connectome: Connectome,
         neuron_index: Mapping[str, int],
         chem_sign: torch.Tensor,
         spec: LayerSpec,
         tying: Tying = "per_couple",
+        *,
+        speed_noise: bool = False,
     ) -> None:
         super().__init__()
         n = len(neuron_index)
         self.n_neurons = n
         self.tying: Tying = tying
         self.spec = spec
-        self.entries = encoder_entries(spec, tying)
+        self.speed_noise = speed_noise
+        self.entries = encoder_entries(spec, tying, speed_noise=speed_noise)
         counts = np.zeros((n, n), dtype=np.float64)
         for syn in connectome.chemical_synapses:
             counts[neuron_index[syn.pre], neuron_index[syn.post]] = float(syn.weight)
@@ -386,6 +424,11 @@ class CompactEncoder(nn.Module):
         monoamine = [name in MONOAMINES for name in spec.ligands]
         self.register_buffer("monoamine_mask", torch.tensor(monoamine, dtype=torch.bool))
         self.register_buffer("timescales_s", torch.full((2,), 60.0))
+        if speed_noise:
+            # Registered only with the option, so a default encoder's state is unchanged. Held, not
+            # learned: a learned timescale would change what each stored previous step means.
+            centre = self.entries[-1].value(0.5)
+            self.register_buffer("speed_noise_timescale_s", torch.tensor(centre))
 
     def chemical(self) -> torch.Tensor:
         """Return the ``(N, N)`` chemical weights, indexed ``[pre, post]``."""
@@ -425,6 +468,12 @@ class CompactEncoder(nn.Module):
         timescale = torch.where(self.monoamine_mask, self.timescales_s[0], self.timescales_s[1])
         return np.exp(-step_seconds / timescale.cpu().double().numpy()).astype(np.float32)
 
+    def speed_noise_rho(self, step_seconds: float) -> float | None:
+        """Return the speed noise's per-step correlation, ``exp(-step / timescale)``, or None."""
+        if not self.speed_noise:
+            return None
+        return math.exp(-step_seconds / float(self.speed_noise_timescale_s))
+
     def own_parameters(self) -> list[nn.Parameter]:
         """Return the learnable tensors this module holds."""
         params = [self.wiring, self.unsigned, self.sensory]
@@ -452,7 +501,8 @@ def write_encoder(brain: object, z: Sequence[float] | np.ndarray) -> None:
     """Write a unit-box vector into an encoded connectome brain, in place.
 
     The encoder, the topology's readout, readout bias, log-SDs and modulator strengths take the
-    vector's values, and the brain's per-step ligand decay follows the two timescales.
+    vector's values, and the brain's per-step ligand decay follows the two timescales; with slow
+    speed noise, its per-step correlation follows the speed noise's timescale.
     """
     topology = brain.topology  # type: ignore[attr-defined]
     encoder: CompactEncoder = topology.encoder
@@ -496,7 +546,11 @@ def write_encoder(brain: object, z: Sequence[float] | np.ndarray) -> None:
         encoder.timescales_s.copy_(
             torch.tensor(values[cursor : cursor + len(TIMESCALE_POOLS)], dtype=torch.float32),
         )
-    brain._modulator_decay = encoder.decay(brain.config.modulator_step_seconds)  # type: ignore[attr-defined]  # noqa: SLF001 - the brain's own decay
+        if encoder.speed_noise:
+            encoder.speed_noise_timescale_s.copy_(torch.tensor(values[-1], dtype=torch.float32))
+    step = brain.config.modulator_step_seconds  # type: ignore[attr-defined]
+    brain._modulator_decay = encoder.decay(step)  # type: ignore[attr-defined]  # noqa: SLF001 - the brain's own decay
+    brain._speed_noise_rho = encoder.speed_noise_rho(step)  # type: ignore[attr-defined]  # noqa: SLF001 - the brain's own correlation
 
 
 def read_encoder(brain: object) -> np.ndarray:
@@ -524,6 +578,8 @@ def read_encoder(brain: object) -> np.ndarray:
             strengths,
             encoder.timescales_s,
         ]
+        if encoder.speed_noise:
+            parts.append(encoder.speed_noise_timescale_s.reshape(1))
         values = np.concatenate([p.detach().cpu().double().numpy().ravel() for p in parts])
     return np.array(
         [entry.unit(float(v)) for entry, v in zip(encoder.entries, values, strict=True)],

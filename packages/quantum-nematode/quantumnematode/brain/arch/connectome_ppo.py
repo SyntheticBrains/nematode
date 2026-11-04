@@ -61,9 +61,14 @@ from quantumnematode.brain.arch._policy import (
     continuous_action_dim,
     continuous_deterministic_action,
     continuous_sample_tanh_gaussian,
+    continuous_sample_tanh_gaussian_ou,
     raise_on_speed_sign_mismatch,
 )
-from quantumnematode.brain.arch._ppo_buffer import ChunkedRolloutBuffer, RolloutBuffer
+from quantumnematode.brain.arch._ppo_buffer import (
+    ChunkedRolloutBuffer,
+    PreviousStep,
+    RolloutBuffer,
+)
 from quantumnematode.brain.arch._ppo_stabilisers import (
     PPOStabiliserConfig,
     reapply_adam,
@@ -258,6 +263,8 @@ def boundary_neurons(
 # the two widths consume identical randomness and start from the same policy; see
 # `_expand_over_motor_pool`. Default "pooled" is byte-identical to the pre-option brain.
 ReadoutWidth = Literal["pooled", "per_neuron"]
+# The speed output's noise under the encoder: independent each step, or slow (see the config).
+SpeedNoise = Literal["none", "ou"]
 SynapseSignModel = Literal["random", "atlas", "per_connection"]
 # How the chemical weights are drawn, which decides what two wirings hold in common at the same
 # seed. The scale rule (``weight_init``) is orthogonal: this setting chooses the draw's STRUCTURE.
@@ -581,6 +588,12 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
     # The encoder only. "per_couple" gives each data-layer row its own strength; "per_ligand" ties
     # them by ligand, a ligand's fixed-sign and fitted rows each sharing one.
     encoder_modulator_tying: Tying = "per_couple"
+    # The speed output's noise under the encoder. "none" draws it independently each step, as every
+    # other output's is. "ou" makes its standardised noise an Ornstein-Uhlenbeck process,
+    # x_t = rho x_{t-1} + sqrt(1 - rho^2) eps_t with rho = exp(-step / tau), reusing each step's
+    # draw; tau is the encoder's last parameter, held under PPO, and PPO scores the speed by its
+    # exact conditional density given the previous step. Default "none" is byte-identical.
+    encoder_speed_noise: SpeedNoise = "none"
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
@@ -621,6 +634,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
             _freeze_wiring_refusal,
             _modulators_refusal,
             _encoder_refusal,
+            _speed_noise_refusal,
             _sign_override_refusal,
         ):
             if (refusal := refusal_of(self)) is not None:
@@ -1264,6 +1278,23 @@ def _encoder_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return None
 
 
+def _speed_noise_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why slow speed noise cannot run here, or ``None`` when it can.
+
+    Its timescale is the compact encoder's last parameter, and the encoder fixes everything else
+    it needs: settling dynamics, continuous primitives, a state-independent std and no activity
+    traces.
+    """
+    if config.encoder_speed_noise not in ("none", "ou"):
+        return f"Unsupported encoder_speed_noise: {config.encoder_speed_noise!r}"
+    if config.encoder_speed_noise != "none" and config.encoder != "compact":
+        return (
+            "encoder_speed_noise is read only with encoder='compact': its timescale is the "
+            "encoder's last parameter."
+        )
+    return None
+
+
 def _encoder_step_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     """Return why the encoder cannot run at this modulator step, or ``None`` when it can.
 
@@ -1322,7 +1353,10 @@ def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
         raise ValueError(refusal)
     if (refusal := _gap_coupling_refusal(config)) is not None:
         raise ValueError(refusal)
-    if (refusal := _encoder_refusal(config) or _encoder_step_refusal(config)) is not None:
+    refusal = (
+        _encoder_refusal(config) or _speed_noise_refusal(config) or _encoder_step_refusal(config)
+    )
+    if refusal is not None:
         raise ValueError(refusal)
 
 
@@ -2362,7 +2396,13 @@ class ConnectomeTopology(nn.Module):
         )
         self.modulator_layer_w = nn.Parameter(torch.zeros(len(fitted), device=device))
 
-    def attach_encoder(self, connectome: Connectome, tying: Tying) -> None:
+    def attach_encoder(
+        self,
+        connectome: Connectome,
+        tying: Tying,
+        *,
+        speed_noise: bool = False,
+    ) -> None:
         """Fix the wiring from data and hand the policy to the compact encoder.
 
         Built on this topology's own wiring and signs, and drawing no random number. The drawn
@@ -2379,6 +2419,7 @@ class ConnectomeTopology(nn.Module):
             cast("torch.Tensor", self.chem_sign),
             self.modulator_spec,
             tying,
+            speed_noise=speed_noise,
         ).to(device)
         self.readout_bias = nn.Parameter(torch.zeros(self.readout.shape[0], device=device))
         unread = [self.w_chem, self.food_gains]
@@ -4009,12 +4050,24 @@ class ConnectomePPOBrain(ClassicalBrain):
                 else 1.0
             )
         )
+        # The speed noise's per-step correlation, set by the encoder's write; None is independent
+        # noise. Its state is the previous step's standardised speed noise, pre-squash speed and
+        # state, kept for the next step's draw and for PPO's conditional density.
+        self._speed_noise_rho: float | None = None
+        self._speed_noise_x: torch.Tensor | None = None
+        self._previous_speed: float | None = None
+        self._previous_state: np.ndarray | None = None
+        self._pending_previous: PreviousStep | None = None
         if self._encoded:
             # Before the rule is built, so its optimiser holds the encoder's parameters; written at
             # the unit box's centre, so a fresh encoded brain does not depend on its seed.
             tying = config.encoder_modulator_tying
-            self.topology.attach_encoder(connectome, tying)
-            write_encoder(self, box_centre(self.topology.modulator_spec, tying))
+            speed_noise = config.encoder_speed_noise == "ou"
+            self.topology.attach_encoder(connectome, tying, speed_noise=speed_noise)
+            write_encoder(
+                self,
+                box_centre(self.topology.modulator_spec, tying, speed_noise=speed_noise),
+            )
 
         # Learning rule: owns the critic (constructed inside the rule at this
         # exact point — same torch-RNG draw order as the pre-extraction
@@ -4538,12 +4591,31 @@ class ConnectomePPOBrain(ClassicalBrain):
         to physical units. The chemical strict-mask / gap junctions are upstream of
         the readout and unaffected.
         """
-        action_vec, log_prob, _entropy, pre_tanh = continuous_sample_tanh_gaussian(
-            mean,
-            log_std,
-            self._action_low,
-            self._action_high,
-        )
+        if self._speed_noise_rho is None:
+            action_vec, log_prob, _entropy, pre_tanh = continuous_sample_tanh_gaussian(
+                mean,
+                log_std,
+                self._action_low,
+                self._action_high,
+            )
+        else:
+            action_vec, log_prob, _entropy, pre_tanh, noise = continuous_sample_tanh_gaussian_ou(
+                mean,
+                log_std,
+                self._action_low,
+                self._action_high,
+                self._speed_noise_x,
+                self._speed_noise_rho,
+            )
+            # The previous step, for PPO's conditional density; an episode's first step has none.
+            self._pending_previous = (
+                PreviousStep(0.0, np.zeros_like(state), live=False)
+                if self._previous_state is None or self._previous_speed is None
+                else PreviousStep(self._previous_speed, self._previous_state, live=True)
+            )
+            self._speed_noise_x = noise
+            self._previous_speed = float(pre_tanh[0])
+            self._previous_state = state
         continuous_action = tuple(float(v) for v in action_vec.tolist())
         with torch.no_grad():
             mean_vec = continuous_deterministic_action(mean, self._action_low, self._action_high)
@@ -4622,6 +4694,15 @@ class ConnectomePPOBrain(ClassicalBrain):
                     done=episode_done,
                     start_state=self._pending_start_state,
                 )
+            elif self._speed_noise_rho is None:
+                self.buffer.add(
+                    state=self._pending_state,
+                    action=self._pending_action,
+                    log_prob=self._pending_log_prob,
+                    value=self._pending_value,
+                    reward=reward,
+                    done=episode_done,
+                )
             else:
                 self.buffer.add(
                     state=self._pending_state,
@@ -4630,6 +4711,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     value=self._pending_value,
                     reward=reward,
                     done=episode_done,
+                    previous=self._pending_previous,
                 )
 
         min_experience = self.config.num_minibatches
@@ -4650,6 +4732,7 @@ class ConnectomePPOBrain(ClassicalBrain):
                     unpack_modulators=self._unpack_modulators,
                     last_value=self.last_value,
                     chunk_length=self.config.bptt_chunk_length if self._leaky else None,
+                    speed_noise_rho=self._speed_noise_rho,
                 ),
             )
             # House PPO telemetry convention: record the mean policy loss
@@ -4756,6 +4839,11 @@ class ConnectomePPOBrain(ClassicalBrain):
             all_components["training_state"].state["encoder_modulator_tying"] = (
                 self.config.encoder_modulator_tying
             )
+            if self.config.encoder_speed_noise != "none":
+                # Recorded only off the default, so an encoded brain saves what it did before.
+                all_components["training_state"].state["encoder_speed_noise"] = (
+                    self.config.encoder_speed_noise
+                )
         if self.config.gap_normalisation != "degree":
             # Recorded only off the default, so a default brain saves exactly what it did before
             # the option existed. A mismatch on load is refused by the gap-matrix wiring check.
@@ -4823,6 +4911,24 @@ class ConnectomePPOBrain(ClassicalBrain):
         "plasticity_plastic_readout",
         "plasticity_plastic_tensors",
     )
+
+    def _reject_speed_noise_mismatch(self, components: dict[str, WeightComponent]) -> None:
+        """Refuse weights saved under the other speed-noise mode.
+
+        Slow noise changes what the policy's speed output means, and PPO's density with it, so a
+        file saved with independent noise does not load into a slow-noise brain or the reverse. A
+        file that records nothing was saved with independent noise.
+        """
+        if "training_state" not in components:
+            return
+        saved = components["training_state"].state.get("encoder_speed_noise", "none")
+        if saved != self.config.encoder_speed_noise:
+            msg = (
+                f"These weights were saved with encoder_speed_noise={saved!r}, and this brain has "
+                f"{self.config.encoder_speed_noise!r}: the speed output's noise, and PPO's density "
+                "for it, differ between the two."
+            )
+            raise ValueError(msg)
 
     def _reject_gap_coupling_mismatch(self, components: dict[str, WeightComponent]) -> None:
         """Refuse weights saved under the other form of gap coupling.
@@ -4962,12 +5068,16 @@ class ConnectomePPOBrain(ClassicalBrain):
         raise_on_std_mode_mismatch(components, state_dependent=self.topology.state_dependent_std)
         self._reject_plasticity_identity_mismatch(components)
         self._reject_gap_coupling_mismatch(components)
+        self._reject_speed_noise_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
             self._load_topology_state(topology_state)
             if self.topology.encoder is not None:
-                # The decay follows the loaded timescales.
+                # The decay and the speed noise's correlation follow the loaded timescales.
                 self._modulator_decay = self.topology.encoder.decay(
+                    self.config.modulator_step_seconds,
+                )
+                self._speed_noise_rho = self.topology.encoder.speed_noise_rho(
                     self.config.modulator_step_seconds,
                 )
         if self._ppo_rule is not None:
@@ -4999,6 +5109,10 @@ class ConnectomePPOBrain(ClassicalBrain):
         self.topology.reset_traces()
         self.topology.reset_membrane()
         self._concentrations = np.zeros(self._n_concentrations, dtype=np.float32)
+        # The speed noise restarts with the episode: its first draw is independent.
+        self._speed_noise_x = None
+        self._previous_speed = None
+        self._previous_state = None
         # Separate from the trace reset: the rule's load-time reset also clears the traces,
         # and a load must restart the perturbation schedule rather than advance it.
         self.topology.advance_schedule()

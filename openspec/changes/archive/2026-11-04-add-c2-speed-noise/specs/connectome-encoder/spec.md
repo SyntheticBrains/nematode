@@ -47,15 +47,26 @@ start; the other outputs SHALL keep independent noise; and the encoder SHALL app
 - **THEN** the brain SHALL refuse it, naming the setting
 - **AND** a weight file recorded under the other speed-noise mode SHALL be refused on load
 
-### Requirement: The slow noise reaches the window statistics
+### Requirement: The slow noise is shown to reach the window statistics before it is relied on
 
-Before the readiness restarts use it, a probe SHALL grade the stage-2 answer on the wiring it was
-fitted on at τ ∈ {0.25, 2, 8.7, 30, 100, 300} s, on 200 animals of seed block 88,100,000.
+The positive control SHALL grade an answer with independent noise and with slow noise at τ ∈ {0.25, 2,
+8.7, 30, 100, 300} s on the same 200 animals, and SHALL be met before the readiness restarts rely on
+slow noise. It is read only on an answer whose speed output responds: one whose speed output's
+pre-squash median over a reference episode lies within ±2, where the squash is not flat. On the
+stage-2 answer, whose speed output's median is −3.9, it was run as first registered and failed; that
+reading SHALL be reported as failed, and the control SHALL be re-run on the first fit whose speed
+output responds.
 
-#### Scenario: The positive control
+#### Scenario: The positive control on a responsive answer
 
-- **WHEN** the sweep is graded
+- **WHEN** the sweep is graded on an answer whose speed output responds
 - **THEN** the roaming speed's 90th percentile SHALL rise by at least 3 band scales above its value at
   τ = 0.25 at some τ, with the dwelling speed's 90th percentile at that τ reported beside it
 - **AND** at τ = 0.25 every kinematics statistic SHALL equal the independent model's, on the same
   seeds, within twice its band scale
+
+#### Scenario: An answer whose speed is pinned cannot carry it
+
+- **WHEN** an answer's speed output's pre-squash median lies outside ±2
+- **THEN** the control's reading on it SHALL be reported as failed, not passed and not re-read, with
+  the speed output's median beside it

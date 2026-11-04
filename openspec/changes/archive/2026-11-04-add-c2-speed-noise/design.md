@@ -86,6 +86,8 @@ Each is refused in the validator, and again at construction through one shared r
 
 The sweep shows the mechanism reaches the window statistics. It is not a fit.
 
+**Outcome (2026-11-04, Logbook 123).** On the stage-2 answer the control failed: no timescale moved the roaming speed's 90th percentile by more than 0.06 band scales. That answer's speed output is pinned at zero speed (pre-squash median −3.9) and its curvature at the maximum (+9.5); its worm moves only by reversals and delta turns, so no speed noise reaches it. A descriptive check with both outputs moved mid-range showed the mechanism does reach the window statistics. The control is therefore re-run on the first fit whose speed output responds, before the readiness restarts rely on slow noise, and the requirement says so.
+
 ### D8. Parity and identity
 
 - With slow noise off, `connectome_identity_check.py` must show every job identical. `BatchedMLP`'s sampling path is untouched.

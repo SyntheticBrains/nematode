@@ -1,0 +1,15 @@
+raw speed action (sampled): pct [-1.    -1.    -0.999 -0.996 -0.961]
+raw speed mean (squashed):   pct [-1.    -0.999 -0.999 -0.999 -0.998]
+speed mm/s = (raw+1)/2*0.2:  median 0.0001
+raw curvature:               pct [1. 1. 1. 1. 1.]
+primitive shares: {np.str_('delta'): 0.16, np.str_('omega'): 0.003, np.str_('reversal'): 0.473, np.str_('run'): 0.364}
+pre-squash mean per output: pct 5/50/95
+  speed      [-4.34 -3.87 -3.59]
+  curvature  [ 4.89  7.37 11.72]
+  reversal   [-1.75  1.77  3.67]
+  omega      [-4.04 -3.03 -2.25]
+  delta      [-3.49 -2.51 -2.1 ]
+  pool VB [-0.916 -0.696 -0.576]
+  pool DB [-0.987 -0.887 -0.773]
+  pool VA [-0.959 -0.177  0.2  ]
+  pool DA [-0.99  -0.489 -0.105]
