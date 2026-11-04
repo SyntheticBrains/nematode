@@ -1,0 +1,15 @@
+{
+  "description": "Description: one D_fit simulation of the encoded brain in one process and one thread, the settling's tanh taken by torch and by NumPy's float32 kernel, alternated twice.",
+  "seconds": {
+    "numpy": [
+      9.949,
+      9.867
+    ],
+    "torch": [
+      12.018,
+      11.948
+    ]
+  },
+  "speedup": 1.211,
+  "statistics_differing": []
+}

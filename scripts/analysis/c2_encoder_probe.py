@@ -47,7 +47,8 @@ registered ranking score (CMA 5990); it passes as the second pilot does. Stage 1
 answer of any fit (score 10.0, 0.34 of the assay on the lawn) without holding the lawn at 0.75;
 **stage2-anyway** runs stage 2 from it regardless, recorded as a deviation from that rule; it held
 the lawn (0.99 of the assay on it, score 4.1 at generation 125). **stage2-extend** resumes it to
-500 generations to see where it converges.
+500 generations to see where it converges. **sizing** writes the W sizing record from the cost
+pilot and the staged pilot.
 
 **readiness** runs up to 3 sep-CMA restarts (CMA 5980-5982) from the box centre on v3's ranking
 score against the band centres on D_fit's families, one after another, stopping once 2 are ready.
@@ -83,6 +84,7 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py pilot-staged
     uv run python scripts/analysis/c2_encoder_probe.py stage2-anyway
     uv run python scripts/analysis/c2_encoder_probe.py stage2-extend
+    uv run python scripts/analysis/c2_encoder_probe.py sizing
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
@@ -1417,6 +1419,70 @@ def _read() -> int:
     return 0
 
 
+# W's arms as planned: the wild type and five nulls; and its planned draws per arm.
+W_ARMS = 6
+W_DRAWS = (8, 16)
+
+
+def _sizing() -> int:
+    """Write the W sizing record from the cost pilot and the staged pilot: measured, and not yet.
+
+    The readiness restarts did not run, so the restart-to-restart spread, the tying and the
+    generations a fit needs to converge are not measured; the record says so beside what is.
+    """
+    cost = json.loads(COST_PATH.read_text())
+    staged = json.loads(STAGED_PILOT_PATH.read_text())
+    root = BUILD / "readiness" / "staged"
+    pace = {
+        stage: float(np.median(json.loads((root / stage / "fit0.json").read_text())["seconds"]))
+        for stage in ("stage1", "stage2")
+    }
+    extended = staged["stage2_extended"]
+    fit_hours = {
+        f"stage2_to_{cap}": (PILOT_CAP * pace["stage1"] + cap * pace["stage2"]) / 3600.0
+        for cap in (STAGE2_EXTENDED_CAP, CAP)
+    }
+    record = {
+        "description": DESCRIPTION + " What F.0b-ii's and W's registrations are sized from.",
+        "measured": {
+            "cost_pilot_generation_seconds": {
+                "d_fit_assays": cost["fit"]["generations"][-1]["wall_seconds"],
+                "all_four_assays": cost["all"]["generations"][-1]["wall_seconds"],
+            },
+            "staged_fit_generation_seconds": pace,
+            "compute_path": cost["compute_path"],
+            "compute_path_decision": "CPU: MPS speeds only the settling, and the rest of a "
+            "simulation would then run serially in one process",
+            "staged_fit": {
+                "stage1_generations": PILOT_CAP,
+                "stage2_generations": STAGE2_EXTENDED_CAP,
+                "stage2_best_generation": extended["best_generation"],
+                "stage2_best_answer_score": extended["best_answer_score"],
+                "converged_by_cap": extended["converged_generation"] < STAGE2_EXTENDED_CAP,
+            },
+            "hours_per_staged_fit": fit_hours,
+        },
+        "projection_hours_for_w": {
+            f"{W_ARMS}_arms_x_{draws}_draws": {
+                key: W_ARMS * draws * hours for key, hours in fit_hours.items()
+            }
+            for draws in W_DRAWS
+        },
+        "not_measured": [
+            "the generations a staged fit needs to converge (stage 2 improved at its cap of 500)",
+            (
+                "the restart-to-restart spread of the held-out families and mutant differences, "
+                "against W's minimum (2.97 fitted, 2.05 held-out)"
+            ),
+            "the tying (per_couple against per_ligand)",
+            "the draws per arm",
+        ],
+    }
+    _write(W_SIZING_PATH, record)
+    print(json.dumps(record["projection_hours_for_w"], indent=1))
+    return 0
+
+
 def w_sizing(readiness: dict[str, Any]) -> dict[str, Any]:
     """Return what F.0b-ii's and W's registrations size from: generations, pace, spread, path."""
     cost = json.loads(COST_PATH.read_text()) if COST_PATH.exists() else None
@@ -1511,6 +1577,7 @@ def main(argv: list[str] | None = None) -> int:
             "pilot-staged",
             "stage2-anyway",
             "stage2-extend",
+            "sizing",
             "readiness",
             "read",
             "smoke",
@@ -1528,6 +1595,7 @@ def main(argv: list[str] | None = None) -> int:
         "pilot-staged": lambda: _staged_pilot(args.workers),
         "stage2-anyway": lambda: _stage2_anyway(args.workers),
         "stage2-extend": lambda: _extend_stage2(args.workers),
+        "sizing": _sizing,
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),

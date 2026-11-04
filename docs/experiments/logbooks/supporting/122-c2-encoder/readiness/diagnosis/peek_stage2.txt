@@ -1,0 +1,15 @@
+{"generation": 257, "score": 4.24, "D_fit": 4.47, "time_on_lawn": 0.997}
+  kinematics/dwelling_speed_median       z 6.64
+  kinematics/dwelling_speed_p90          z 7.94
+  kinematics/roaming_speed_median        z -5.22
+  kinematics/roaming_speed_p90           z -6.16
+  kinematics/roaming_survival_5min       z -4.31
+  small_lawn/dwelling_bout_s             z 2.04
+  small_lawn/exits_per_on_lawn_hour      z -2.93
+  small_lawn/pre_exit_enrichment         z -3.8
+  small_lawn/roaming_bout_s              z -3.13
+  small_lawn/roaming_fraction            z -2.36
+  small_lawn/time_on_lawn                z 2.99
+  uniform_lawn/dwelling_bout_s           z 0.12
+  uniform_lawn/roaming_bout_s            z -6.16
+  uniform_lawn/roaming_fraction          z -1.27
