@@ -200,15 +200,33 @@ def read_fenyves_sheet(
     with, so a copy re-saved by a program that does not compute them is refused rather than read as
     blank.
     """
+    _check_digest(path, expected_sha256)
+    return _parse_sheet(iter(_sheet_rows(path, sheet)), path, sheet, edges)
+
+
+# A sheet's rows by file, sheet, size and modification time: reading the workbook takes most of a
+# second, so each sheet is read once per process. The rows are tuples of plain cell values, so no
+# caller can change what the next one reads.
+_SHEET_ROWS: dict[tuple[str, str, int, int], tuple[tuple[object, ...], ...]] = {}
+
+
+def _sheet_rows(path: Path, sheet: str) -> tuple[tuple[object, ...], ...]:
+    """Return a sheet's rows as saved, read once per process."""
     import openpyxl
 
-    _check_digest(path, expected_sha256)
-    # A read-only workbook holds its file open until closed, so it is closed however parsing ends.
-    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    try:
-        return _parse_sheet(workbook[sheet].iter_rows(values_only=True), path, sheet, edges)
-    finally:
-        workbook.close()
+    stat = path.stat()
+    key = (str(path.resolve()), sheet, stat.st_size, stat.st_mtime_ns)
+    rows = _SHEET_ROWS.get(key)
+    if rows is None:
+        # A read-only workbook holds its file open until closed, so it is closed however reading
+        # ends.
+        workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+        try:
+            rows = tuple(workbook[sheet].iter_rows(values_only=True))
+        finally:
+            workbook.close()
+        _SHEET_ROWS[key] = rows
+    return rows
 
 
 def _parse_sheet(

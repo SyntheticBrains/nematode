@@ -1,10 +1,16 @@
 """Tests for the *C. elegans* connectome loader."""
 
+import os
+import shutil
+from pathlib import Path
+
+import pandas as pd
 import pytest
 from quantumnematode.connectome import (
     Connectome,
     load_cook_2019_hermaphrodite,
     load_witvliet_2021_adult,
+    loader,
 )
 
 # Loose lower bounds — see add-connectome-substrate spec for rationale.
@@ -129,3 +135,43 @@ class TestLoadWitvliet2021Adult:
         """Source identifier references Witvliet adult dataset."""
         assert "witvliet" in connectome.source.lower()
         assert "adult" in connectome.source.lower()
+
+
+class TestSheetCache:
+    """A workbook sheet is parsed once per process, and every read gets its own copy."""
+
+    def test_a_read_is_a_copy(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Changing one read's frame leaves the next read as the file has it."""
+        monkeypatch.setattr(loader, "_SHEETS", {})
+        sheet = "hermaphrodite chemical"
+        first = loader._read_sheet(loader.COOK_2019_HERMAPHRODITE_PATH, sheet)
+        expected = first.copy()
+        first.iloc[3, 3] = -1
+        second = loader._read_sheet(loader.COOK_2019_HERMAPHRODITE_PATH, sheet)
+        pd.testing.assert_frame_equal(second, expected)
+
+    def test_a_changed_file_is_parsed_again(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A sheet is parsed once until its file's modification time changes."""
+        parses: list[str] = []
+        real_read = pd.read_excel
+
+        def counting_read(*args, **kwargs):
+            parses.append(kwargs["sheet_name"])
+            return real_read(*args, **kwargs)
+
+        monkeypatch.setattr(loader, "_SHEETS", {})
+        monkeypatch.setattr(loader.pd, "read_excel", counting_read)
+        copy = tmp_path / loader.WITVLIET_2021_ADULT_PATH.name
+        shutil.copyfile(loader.WITVLIET_2021_ADULT_PATH, copy)
+        sheet = pd.ExcelFile(copy, engine="openpyxl").sheet_names[0]
+        loader._read_sheet(copy, sheet)
+        loader._read_sheet(copy, sheet)
+        assert parses == [sheet]
+        stat = copy.stat()
+        os.utime(copy, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+        loader._read_sheet(copy, sheet)
+        assert parses == [sheet, sheet]

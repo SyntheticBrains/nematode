@@ -48,6 +48,15 @@ def quantum_agent_config(tmp_path: Path) -> Path:
     return path
 
 
+@pytest.fixture
+def short_mixed_config(tmp_path: Path) -> Path:
+    """Build the mixed config with a short episode: acceptance needs a run, not a full one."""
+    text = MIXED_CONFIG.read_text(encoding="utf-8").replace("max_steps: 1500", "max_steps: 50", 1)
+    path = tmp_path / "multi_agent_short.yml"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 def _run(config: Path, device: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603 — fixed argv, no shell
         [
@@ -101,6 +110,6 @@ class TestMultiAgentDeviceValidation:
         assert "PyTorch-only accelerator" in result.stderr
         assert "qvarcircuit" in result.stderr
 
-    def test_usable_device_is_accepted(self) -> None:
+    def test_usable_device_is_accepted(self, short_mixed_config: Path) -> None:
         """The guard must not refuse a configuration that works."""
-        assert _run(MIXED_CONFIG, _ALWAYS_AVAILABLE_DEVICE).returncode == 0
+        assert _run(short_mixed_config, _ALWAYS_AVAILABLE_DEVICE).returncode == 0

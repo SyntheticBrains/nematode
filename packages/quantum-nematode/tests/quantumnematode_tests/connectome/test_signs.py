@@ -12,6 +12,7 @@ derivation was checked against, edge by edge, before the files were vendored.
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 from collections import Counter
 from pathlib import Path
@@ -113,6 +114,7 @@ class TestVendoredFiles:
 
         monkeypatch.setattr(openpyxl, "load_workbook", tracking_load)
         monkeypatch.setattr(sg, "_parse_sheet", failing_parse)
+        monkeypatch.setattr(sg, "_SHEET_ROWS", {})
         with pytest.raises(ValueError, match="parse failed"):
             sg.read_fenyves_sheet(
                 sg.FENYVES_S5_PATH,
@@ -121,6 +123,33 @@ class TestVendoredFiles:
                 set(),
             )
         assert closed == [True]
+
+    def test_a_sheet_is_read_once_until_its_file_changes(self, tmp_path: Path, monkeypatch) -> None:
+        import openpyxl
+
+        edges = {(s.pre, s.post) for s in load_cook_2019_hermaphrodite().chemical_synapses}
+        loads: list[object] = []
+        real_load = openpyxl.load_workbook
+
+        def counting_load(filename, *args, **kwargs):
+            loads.append(filename)
+            return real_load(filename, *args, **kwargs)
+
+        monkeypatch.setattr(openpyxl, "load_workbook", counting_load)
+        monkeypatch.setattr(sg, "_SHEET_ROWS", {})
+        copy = tmp_path / sg.FENYVES_S5_PATH.name
+        shutil.copyfile(sg.FENYVES_S5_PATH, copy)
+
+        def read_copy() -> sg.FenyvesSheet:
+            return sg.read_fenyves_sheet(copy, sg.FENYVES_S5_SHEET, sg.FENYVES_S5_SHA256, edges)
+
+        read = [read_copy(), read_copy()]
+        assert len(loads) == 1
+        stat = copy.stat()
+        os.utime(copy, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+        read.append(read_copy())
+        assert len(loads) == 2
+        assert read[0] == read[1] == read[2]
 
     def test_the_physiology_table_is_recorded(self) -> None:
         assert sg.PHYSIOLOGY_OVERRIDES_PATH.name in PROVENANCE.read_text(encoding="utf-8")
