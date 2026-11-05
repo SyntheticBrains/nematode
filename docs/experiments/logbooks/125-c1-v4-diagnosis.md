@@ -1,6 +1,6 @@
 # 125: Phase 10 — C.1 on Benchmark v4: It Lacks an On-Food Dwelling Reversal Rate; Given One, a Continued Fit Reaches v4 and the Box Centre Does Not; the Refit Is Deferred
 
-**Status**: completed, as a diagnosis. No fit is registered. **C.1's 25-parameter model cannot reach benchmark v4**, and one mechanism closes the gap: a dwelling reversal rate of its own on food.
+**Status**: completed, as a diagnosis. No fit is registered. **C.1's 25-parameter model did not reach benchmark v4 in the restarts probed**, and one mechanism closes the gap: a dwelling reversal rate of its own on food.
 
 - With it, a fit continued from C.1 (v3)'s answer passes the wild type in 4 of 5 discarded populations (D 1.28–1.44).
 - From the box centre, where a registered fit would start, no run reaches the passing basin: 0 of 5 in each of three.
@@ -67,7 +67,7 @@ The same rate sets reversals off food, so raising it flattens López-Cruz's sear
 - **A reversal–speed coupling** (v2's reachability worm's, the reversal hazard × exp(β z) on the window's speed draw): 0 of 5, the onset rate z −3.7 to −4.1, β 0.76. It acts on whole windows.
 - **Intermittent dwelling** (a per-second pause chain on food): 0 of 5, the onset rate z −4.0 to −4.2. The fit paused 80% of dwelling seconds in 1.7-s pauses, moving at 0.028 mm/s, still below the floor, with `r_dwell` at its floor.
 - **A state-free off-food reversal rate:** 0 of 5. It ran to the cap with one statistic undefined throughout: local search's γ, in every population, with its presence failing. C.1 makes its off-food decay from the two states' different rates, and one rate replaced them. Its on-lawn onsets did come within the bar (z −1.3 to −1.6), with `r_dwell` raised to 0.097.
-- **An on-food dwelling reversal rate** (`r_dwell_on_food`), which keeps both state rates off food. In its sensitivity test (`ondwell_sensitivity.json`) it moves no off-food statistic. At 0.03 the on-lawn onsets pass (z −2.7), and the small lawn's roaming fraction and roaming bouts fail, which a fit retunes.
+- **An on-food dwelling reversal rate** (`r_dwell_on_food`), which keeps both state rates off food. In its sensitivity test (`ondwell_sensitivity.json`, one population each), no off-food statistic shifts by 0.5 z or more at 0.03, while at 0.01 local search's γ shifts by 0.62 z and at 0.1 its log early/late ratio by 0.59 z. At 0.03 the on-lawn onsets pass (z −2.7), and the small lawn's roaming fraction and roaming bouts fail, which a fit retunes.
 
 **The fit with it** (`mechanism_ondwell.json`), continued from the readiness answer, plateaued at generation 101. It passes 4 of 5 populations (D 1.28–1.44), and the fifth fails one small-lawn roaming-bout length (z +3.23).
 
@@ -97,7 +97,7 @@ The maintainer chose to **defer the refit** and ship this diagnosis.
 
 ## What this establishes, and what it does not
 
-- **C.1's model can reproduce v4's wild type, given one mechanism.** It answers a measured failure, the missing dwelling reversals on the lawn, and it moves no off-food statistic. The pass is at the threshold, from a continued start, on discarded populations. No registered verdict is read.
+- **C.1's model can reproduce v4's wild type, given one mechanism.** It answers a measured failure, the missing dwelling reversals on the lawn, and in its sensitivity test no off-food statistic shifts by more than 0.62 z. The pass is at the threshold, from a continued start, on discarded populations. No registered verdict is read.
 - **The mechanism was chosen by looking.** It is C.1's fourth mechanism chosen on the benchmark's families. Every candidate's record is committed, and C.1's mutant predictions remain its held-out test.
 - **The box centre does not find the basin.** That is a property of the fit from the box centre, not of the model or the benchmark. So the roadmap's risk row ("C.1 fails the wild type: the primitives or the benchmark are wrong") is not triggered.
 

@@ -66,11 +66,13 @@ class BatchedController(Protocol):
 
 
 def _refuse(brain: object, reason: str) -> None:
+    """Raise that the batched evaluator cannot run this brain, and why."""
     msg = f"the batched evaluator cannot run {type(brain).__name__}: {reason}"
     raise ValueError(msg)
 
 
 def _check_policy(brain: object, config: object) -> None:
+    """Refuse a brain whose policy the batched evaluator does not reproduce."""
     if getattr(config, "action_mode", None) != "continuous":
         _refuse(brain, "its action mode is not continuous")
     if getattr(config, "action_space", None) != "primitives":
@@ -107,6 +109,7 @@ def _sample(
 
 
 def _food_features(senses: BatchedSenses) -> np.ndarray:
+    """Return each animal's concentration and squashed lateral and dC/dt cues, (animals, 3)."""
     return np.stack(
         [
             senses.concentration,
@@ -270,6 +273,7 @@ class BatchedConnectome:
 
 
 def _raw_hazards(rates: np.ndarray) -> np.ndarray:
+    """Map hazards per second onto the primitives' log-linear raw range [-1, 1], clipped."""
     k = load_kinematics()
     log_low = math.log(k.hazard_min_per_s)
     log_span = math.log(k.hazard_max_per_s) - log_low
@@ -278,6 +282,7 @@ def _raw_hazards(rates: np.ndarray) -> np.ndarray:
 
 
 def _raw_speed(speed: float) -> float:
+    """Map a run speed in mm/s onto the primitives' raw range [-1, 1], clipped."""
     k = load_kinematics()
     return min(1.0, max(-1.0, 2.0 * speed / k.v_max_mm_per_s - 1.0))
 
@@ -350,6 +355,7 @@ def _normals(noise: list[torch.Generator]) -> np.ndarray:
 
 
 def _require_noise(noise: list[torch.Generator] | None) -> list[torch.Generator]:
+    """Return the animals' generators; these controllers have no mean action to fall back on."""
     if noise is None:
         msg = "this controller draws its randomness from each animal's generator; noise is None"
         raise ValueError(msg)
@@ -636,6 +642,7 @@ class BatchedMechanistic:
         return np.where(roaming, p["r_roam"], dwell)
 
     def _switch_rates(self, senses: BatchedSenses) -> tuple[np.ndarray, np.ndarray]:
+        """Return each animal's dwelling-to-roaming and roaming-to-dwelling rates this second."""
         p = self.p
         intake = (
             np.asarray(senses.intake, dtype=np.float64) / senses.max_intake

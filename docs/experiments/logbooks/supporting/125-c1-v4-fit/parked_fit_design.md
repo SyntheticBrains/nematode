@@ -12,9 +12,9 @@ ______________________________________________________________________
 
 ## Why
 
-Benchmark v4 ([Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)) fails C.1's v3 answer in all 5 of its registered populations. The answer reverses too rarely on the lawn: 0.78–0.85 onsets per on-lawn minute against real worms' 2.28 (z −6.4 to −6.7). C.1 must be refitted on v4 before the fidelity table.
+Benchmark v4 ([Logbook 124](../../124-benchmark-v4.md)) fails C.1's v3 answer in all 5 of its registered populations. The answer reverses too rarely on the lawn: 0.78–0.85 onsets per on-lawn minute against real worms' 2.28 (z −6.4 to −6.7). C.1 must be refitted on v4 before the fidelity table.
 
-Discarded-seed probes (2026-11-05, description; `supporting/125-c1-v4-fit/probes/`) show that C.1's 25-parameter model cannot reach v4, and why:
+Discarded-seed probes (2026-11-05, description; `supporting/125-c1-v4-fit/probes/`) show that C.1's 25-parameter model did not reach v4 in the restarts probed, and why:
 
 - **It never reverses while dwelling on food.** Real worms make most on-lawn onsets while dwelling (2.12 per minute in dwelling windows, which are 83% of on-lawn time), from intermittent movement: over half their dwelling seconds are paused, yet 31% of their 1-s steps clear the detector's 0.03 mm floor. C.1 dwells at a near-constant 0.013 mm/s with its dwelling reversal rate at its floor (0.001/s), so its dwelling onsets are 0.78 per minute.
 - **Raising `r_dwell` breaks the off-food assays.** The same rate sets reversals off food: at 0.03 it lifts on-lawn onsets to z −2.2, but flattens López-Cruz's local search (log early/late z −3.1) and over-flips Chen's chemotaxis (+2.1). The conflict is on food against off food.
@@ -75,9 +75,9 @@ ______________________________________________________________________
 
 ## Context
 
-- **Benchmark v4** ([Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)) is VALID and the default: 24 statistics in six equal families at z\* 3.0781, the new activity family (pause share, flip fraction, on-lawn onset rate) in D and D_fit. A faithful controller passes 3 of 5 populations with probability 0.975.
+- **Benchmark v4** ([Logbook 124](../../124-benchmark-v4.md)) is VALID and the default: 24 statistics in six equal families at z\* 3.0781, the new activity family (pause share, flip fraction, on-lawn onset rate) in D and D_fit. A faithful controller passes 3 of 5 populations with probability 0.975.
 
-- **C.1 (v3)** ([Logbook 121](../../../docs/experiments/logbooks/121-c1-v3-fit.md)) passed v3 at 3 of 5, and fails v4 at 0 of 5 on the on-lawn onset rate (z −6.4 to −6.7), on the same animals.
+- **C.1 (v3)** ([Logbook 121](../../121-c1-v3-fit.md)) passed v3 at 3 of 5, and fails v4 at 0 of 5 on the on-lawn onset rate (z −6.4 to −6.7), on the same animals.
 
 - **The probes** (2026-11-05, description, discarded seeds 620–642 M, CMA 9441–9447; records and scripts in `supporting/125-c1-v4-fit/probes/`). Each is one sep-CMA restart against v4's ranking score with C.1b's doubly guarded stop and a cap of 300, its answer graded on v4 with presence on 5 populations:
 
@@ -97,7 +97,7 @@ ______________________________________________________________________
   **Two sensitivity checks** (one population each on shared discarded animals):
 
   - on the intermittent-dwelling answer (`dwell_sensitivity.json`), raising `r_dwell` lifts on-lawn onsets (z −4.0 → −2.2 at 0.03 → +0.1 at 0.1) but flattens local search (log early/late −3.1 at 0.03) and over-flips Chen's chemotaxis (+2.1); faster dwelling movement breaks the dwelling window speeds (+7);
-  - on the readiness warm answer (`ondwell_sensitivity.json`), `r_dwell_on_food` at 0.03 lifts on-lawn onsets to z −2.7 and moves no off-food statistic; the small lawn's roaming fraction and roaming bouts then fail, which the fit retunes.
+  - on the readiness warm answer (`ondwell_sensitivity.json`), `r_dwell_on_food` at 0.03 lifts on-lawn onsets to z −2.7 and shifts no off-food statistic by 0.5 z or more (at 0.01 local search's γ shifts by 0.62 z, at 0.1 its log early/late ratio by 0.59 z); the small lawn's roaming fraction and roaming bouts then fail, which the fit retunes.
 
 - **Cost:** about 30 s per generation on 16 workers.
 
@@ -184,7 +184,7 @@ ______________________________________________________________________
 
 ## Risks / Trade-offs
 
-- **[The mechanism was chosen on the benchmark]** → Disclosed, with every candidate probed and its record committed. It answers a measured failure: real worms reverse while dwelling on the lawn and C.1 cannot. C.1's mutant predictions remain its held-out test.
+- **[The mechanism was chosen on the benchmark]** → Disclosed, with every candidate probed and its record committed. It answers a measured failure: real worms reverse while dwelling on the lawn, and C.1's fits do not, since its one dwelling rate also sets reversals off food. C.1's mutant predictions remain its held-out test.
 - **[Thin margins]** → The warm probe's passing populations hold the onset rate at z −2.6 to −3.0 and the small lawn's roaming bouts at +2.2 to +3.2, against a bar of 3.0781. The verdict's chance is below the 4 of 5 the warm probe saw, and both 26-parameter box-centre probes passed 0 of 5.
 - **[Under-reversal off food]** → The on-lawn onset rate is now graded and met; the reported reversal share over the off-food windows stays near 5%, against Roberts' 17.3%. It is reported beside the verdict.
 - **[Parameters at their bounds]** → The warm answer holds `b0` at its upper bound (log 0.1) and `r_dwell` near its floor. The box is not widened; a bound is reported where it holds.

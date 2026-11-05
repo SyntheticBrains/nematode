@@ -1,10 +1,10 @@
 ## Why
 
-Benchmark v4 ([Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)) fails C.1's v3 answer in all 5 of its registered populations: it reverses too rarely on the lawn (0.78–0.85 onsets per on-lawn minute against real worms' 2.28; z −6.4 to −6.7). Before refitting, the maintainer asked whether C.1's model can reach v4 at all, and if not, why.
+Benchmark v4 ([Logbook 124](../../../../docs/experiments/logbooks/124-benchmark-v4.md)) fails C.1's v3 answer in all 5 of its registered populations: it reverses too rarely on the lawn (0.78–0.85 onsets per on-lawn minute against real worms' 2.28; z −6.4 to −6.7). Before refitting, the maintainer asked whether C.1's model can reach v4 at all, and if not, why.
 
 Discarded-seed probes (2026-11-05, description) answer it:
 
-- **C.1's 25-parameter model cannot.** Real worms make most on-lawn onsets while dwelling (2.12 per minute in dwelling windows, which are 83% of on-lawn time). C.1 dwells at a near-constant 0.013 mm/s with its dwelling reversal rate at its floor, and raising that rate breaks the off-food assays, since the same rate sets reversals off food.
+- **C.1's 25-parameter model did not, in the restarts probed.** Real worms make most on-lawn onsets while dwelling (2.12 per minute in dwelling windows, which are 83% of on-lawn time). C.1 dwells at a near-constant 0.013 mm/s with its dwelling reversal rate at its floor, and raising that rate breaks the off-food assays, since the same rate sets reversals off food.
 - **One mechanism closes it:** a dwelling reversal rate of its own on food. With it, a fit continued from C.1 (v3)'s answer passes the wild type in 4 of 5 populations (D 1.28–1.44).
 - **From the box centre, no fit reaches it** (three runs, D 1.78–3.02), including one with the states ordered after a run swapped them.
 
