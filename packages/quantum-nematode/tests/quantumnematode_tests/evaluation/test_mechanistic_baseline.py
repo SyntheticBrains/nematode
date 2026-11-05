@@ -196,70 +196,12 @@ def test_a_speed_spread_varies_speed_by_window_only() -> None:
         BatchedMechanistic({**_BASE, "speed_log_sd_dwell": 0.5})
 
 
-def test_a_reversal_speed_coupling_moves_only_the_reversal_hazard() -> None:
-    """With beta 0 the coupled model is the spread model; with beta, reversals scale by exp(beta z).
-
-    Every column but the reversal hazard is the spread model's. Against the model without a spread,
-    the speed moved by exp(sd z), so the log of the reversal ratio is beta / sd times the log of
-    the speed ratio, wherever neither is clipped.
-    """
-    seeds = [3, 4, 5, 6]
-    spread = {**_BASE, "speed_log_sd_dwell": 0.5, "speed_log_sd_roam": 0.5}
-    with pytest.raises(ValueError, match="needs a speed spread"):
-        BatchedMechanistic({**_BASE, "reversal_speed_coupling": 1.0})
-    plain, varied = _steering(_BASE, 1.0, seeds), _steering(spread, 1.0, seeds)
-    np.testing.assert_array_equal(
-        _steering({**spread, "reversal_speed_coupling": 0.0}, 1.0, seeds),
-        varied,
-    )
-    coupled = _steering({**spread, "reversal_speed_coupling": 1.0}, 1.0, seeds)
-    np.testing.assert_array_equal(coupled[..., [0, 1, 3, 4]], varied[..., [0, 1, 3, 4]])
-    inside = (np.abs(coupled[..., 2]) < 1) & (np.abs(varied[..., 2]) < 1) & (varied[..., 0] < 1)
-    assert inside.sum() > 40
-    rate = np.vectorize(_rate)
-    log_reversal = np.log(rate(coupled[..., 2][inside]) / rate(varied[..., 2][inside]))
-    log_speed = np.log((varied[..., 0][inside] + 1.0) / (plain[..., 0][inside] + 1.0))
-    np.testing.assert_allclose(log_reversal, log_speed / 0.5, rtol=1e-6, atol=1e-9)
-
-
-def _dwell_speeds(params: dict[str, float], contact: float, seconds: int) -> np.ndarray:
-    controller = BatchedMechanistic(params)
-    gens = _gens(list(range(40)))
-    return np.stack(
-        [controller.act(_senses(40, contact=contact), gens)[:, 0] for _ in range(seconds)],
-    )
-
-
-def test_intermittent_dwelling_pauses_only_dwelling_on_food() -> None:
-    """Dwelling on food is paused a share of seconds, in pauses of the set mean; nothing else is."""
-    for bad in (
-        {"dwell_pause_share": 0.5},
-        {"dwell_pause_share": 1.0, "dwell_pause_s": 4.0},
-        {"dwell_pause_share": 0.5, "dwell_pause_s": 0.5},
-    ):
-        with pytest.raises(ValueError, match="dwell"):
-            BatchedMechanistic({**_BASE, **bad})
-    pauses = {"dwell_pause_share": 0.6, "dwell_pause_s": 4.0}
-    dwelling = {**_BASE, "a0": math.log(1e-12), "b0": math.log(1.0), **pauses}
-    roaming = {**_BASE, "a0": math.log(1.0), "b0": math.log(1e-12), **pauses}
-    paused = _dwell_speeds(dwelling, 1.0, 2000) == -1.0
-    assert abs(paused.mean() - 0.6) < 0.02
-    lengths = [
-        len(run)
-        for column in paused.T
-        for run in np.split(column, np.flatnonzero(np.diff(column)) + 1)
-        if run[0]
-    ]
-    assert abs(np.mean(lengths) - 4.0) < 0.3
-    assert not np.any(_dwell_speeds(dwelling, 0.0, 200) == -1.0)
-    assert not np.any(_dwell_speeds(roaming, 1.0, 200) == -1.0)
-
-
 def test_an_on_food_dwelling_rate_changes_only_dwelling_on_food() -> None:
     """Without r_dwell_on_food the model is unchanged; with it, dwelling on food reverses at it.
 
-    Off food every column is the state's. On food only the reversal hazard of dwelling animals
-    changes, scaled from r_dwell to r_dwell_on_food; roaming animals keep r_roam.
+    Covers the mechanistic-baseline scenarios "Off food nothing changes" and "On food only dwelling
+    reversals change": off food every column is the state's; on food only the reversal hazard of
+    dwelling animals changes, scaled from r_dwell to r_dwell_on_food; roaming keeps r_roam.
     """
     seeds = list(range(40))
     on = {**_BASE, "r_dwell_on_food": 0.2}

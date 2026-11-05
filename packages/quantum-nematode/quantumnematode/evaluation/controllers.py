@@ -528,20 +528,6 @@ _UNIFORMS_PER_STEP = 3
 SPEED_WINDOW_STEPS = 10
 
 
-def _dwell_pause(params: dict[str, float]) -> tuple[float, float] | None:
-    """Return intermittent dwelling's paused share and mean pause length, or None when unset."""
-    share, pause_s = params.get("dwell_pause_share"), params.get("dwell_pause_s")
-    if share is None and pause_s is None:
-        return None
-    if share is None or pause_s is None:
-        msg = "dwell_pause_share and dwell_pause_s come together"
-        raise ValueError(msg)
-    if not (0.0 <= float(share) < 1.0 and float(pause_s) >= 1.0):
-        msg = f"intermittent dwelling needs a share in [0, 1) and pauses of at least 1 s: {params}"
-        raise ValueError(msg)
-    return float(share), float(pause_s)
-
-
 class BatchedMechanistic:
     """A closed-loop roaming/dwelling worm with klinokinesis, weathervane, an edge and search terms.
 
@@ -571,22 +557,12 @@ class BatchedMechanistic:
       within a state: at the first second and every :data:`SPEED_WINDOW_STEPS` seconds after, each
       animal draws a standard normal z, and its run speed is the speed above times
       ``exp(speed_log_sd_s z)`` for its state ``s``, so that speed is the median. The normal is the
-      sine partner of that second's curvature normal (one Box-Muller pair), so no draw is added;
-    - **optionally,** with ``reversal_speed_coupling`` (beta, which needs the speed spread), the
-      reversal hazard is the one above times ``exp(beta z)``, z the window's speed normal, so
-      reversals come more often out of faster movement;
-    - **optionally,** with ``dwell_pause_share`` and ``dwell_pause_s``, a dwelling animal on food
-      moves intermittently: each second it is paused (a run at zero speed) or moving at the speed
-      above. A pause ends with probability ``1 / dwell_pause_s`` each second, and a moving second
-      starts one with the probability that makes ``dwell_pause_share`` the stationary share of
-      paused seconds (capped at 1). Its first such second is paused with that share. Roaming, or
-      off food, it moves. This takes a fourth uniform each second.
+      sine partner of that second's curvature normal (one Box-Muller pair), so no draw is added.
 
     The rates are per second at a 1-second step. Each second takes three uniforms from each
-    animal's own generator (four with intermittent dwelling): the same numbers, in the same order,
-    as one draw of three (or four) per second. They are drawn in blocks of
-    :data:`UNIFORM_BLOCK_STEPS` seconds, since one draw of k blocks' uniforms from a generator gives
-    the numbers k draws of one would, and leaves it in the same state.
+    animal's own generator: the same numbers, in the same order, as one draw of three per second.
+    They are drawn in blocks of :data:`UNIFORM_BLOCK_STEPS` seconds, since one draw of 3k uniforms
+    from a generator gives the numbers k draws of three would, and leaves it in the same state.
     """
 
     def __init__(self, params: dict[str, float]) -> None:
@@ -616,16 +592,6 @@ class BatchedMechanistic:
             if sd_dwell is None or sd_roam is None
             else np.array([float(sd_dwell), float(sd_roam)])
         )
-        # Optional: reversals coupled to the window's speed draw, which needs the spread.
-        coupling = params.get("reversal_speed_coupling")
-        if coupling is not None and self.speed_log_sd is None:
-            msg = "a reversal-speed coupling needs a speed spread to couple to"
-            raise ValueError(msg)
-        self.reversal_speed_coupling = None if coupling is None else float(coupling)
-        # Optional: intermittent dwelling, its stationary paused share and mean pause length.
-        self.dwell_pause = _dwell_pause(params)
-        self._per_step = _UNIFORMS_PER_STEP + (self.dwell_pause is not None)
-        self.paused: np.ndarray | None = None
         self.steps = 0
         self.speed_z: np.ndarray | None = None
         self.state: np.ndarray | None = None
@@ -638,14 +604,14 @@ class BatchedMechanistic:
         self._block_used = 0
 
     def _uniforms(self, gens: list[torch.Generator]) -> np.ndarray:
-        """Return this second's uniforms per animal, from each animal's generator in order."""
+        """Return this second's three uniforms per animal, from each animal's generator in order."""
         if gens is not self._block_owner or self._block_used == self._block.shape[1]:
-            self._block = _uniforms(gens, self._per_step * UNIFORM_BLOCK_STEPS)
+            self._block = _uniforms(gens, _UNIFORMS_PER_STEP * UNIFORM_BLOCK_STEPS)
             self._block_owner = gens
             self._block_used = 0
         used = self._block_used
-        self._block_used = used + self._per_step
-        return self._block[:, used : used + self._per_step].copy()
+        self._block_used = used + _UNIFORMS_PER_STEP
+        return self._block[:, used : used + _UNIFORMS_PER_STEP].copy()
 
     @classmethod
     def from_vector(cls, theta: np.ndarray) -> BatchedMechanistic:
@@ -660,41 +626,14 @@ class BatchedMechanistic:
         self.t_off = None
         self.steps = 0
         self.speed_z = None
-        self.paused = None
 
-    def _paused(self, u: np.ndarray, moving_dwell: np.ndarray) -> np.ndarray:
-        """Step each animal's pause chain on this second's fourth uniform; return who is paused."""
-        assert self.dwell_pause is not None  # noqa: S101
-        share, pause_s = self.dwell_pause
-        end = min(1.0, 1.0 / pause_s)
-        start = min(1.0, end * share / (1.0 - share))
-        paused = u < share if self.paused is None else np.where(self.paused, u >= end, u < start)
-        self.paused = moving_dwell & paused
-        return self.paused
-
-    def _run_speed(
-        self,
-        u: np.ndarray,
-        roaming: np.ndarray,
-        contact: np.ndarray,
-        reversal: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Return this second's run speeds and reversal hazards, after the optional terms."""
+    def _reversal_rate(self, roaming: np.ndarray, contact: np.ndarray) -> np.ndarray:
+        """Return each animal's reversal rate: its state's, or the on-food dwelling rate if set."""
         p = self.p
-        speed = np.where(roaming, p["v_roam"], p["v_dwell"])
-        if self.v_off_food is not None:
-            speed = np.where(contact > 0, speed, self.v_off_food)
-        if self.speed_log_sd is not None:
-            if self.steps % SPEED_WINDOW_STEPS == 0:
-                radius = np.sqrt(-2.0 * np.log(np.maximum(u[:, 1], 1e-300)))
-                self.speed_z = radius * np.sin(2.0 * np.pi * u[:, 2])
-            assert self.speed_z is not None  # noqa: S101
-            speed = speed * np.exp(self.speed_log_sd[self.state] * self.speed_z)
-            if self.reversal_speed_coupling is not None:
-                reversal = reversal * np.exp(self.reversal_speed_coupling * self.speed_z)
-        if self.dwell_pause is not None:
-            speed = np.where(self._paused(u[:, 3], ~roaming & (contact > 0)), 0.0, speed)
-        return speed, reversal
+        dwell = p["r_dwell"]
+        if self.r_dwell_on_food is not None:
+            dwell = np.where(contact > 0, self.r_dwell_on_food, p["r_dwell"])
+        return np.where(roaming, p["r_roam"], dwell)
 
     def _switch_rates(self, senses: BatchedSenses) -> tuple[np.ndarray, np.ndarray]:
         p = self.p
@@ -736,12 +675,11 @@ class BatchedMechanistic:
         )
         roaming = self.state == 1
         klino = np.tanh(np.asarray(senses.derivative, dtype=np.float64) * senses.derivative_scale)
-        dwell_rate = p["r_dwell"]
-        if self.r_dwell_on_food is not None:
-            dwell_rate = np.where(contact > 0, self.r_dwell_on_food, p["r_dwell"])
-        reversal_rate = np.where(roaming, p["r_roam"], dwell_rate)
         reversal = (
-            reversal_rate * np.exp(-p["beta_reversal"] * klino) * np.exp(p["edge"] * loss) * search
+            self._reversal_rate(roaming, contact)
+            * np.exp(-p["beta_reversal"] * klino)
+            * np.exp(p["edge"] * loss)
+            * search
         )
         omega = (
             np.where(roaming, p["o_roam"], p["o_dwell"]) * np.exp(-p["beta_omega"] * klino) * search
@@ -759,7 +697,15 @@ class BatchedMechanistic:
         if self.sigma_off_food is not None:
             sigma = np.where(contact > 0, sigma, self.sigma_off_food)
         curvature = kappa * lateral + sigma * z
-        speed, reversal = self._run_speed(u, roaming, contact, reversal)
+        speed = np.where(roaming, p["v_roam"], p["v_dwell"])
+        if self.v_off_food is not None:
+            speed = np.where(contact > 0, speed, self.v_off_food)
+        if self.speed_log_sd is not None:
+            if self.steps % SPEED_WINDOW_STEPS == 0:
+                radius = np.sqrt(-2.0 * np.log(np.maximum(u[:, 1], 1e-300)))
+                self.speed_z = radius * np.sin(2.0 * np.pi * u[:, 2])
+            assert self.speed_z is not None  # noqa: S101
+            speed = speed * np.exp(self.speed_log_sd[self.state] * self.speed_z)
         self.steps += 1
         v_max = load_kinematics().v_max_mm_per_s
         raw = np.zeros((n, 5))

@@ -437,6 +437,8 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **Reported:** W's minimum on the fitted families is 2.597 (v3: 2.967); the 3-of-5 probability
     0.975.
   - **Next:** C.1 refitted on v4, its own change; C.2's next change fits against v4.
+    *(2026-11-05, [Logbook 125](../../../docs/experiments/logbooks/125-c1-v4-diagnosis.md): C.1's refit
+    is diagnosed and deferred until C.4 approaches; C.2's next change comes first.)*
 
 ## N — the neuromodulator layer from data (MUST)
 
@@ -639,6 +641,21 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   (+2.6 to +3.0) and flip fraction (−2.8) sit near the bar. **C.1 is refitted on v4 next,** in its own
   change (about 12–18 h), carrying the 3-of-5 probability 0.975.
 
+  *(2026-11-05: change `c1-v4-diagnosis`;
+  [Logbook 125](../../../docs/experiments/logbooks/125-c1-v4-diagnosis.md).)* **C.1's model lacks an
+  on-food dwelling reversal rate; the refit is deferred.** Real worms make most on-lawn onsets while
+  dwelling, and C.1's one dwelling rate also sets reversals off food, so raising it breaks local search
+  and Chen's chemotaxis.
+
+  - **`BatchedMechanistic` gains `r_dwell_on_food`,** off by default and byte-identical without it.
+    With it, a fit continued from C.1 (v3)'s answer passes 4 of 5 discarded populations (D 1.28–1.44).
+  - **No box-centre run reaches the basin** (three, D 1.78–3.02), one of them with the states ordered
+    after another swapped them.
+  - **The maintainer's decision:** defer the refit until C.4 approaches, to run once on the benchmark
+    current then, from the parked design (`supporting/125-c1-v4-fit/parked_fit_design.md`). Its start
+    is decided then: a warm start needs a dated D38 amendment, since C.1's x₀ is set without search
+    data; a box-centre design needs its odds measured first.
+
 - [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
@@ -684,7 +701,9 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   D_fit, so a worm that does not run forward fails its own objective: the stage-2 answer is caught by
   all three activity statistics in 5 of 5 populations. That change carries the readout box and the
   saturation report, the staged procedure, the readiness restarts against v4, and slow noise's
-  positive control re-run on a fit whose speed responds.
+  positive control re-run on a fit whose speed responds. *(2026-11-05, Logbook 125: C.1's refit on v4
+  is deferred, so until it runs C.2's yardstick is C.1's continued probe's D, 1.28–1.44, as
+  description.)*
 
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
@@ -695,7 +714,8 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 
   *(Added 2026-11-05, B v4.)* **On v4, C.1's v3 answer fails the wild type** (0 of 5;
   [Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)). C.1 enters the table from
-  its refit on v4.
+  its refit on v4, *(2026-11-05, [Logbook 125](../../../docs/experiments/logbooks/125-c1-v4-diagnosis.md))*
+  deferred until C.4 approaches.
 
   *(Added 2026-11-03, C.1 on v3.)* **C.1 (v3) enters as passing the wild type**
   ([Logbook 121](../../../docs/experiments/logbooks/121-c1-v3-fit.md)). Its wild-type-passing
