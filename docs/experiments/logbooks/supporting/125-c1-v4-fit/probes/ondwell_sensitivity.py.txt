@@ -1,0 +1,43 @@
+"""Does an on-food dwelling reversal rate lift on-lawn onsets alone? (description, discarded seeds)
+
+The readiness warm answer, with r_dwell_on_food at its r_dwell (0.001, unchanged), 0.01, 0.03 and
+0.1; every variant on the same 200 animals at 632,000,000 + i (discarded), on all of v4's assays,
+graded on v4 without presence. Run from the repository root.
+"""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c1-v4")
+import benchmark_grade as bg
+import mechanisms_v4 as m
+import npe_recovery as nr
+
+BASE = json.loads(Path("build/c1-v4/readiness_warm.json").read_text())["parameters"]
+VARIANTS = {f"r_dwell_on_food {v}": {"r_dwell_on_food": v} for v in (BASE["r_dwell"], 0.01, 0.03, 0.1)}
+
+
+def run(name):
+    params = {**BASE, **VARIANTS[name]}
+    populations, chemotaxis, bands = m._populations(params, [632_000_000 + i for i in range(nr.ANIMALS)])
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=False)
+    return name, bg._finite({
+        "D": graded["D"], "D_fit": graded["D_fit"],
+        "z": {f"{f}/{n}": v["z"] for f, rs in graded["families"].items() for n, v in rs.items()},
+        "failing": [f"{f}/{n}" for f, rs in graded["families"].items() for n, v in rs.items() if not v["passes"]],
+        "reversal_share": graded["reversal_share"]["value"] if graded["reversal_share"] else None,
+    })
+
+
+if __name__ == "__main__":
+    with ProcessPoolExecutor(max_workers=len(VARIANTS), initializer=nr._worker_setup) as pool:
+        out = dict(pool.map(run, VARIANTS))
+    Path("build/c1-v4/ondwell_sensitivity.json").write_text(json.dumps({"description": __doc__, "results": out}, indent=1) + "\n")
+    base = out[next(iter(VARIANTS))]["z"]
+    for name, r in out.items():
+        moved = {k: round(v, 2) for k, v in r["z"].items() if base[k] is not None and v is not None and abs(v - base[k]) >= 0.5}
+        print(f"{name:26s} D {r['D']:.2f} failing {r['failing']}")
+        print("     moved:", moved)

@@ -6,8 +6,8 @@ C.1's mechanistic baseline: a closed-loop roaming/dwelling worm on the primitive
 satiety-dependent switching, klinokinetic reversal and omega hazards, weathervane steering, an edge
 reversal on falling food contact, and a search term that decays off food. It has 20 parameters, and
 every random draw comes from each animal's own generator. Optional off-food run kinematics, a per-state
-speed spread and an off-food weathervane gain extend it to C.1 (v3)'s 25 parameters; without them it is
-unchanged.
+speed spread and an off-food weathervane gain extend it to C.1 (v3)'s 25 parameters, and an optional
+on-food dwelling reversal rate to 26; without them it is unchanged.
 
 ## Requirements
 
@@ -66,3 +66,17 @@ The spread's z SHALL be the sine partner of that second's curvature normal, so t
 
 - **WHEN** only `speed_log_sd_dwell` is given
 - **THEN** the controller SHALL raise an error
+
+### Requirement: An optional on-food dwelling reversal rate
+
+`BatchedMechanistic` SHALL accept `r_dwell_on_food`, used only when given: a dwelling animal's reversal rate wherever food contact is above 0, in place of `r_dwell`, before the klinokinesis, edge and search terms. Off food, and while roaming, the state's rate SHALL apply. Without it, every action SHALL be byte-identical to the model's without the option.
+
+#### Scenario: Off food nothing changes
+
+- **WHEN** an animal is off food
+- **THEN** its actions SHALL be those of the model without `r_dwell_on_food`
+
+#### Scenario: On food only dwelling reversals change
+
+- **WHEN** an animal is on food
+- **THEN** its run speed, curvature, omega and delta hazards SHALL be unchanged, and its reversal hazard SHALL scale from `r_dwell` to `r_dwell_on_food` while dwelling and stay unchanged while roaming

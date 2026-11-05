@@ -1,0 +1,151 @@
+{
+ "description": "Does an on-food dwelling reversal rate lift on-lawn onsets alone? (description, discarded seeds)\n\nThe readiness warm answer, with r_dwell_on_food at its r_dwell (0.001, unchanged), 0.01, 0.03 and\n0.1; every variant on the same 200 animals at 632,000,000 + i (discarded), on all of v4's assays,\ngraded on v4 without presence. Run from the repository root.\n",
+ "results": {
+  "r_dwell_on_food 0.0010005557715145577": {
+   "D": 1.3934637669047416,
+   "D_fit": 1.657499084427311,
+   "z": {
+    "small_lawn/roaming_fraction": 2.945917071088466,
+    "small_lawn/roaming_bout_s": 3.0872644902484256,
+    "small_lawn/dwelling_bout_s": -1.190207357562037,
+    "small_lawn/exits_per_on_lawn_hour": -0.9467756081639224,
+    "small_lawn/pre_exit_enrichment": -0.9598334099841676,
+    "small_lawn/time_on_lawn": -1.345228726434466,
+    "kinematics/dwelling_speed_median": 0.014403283441895719,
+    "kinematics/dwelling_speed_p90": 1.008556996795015,
+    "kinematics/roaming_speed_median": -1.5968104518207686,
+    "kinematics/roaming_speed_p90": -0.508530020075937,
+    "kinematics/roaming_survival_5min": 1.4522502007502653,
+    "activity/pause_share": 0.7992493905504665,
+    "activity/flip_fraction": 0.8211481510822745,
+    "activity/onset_rate_per_min": -3.58862663001504,
+    "uniform_lawn/roaming_fraction": 0.6325043671122421,
+    "uniform_lawn/roaming_bout_s": -1.5714746349317081,
+    "uniform_lawn/dwelling_bout_s": -0.8479720025491966,
+    "local_search/gamma_per_min": -0.18672520036883977,
+    "local_search/log_early_late_ratio": 0.3102979038563432,
+    "chemotaxis/drift_mm_s": -0.7062596104942125,
+    "chemotaxis/log_quintile_ratio": -1.241699418728585,
+    "chemotaxis/weathervane_deg_s": 0.827004964725604,
+    "chemotaxis/onset_per_min": -0.40106794930508194,
+    "chemotaxis/flip_fraction": 0.3047675724877924
+   },
+   "failing": [
+    "small_lawn/roaming_bout_s",
+    "activity/onset_rate_per_min"
+   ],
+   "reversal_share": 0.04457222222222222
+  },
+  "r_dwell_on_food 0.01": {
+   "D": 1.4192156975021069,
+   "D_fit": 1.6771862272900153,
+   "z": {
+    "small_lawn/roaming_fraction": 2.654950335186452,
+    "small_lawn/roaming_bout_s": 3.115360108647179,
+    "small_lawn/dwelling_bout_s": -0.998057154476316,
+    "small_lawn/exits_per_on_lawn_hour": -0.057945133047451906,
+    "small_lawn/pre_exit_enrichment": 0.2820256219223002,
+    "small_lawn/time_on_lawn": -3.319516705443334,
+    "kinematics/dwelling_speed_median": 0.20369307003637552,
+    "kinematics/dwelling_speed_p90": 1.1165162075315813,
+    "kinematics/roaming_speed_median": -1.3397345004487382,
+    "kinematics/roaming_speed_p90": -0.523022669035373,
+    "kinematics/roaming_survival_5min": -0.6623644797506507,
+    "activity/pause_share": 0.732072023005115,
+    "activity/flip_fraction": 0.6472884680467501,
+    "activity/onset_rate_per_min": -3.4928594884151294,
+    "uniform_lawn/roaming_fraction": 0.8632305047997902,
+    "uniform_lawn/roaming_bout_s": -1.4903477728734609,
+    "uniform_lawn/dwelling_bout_s": -0.9647710226455752,
+    "local_search/gamma_per_min": -0.8026775334745971,
+    "local_search/log_early_late_ratio": 0.18893501449617853,
+    "chemotaxis/drift_mm_s": -0.7474348551381514,
+    "chemotaxis/log_quintile_ratio": -1.1041512212814755,
+    "chemotaxis/weathervane_deg_s": 0.6704631380609675,
+    "chemotaxis/onset_per_min": -0.438725963738356,
+    "chemotaxis/flip_fraction": 0.21527617577692332
+   },
+   "failing": [
+    "small_lawn/roaming_bout_s",
+    "small_lawn/time_on_lawn",
+    "activity/onset_rate_per_min"
+   ],
+   "reversal_share": 0.04194888888888889
+  },
+  "r_dwell_on_food 0.03": {
+   "D": 1.4121051962703284,
+   "D_fit": 1.682013455592129,
+   "z": {
+    "small_lawn/roaming_fraction": 3.2434265917666787,
+    "small_lawn/roaming_bout_s": 3.5678184913798883,
+    "small_lawn/dwelling_bout_s": -1.3295230151272066,
+    "small_lawn/exits_per_on_lawn_hour": -0.2046702034232845,
+    "small_lawn/pre_exit_enrichment": -1.0543803484429908,
+    "small_lawn/time_on_lawn": -1.7853658756277164,
+    "kinematics/dwelling_speed_median": 1.0487254069204304,
+    "kinematics/dwelling_speed_p90": 1.8519282491449438,
+    "kinematics/roaming_speed_median": -1.8657169333038532,
+    "kinematics/roaming_speed_p90": -0.5103247001043942,
+    "kinematics/roaming_survival_5min": 0.296505848355991,
+    "activity/pause_share": -0.13428239350397753,
+    "activity/flip_fraction": 0.7227868451154057,
+    "activity/onset_rate_per_min": -2.679604664506412,
+    "uniform_lawn/roaming_fraction": 0.6823547368605384,
+    "uniform_lawn/roaming_bout_s": -2.268516860057774,
+    "uniform_lawn/dwelling_bout_s": -0.9609042876619062,
+    "local_search/gamma_per_min": -0.10455520323693154,
+    "local_search/log_early_late_ratio": -0.16117380067844755,
+    "chemotaxis/drift_mm_s": -0.7145802602110948,
+    "chemotaxis/log_quintile_ratio": -1.2879642309487151,
+    "chemotaxis/weathervane_deg_s": 0.8609909968889122,
+    "chemotaxis/onset_per_min": -0.4053240007589217,
+    "chemotaxis/flip_fraction": 0.2655286274135173
+   },
+   "failing": [
+    "small_lawn/roaming_fraction",
+    "small_lawn/roaming_bout_s"
+   ],
+   "reversal_share": 0.04380666666666667
+  },
+  "r_dwell_on_food 0.1": {
+   "D": 2.964619971357515,
+   "D_fit": 3.603789845079577,
+   "z": {
+    "small_lawn/roaming_fraction": 4.167972391488131,
+    "small_lawn/roaming_bout_s": 3.527052642473256,
+    "small_lawn/dwelling_bout_s": -1.7534776537449464,
+    "small_lawn/exits_per_on_lawn_hour": 8.235329932183046,
+    "small_lawn/pre_exit_enrichment": -4.835099627344726,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/dwelling_speed_median": 4.160317365678206,
+    "kinematics/dwelling_speed_p90": 5.428622297010832,
+    "kinematics/roaming_speed_median": -1.7705742174974057,
+    "kinematics/roaming_speed_p90": -0.49338817319061945,
+    "kinematics/roaming_survival_5min": 1.5228801701354615,
+    "activity/pause_share": -2.161842845682898,
+    "activity/flip_fraction": 0.3340060589680154,
+    "activity/onset_rate_per_min": -1.2517310169150024,
+    "uniform_lawn/roaming_fraction": 1.320038625365527,
+    "uniform_lawn/roaming_bout_s": -1.642884061626293,
+    "uniform_lawn/dwelling_bout_s": -1.235253552604345,
+    "local_search/gamma_per_min": -0.6520341882908632,
+    "local_search/log_early_late_ratio": -0.27831954612028786,
+    "chemotaxis/drift_mm_s": -0.6816926668340092,
+    "chemotaxis/log_quintile_ratio": -1.16671273966574,
+    "chemotaxis/weathervane_deg_s": 0.7494100565274114,
+    "chemotaxis/onset_per_min": -0.3445531355513972,
+    "chemotaxis/flip_fraction": 0.4004255250271886
+   },
+   "failing": [
+    "small_lawn/roaming_fraction",
+    "small_lawn/roaming_bout_s",
+    "small_lawn/exits_per_on_lawn_hour",
+    "small_lawn/pre_exit_enrichment",
+    "small_lawn/time_on_lawn",
+    "kinematics/dwelling_speed_median",
+    "kinematics/dwelling_speed_p90"
+   ],
+   "reversal_share": 0.04622
+  }
+ }
+}

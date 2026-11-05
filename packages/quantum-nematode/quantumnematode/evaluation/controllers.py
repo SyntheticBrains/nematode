@@ -66,11 +66,13 @@ class BatchedController(Protocol):
 
 
 def _refuse(brain: object, reason: str) -> None:
+    """Raise that the batched evaluator cannot run this brain, and why."""
     msg = f"the batched evaluator cannot run {type(brain).__name__}: {reason}"
     raise ValueError(msg)
 
 
 def _check_policy(brain: object, config: object) -> None:
+    """Refuse a brain whose policy the batched evaluator does not reproduce."""
     if getattr(config, "action_mode", None) != "continuous":
         _refuse(brain, "its action mode is not continuous")
     if getattr(config, "action_space", None) != "primitives":
@@ -107,6 +109,7 @@ def _sample(
 
 
 def _food_features(senses: BatchedSenses) -> np.ndarray:
+    """Return each animal's concentration and squashed lateral and dC/dt cues, (animals, 3)."""
     return np.stack(
         [
             senses.concentration,
@@ -270,6 +273,7 @@ class BatchedConnectome:
 
 
 def _raw_hazards(rates: np.ndarray) -> np.ndarray:
+    """Map hazards per second onto the primitives' log-linear raw range [-1, 1], clipped."""
     k = load_kinematics()
     log_low = math.log(k.hazard_min_per_s)
     log_span = math.log(k.hazard_max_per_s) - log_low
@@ -278,6 +282,7 @@ def _raw_hazards(rates: np.ndarray) -> np.ndarray:
 
 
 def _raw_speed(speed: float) -> float:
+    """Map a run speed in mm/s onto the primitives' raw range [-1, 1], clipped."""
     k = load_kinematics()
     return min(1.0, max(-1.0, 2.0 * speed / k.v_max_mm_per_s - 1.0))
 
@@ -350,6 +355,7 @@ def _normals(noise: list[torch.Generator]) -> np.ndarray:
 
 
 def _require_noise(noise: list[torch.Generator] | None) -> list[torch.Generator]:
+    """Return the animals' generators; these controllers have no mean action to fall back on."""
     if noise is None:
         msg = "this controller draws its randomness from each animal's generator; noise is None"
         raise ValueError(msg)
@@ -549,7 +555,10 @@ class BatchedMechanistic:
     - **optionally,** with ``kappa_off_food`` in the parameters, the weathervane gain is
       ``kappa_off_food`` wherever food contact is 0, and ``kappa_weathervane`` on food. Likewise
       ``v_off_food`` and ``sigma_off_food`` set the run speed and the curvature noise wherever food
-      contact is 0, whatever the state; on food the state's own values apply;
+      contact is 0, whatever the state; on food the state's own values apply. With
+      ``r_dwell_on_food``, a dwelling animal's reversal rate is ``r_dwell_on_food`` in place of
+      ``r_dwell`` wherever food contact is above 0, before the klinokinesis, edge and search terms;
+      off food, and roaming, the state's own rate applies;
     - **optionally,** with ``speed_log_sd_dwell`` and ``speed_log_sd_roam``, the run speed varies
       within a state: at the first second and every :data:`SPEED_WINDOW_STEPS` seconds after, each
       animal draws a standard normal z, and its run speed is the speed above times
@@ -576,6 +585,9 @@ class BatchedMechanistic:
         speed_off, sigma_off = params.get("v_off_food"), params.get("sigma_off_food")
         self.v_off_food = None if speed_off is None else float(speed_off)
         self.sigma_off_food = None if sigma_off is None else float(sigma_off)
+        # Optional: a dwelling reversal rate of its own on food.
+        dwell_on = params.get("r_dwell_on_food")
+        self.r_dwell_on_food = None if dwell_on is None else float(dwell_on)
         # Optional: a per-state spread of the run speed, redrawn every window.
         sd_dwell, sd_roam = params.get("speed_log_sd_dwell"), params.get("speed_log_sd_roam")
         if (sd_dwell is None) != (sd_roam is None):
@@ -621,7 +633,16 @@ class BatchedMechanistic:
         self.steps = 0
         self.speed_z = None
 
+    def _reversal_rate(self, roaming: np.ndarray, contact: np.ndarray) -> np.ndarray:
+        """Return each animal's reversal rate: its state's, or the on-food dwelling rate if set."""
+        p = self.p
+        dwell = p["r_dwell"]
+        if self.r_dwell_on_food is not None:
+            dwell = np.where(contact > 0, self.r_dwell_on_food, p["r_dwell"])
+        return np.where(roaming, p["r_roam"], dwell)
+
     def _switch_rates(self, senses: BatchedSenses) -> tuple[np.ndarray, np.ndarray]:
+        """Return each animal's dwelling-to-roaming and roaming-to-dwelling rates this second."""
         p = self.p
         intake = (
             np.asarray(senses.intake, dtype=np.float64) / senses.max_intake
@@ -662,7 +683,7 @@ class BatchedMechanistic:
         roaming = self.state == 1
         klino = np.tanh(np.asarray(senses.derivative, dtype=np.float64) * senses.derivative_scale)
         reversal = (
-            np.where(roaming, p["r_roam"], p["r_dwell"])
+            self._reversal_rate(roaming, contact)
             * np.exp(-p["beta_reversal"] * klino)
             * np.exp(p["edge"] * loss)
             * search

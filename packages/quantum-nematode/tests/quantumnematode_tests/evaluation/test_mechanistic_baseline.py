@@ -45,6 +45,7 @@ _BASE = {
 
 
 def _senses(n: int, *, contact: float = 1.0, derivative: float = 0.0) -> BatchedSenses:
+    """Return n animals' senses: a flat field, the given food contact and dC/dt."""
     zeros = np.zeros(n)
     return BatchedSenses(
         concentration=zeros,
@@ -63,6 +64,7 @@ def _senses(n: int, *, contact: float = 1.0, derivative: float = 0.0) -> Batched
 
 
 def _gens(seeds: list[int]) -> list[torch.Generator]:
+    """Return one seeded generator per animal."""
     return [torch.Generator().manual_seed(s) for s in seeds]
 
 
@@ -74,6 +76,7 @@ def _rate(raw: float) -> float:
 
 
 def _reversal(controller: BatchedMechanistic, senses: BatchedSenses) -> float:
+    """Return the first animal's reversal hazard, per second, after one step."""
     return _rate(float(controller.act(senses, _gens([1]))[0, 2]))
 
 
@@ -135,11 +138,13 @@ def test_mean_action_is_refused() -> None:
 
 
 def _steer_senses(n: int, contact: float) -> BatchedSenses:
+    """Return n animals' senses with the lateral cue spread from -1 to 1 across them."""
     senses = _senses(n, contact=contact)
     return dataclasses.replace(senses, lateral=np.linspace(-1.0, 1.0, n))
 
 
 def _steering(params: dict[str, float], contact: float, seeds: list[int]) -> np.ndarray:
+    """Return 20 steps of raw actions, (steps, animals, outputs), for the given animals."""
     controller = BatchedMechanistic(params)
     gens = _gens(seeds)
     return np.stack([controller.act(_steer_senses(len(seeds), contact), gens) for _ in range(20)])
@@ -194,3 +199,26 @@ def test_a_speed_spread_varies_speed_by_window_only() -> None:
     assert not np.array_equal(first[0], second[0])
     with pytest.raises(ValueError, match="come together"):
         BatchedMechanistic({**_BASE, "speed_log_sd_dwell": 0.5})
+
+
+def test_an_on_food_dwelling_rate_changes_only_dwelling_on_food() -> None:
+    """Without r_dwell_on_food the model is unchanged; with it, dwelling on food reverses at it.
+
+    Covers the mechanistic-baseline scenarios "Off food nothing changes" and "On food only dwelling
+    reversals change": off food every column is the state's; on food only the reversal hazard of
+    dwelling animals changes, scaled from r_dwell to r_dwell_on_food; roaming keeps r_roam.
+    """
+    seeds = list(range(40))
+    # Distinct state rates, so a rate applied to the wrong state changes the ratio.
+    params = {**_BASE, "r_roam": 0.08}
+    on = {**params, "r_dwell_on_food": 0.2}
+    np.testing.assert_array_equal(_steering(params, 0.0, seeds), _steering(on, 0.0, seeds))
+    base, moved = _steering(params, 1.0, seeds), _steering(on, 1.0, seeds)
+    np.testing.assert_array_equal(base[..., [0, 1, 3, 4]], moved[..., [0, 1, 3, 4]])
+    inside = (np.abs(base[..., 2]) < 1) & (np.abs(moved[..., 2]) < 1)
+    rate = np.vectorize(_rate)
+    ratio = rate(moved[..., 2][inside]) / rate(base[..., 2][inside])
+    # Dwelling steps scale by 0.2 / r_dwell; roaming steps are unchanged; both occur here.
+    assert np.all(np.isclose(ratio, 0.2 / params["r_dwell"]) | np.isclose(ratio, 1.0))
+    assert np.isclose(ratio, 0.2 / params["r_dwell"]).any()
+    assert np.isclose(ratio, 1.0).any()
