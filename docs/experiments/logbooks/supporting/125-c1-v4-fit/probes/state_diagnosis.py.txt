@@ -1,0 +1,134 @@
+"""Where on-lawn onsets and flips come from, by roaming/dwelling state: real against C.1 on v4.
+
+Real: PD1074 OD 2 band cohorts (the bands' own animals). Simulated: the warm readiness answer on
+200 animals at 627,000,000 + i (discarded), measured on Scheer's rig, small lawn only. Each on-lawn
+second is assigned the state of its 10-s window; onsets by their sample, flips by their middle
+sample. Description for planning. Run from the repository root.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c1-v4")
+import benchmark_bands as bb
+import benchmark_grade as bg
+from quantumnematode.benchmark import chemotaxis as ch
+from quantumnematode.benchmark import grading as g
+from quantumnematode.benchmark import references as refs
+from quantumnematode.benchmark.readouts import OFF_FOOD_DETECTOR, reversal_onsets
+from quantumnematode.validation import roaming_dwelling as rd
+
+BINS = (0.0, 0.02, 0.03, 0.06, 0.1, np.inf)
+STATES = {"dwelling": rd.DWELLING, "roaming": rd.ROAMING}
+
+
+def flip_positions(x, y):
+    """Return the middle sample of each flipping pair and of each counted pair (chemotaxis rule)."""
+    dx, dy = np.diff(x), np.diff(y)
+    length = np.hypot(dx, dy)
+    ok = np.isfinite(length) & (length >= ch.FLIP_FLOOR_MM if hasattr(ch, "FLIP_FLOOR_MM") else length >= 0.03)
+    a, b = ok[:-1], ok[1:]
+    pair = a & b
+    with np.errstate(invalid="ignore", divide="ignore"):
+        cos = (dx[:-1] * dx[1:] + dy[:-1] * dy[1:]) / (length[:-1] * length[1:])
+    flip = pair & (cos < np.cos(np.radians(135.0)))
+    mids = np.arange(1, len(x) - 1)
+    return mids[flip], mids[pair]
+
+
+def tally(x, y, on, states, labels=None):
+    out = {s: {"seconds": 0, "bins": np.zeros(len(BINS) - 1), "onsets": 0, "flips": 0, "pairs": 0, "reversal_labels": 0} for s in STATES}
+    step = np.hypot(np.diff(x), np.diff(y))
+    valid = np.isfinite(step) & on[1:] & on[:-1]
+    win = np.arange(len(step)) // g.SAMPLES_PER_WINDOW
+    state_of = lambda t: states[t // g.SAMPLES_PER_WINDOW] if t // g.SAMPLES_PER_WINDOW < len(states) else rd.OFF_FOOD
+    for name, code in STATES.items():
+        sel = valid & (win < len(states))
+        sel &= np.array([states[w] == code if w < len(states) else False for w in win])
+        out[name]["seconds"] += int(sel.sum())
+        out[name]["bins"] += np.histogram(step[sel], bins=BINS)[0]
+        if labels is not None:
+            out[name]["reversal_labels"] += int(sum(1 for t in np.flatnonzero(sel) if labels[t] == "reversal"))
+    for o in reversal_onsets(x, y, OFF_FOOD_DETECTOR, floor=g.ON_LAWN_REVERSAL_FLOOR_MM):
+        o = int(o)
+        if o < len(on) and on[o]:
+            s = state_of(o)
+            for name, code in STATES.items():
+                if s == code:
+                    out[name]["onsets"] += 1
+    xb, yb = np.where(on, x, np.nan), np.where(on, y, np.nan)
+    flips, pairs = flip_positions(xb, yb)
+    for arr, key in ((flips, "flips"), (pairs, "pairs")):
+        for t in arr:
+            s = state_of(int(t))
+            for name, code in STATES.items():
+                if s == code:
+                    out[name][key] += 1
+    return out
+
+
+def merge(total, part):
+    for s in STATES:
+        for k in total[s]:
+            total[s][k] = total[s][k] + part[s][k]
+
+
+def summary(total):
+    out = {}
+    for s, t in total.items():
+        sec = max(t["seconds"], 1)
+        out[s] = {
+            "seconds": int(t["seconds"]),
+            "step_share": {f"{BINS[i]}-{BINS[i+1]}": float(t["bins"][i] / sec) for i in range(len(BINS) - 1)},
+            "onsets_per_min": 60.0 * t["onsets"] / sec,
+            "flip_fraction": t["flips"] / t["pairs"] if t["pairs"] else None,
+            "pairs_per_s": t["pairs"] / sec,
+            "flips_per_min": 60.0 * t["flips"] / sec,
+            "reversal_label_share": t["reversal_labels"] / sec,
+        }
+    share = {s: total[s]["seconds"] for s in STATES}
+    out["roaming_share_of_classified_seconds"] = share["roaming"] / max(sum(share.values()), 1)
+    return out
+
+
+def real():
+    tracks = refs.load_scheer_tracks()
+    clf = bg.classifier(bg.load_bands_v4())
+    total = {s: {"seconds": 0, "bins": np.zeros(len(BINS) - 1), "onsets": 0, "flips": 0, "pairs": 0, "reversal_labels": 0} for s in STATES}
+    for i in bb.band_rows(tracks, bb.WILD_TYPE):
+        x, y = tracks.x[i], tracks.y[i]
+        on = g.real_on_lawn(x, y, tracks.boundary_radius[i])
+        w = g.animal_windows(x, y, on, clf)
+        merge(total, tally(x, y, on, w.states))
+    return summary(total)
+
+
+def simulated():
+    import readiness_v4 as r
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    import c1_v3_fit as c1v3
+
+    z = json.loads(Path("build/c1-v4/readiness_warm.json").read_text())["answer"]
+    bands = bg.load_bands_v4()
+    params = c1v3.parameters(z)
+    pops, _ = bg.simulate_v2("mlp", lambda _p: BatchedMechanistic(params), [627_000_000 + i for i in range(200)], bands, ("small_lawn",))
+    clf = bg.classifier(bands)
+    total = {s: {"seconds": 0, "bins": np.zeros(len(BINS) - 1), "onsets": 0, "flips": 0, "pairs": 0, "reversal_labels": 0} for s in STATES}
+    for steps in pops["small_lawn"]:
+        x = np.array([s.x for s in steps], float)
+        y = np.array([s.y for s in steps], float)
+        on = np.array([bool(s.on_lawn) for s in steps])
+        w = g.simulated_windows(steps, clf)
+        merge(total, tally(x, y, on, w.states, [s.primitive for s in steps]))
+    return summary(total), {k: params[k] for k in ("v_dwell", "v_roam", "sigma_dwell", "sigma_roam", "r_dwell", "r_roam", "o_dwell", "o_roam", "speed_log_sd_dwell", "speed_log_sd_roam")}
+
+
+if __name__ == "__main__":
+    sim, params = simulated()
+    record = {"description": __doc__, "real": real(), "simulated": sim, "simulated_parameters": params}
+    Path("build/c1-v4/state_diagnosis.json").write_text(json.dumps(record, indent=1, default=float) + "\n")
+    print(json.dumps({k: record[k] for k in ("real", "simulated", "simulated_parameters")}, indent=1, default=float))

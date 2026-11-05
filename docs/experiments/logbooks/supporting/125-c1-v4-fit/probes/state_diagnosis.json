@@ -1,0 +1,81 @@
+{
+ "description": "Where on-lawn onsets and flips come from, by roaming/dwelling state: real against C.1 on v4.\n\nReal: PD1074 OD 2 band cohorts (the bands' own animals). Simulated: the warm readiness answer on\n200 animals at 627,000,000 + i (discarded), measured on Scheer's rig, small lawn only. Each on-lawn\nsecond is assigned the state of its 10-s window; onsets by their sample, flips by their middle\nsample. Description for planning. Run from the repository root.\n",
+ "real": {
+  "dwelling": {
+   "seconds": 1931880,
+   "step_share": {
+    "0.0-0.02": 0.5471768432821914,
+    "0.02-0.03": 0.14214961591817296,
+    "0.03-0.06": 0.20985827277056546,
+    "0.06-0.1": 0.07721131747313498,
+    "0.1-inf": 0.02360395055593515
+   },
+   "onsets_per_min": 2.118827256351326,
+   "flip_fraction": 0.1477998045562373,
+   "pairs_per_s": 0.14248866389216722,
+   "flips_per_min": 1.263587800484502,
+   "reversal_label_share": 0.0
+  },
+  "roaming": {
+   "seconds": 393900,
+   "step_share": {
+    "0.0-0.02": 0.17403909621731403,
+    "0.02-0.03": 0.09755013962934755,
+    "0.03-0.06": 0.3030921553693831,
+    "0.06-0.1": 0.2754810865701955,
+    "0.1-inf": 0.14983752221375984
+   },
+   "onsets_per_min": 3.0857578065498856,
+   "flip_fraction": 0.11399803689047004,
+   "pairs_per_s": 0.5715993907083016,
+   "flips_per_min": 3.9096725057121096,
+   "reversal_label_share": 0.0
+  },
+  "roaming_share_of_classified_seconds": 0.1693625364393881
+ },
+ "simulated": {
+  "dwelling": {
+   "seconds": 270560,
+   "step_share": {
+    "0.0-0.02": 0.6349571259609699,
+    "0.02-0.03": 0.16366055588409226,
+    "0.03-0.06": 0.11145771732702543,
+    "0.06-0.1": 0.07583530455351863,
+    "0.1-inf": 0.014089296274393849
+   },
+   "onsets_per_min": 0.7819337670017741,
+   "flip_fraction": 0.15385977337110482,
+   "pairs_per_s": 0.14612655233589592,
+   "flips_per_min": 1.34897989355411,
+   "reversal_label_share": 0.05546274393849793
+  },
+  "roaming": {
+   "seconds": 95010,
+   "step_share": {
+    "0.0-0.02": 0.14356383538574888,
+    "0.02-0.03": 0.04945795179454794,
+    "0.03-0.06": 0.2634564782654457,
+    "0.06-0.1": 0.4087780233659615,
+    "0.1-inf": 0.13474371118829598
+   },
+   "onsets_per_min": 3.3621724029049576,
+   "flip_fraction": 0.1363427916308398,
+   "pairs_per_s": 0.7344490053678561,
+   "flips_per_min": 6.008209662140827,
+   "reversal_label_share": 0.2376486685612041
+  },
+  "roaming_share_of_classified_seconds": 0.25989550564871294
+ },
+ "simulated_parameters": {
+  "v_dwell": 0.012813100111929654,
+  "v_roam": 0.06648991795145896,
+  "sigma_dwell": 20.83067679475039,
+  "sigma_roam": 59.45422389182894,
+  "r_dwell": 0.0010005557715145577,
+  "r_roam": 0.14563538787703753,
+  "o_dwell": 0.027081510158807057,
+  "o_roam": 0.03824281872196687,
+  "speed_log_sd_dwell": 0.45623412568865873,
+  "speed_log_sd_roam": 0.457802101885306
+ }
+}

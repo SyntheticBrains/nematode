@@ -1,0 +1,147 @@
+"""C.1's 25-parameter model on benchmark v4: a readiness probe (description, discarded seeds).
+
+warm: x0 = C.1's v3 answer (Logbook 121, its chosen restart), sigma0 0.1; CMA 9441;
+      fit animals 620,000,000 + 200·k + i; its answer graded on 625,000,000 + 200·g + i.
+box:  the box centre, sigma0 0.2; CMA 9442; fit 621,000,000; graded on 626,000,000.
+Both: v4's definedness-first ranking score against v4's band centres at n = 200 (all six
+families), C.1b's doubly guarded stop, cap 300. Each answer is graded on v4 with presence on 5
+populations. Reaches: at least 3 of 5 pass. Run from the repository root.
+"""
+
+import json
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c1_v3_fit as c1v3
+import c1b_fit as c1b
+import cma_recovery as cr
+import cma_recovery_v2 as v2
+import npe_recovery as nr
+
+OUT = Path("build/c1-v4")
+CAP = 300
+GRADE_POPULATIONS = 5
+RUNS = {
+    "warm": {"cma": 9441, "fit": 620_000_000, "grade": 625_000_000, "sigma0": 0.1},
+    "box": {"cma": 9442, "fit": 621_000_000, "grade": 626_000_000, "sigma0": 0.2},
+}
+
+
+class V4BandObjective:
+    """The ranking score of a v4 simulation against v4's band centres at n = 200, picklable."""
+
+    def __init__(self) -> None:
+        bands = bg.load_bands_v4()
+        self.family_map = {f: tuple(st) for f, st in bands["families"].items()}
+        self.scales = v2.band_scales_v2(bands)
+        centres = {}
+        for family, stats in self.family_map.items():
+            family_bands = bg.family_bands_v2(bands, family, nr.ANIMALS)
+            for s in stats:
+                centres[f"{family}/{s}"] = float(family_bands[s].centre)
+        self.truth = {"statistics": centres}
+
+    def __call__(self, record):
+        return v2.ranking_score(self.truth, record, self.scales, self.family_map)
+
+
+def _populations(z, seeds):
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+
+    params = c1v3.parameters(z)
+    bands = bg.load_bands_v4()
+    populations, chemotaxis = bg.simulate_v2("mlp", lambda _p: BatchedMechanistic(params), seeds, bands)
+    return populations, chemotaxis, bands
+
+
+def simulate(k, z, seed_base):
+    """Run simulation k of C.1 (v3's model) at z on v4's assays; return its graded statistics."""
+    seeds = [seed_base + nr.ANIMALS * k + i for i in range(nr.ANIMALS)]
+    start = time.perf_counter()
+    populations, chemotaxis, bands = _populations(z, seeds)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=False)
+    share = graded["reversal_share"]
+    return nr._finite({
+        "k": k,
+        "z": list(map(float, z)),
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "D": graded["D"],
+        "D_fit": graded["D_fit"],
+        "reversal_share": None if share is None else share["value"],
+        "seconds": time.perf_counter() - start,
+    })
+
+
+def grade(item):
+    z, base, g = item
+    populations, chemotaxis, bands = _populations(z, [base + nr.ANIMALS * g + i for i in range(nr.ANIMALS)])
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=True)
+    return bg._finite({
+        "g": g,
+        "wild_type_passes": graded["wild_type_passes"],
+        "family_passes": graded["family_passes"],
+        "D": graded["D"],
+        "D_fit": graded["D_fit"],
+        "failing": [f"{f}/{n}" for f, rs in graded["families"].items() for n, r in rs.items() if not r["passes"]],
+        "z": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "values": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "chemotaxis_present": graded["chemotaxis_presence"]["present"],
+        "local_search_present": graded["local_search_presence"]["present"],
+        "reversal_share": graded["reversal_share"]["value"] if graded["reversal_share"] else None,
+    })
+
+
+def _warm_x0():
+    fit = json.loads(c1v3.FIT_PATH.read_text())
+    return list(fit["restarts"][fit["chosen_restart"]]["answer"])
+
+
+def start_warm(seed):
+    import cma
+
+    return cma.CMAEvolutionStrategy(_warm_x0(), RUNS["warm"]["sigma0"], {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": cr.POPSIZE, "seed": seed, "verbose": -9})
+
+
+def run(name, pool):
+    p = RUNS[name]
+    out = OUT / f"readiness_{name}.json"
+    if out.exists():
+        return
+    t0 = time.time()
+    history = cr.run_fit(
+        {}, fit=0, cma_seed=p["cma"], seed_base=p["fit"], cap=CAP, use_rule=True,
+        state_dir=OUT / f"readiness_{name}", pool=pool, scales={}, objective=V4BandObjective(),
+        simulate=simulate, stop=c1b.defined_stop,
+        strategy_factory=start_warm if name == "warm" else c1v3.start_centre,
+    )
+    answer = history["answers"][-1]
+    grades = list(pool.map(grade, [(answer, p["grade"], g) for g in range(GRADE_POPULATIONS)]))
+    passing = sum(bool(g["wild_type_passes"]) for g in grades)
+    record = {
+        "description": f"Description: C.1's 25-parameter model on benchmark v4, run '{name}'; discarded seeds.",
+        **p, "cap": CAP, "stop": history.get("stop"), "generations": len(history["medians"]),
+        "medians": history["medians"], "sigmas": history["sigmas"], "answer": answer,
+        "parameters": c1v3.parameters(answer), "populations_passing": passing,
+        "reaches": passing >= 3, "grades": grades, "wall_hours": (time.time() - t0) / 3600,
+    }
+    out.write_text(json.dumps(bg._finite(record), indent=2) + "\n")
+    print(name, json.dumps({k: record[k] for k in ("stop", "generations", "populations_passing", "reaches")}),
+          "D", [round(g["D"], 2) for g in grades], flush=True)
+    for g in grades:
+        print("  ", g["g"], g["wild_type_passes"], g["failing"], flush=True)
+
+
+def main():
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        for name in sys.argv[1:] or list(RUNS):
+            run(name, pool)
+
+
+if __name__ == "__main__":
+    main()
