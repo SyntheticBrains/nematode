@@ -1,4 +1,4 @@
-# 126: Phase 10 — C.2's Fit: Seven Designs Stall at Constant Outputs; a Responsiveness Guard and a Wider Search From an Imitation Start Fit the Lawn, and the Held-Out Families and Mutants Fail
+# 126: Phase 10 — C.2's Fit: Seven Designs Stall; a Responsiveness Guard and a Wider Search From an Imitation Start Fit the Lawn, and the Held-Out Families and Mutants Fail
 
 **Status**: completed, as a diagnosis. No fit is registered. **C.2's encoded connectome now fits benchmark v4's fitted families.** The search used a responsiveness guard and a population of 48, started from a network trained to imitate C.1. On 5 fresh populations it passes every fitted family (small lawn, uniform well, kinematics, activity) in all 5, at D_fit 1.29–1.40.
 
@@ -8,18 +8,24 @@ It passes the wild type in **0 of 5**. Every held-out family fails:
 - **Chemotaxis:** no drift up the gradient, and it keeps reversing off food at its lawn rate.
 - **The mutants:** tph-1 and tax-4 fail.
 
-Seven designs before it ended in one basin: outputs held constant by the readout's biases, scoring about 9.3–10. **The imitation speeds the fit but is not what escapes the basin.** From stage 1's answer, with no teacher, the same guard and population reach 2 of the 4 fitted families by generation 250 (D_fit 2.15), still improving.
+Seven designs before it stalled, at scores of about 8.6–9.6 at the end. The score is each generation's median ranking score, averaged over the run's last 20 generations.
 
-> | Design (one restart; v4's D_fit) | Start | Generations | Score at the end | What it found |
+- **Four held every output constant at the readout's cap:** the soft cap, alone and with pool centres, and both stages of the per-ligand staged fit.
+- **The unbounded run (8.8)** kept speed responsive but pinned its curvature and reversal readouts.
+- **Two kept a responsive network and still stalled:** the graded box (8.6) and the imitation's refinement (9.5, the median of its last 20 generations, since one of them had an undefined statistic).
+
+**The imitation speeds the fit but is not what escapes the basin.** From stage 1's answer, with no teacher, the same guard and population reach 2 of the 4 fitted families by generation 250 (D_fit 2.15), still improving.
+
+> | Design (one restart; v4's D_fit) | Start | Generations | Score at the end (mean of the last 20 medians) | What it found |
 > |---|---|---|---|---|
 > | stage 2, unbounded | stage 1's answer | 155 (stopped) | 8.8 | curvature pinned, reversals suppressed |
 > | soft cap (±2) | stage 1's answer | 81 (stopped) | 9.4 | outputs parked at the cap; motor layer 97% saturated |
 > | soft cap + pool centres | stage 1's answer | 80 (stopped) | 9.6 | the same |
 > | graded box + saturation guard | stage 1's answer | 200 | 8.6 | responsive, unsaturated; the worm reverses half the time; D_fit 4.41 |
 > | responsive stage 1, per-ligand tying | box centre | 47 + 200 | 9.3 | constant outputs from stage 1 on; leaves the lawn |
-> | imitation of C.1, then sep-CMA | imitation answer | 200 | about 10 | D_fit 4.86 at the end |
+> | imitation of C.1, then sep-CMA | imitation answer | 200 | 84.6 (one generation with an undefined statistic; the median of the 20 is 9.5) | responsive; D_fit 4.86 at the end |
 > | **responsiveness guard, population 48** | **the imitation fit's answer** | **250** | **1.8** | **every fitted family passes; D_fit 1.33** |
-> | the same, no imitation | stage 1's answer | 250 | 2.7, still falling | small lawn and uniform well pass; D_fit 2.15 |
+> | the same, no imitation | stage 1's answer | 250 | 3.0, still falling (2.71 at generation 250) | small lawn and uniform well pass; D_fit 2.15 |
 
 **Date**: 2026-11-05 to 2026-11-06.
 
@@ -84,7 +90,7 @@ The answer was also graded on D_fit's assays on one population.
 
 - **A stage 1 that fits every sense, and per-ligand tying** (`staged_bc.json`, 136 parameters). Stage 1 fitted the 77 parameters that carry the senses to the outputs, from the box centre. It still parked its outputs at the cap within 47 generations, and stage 2 stayed in that basin at 9.3.
 
-Across these designs the basin is the same: constant outputs, set by the readout's biases, scoring about 9.3–10. A worm that varies its outputs scores worse there, so the search does not leave.
+The capped designs share one basin: constant outputs set by the readout's biases, scoring about 9.3–9.6. A worm that varies its outputs scores worse there, so the search does not leave it. The graded design stayed responsive, and still stalled at 8.6.
 
 ## An imitation start, then a guard against constant outputs
 
@@ -93,6 +99,7 @@ Across these designs the basin is the same: constant outputs, set by the readout
 - **The fit to the teacher:** R² about 0.3 for speed and the reversal hazard; curvature's noise draw cannot be learned. C.2 learns the teacher's average action given the senses, not its roaming or dwelling state.
 - **Closed-loop**, the imitation answer is responsive but leaves the lawn (D_fit 8.0).
 - **sep-CMA refined it** to D_fit 4.86 at 200 generations. Its median score stayed near 10.
+- **Provenance:** the first run trained, saved its answer, then stopped with a `TypeError` while profiling. Its log is committed as `probes/imitation_training.log.txt`, and is the `imitation_d.log` the record names. The committed script is the corrected one: it resumed from that saved answer, which equals the record's `imitation_answer.z`, and graded and refined it. The first script was not kept. `probes/README.md` has the details and how to re-run the probes.
 
 **The guard and a wider search** (`guarded_wide.json`), from the refined answer:
 
@@ -162,9 +169,13 @@ Its median fell from 3.83 to 2.71 over the last 50 generations. The imitation st
 
 ## What this establishes, and what it does not
 
-- **The run mode is solved on the fitted families,** but only with four changes acting together: the bounded readout, the graded box, the two guards and the wider search. Every partial combination stalled at constant outputs.
+- **The tested combination fixes the run mode on the fitted families:** the bounded readout, the graded box, the two guards and the population of 48, together.
 
-- **The imitation start speeds the fit; the guard and the wider search are what escape the basin.** Without the start, the fit is slower and had not reached all four families when stopped. So the fit that passes depends on C.1 only through its start, and a longer run without it may remove even that.
+  - The responsiveness guard and the larger population were introduced in the same run, so the experiment does not isolate whether either alone would suffice.
+  - The next fitting plan keeps both.
+  - Population 48 makes each generation about three times as costly: about 80 s, against 25 s.
+
+- **The imitation start speeds the fit; the guard and the wider search, together, are what escape the basin.** Without the start, the fit is slower and had not reached all four families when stopped. So the fit that passes depends on C.1 only through its start, and a longer run without it may remove even that.
 
 - **D_fit carries no signal for the held-out families,** and the fitted C.2 does not reproduce them:
 

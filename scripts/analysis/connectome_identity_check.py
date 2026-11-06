@@ -132,6 +132,11 @@ def per_step_job(arm: str) -> str:
     config = load_simulation_config(str(path))
     brain, _, _ = harness.build_brain(path, BRAIN_SEED, ARMS[arm])
     episode = run_reference(config, brain, PER_STEP_SEED, PER_STEP_STEPS, record_density=True)
+    return _episode_digest(episode)
+
+
+def _episode_digest(episode: Any) -> str:  # noqa: ANN401 - a reference episode
+    """Digest a per-step episode's log: its features, outputs, modulators and behaviour."""
     behaviour = np.array(
         [[s.x, s.y, s.heading_rad, s.concentration, s.dc_dt] for s in episode.behaviour],
         dtype=np.float64,
@@ -198,14 +203,7 @@ def encoded_job(kind: str, vector: str) -> str:
         trajectories = BatchedEvaluator(config, BatchedConnectome(brain), seeds).run()
         return _digest([np.asarray(getattr(trajectories, name)) for name in (*ARRAYS, *TOTALS)])
     episode = run_reference(config, brain, PER_STEP_SEED, PER_STEP_STEPS, record_density=True)
-    return _digest(
-        [
-            np.asarray(episode.features, dtype=np.float64),
-            np.asarray(episode.means, dtype=np.float64),
-            np.asarray(episode.actions, dtype=np.float64),
-            np.array([str(s.primitive) for s in episode.behaviour]).astype("U16").view(np.uint32),
-        ],
-    )
+    return _episode_digest(episode)
 
 
 def jobs() -> list[tuple[str, str, str]]:
@@ -293,6 +291,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{len(digests)} jobs recorded at {_describe(state)}")
         return 0
     baseline = json.loads(baseline_path.read_text())
+    missing = sorted(set(baseline["digests"]) - set(digests))
+    extra = sorted(set(digests) - set(baseline["digests"]))
+    if missing or extra:
+        print(f"the baseline's jobs differ from this run's: missing {missing}, extra {extra}")
+        print("record the baseline again on the code before the change")
+        return 1
     rows = [
         {"job": job, "identical": digests[job] == baseline["digests"][job]}
         for job in baseline["digests"]

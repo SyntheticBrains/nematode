@@ -1,17 +1,17 @@
 {
-  "description": "Description: every connectome output in the baseline re-run at 3414fdab19 with uncommitted edits (source fa156087a8ab), against the baseline recorded at 3414fdab19 with uncommitted edits (source fa156087a8ab).",
-  "baseline_code": "3414fdab19c7a82e8da1ffce8b07f24a993547da",
+  "description": "Description: every connectome output in the baseline re-run at 17560ab8d5 with uncommitted edits (source 8e2326c46c18), against the baseline recorded at 17560ab8d5 with uncommitted edits (source 8e2326c46c18).",
+  "baseline_code": "17560ab8d5ead8217a232d5d3dc81e8c1bcb8bda",
   "baseline_source": {
-    "head": "3414fdab19c7a82e8da1ffce8b07f24a993547da",
+    "head": "17560ab8d5ead8217a232d5d3dc81e8c1bcb8bda",
     "uncommitted_edits": true,
-    "source_sha256": "fa156087a8ab48ae50144cd12487d1aef38c4ce07c190f9177446ccb81297b6a",
+    "source_sha256": "8e2326c46c1841b0ba42eef0e3d15722a3868539b6023459fdd7d9dabaa28002",
     "files": 573
   },
-  "code": "3414fdab19c7a82e8da1ffce8b07f24a993547da",
+  "code": "17560ab8d5ead8217a232d5d3dc81e8c1bcb8bda",
   "source": {
-    "head": "3414fdab19c7a82e8da1ffce8b07f24a993547da",
+    "head": "17560ab8d5ead8217a232d5d3dc81e8c1bcb8bda",
     "uncommitted_edits": true,
-    "source_sha256": "fa156087a8ab48ae50144cd12487d1aef38c4ce07c190f9177446ccb81297b6a",
+    "source_sha256": "8e2326c46c1841b0ba42eef0e3d15722a3868539b6023459fdd7d9dabaa28002",
     "files": 573
   },
   "jobs": 24,

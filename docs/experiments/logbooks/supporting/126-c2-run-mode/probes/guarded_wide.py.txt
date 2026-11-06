@@ -1,3 +1,5 @@
+# Added on commit, not part of the script as run: x0() reads build/c2-run-mode/imitation_d.json.
+# Copy the committed record, imitation_d.json beside this file, there first; README.md has the rest.
 """C.2 with a responsiveness guard and a larger population (description, discarded seeds).
 
 Seven designs reached one basin: outputs held constant by the readout's biases, scoring about

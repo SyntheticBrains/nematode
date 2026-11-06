@@ -709,15 +709,21 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   on discarded seeds.)* **C.2 fits v4's fitted families, from an imitation start; its held-out
   families fail.**
 
-  - **Seven designs stalled** at constant outputs set by the readout's biases (scores about 9.3–10):
+  - **Seven designs stalled** (scores about 8.6–9.6), four at constant outputs set by the readout's
+    biases; the unbounded fit pinned two outputs, and the graded box and the imitation's refinement
+    stayed responsive:
     - unbounded;
     - a soft cap, alone and with pool centres;
     - the graded box with a saturation guard;
     - a stage 1 that fits every sense, with per-ligand tying;
     - an imitation of C.1, then sep-CMA.
-  - **What worked:** a responsiveness guard (a candidate whose speed or reversal output barely
-    varies ranks behind every responsive one) with population 48, from the imitation fit's answer.
+  - **What worked:** a responsiveness guard with population 48, from the imitation fit's answer.
     D_fit is 1.33, and every fitted family passes in 5 of 5 fresh populations.
+    - The guard adds 300 to the score of a candidate whose speed or reversal output spans less than
+      0.5 between its 5th and 95th percentiles.
+    - The saturation guard adds 500 to one with over half its motor neurons saturated.
+    - The penalties add, so a saturated responsive candidate (+500) ranks behind an unresponsive,
+      unsaturated one (+300).
   - **Held out:** the wild type passes in 0 of 5. Local search shows no decay, and chemotaxis no
     drift with reversals at the lawn rate; tph-1 and tax-4 fail.
   - **Next, C.2's change:**
