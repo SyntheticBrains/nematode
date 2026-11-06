@@ -1,0 +1,84 @@
+round 0 samples 720000
+  epoch 0 loss 0.1192
+  epoch 1 loss 0.082
+  epoch 2 loss 0.0769
+  epoch 3 loss 0.0762
+  epoch 4 loss 0.0759
+  epoch 5 loss 0.0757
+  epoch 6 loss 0.0756
+  epoch 7 loss 0.0755
+  epoch 8 loss 0.0754
+  epoch 9 loss 0.0753
+  epoch 10 loss 0.0753
+  epoch 11 loss 0.0753
+  epoch 12 loss 0.0753
+  epoch 13 loss 0.0752
+  epoch 14 loss 0.0751
+  epoch 15 loss 0.075
+  epoch 16 loss 0.0749
+  epoch 17 loss 0.0748
+  epoch 18 loss 0.0747
+  epoch 19 loss 0.0744
+  fit {'speed': {'teacher_sd': 0.4297, 'r2': 0.275}, 'curvature': {'teacher_sd': 0.4835, 'r2': 0.061}, 'reversal': {'teacher_sd': 0.1758, 'r2': 0.083}, 'omega': {'teacher_sd': 0.0458, 'r2': 0.144}, 'delta': {'teacher_sd': 0.0, 'r2': None}}
+round 1 samples 720000
+  epoch 0 loss 0.0942
+  epoch 1 loss 0.0758
+  epoch 2 loss 0.075
+  epoch 3 loss 0.0746
+  epoch 4 loss 0.0744
+  epoch 5 loss 0.0741
+  epoch 6 loss 0.0739
+  epoch 7 loss 0.0738
+  epoch 8 loss 0.0736
+  epoch 9 loss 0.0734
+  epoch 10 loss 0.0733
+  epoch 11 loss 0.0731
+  epoch 12 loss 0.073
+  epoch 13 loss 0.0729
+  epoch 14 loss 0.0728
+  epoch 15 loss 0.0728
+  epoch 16 loss 0.0726
+  epoch 17 loss 0.0726
+  epoch 18 loss 0.0726
+  epoch 19 loss 0.0724
+  fit {'speed': {'teacher_sd': 0.4297, 'r2': 0.284}, 'curvature': {'teacher_sd': 0.4835, 'r2': 0.07}, 'reversal': {'teacher_sd': 0.1758, 'r2': 0.293}, 'omega': {'teacher_sd': 0.0458, 'r2': 0.168}, 'delta': {'teacher_sd': 0.0, 'r2': None}}
+round 2 samples 720000
+  epoch 0 loss 0.1626
+  epoch 1 loss 0.0872
+  epoch 2 loss 0.0852
+  epoch 3 loss 0.0843
+  epoch 4 loss 0.0839
+  epoch 5 loss 0.0834
+  epoch 6 loss 0.0825
+  epoch 7 loss 0.0816
+  epoch 8 loss 0.0811
+  epoch 9 loss 0.0807
+  epoch 10 loss 0.0803
+  epoch 11 loss 0.0799
+  epoch 12 loss 0.0796
+  epoch 13 loss 0.0791
+  epoch 14 loss 0.0781
+  epoch 15 loss 0.0774
+  epoch 16 loss 0.077
+  epoch 17 loss 0.0768
+  epoch 18 loss 0.0765
+  epoch 19 loss 0.0764
+  fit {'speed': {'teacher_sd': 0.4297, 'r2': 0.294}, 'curvature': {'teacher_sd': 0.4835, 'r2': 0.001}, 'reversal': {'teacher_sd': 0.1758, 'r2': 0.27}, 'omega': {'teacher_sd': 0.0458, 'r2': 0.232}, 'delta': {'teacher_sd': 0.0, 'r2': None}}
+Traceback (most recent call last):
+  File "/Users/chriszaharia/projects/personal/nematode/build/c2-run-mode/imitation_d.py", line 217, in <module>
+    main()
+    ~~~~^^
+  File "/Users/chriszaharia/projects/personal/nematode/build/c2-run-mode/imitation_d.py", line 202, in main
+    record["imitation_answer"] = {"z": z, "profile": b.profile(z)}
+                                                     ~~~~~~~~~^^^
+  File "/Users/chriszaharia/projects/personal/nematode/build/c2-run-mode/staged_bc.py", line 180, in profile
+    write(brain, z)
+    ~~~~~^^^^^^^^^^
+  File "/Users/chriszaharia/projects/personal/nematode/build/c2-run-mode/staged_bc.py", line 110, in write
+    brain.topology.probe_centres = torch.from_numpy(-1.0 + 2.0 * np.asarray(z[N_ENCODER:], dtype=np.float32))
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chriszaharia/projects/personal/nematode/.venv/lib/python3.13/site-packages/torch/nn/modules/module.py", line 2004, in __setattr__
+    raise TypeError(
+    ...<2 lines>...
+    )
+TypeError: cannot assign 'torch.FloatTensor' as parameter 'probe_centres' (torch.nn.Parameter or None expected)

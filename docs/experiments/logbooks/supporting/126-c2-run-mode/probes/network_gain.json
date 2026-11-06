@@ -1,0 +1,387 @@
+{
+ "stage 1": {
+  "layers": {
+   "sensory": {
+    "neurons": 30,
+    "median_sd_over_time": 0.0026,
+    "saturated_share": 0.0,
+    "silent_share": 0.633,
+    "median_abs": 0.0
+   },
+   "motor": {
+    "neurons": 39,
+    "median_sd_over_time": 0.0102,
+    "saturated_share": 0.0,
+    "silent_share": 0.051,
+    "median_abs": 0.0
+   },
+   "other": {
+    "neurons": 233,
+    "median_sd_over_time": 0.0044,
+    "saturated_share": 0.0,
+    "silent_share": 0.524,
+    "median_abs": 0.0
+   }
+  },
+  "pool_spread": {
+   "VB": 0.0142000000923872,
+   "DB": 0.02370000071823597,
+   "VA": 0.020600000396370888,
+   "DA": 0.024399999529123306
+  },
+  "feature_to_pool_gain": [
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.013899999670684338,
+    0.02329999953508377,
+    0.01979999989271164,
+    0.023900000378489494
+   ]
+  ],
+  "feature_spread": [
+   0.1606999933719635,
+   1.882099986076355,
+   0.6341000199317932,
+   0.9976999759674072
+  ],
+  "wiring": {
+   "excitatory": 0.423,
+   "inhibitory": 0.131,
+   "gap": 0.492,
+   "unsigned.dopamine": 0.0,
+   "unsigned.serotonin": 0.0,
+   "unsigned.octopamine": 0.0,
+   "unsigned.none": 0.0
+  },
+  "sensory_gain_abs": {
+   "max": 1.75,
+   "median": 0.0
+  },
+  "time_on_lawn": 0.462
+ },
+ "v3 stage 2": {
+  "layers": {
+   "sensory": {
+    "neurons": 30,
+    "median_sd_over_time": 0.1542,
+    "saturated_share": 0.033,
+    "silent_share": 0.0,
+    "median_abs": 0.8806
+   },
+   "motor": {
+    "neurons": 39,
+    "median_sd_over_time": 0.2457,
+    "saturated_share": 0.051,
+    "silent_share": 0.0,
+    "median_abs": 0.8996
+   },
+   "other": {
+    "neurons": 233,
+    "median_sd_over_time": 0.0838,
+    "saturated_share": 0.099,
+    "silent_share": 0.0,
+    "median_abs": 0.9092
+   }
+  },
+  "pool_spread": {
+   "VB": 0.40119999647140503,
+   "DB": 0.23270000517368317,
+   "VA": 1.0809999704360962,
+   "DA": 0.7475000023841858
+  },
+  "feature_to_pool_gain": [
+   [
+    0.4375,
+    0.3878999948501587,
+    1.756600022315979,
+    1.4529999494552612
+   ],
+   [
+    0.16279999911785126,
+    0.14820000529289246,
+    1.0390000343322754,
+    0.8305000066757202
+   ],
+   [
+    0.5049999952316284,
+    0.39419999718666077,
+    2.2820000648498535,
+    1.8883999586105347
+   ],
+   [
+    0.06019999831914902,
+    0.06129999831318855,
+    0.3714999854564667,
+    0.29660001397132874
+   ]
+  ],
+  "feature_spread": [
+   0.04960000142455101,
+   1.6612000465393066,
+   0.05719999969005585,
+   0.9983000159263611
+  ],
+  "wiring": {
+   "excitatory": 1.257,
+   "inhibitory": 0.005,
+   "gap": 0.709,
+   "unsigned.dopamine": -0.224,
+   "unsigned.serotonin": -0.387,
+   "unsigned.octopamine": -0.911,
+   "unsigned.none": 0.484
+  },
+  "sensory_gain_abs": {
+   "max": 5.0,
+   "median": 3.23
+  },
+  "time_on_lawn": 0.769
+ },
+ "v4 unbounded gen 155": {
+  "layers": {
+   "sensory": {
+    "neurons": 30,
+    "median_sd_over_time": 0.0401,
+    "saturated_share": 0.167,
+    "silent_share": 0.0,
+    "median_abs": 0.9397
+   },
+   "motor": {
+    "neurons": 39,
+    "median_sd_over_time": 0.0743,
+    "saturated_share": 0.077,
+    "silent_share": 0.0,
+    "median_abs": 0.9042
+   },
+   "other": {
+    "neurons": 233,
+    "median_sd_over_time": 0.1829,
+    "saturated_share": 0.077,
+    "silent_share": 0.0,
+    "median_abs": 0.7521
+   }
+  },
+  "pool_spread": {
+   "VB": 0.805899977684021,
+   "DB": 1.0017999410629272,
+   "VA": 0.17389999330043793,
+   "DA": 0.2648000121116638
+  },
+  "feature_to_pool_gain": [
+   [
+    0.21160000562667847,
+    0.32190001010894775,
+    0.11630000174045563,
+    0.14249999821186066
+   ],
+   [
+    0.14710000157356262,
+    0.13840000331401825,
+    0.10580000281333923,
+    0.0658000037074089
+   ],
+   [
+    0.14659999310970306,
+    0.1858000010251999,
+    0.037300001829862595,
+    0.06040000170469284
+   ],
+   [
+    0.010999999940395355,
+    0.01679999940097332,
+    0.011500000022351742,
+    0.00860000029206276
+   ]
+  ],
+  "feature_spread": [
+   0.045899998396635056,
+   1.8336999416351318,
+   0.03099999949336052,
+   0.9961000084877014
+  ],
+  "wiring": {
+   "excitatory": 1.304,
+   "inhibitory": 0.714,
+   "gap": 0.457,
+   "unsigned.dopamine": -0.12,
+   "unsigned.serotonin": 0.413,
+   "unsigned.octopamine": 0.148,
+   "unsigned.none": -0.372
+  },
+  "sensory_gain_abs": {
+   "max": 5.0,
+   "median": 3.18
+  },
+  "time_on_lawn": 0.469
+ },
+ "v4 cap gen 81": {
+  "layers": {
+   "sensory": {
+    "neurons": 30,
+    "median_sd_over_time": 0.1999,
+    "saturated_share": 0.333,
+    "silent_share": 0.0,
+    "median_abs": 0.9507
+   },
+   "motor": {
+    "neurons": 39,
+    "median_sd_over_time": 0.1392,
+    "saturated_share": 0.974,
+    "silent_share": 0.0,
+    "median_abs": 0.9999
+   },
+   "other": {
+    "neurons": 233,
+    "median_sd_over_time": 0.1763,
+    "saturated_share": 0.489,
+    "silent_share": 0.0,
+    "median_abs": 0.9659
+   }
+  },
+  "pool_spread": {
+   "VB": 0.1665000021457672,
+   "DB": 0.16990000009536743,
+   "VA": 0.26980000734329224,
+   "DA": 0.20730000734329224
+  },
+  "feature_to_pool_gain": [
+   [
+    0.00039999998989515007,
+    0.0008999999845400453,
+    0.0015999999595806003,
+    0.001500000013038516
+   ],
+   [
+    0.0005000000237487257,
+    0.00039999998989515007,
+    0.0005000000237487257,
+    0.0005000000237487257
+   ],
+   [
+    0.0010000000474974513,
+    0.0015999999595806003,
+    0.0003000000142492354,
+    0.0010999999940395355
+   ],
+   [
+    0.001500000013038516,
+    0.003800000064074993,
+    0.0027000000700354576,
+    0.009600000455975533
+   ]
+  ],
+  "feature_spread": [
+   0.13850000500679016,
+   1.9399000406265259,
+   0.5357000231742859,
+   0.9976000189781189
+  ],
+  "wiring": {
+   "excitatory": 0.046,
+   "inhibitory": 0.248,
+   "gap": 1.338,
+   "unsigned.dopamine": 0.933,
+   "unsigned.serotonin": 0.182,
+   "unsigned.octopamine": 0.69,
+   "unsigned.none": -0.677
+  },
+  "sensory_gain_abs": {
+   "max": 5.0,
+   "median": 2.71
+  },
+  "time_on_lawn": 0.174
+ },
+ "v4 centred gen 80": {
+  "layers": {
+   "sensory": {
+    "neurons": 30,
+    "median_sd_over_time": 0.4094,
+    "saturated_share": 0.233,
+    "silent_share": 0.0,
+    "median_abs": 0.5296
+   },
+   "motor": {
+    "neurons": 39,
+    "median_sd_over_time": 0.4064,
+    "saturated_share": 0.974,
+    "silent_share": 0.0,
+    "median_abs": 0.9995
+   },
+   "other": {
+    "neurons": 233,
+    "median_sd_over_time": 0.4002,
+    "saturated_share": 0.21,
+    "silent_share": 0.0,
+    "median_abs": 0.6795
+   }
+  },
+  "pool_spread": {
+   "VB": 0.8870999813079834,
+   "DB": 1.0042999982833862,
+   "VA": 1.0139000415802002,
+   "DA": 1.0174000263214111
+  },
+  "feature_to_pool_gain": [
+   [
+    0.002300000051036477,
+    0.0034000000450760126,
+    0.004999999888241291,
+    0.006200000178068876
+   ],
+   [
+    0.001500000013038516,
+    0.0010000000474974513,
+    0.000699999975040555,
+    0.0007999999797903001
+   ],
+   [
+    0.0017999999690800905,
+    0.0019000000320374966,
+    0.004699999932199717,
+    0.005200000014156103
+   ],
+   [
+    0.0013000000035390258,
+    0.0012000000569969416,
+    0.001500000013038516,
+    0.0015999999595806003
+   ]
+  ],
+  "feature_spread": [
+   0.16689999401569366,
+   1.5997999906539917,
+   0.4603999853134155,
+   0.9987999796867371
+  ],
+  "wiring": {
+   "excitatory": 0.212,
+   "inhibitory": 0.352,
+   "gap": 0.181,
+   "unsigned.dopamine": -0.032,
+   "unsigned.serotonin": -0.433,
+   "unsigned.octopamine": 1.965,
+   "unsigned.none": -0.123
+  },
+  "sensory_gain_abs": {
+   "max": 4.99,
+   "median": 1.87
+  },
+  "time_on_lawn": 0.777
+ }
+}

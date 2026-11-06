@@ -705,6 +705,29 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   is deferred, so until it runs C.2's yardstick is C.1's continued probe's D, 1.28–1.44, as
   description.)*
 
+  *(Added 2026-11-06; [Logbook 126](../../../docs/experiments/logbooks/126-c2-run-mode.md), probes
+  on discarded seeds.)* **C.2 fits v4's fitted families, from an imitation start; its held-out
+  families fail.**
+
+  - **Seven designs stalled** at constant outputs set by the readout's biases (scores about 9.3–10):
+    - unbounded;
+    - a soft cap, alone and with pool centres;
+    - the graded box with a saturation guard;
+    - a stage 1 that fits every sense, with per-ligand tying;
+    - an imitation of C.1, then sep-CMA.
+  - **What worked:** a responsiveness guard (a candidate whose speed or reversal output barely
+    varies ranks behind every responsive one) with population 48, from the imitation fit's answer.
+    D_fit is 1.33, and every fitted family passes in 5 of 5 fresh populations.
+  - **Held out:** the wild type passes in 0 of 5. Local search shows no decay, and chemotaxis no
+    drift with reversals at the lawn rate; tph-1 and tax-4 fail.
+  - **Next, C.2's change:**
+    - the procedure built into the encoder: the soft cap, pool centres, per-ligand tying, the
+      graded box, both guards and the wider population;
+    - whether the imitation start is kept. Without it the same search escapes the basin but reaches 2 of 4 fitted families at 250 generations (D_fit 2.15, still falling);
+    - whether C.2 is fitted on every family;
+    - the cost, about 10 h a fit as run;
+    - then the readiness restarts, and slow noise's control re-run.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 
@@ -858,7 +881,10 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     Every arm would share that failure, which would mask a wiring effect. The next change fixes the run
     mode first, and no fit runs past 500 generations until it is fixed. *(Added 2026-11-05.)* B v4
     grades that failure ([Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)): the
-    activity family is in D_fit, and W's minimum on v4's fitted families is 2.597.
+    activity family is in D_fit, and W's minimum on v4's fitted families is 2.597. *(Added
+    2026-11-06.)* The run mode is solved on the fitted families by a responsiveness guard and a
+    wider search from an imitation start ([Logbook 126](../../../docs/experiments/logbooks/126-c2-run-mode.md)).
+    A fit costs about 10 h as run, so W's 232–815 h projection, which assumed 4.8-h fits, is low.
   - **Equal budget.** Every arm runs a fixed generation count, not the plateau rule, set from the
     readiness restarts' convergence (checkpoints at 250, 500 and 750 of a 1,000 cap).
   - **Stage 1 is fixed.** Its 18-parameter lawn subset was chosen on the wild type. It is registered

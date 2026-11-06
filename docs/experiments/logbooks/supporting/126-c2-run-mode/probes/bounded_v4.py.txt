@@ -1,0 +1,176 @@
+"""C.2's stage 2 against benchmark v4 with a bounded readout: two designs (description, discarded).
+
+The unbounded stage 2 on v4 (stopped at generation 155) traded the v3 fit's pinned speed for a
+pinned curvature and a suppressed reversal hazard: the readout's weights sit at the box edges on
+offset, low-variance pools, and their offset drives outputs off the squash. Two bounds, applied in
+this script by patching the encoded readout (no package code changes):
+
+- cap (PROBE_MODE=cap): each output's pre-squash value passes through 2·tanh(x / 2) before the
+  squash, so it cannot pass ±2. 196 parameters. CMA 9471; fit animals 702,000,000; checks
+  703,000,000.
+- centred (PROBE_MODE=centred): the cap, and four fitted pool centres c_j on [-1, 1], so the readout
+  is b + Σ_j w_j (pool_j - c_j). 200 parameters, the centres starting at 0 (unit 0.5). CMA 9472;
+  fit 704,000,000; checks 705,000,000.
+
+Both start at the staged pilot's stage-1 answer (sigma0 0.1), on the corrected wiring, scored by
+v4's ranking score on D_fit (small lawn, uniform well, kinematics, activity), run through a cap of
+200 generations on 8 workers each. Every 50 generations the answer is profiled (each output's
+pre-squash percentiles after the bound, the primitive shares, the time on the lawn; one 1,800-s
+reference episode, seed 99,670,000) and graded on D_fit's assays on one population. Run from the
+repository root.
+"""
+
+import json
+import os
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery as cr
+import npe_recovery as nr
+import stage2_v4 as s
+from quantumnematode.brain.arch import connectome_ppo as cp
+
+MODE = os.environ["PROBE_MODE"]
+RUN = {"cap": {"cma": 9471, "fit": 702_000_000, "check": 703_000_000},
+       "centred": {"cma": 9472, "fit": 704_000_000, "check": 705_000_000}}[MODE]
+OUT = Path("build/c2-run-mode")
+SOFT_CAP = 2.0
+CAP = 200
+EVERY = 50
+N_ENCODER = 196
+POOLS = 4
+
+
+def _bounded_forward(self, h, modulators):
+    """The encoded settling and readout, with the probe's pool centres and soft cap."""
+    encoder = self.encoder
+    recurrent = encoder.chemical() + self.g_gap * encoder.gap_scale()
+    held = self._held_current(modulators)
+    previous = h
+    for _ in range(self.forward_pass_depth):
+        previous = h
+        preact = h @ recurrent
+        if held is not None:
+            preact = preact + held
+        h = cp._settling_tanh(preact)
+    if self.capture_penultimate:
+        self.penultimate = previous.detach()
+    pooled = self._pool_motor(h)
+    centres = getattr(self, "probe_centres", None)
+    if centres is not None:
+        pooled = pooled - centres
+    mean = pooled @ self.readout.T + self.readout_bias
+    return SOFT_CAP * torch.tanh(mean / SOFT_CAP), h
+
+
+cp.ConnectomeTopology._forward_encoded = _bounded_forward
+
+
+def centres(z):
+    return -1.0 + 2.0 * np.asarray(z[N_ENCODER : N_ENCODER + POOLS], dtype=np.float32)
+
+
+def write(brain, z):
+    from quantumnematode.connectome import encoder as enc
+
+    enc.write_encoder(brain, list(z[:N_ENCODER]))
+    brain.topology.probe_centres = torch.from_numpy(centres(z)) if MODE == "centred" else None
+
+
+def controller(z):
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain = p.encoded_brain()
+    write(brain, z)
+    return lambda _path: BatchedConnectome(brain)
+
+
+def simulate(k, z, seed_base):
+    bands = bg.load_bands_v4()
+    start = time.perf_counter()
+    populations, _ = bg.simulate_v2(p.ARM, controller(z), p.population_seeds(seed_base, k), bands, assays=p.FIT_ASSAYS)
+    graded = bg.grade_populations_v4(populations, None, bands, presence=False)
+    return nr._finite({
+        "k": k, "z": list(map(float, z)),
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "z_scores": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "fit_passes": {f: all(r["passes"] for r in graded["families"][f].values()) for f in bands["fit_families"]},
+        "D_fit": graded["D_fit"], "seconds": time.perf_counter() - start,
+    })
+
+
+def x0():
+    z = json.loads(p.STAGED_PILOT_PATH.read_text())["stage1"]["answer_full"]
+    return [*z, *([0.5] * POOLS)] if MODE == "centred" else list(z)
+
+
+def start(seed):
+    import cma
+
+    return cma.CMAEvolutionStrategy(x0(), s.SIGMA0, {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": cr.POPSIZE, "seed": seed, "verbose": -9})
+
+
+def profile(z):
+    from quantumnematode.evaluation.reference import run_reference
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    path = p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+    brain = p.encoded_brain()
+    write(brain, z)
+    episode = run_reference(load_simulation_config(str(path)), brain, s.PROFILE_SEED, 1800, record_density=False)
+    prim = np.array([str(x.primitive) for x in episode.behaviour])
+    on = np.array([bool(x.on_lawn) for x in episode.behaviour])
+    states = torch.from_numpy(np.asarray(episode.features, dtype=np.float32))
+    topo = brain.topology
+    with torch.no_grad():
+        mean, _ = topo.forward_with_hidden_batched(states[:, : topo.n_food_features], modulators=brain._unpack_modulators(states))
+    out = {o: np.percentile(mean[:, i].numpy(), [5, 50, 95]).round(2).tolist() for i, o in enumerate(("speed", "curvature", "reversal", "omega", "delta"))}
+    out["primitive_shares"] = {k: round(float(np.mean(prim == k)), 3) for k in sorted(set(prim))}
+    out["time_on_lawn"] = round(float(on.mean()), 3)
+    if MODE == "centred":
+        out["centres"] = centres(z).round(3).tolist()
+    return out
+
+
+def _check(item):
+    g, z = item
+    return g, simulate(g // EVERY, z, RUN["check"])
+
+
+def main():
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=8, initializer=nr._worker_setup) as pool:
+        history = cr.run_fit(
+            {}, fit=0, cma_seed=RUN["cma"], seed_base=RUN["fit"], cap=CAP, use_rule=False,
+            state_dir=OUT / f"bounded_{MODE}", pool=pool, scales={}, objective=s.V4FitObjective(),
+            simulate=simulate, stop=p.readiness_stop, strategy_factory=start,
+        )
+        gens = list(range(EVERY, len(history["answers"]) + 1, EVERY))
+        checks = dict(pool.map(_check, [(g, history["answers"][g - 1]) for g in gens]))
+    points = []
+    for g in [0, *gens]:
+        z = x0() if g == 0 else history["answers"][g - 1]
+        point = {"generation": g, "profile": profile(z)}
+        if g:
+            c = checks[g]
+            point |= {"D_fit": c["D_fit"], "fit_passes": c["fit_passes"], "z": c["z_scores"]}
+        points.append(point)
+        print(g, json.dumps({k: point["profile"][k] for k in ("speed", "curvature", "reversal", "primitive_shares", "time_on_lawn")}),
+              "D_fit", None if not g else round(point["D_fit"], 2), flush=True)
+    record = {"description": __doc__, "mode": MODE, **RUN, "cap": CAP, "medians": history["medians"],
+              "sigmas": history["sigmas"], "answer": history["answers"][-1], "points": points,
+              "wall_hours": (time.time() - t0) / 3600}
+    (OUT / f"bounded_{MODE}.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

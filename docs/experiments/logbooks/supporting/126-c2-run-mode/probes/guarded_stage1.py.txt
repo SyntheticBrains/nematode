@@ -1,0 +1,151 @@
+"""The ablation: C.2's guarded wide search without the imitation start (description, discarded seeds).
+
+As `guarded_wide.py` in every rule, but started from the staged pilot's stage-1 answer (no C.1
+teacher): its 73 non-modulator entries (wiring, sensory, readout, noise) mapped into the graded box's
+units, the per-ligand modulators and the timescales at the box centre (as in that answer), the pool
+centres at 0. CMA 9478; fit animals 722,000,000; checkpoints on 725,000,000. It asks whether the
+guard and the larger population reach D_fit without the imitation start.
+
+The original description follows.
+
+C.2 with a responsiveness guard and a larger population (description, discarded seeds).
+
+Seven designs reached one basin: outputs held constant by the readout's biases, scoring about
+9.3-10 on v4's D_fit, which no guard so far excluded (the saturation guard catches a saturated motor
+layer, not constant outputs from an unsaturated one). Here, on `staged_bc.py`'s model (per-ligand
+tying with four pool centres, 136 parameters; the soft cap; the graded box; no package changes):
+
+- the responsiveness guard: each simulation records the bounded pre-squash outputs of 8 animals at
+  every step; a candidate whose speed or reversal output spans less than 0.5 between its 5th and
+  95th percentiles scores 300 more, behind every responsive candidate;
+- the saturation guard as before (500 more);
+- the search: sep-CMA with population 48 (three times the earlier 16), sigma0 0.1, from the imitation
+  refinement's last answer (`imitation_d.json`, generation 200: responsive, its speed bimodal);
+  CMA 9477; fit animals 716,000,000 + 200·k + i with k = 48(g - 1) + m; a cap of 250 generations on
+  16 workers, saved every generation and resumable;
+- checkpoints every 50 generations, profiled and graded on D_fit's assays on one population
+  (719,000,000 + 200·c + i).
+
+v4's ranking score on D_fit, on the corrected wiring. Run from the repository root.
+"""
+
+import json
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import npe_recovery as nr
+import staged_bc as b
+from quantumnematode.brain.arch import connectome_ppo as cp
+
+OUT = Path("build/c2-run-mode/guarded_stage1")
+POPSIZE, SIGMA0, CMA_SEED, CAP, EVERY = 48, 0.1, 9478, 250, 50
+FIT_BASE, CHECK_BASE = 722_000_000, 725_000_000
+SPREAD_FLOOR, RESPONSIVE_PENALTY = 0.5, 300.0
+RECORD_ANIMALS = 8
+_OUTPUTS: list[np.ndarray] = []
+_base_forward = cp.ConnectomeTopology._forward_encoded
+
+
+def _forward(self, h, modulators):
+    mean, h = _base_forward(self, h, modulators)
+    flat = mean.detach().reshape(-1, mean.shape[-1])
+    _OUTPUTS.append(flat[:RECORD_ANIMALS].numpy().copy())
+    return mean, h
+
+
+cp.ConnectomeTopology._forward_encoded = _forward
+
+
+def simulate(k, z, seed_base):
+    _OUTPUTS.clear()
+    record = b._simulate_full(k, z, seed_base)
+    out = np.concatenate(_OUTPUTS) if _OUTPUTS else np.zeros((1, 5))
+    spread = (np.percentile(out, 95, axis=0) - np.percentile(out, 5, axis=0)).tolist()
+    record["output_spread"] = dict(zip(("speed", "curvature", "reversal", "omega", "delta"), map(float, spread)))
+    return record
+
+
+class Objective(b.GuardedObjective):
+    def __call__(self, record):
+        spread = record.get("output_spread", {})
+        unresponsive = min(spread.get("speed", 0.0), spread.get("reversal", 0.0)) < SPREAD_FLOOR
+        return super().__call__(record) + (RESPONSIVE_PENALTY if unresponsive else 0.0)
+
+
+def x0():
+    """The staged pilot's stage-1 answer in this model's units: its first 73 entries mapped, the rest centred."""
+    stage1 = json.loads(p.STAGED_PILOT_PATH.read_text())["stage1"]["answer_full"]
+    names = [e.name for e in b.entries()]
+    z = [0.5] * (b.N_ENCODER + b.POOLS)
+    for i, name in enumerate(names):
+        if name.startswith(("wiring.", "sensory.", "readout.", "noise.")):
+            u = stage1[i]
+            if name in ("wiring.excitatory", "wiring.inhibitory", "wiring.gap"):
+                u = u * 1.5 / b.WIRING_HIGH
+            elif name.startswith("sensory."):
+                u = (10.0 * u - 5.0 + b.SENSORY_BOUND) / (2 * b.SENSORY_BOUND)
+            if not 0.0 <= u <= 1.0:
+                raise ValueError(f"{name} lies outside the graded box")
+            z[i] = float(u)
+    return z
+
+
+def _check(item):
+    g, z = item
+    return g, simulate(g // EVERY, z, CHECK_BASE)
+
+
+def main():
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path, history_path = OUT / "state.pkl", OUT / "history.json"
+    if state_path.exists():
+        es = pickle.loads(state_path.read_bytes())
+        history = json.loads(history_path.read_text())
+    else:
+        es = cma.CMAEvolutionStrategy(x0(), SIGMA0, {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": POPSIZE, "seed": CMA_SEED, "verbose": -9})
+        history = {"medians": [], "sigmas": [], "answers": [], "responsive_share": [], "best": []}
+    objective = Objective()
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        while len(history["medians"]) < CAP:
+            g = len(history["medians"]) + 1
+            points = es.ask()
+            ks = [POPSIZE * (g - 1) + m for m in range(POPSIZE)]
+            records = list(pool.map(simulate, ks, [list(map(float, x)) for x in points], [FIT_BASE] * POPSIZE))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            history["medians"].append(float(np.median(scores)))
+            history["best"].append(float(np.min(scores)))
+            history["sigmas"].append(float(es.sigma))
+            history["answers"].append(np.clip(es.result.xfavorite, 0, 1).tolist())
+            history["responsive_share"].append(float(np.mean([min(r["output_spread"]["speed"], r["output_spread"]["reversal"]) >= SPREAD_FLOOR for r in records])))
+            state_path.write_bytes(pickle.dumps(es))
+            history_path.write_text(json.dumps(history))
+            print(f"gen {g}: median {history['medians'][-1]:.2f}, best {history['best'][-1]:.2f}, responsive {history['responsive_share'][-1]:.2f}, sigma {es.sigma:.3f}", flush=True)
+        gens = list(range(EVERY, CAP + 1, EVERY))
+        checks = dict(pool.map(_check, [(g, history["answers"][g - 1]) for g in gens]))
+    points = []
+    for g in gens:
+        z = history["answers"][g - 1]
+        c = checks[g]
+        point = {"generation": g, "profile": b.profile(z), "D_fit": c["D_fit"], "fit_passes": c["fit_passes"], "output_spread": c["output_spread"], "z": c["z_scores"]}
+        points.append(point)
+        print(f"check gen {g}", json.dumps(point["profile"]), "D_fit", round(c["D_fit"], 2), c["fit_passes"], flush=True)
+    record = {"description": __doc__, "popsize": POPSIZE, "cap": CAP, **history, "answer": history["answers"][-1], "points": points, "wall_hours": (time.time() - t0) / 3600}
+    (OUT.parent / "guarded_stage1.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

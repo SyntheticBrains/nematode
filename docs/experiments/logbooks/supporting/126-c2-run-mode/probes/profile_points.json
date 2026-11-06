@@ -1,0 +1,104 @@
+{
+ "box centre": {
+  "speed": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "curvature": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "reversal": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "omega": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "delta": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "primitive_shares": {
+   "delta": 0.083,
+   "omega": 0.114,
+   "reversal": 0.031,
+   "run": 0.772
+  },
+  "time_on_lawn": 0.046
+ },
+ "stage 1 answer": {
+  "speed": [
+   -0.73,
+   -0.67,
+   -0.67
+  ],
+  "curvature": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "reversal": [
+   -0.05,
+   0.01,
+   0.01
+  ],
+  "omega": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "delta": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "primitive_shares": {
+   "delta": 0.066,
+   "omega": 0.078,
+   "reversal": 0.363,
+   "run": 0.493
+  },
+  "time_on_lawn": 0.432
+ },
+ "stage 2 answer": {
+  "speed": [
+   -4.36,
+   -3.88,
+   -3.42
+  ],
+  "curvature": [
+   5.44,
+   9.63,
+   11.96
+  ],
+  "reversal": [
+   -1.94,
+   0.04,
+   3.16
+  ],
+  "omega": [
+   -4.2,
+   -3.67,
+   -2.08
+  ],
+  "delta": [
+   -3.56,
+   -2.86,
+   -2.13
+  ],
+  "primitive_shares": {
+   "delta": 0.191,
+   "omega": 0.001,
+   "reversal": 0.304,
+   "run": 0.504
+  },
+  "time_on_lawn": 0.839
+ }
+}

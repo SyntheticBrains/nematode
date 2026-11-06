@@ -1,0 +1,62 @@
+"""How the readout drives each output: its bias, and each pooled motor class's term and range.
+
+Description, for planning C.2's bounded readout. For the stage-1 answer, the staged pilot's stage-2
+answer (on the wiring it was fitted on) and the stopped v4 stage-2 probe's answers at generations
+100 and 147, over one 1,800-s reference episode (seed 99,670,000): each pooled class's 5/50/95th
+percentiles and its spread (95th minus 5th), and each output's bias with every pool's weight and
+contribution spread (|w| x the pool's spread). Also writes the stopped probe's record. Run from the
+repository root.
+"""
+import json, sys
+import numpy as np
+import torch
+import quantumnematode.agent  # noqa: F401
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import c2_encoder_probe as p
+import stage2_v4 as s
+from quantumnematode.connectome import encoder as enc
+from quantumnematode.evaluation.reference import run_reference
+from quantumnematode.utils.config_loader import load_simulation_config
+
+staged = json.loads(p.STAGED_PILOT_PATH.read_text())
+h = json.load(open("build/c2-run-mode/stage2_v4/fit0.json"))
+OUTPUTS = ("speed", "curvature", "reversal", "omega", "delta")
+POOLS = ("VB", "DB", "VA", "DA")
+POINTS = {
+    "stage 1 answer": (staged["stage1"]["answer_full"], {}),
+    "v3 stage 2 answer": (staged["stage2_extended"]["answer"], {"sign_override_exclude": ["lopezcruz2019"]}),
+    "v4 probe gen 100": (h["answers"][99], {}),
+    f"v4 probe gen {len(h['answers'])}": (h["answers"][-1], {}),
+}
+path = p.FORAGING / f"{p.bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+config = load_simulation_config(str(path))
+out = {}
+for name, (z, settings) in POINTS.items():
+    brain, _, _ = p.harness.build_brain(path, 1, {"encoder_modulator_tying": "per_couple", **settings})
+    enc.write_encoder(brain, z)
+    ep = run_reference(config, brain, 99_670_000, 1800, record_density=False)
+    topo = brain.topology
+    with torch.no_grad():
+        states = torch.from_numpy(np.asarray(ep.features, dtype=np.float32))
+        mean, hidden = topo.forward_with_hidden_batched(states[:, : topo.n_food_features], modulators=brain._unpack_modulators(states))
+        pooled = topo._pool_motor_classes(hidden).numpy()
+    W = topo.readout.detach().numpy(); b = topo.readout_bias.detach().numpy()
+    spread = np.percentile(pooled, 95, axis=0) - np.percentile(pooled, 5, axis=0)
+    rec = {"pools": {k: np.percentile(pooled[:, i], [5, 50, 95]).round(3).tolist() for i, k in enumerate(POOLS)},
+           "pool_spread": dict(zip(POOLS, spread.round(3).tolist())),
+           "outputs": {o: {"pre_squash": np.percentile(mean[:, j].numpy(), [5, 50, 95]).round(2).tolist(),
+                           "bias": round(float(b[j]), 2),
+                           "weights": dict(zip(POOLS, W[j].round(2).tolist())),
+                           "term_spread": dict(zip(POOLS, (np.abs(W[j]) * spread).round(3).tolist()))}
+                       for j, o in enumerate(OUTPUTS)}}
+    out[name] = rec
+    print(name, "pool spread", rec["pool_spread"])
+    for o in ("speed", "curvature", "reversal"):
+        r = rec["outputs"][o]; print(f"   {o:9s} pre {r['pre_squash']} bias {r['bias']} w {r['weights']}")
+json.dump(out, open("build/c2-run-mode/readout_anatomy.json", "w"), indent=1)
+record = {"description": s.__doc__ + "\nStopped by the maintainer at generation %d of 500, once the curvature readout had pinned; the profiles below were read on the saved answers." % len(h["answers"]),
+          "stopped_at_generation": len(h["answers"]), "medians": h["medians"], "sigmas": h["sigmas"],
+          "profiles": {str(g): s.profile(z) for g, z in [(0, staged["stage1"]["answer_full"]), (50, h["answers"][49]), (100, h["answers"][99]), (len(h["answers"]), h["answers"][-1])]},
+          "answer": h["answers"][-1]}
+json.dump(record, open("build/c2-run-mode/stage2_v4_stopped.json", "w"), indent=1, default=str)

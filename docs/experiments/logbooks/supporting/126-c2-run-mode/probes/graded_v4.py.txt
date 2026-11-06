@@ -1,0 +1,232 @@
+"""C.2's stage 2 on benchmark v4, held to the network's graded regime (description, discarded seeds).
+
+Every stage-2 design so far ended with outputs the senses barely move: stage 1 with a silent
+network, the unbounded runs with a saturated readout, the soft-capped runs with 97% of motor neurons
+saturated (`network_gain.json`). Here, applied in this script (no package code changes):
+
+- the box: the three wiring scales on [0, 0.75] (the encoder's own graded range) and every sensory
+  gain on [-2, 2], each mapped onto the encoder's unit box; every other range unchanged;
+- the readout: each output's pre-squash value through 2·tanh(x / 2), and four fitted pool centres
+  on [-1, 1], so the readout is b + Σ_j w_j (pool_j - c_j);
+- the guard: each simulation tallies its motor neurons' saturation (the share of steps with
+  |h| > 0.99, over every animal), and a candidate with over half its motor neurons saturated in
+  over half the steps scores 500 more, behind every responsive candidate and ahead of any with an
+  undefined statistic.
+
+From the staged pilot's stage-1 answer (inside the new box, so its worm is unchanged), centres at 0,
+sigma0 0.1, on the corrected wiring, scored by v4's ranking score on D_fit; CMA 9473; fit animals
+706,000,000 + 200·k + i; cap 200 on 16 workers. Every 50 generations the answer is profiled (each
+output's bounded pre-squash percentiles, the primitive shares, the time on the lawn, the motor
+saturation and each food feature's gain onto the pools; one 1,800-s reference episode, seed
+99,670,000) and graded on D_fit's assays on one population (707,000,000 + 200·c + i). Run from the
+repository root.
+"""
+
+import json
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery as cr
+import npe_recovery as nr
+import stage2_v4 as s
+from quantumnematode.brain.arch import connectome_ppo as cp
+
+OUT = Path("build/c2-run-mode")
+RUN = {"cma": 9473, "fit": 706_000_000, "check": 707_000_000}
+SOFT_CAP = 2.0
+CAP = 200
+EVERY = 50
+N_ENCODER = 196
+POOLS = 4
+WIRING_HIGH = 0.75
+SENSORY_BOUND = 2.0
+SATURATED = 0.99
+SATURATED_SHARE = 0.5
+PENALTY = 500.0
+_TALLY = {"steps": None, "count": 0}
+
+
+def _forward(self, h, modulators):
+    encoder = self.encoder
+    recurrent = encoder.chemical() + self.g_gap * encoder.gap_scale()
+    held = self._held_current(modulators)
+    previous = h
+    for _ in range(self.forward_pass_depth):
+        previous = h
+        preact = h @ recurrent
+        if held is not None:
+            preact = preact + held
+        h = cp._settling_tanh(preact)
+    if self.capture_penultimate:
+        self.penultimate = previous.detach()
+    motor = h.detach().index_select(-1, self._motor_flat_indices).abs() > SATURATED
+    motor = motor.reshape(-1, motor.shape[-1]).sum(dim=0).numpy()
+    _TALLY["steps"] = motor if _TALLY["steps"] is None else _TALLY["steps"] + motor
+    _TALLY["count"] += int(h.reshape(-1, h.shape[-1]).shape[0])
+    pooled = self._pool_motor(h)
+    centres = getattr(self, "probe_centres", None)
+    if centres is not None:
+        pooled = pooled - centres
+    mean = pooled @ self.readout.T + self.readout_bias
+    return SOFT_CAP * torch.tanh(mean / SOFT_CAP), h
+
+
+cp.ConnectomeTopology._forward_encoded = _forward
+
+
+def _names():
+    return [e.name for e in p.entries()]
+
+
+def to_encoder(z):
+    """Map the probe's unit vector onto the encoder's: the narrowed wiring and sensory boxes."""
+    names = _names()
+    out = list(map(float, z[:N_ENCODER]))
+    for i, n in enumerate(names):
+        if n in ("wiring.excitatory", "wiring.inhibitory", "wiring.gap"):
+            out[i] = z[i] * WIRING_HIGH / 1.5
+        elif n.startswith("sensory."):
+            out[i] = (-SENSORY_BOUND + 2 * SENSORY_BOUND * z[i] + 5.0) / 10.0
+    return out
+
+
+def from_encoder(u):
+    """The inverse of to_encoder, for a point inside the narrowed boxes."""
+    names = _names()
+    out = list(map(float, u))
+    for i, n in enumerate(names):
+        if n in ("wiring.excitatory", "wiring.inhibitory", "wiring.gap"):
+            out[i] = u[i] * 1.5 / WIRING_HIGH
+        elif n.startswith("sensory."):
+            out[i] = (10.0 * u[i] - 5.0 + SENSORY_BOUND) / (2 * SENSORY_BOUND)
+    if not all(0.0 <= v <= 1.0 for v in out):
+        raise ValueError("the stage-1 answer lies outside the narrowed box")
+    return out
+
+
+def write(brain, z):
+    from quantumnematode.connectome import encoder as enc
+
+    enc.write_encoder(brain, to_encoder(z))
+    brain.topology.probe_centres = torch.from_numpy(-1.0 + 2.0 * np.asarray(z[N_ENCODER:], dtype=np.float32))
+
+
+def controller(z):
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain = p.encoded_brain()
+    write(brain, z)
+    return lambda _path: BatchedConnectome(brain)
+
+
+def simulate(k, z, seed_base):
+    bands = bg.load_bands_v4()
+    _TALLY["steps"], _TALLY["count"] = None, 0
+    start = time.perf_counter()
+    populations, _ = bg.simulate_v2(p.ARM, controller(z), p.population_seeds(seed_base, k), bands, assays=p.FIT_ASSAYS)
+    graded = bg.grade_populations_v4(populations, None, bands, presence=False)
+    share = _TALLY["steps"] / max(_TALLY["count"], 1)
+    saturated = float(np.mean(share > SATURATED_SHARE))
+    return nr._finite({
+        "k": k, "z": list(map(float, z)),
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "z_scores": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "fit_passes": {f: all(r["passes"] for r in graded["families"][f].values()) for f in bands["fit_families"]},
+        "motor_saturated_share": saturated,
+        "D_fit": graded["D_fit"], "seconds": time.perf_counter() - start,
+    })
+
+
+class GuardedObjective(s.V4FitObjective):
+    """v4's ranking score on D_fit, 500 more for a candidate whose motor layer saturates."""
+
+    def __call__(self, record):
+        penalty = PENALTY if record.get("motor_saturated_share", 0.0) > SATURATED_SHARE else 0.0
+        return super().__call__(record) + penalty
+
+
+def x0():
+    stage1 = json.loads(p.STAGED_PILOT_PATH.read_text())["stage1"]["answer_full"]
+    return [*from_encoder(stage1), *([0.5] * POOLS)]
+
+
+def start(seed):
+    import cma
+
+    return cma.CMAEvolutionStrategy(x0(), s.SIGMA0, {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": cr.POPSIZE, "seed": seed, "verbose": -9})
+
+
+def profile(z):
+    from quantumnematode.evaluation.reference import run_reference
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    path = p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+    brain = p.encoded_brain()
+    write(brain, z)
+    episode = run_reference(load_simulation_config(str(path)), brain, s.PROFILE_SEED, 1800, record_density=False)
+    prim = np.array([str(x.primitive) for x in episode.behaviour])
+    on = np.array([bool(x.on_lawn) for x in episode.behaviour])
+    states = torch.from_numpy(np.asarray(episode.features, dtype=np.float32))
+    topo = brain.topology
+    nf = topo.n_food_features
+    mods = brain._unpack_modulators(states)
+    with torch.no_grad():
+        mean, hidden = topo.forward_with_hidden_batched(states[:, :nf], modulators=mods)
+        idx = torch.from_numpy(np.random.default_rng(0).choice(len(states), size=min(200, len(states)), replace=False))
+        gains = []
+        for j in range(nf):
+            up, down = states[idx, :nf].clone(), states[idx, :nf].clone()
+            up[:, j] += 0.05
+            down[:, j] -= 0.05
+            _, hu = topo.forward_with_hidden_batched(up, modulators=mods[idx])
+            _, hd = topo.forward_with_hidden_batched(down, modulators=mods[idx])
+            gains.append(float(np.abs((topo._pool_motor_classes(hu) - topo._pool_motor_classes(hd)).numpy() / 0.1).mean()))
+    motor = np.abs(hidden.numpy()[:, topo._motor_flat_indices.numpy()]) > SATURATED
+    out = {o: np.percentile(mean[:, i].numpy(), [5, 50, 95]).round(2).tolist() for i, o in enumerate(("speed", "curvature", "reversal", "omega", "delta"))}
+    out["primitive_shares"] = {str(k): round(float(np.mean(prim == k)), 3) for k in sorted(set(prim))}
+    out["time_on_lawn"] = round(float(on.mean()), 3)
+    out["motor_saturated_share"] = round(float(np.mean(motor.mean(axis=0) > SATURATED_SHARE)), 3)
+    out["feature_to_pool_gain"] = [round(g, 4) for g in gains]
+    return out
+
+
+def _check(item):
+    g, z = item
+    return g, simulate(g // EVERY, z, RUN["check"])
+
+
+def main():
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        history = cr.run_fit(
+            {}, fit=0, cma_seed=RUN["cma"], seed_base=RUN["fit"], cap=CAP, use_rule=False,
+            state_dir=OUT / "graded", pool=pool, scales={}, objective=GuardedObjective(),
+            simulate=simulate, stop=p.readiness_stop, strategy_factory=start,
+        )
+        gens = list(range(EVERY, len(history["answers"]) + 1, EVERY))
+        checks = dict(pool.map(_check, [(g, history["answers"][g - 1]) for g in gens]))
+    points = []
+    for g in [0, *gens]:
+        z = x0() if g == 0 else history["answers"][g - 1]
+        point = {"generation": g, "profile": profile(z)}
+        if g:
+            c = checks[g]
+            point |= {"D_fit": c["D_fit"], "fit_passes": c["fit_passes"], "motor_saturated_share_sim": c["motor_saturated_share"], "z": c["z_scores"]}
+        points.append(point)
+        print(g, json.dumps(point["profile"]), "D_fit", None if not g else round(point["D_fit"], 2), flush=True)
+    record = {"description": __doc__, **RUN, "cap": CAP, "medians": history["medians"], "sigmas": history["sigmas"],
+              "answer": history["answers"][-1], "points": points, "wall_hours": (time.time() - t0) / 3600}
+    (OUT / "graded.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()
