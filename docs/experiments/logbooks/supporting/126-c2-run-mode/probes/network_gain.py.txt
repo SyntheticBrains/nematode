@@ -1,0 +1,118 @@
+"""Why the encoded network's motor pools barely respond: activity and sense-to-pool gain by layer.
+
+Description, for planning C.2's run-mode change. For the staged pilot's stage-1 and stage-2 answers
+(the latter on the wiring it was fitted on), the stopped unbounded v4 probe's answer and the two
+stopped bounded probes' answers (their bounds applied), over one 1,800-s reference episode on
+Scheer's small lawn (seed 99,710,000): per layer (injected sensory neurons, motor neurons in the four
+pools, every other neuron), the median over neurons of each neuron's SD over time, the share of
+neurons saturated (|h| > 0.99 in most steps) and the share silent (|h| < 0.01 in every step); the
+pools' 5-95% spread; and each food feature's gain onto each pool by central differences (±0.05 on
+the feature, 200 steps). Also each answer's wiring scales and sensory gains, and writes the two
+bounded probes' stopped records. Run from the repository root.
+"""
+import json, sys
+import numpy as np
+import torch
+import quantumnematode.agent  # noqa: F401
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.brain.arch import connectome_ppo as cp
+from quantumnematode.connectome import encoder as enc
+from quantumnematode.evaluation.reference import run_reference
+from quantumnematode.utils.config_loader import load_simulation_config
+
+BOUND = {"cap": None, "centres": None}
+_original = cp.ConnectomeTopology._forward_encoded
+
+
+def _forward(self, h, modulators):
+    if BOUND["cap"] is None:
+        return _original(self, h, modulators)
+    encoder = self.encoder
+    recurrent = encoder.chemical() + self.g_gap * encoder.gap_scale()
+    held = self._held_current(modulators)
+    for _ in range(self.forward_pass_depth):
+        preact = h @ recurrent
+        if held is not None:
+            preact = preact + held
+        h = cp._settling_tanh(preact)
+    pooled = self._pool_motor(h)
+    if BOUND["centres"] is not None:
+        pooled = pooled - BOUND["centres"]
+    mean = pooled @ self.readout.T + self.readout_bias
+    return BOUND["cap"] * torch.tanh(mean / BOUND["cap"]), h
+
+
+cp.ConnectomeTopology._forward_encoded = _forward
+
+staged = json.loads(p.STAGED_PILOT_PATH.read_text())
+unb = json.load(open("build/c2-run-mode/stage2_v4/fit0.json"))
+cap = json.load(open("build/c2-run-mode/bounded_cap/fit0.json"))
+cen = json.load(open("build/c2-run-mode/bounded_centred/fit0.json"))
+POINTS = {
+    "stage 1": (staged["stage1"]["answer_full"], {}, None, None),
+    "v3 stage 2": (staged["stage2_extended"]["answer"], {"sign_override_exclude": ["lopezcruz2019"]}, None, None),
+    f"v4 unbounded gen {len(unb['answers'])}": (unb["answers"][-1], {}, None, None),
+    f"v4 cap gen {len(cap['answers'])}": (cap["answers"][-1], {}, 2.0, None),
+    f"v4 centred gen {len(cen['answers'])}": (cen["answers"][-1][:196], {}, 2.0, -1.0 + 2.0 * np.asarray(cen["answers"][-1][196:200], dtype=np.float32)),
+}
+path = p.FORAGING / f"{p.bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+config = load_simulation_config(str(path))
+names = [e.name for e in p.entries()]
+out = {}
+for label, (z, settings, soft, centres) in POINTS.items():
+    BOUND["cap"], BOUND["centres"] = soft, None if centres is None else torch.from_numpy(centres)
+    brain, _, _ = p.harness.build_brain(path, 1, {"encoder_modulator_tying": "per_couple", **settings})
+    enc.write_encoder(brain, z)
+    topo = brain.topology
+    ep = run_reference(config, brain, 99_710_000, 1800, record_density=False)
+    states = torch.from_numpy(np.asarray(ep.features, dtype=np.float32))
+    nf = topo.n_food_features
+    mods = brain._unpack_modulators(states)
+    with torch.no_grad():
+        _, hidden = topo.forward_with_hidden_batched(states[:, :nf], modulators=mods)
+        pooled = topo._pool_motor_classes(hidden).numpy()
+        rng = np.random.default_rng(0)
+        idx = torch.from_numpy(rng.choice(len(states), size=min(200, len(states)), replace=False))
+        gains = []
+        for j in range(nf):
+            up, down = states[idx, :nf].clone(), states[idx, :nf].clone()
+            up[:, j] += 0.05
+            down[:, j] -= 0.05
+            _, hu = topo.forward_with_hidden_batched(up, modulators=mods[idx])
+            _, hd = topo.forward_with_hidden_batched(down, modulators=mods[idx])
+            g = (topo._pool_motor_classes(hu) - topo._pool_motor_classes(hd)).numpy() / 0.1
+            gains.append(np.abs(g).mean(axis=0).round(4).tolist())
+    h = hidden.numpy()
+    sensory = sorted(set(topo.encoder.sensory_neurons.tolist()))
+    motor = sorted(set(topo._motor_flat_indices.tolist()))
+    other = sorted(set(range(h.shape[1])) - set(sensory) - set(motor))
+    layers = {}
+    for lname, cols in (("sensory", sensory), ("motor", motor), ("other", other)):
+        a = h[:, cols]
+        layers[lname] = {
+            "neurons": len(cols),
+            "median_sd_over_time": round(float(np.median(a.std(axis=0))), 4),
+            "saturated_share": round(float(np.mean(np.mean(np.abs(a) > 0.99, axis=0) > 0.5)), 3),
+            "silent_share": round(float(np.mean(np.all(np.abs(a) < 0.01, axis=0))), 3),
+            "median_abs": round(float(np.median(np.abs(a))), 4),
+        }
+    value = {n: e.value(u) for n, e, u in zip(names, p.entries(), z)}
+    sens = np.array([v for n, v in value.items() if n.startswith("sensory.")])
+    rec = {
+        "layers": layers,
+        "pool_spread": dict(zip(("VB", "DB", "VA", "DA"), (np.percentile(pooled, 95, axis=0) - np.percentile(pooled, 5, axis=0)).round(4).tolist())),
+        "feature_to_pool_gain": gains,
+        "feature_spread": (np.percentile(states[:, :nf].numpy(), 95, axis=0) - np.percentile(states[:, :nf].numpy(), 5, axis=0)).round(4).tolist(),
+        "wiring": {n.split(".", 1)[1]: round(v, 3) for n, v in value.items() if n.startswith("wiring.")},
+        "sensory_gain_abs": {"max": round(float(np.abs(sens).max()), 2), "median": round(float(np.median(np.abs(sens))), 2)},
+        "time_on_lawn": round(float(np.mean([bool(s.on_lawn) for s in ep.behaviour])), 3),
+    }
+    out[label] = rec
+    print(label, json.dumps({k: rec[k] for k in ("layers", "pool_spread", "wiring", "sensory_gain_abs")}), flush=True)
+    print("   feature->pool gain (rows: features)", rec["feature_to_pool_gain"], "feature spread", rec["feature_spread"], flush=True)
+json.dump(out, open("build/c2-run-mode/network_gain.json", "w"), indent=1)
+for name, h in (("cap", cap), ("centred", cen)):
+    json.dump({"description": f"The bounded stage-2 probe ({name}) on v4, stopped by the maintainer at generation {len(h['answers'])} of 200: its median score had held near 9.5 since generation 10, with its outputs parked at the soft cap.",
+               "stopped_at_generation": len(h["answers"]), "medians": h["medians"], "sigmas": h["sigmas"], "answer": h["answers"][-1]},
+              open(f"build/c2-run-mode/bounded_{name}_stopped.json", "w"), indent=1)

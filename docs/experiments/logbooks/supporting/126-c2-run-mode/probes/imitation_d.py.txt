@@ -1,0 +1,226 @@
+"""C.2 from an imitation start (the plan review's option D; description, discarded seeds).
+
+Six sep-CMA designs reached the same basin: constant outputs set by the readout's biases, scoring
+about 9.3-9.5 on v4's D_fit, with no responsive network nearby scoring better. Here C.2 starts from
+a responsive network trained to act like a teacher, then sep-CMA refines it.
+
+- The teacher: C.1's 26-parameter warm probe answer on v4 (Logbook 125, `mechanism_ondwell.json`;
+  passes v4 in 4 of 5 discarded populations).
+- The student: the encoded connectome under per-ligand tying with four pool centres (136), the
+  soft cap 2·tanh(x/2), the graded box (wiring scales on [0, 0.75], sensory gains on [-2, 2]) and
+  the saturation guard, as `staged_bc.py` applies them (no package code changes).
+- The rollouts: on D_fit's two assays (Scheer's small lawn and uniform well), 100 animals each
+  (712,000,000 + i, and 712,100,000 + i), the teacher drives; on the same senses a shadow C.2
+  advances its own modulator concentrations, and each second's C.2 state (food features, its
+  modulators, the intake drive) is stored beside the teacher's raw action.
+- The training: Adam (lr 0.01, batches of 4,096) on C.2's learnable encoder tensors and centres,
+  minimising the squared error between C.2's squashed mean action and the teacher's raw action;
+  every 20 steps the vector is projected onto the graded box. Three rounds of 20 epochs, the shadow
+  re-rolled before each with the trained network, so its modulators follow its own activity.
+- The refinement: sep-CMA from the imitation answer, sigma0 0.1, v4's ranking score on D_fit with
+  the guard, CMA 9476, fit animals 714,000,000, 200 generations on 16 workers; checkpoints every 50
+  generations graded on 715,000,000, profiled as `staged_bc.py` profiles.
+
+Run from the repository root.
+"""
+
+import json
+import math
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery as cr
+import npe_recovery as nr
+import staged_bc as b
+from quantumnematode.connectome import encoder as enc
+
+OUT = Path("build/c2-run-mode/imitation")
+TEACHER = json.loads(Path("docs/experiments/logbooks/supporting/125-c1-v4-fit/probes/mechanism_ondwell.json").read_text())["parameters"]
+ROLLOUT_BASES = {"scheer_lawn": 712_000_000, "uniform_lawn_scheer": 712_100_000}
+ROLLOUT_ANIMALS = 100
+LR, BATCH, EPOCHS, ROUNDS, PROJECT_EVERY = 0.01, 4096, 20, 3, 20
+REFINE = {"cma": 9476, "fit": 714_000_000, "check": 715_000_000, "sigma0": 0.1, "cap": 200}
+EVERY = 50
+
+
+class Rider:
+    """The teacher drives; a shadow C.2 advances its modulators on the same senses and records."""
+
+    def __init__(self, teacher, brain):
+        from quantumnematode.evaluation.controllers import BatchedConnectome
+
+        self.teacher = teacher
+        self.shadow = BatchedConnectome(brain)
+        self.brain = brain
+        self.states, self.actions = [], []
+
+    def reset(self, n):
+        self.teacher.reset(n)
+        self.shadow.reset(n)
+
+    def act(self, senses, noise):
+        raw = self.teacher.act(senses, noise)
+        state = self.shadow.state(senses)
+        brain, topo = self.brain, self.brain.topology
+        with torch.no_grad():
+            st = torch.from_numpy(state)
+            _, hidden = topo.forward_with_hidden_batched(st[:, : topo.n_food_features], modulators=brain._unpack_modulators(st))
+            release = topo.modulator_release_batched(hidden).numpy().astype(np.float32)
+            for k in brain._knocked_ligands:
+                release[:, k] = 0.0
+            decay = brain._modulator_decay
+            self.shadow.concentrations = (decay * self.shadow.concentrations + (1.0 - decay) * release).astype(np.float32)
+        self.states.append(state.copy())
+        self.actions.append(np.asarray(raw, dtype=np.float32).copy())
+        return raw
+
+
+def rollouts(brain):
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedMechanistic
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    xs, ys = [], []
+    for assay, base in ROLLOUT_BASES.items():
+        config = load_simulation_config(str(p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_{assay}.yml"))
+        rider = Rider(BatchedMechanistic(TEACHER), brain)
+        BatchedEvaluator(config, rider, [base + i for i in range(ROLLOUT_ANIMALS)]).run()
+        xs.append(np.concatenate(rider.states))
+        ys.append(np.concatenate(rider.actions))
+    return np.concatenate(xs), np.concatenate(ys)
+
+
+def project(brain):
+    """Clip the brain's vector onto the graded box and the centres onto [-1, 1]."""
+    u = enc.read_encoder(brain)
+    for i, e in enumerate(b.entries()):
+        if e.name in ("wiring.excitatory", "wiring.inhibitory", "wiring.gap"):
+            u[i] = min(max(u[i], 0.0), b.WIRING_HIGH / 1.5)
+        elif e.name.startswith("sensory."):
+            lo, hi = (-b.SENSORY_BOUND + 5.0) / 10.0, (b.SENSORY_BOUND + 5.0) / 10.0
+            u[i] = min(max(u[i], lo), hi)
+        else:
+            u[i] = min(max(u[i], 0.0), 1.0)
+    enc.write_encoder(brain, u)
+    with torch.no_grad():
+        brain.topology.probe_centres.clamp_(-1.0, 1.0)
+
+
+def train(brain, x, y, log):
+    topo = brain.topology
+    params = [*topo.learnable_parameters, topo.probe_centres]
+    opt = torch.optim.Adam(params, lr=LR)
+    X, Y = torch.from_numpy(x), torch.from_numpy(y)
+    low = torch.as_tensor(brain._action_low, dtype=torch.float32)
+    high = torch.as_tensor(brain._action_high, dtype=torch.float32)
+    centre, half = (high + low) / 2.0, (high - low) / 2.0
+    nf = topo.n_food_features
+    step = 0
+    for epoch in range(EPOCHS):
+        order = torch.randperm(len(X), generator=torch.Generator().manual_seed(epoch))
+        losses = []
+        for start in range(0, len(X), BATCH):
+            idx = order[start : start + BATCH]
+            st = X[idx]
+            mean, _ = topo.forward_with_hidden_batched(st[:, :nf], modulators=brain._unpack_modulators(st))
+            pred = centre + half * torch.tanh(mean)
+            loss = torch.mean((pred - Y[idx]) ** 2)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            step += 1
+            if step % PROJECT_EVERY == 0:
+                project(brain)
+            losses.append(loss.item())
+        project(brain)
+        log.append({"epoch": epoch, "loss": float(np.mean(losses))})
+        print("  epoch", epoch, "loss", round(float(np.mean(losses)), 4), flush=True)
+
+
+def fit_quality(brain, x, y):
+    topo = brain.topology
+    nf = topo.n_food_features
+    low, high = np.asarray(brain._action_low, dtype=np.float32), np.asarray(brain._action_high, dtype=np.float32)
+    with torch.no_grad():
+        st = torch.from_numpy(x[:: max(1, len(x) // 50_000)])
+        mean, _ = topo.forward_with_hidden_batched(st[:, :nf], modulators=brain._unpack_modulators(st))
+        pred = (high + low) / 2 + (high - low) / 2 * np.tanh(mean.numpy())
+    yy = y[:: max(1, len(x) // 50_000)]
+    out = {}
+    for j, o in enumerate(("speed", "curvature", "reversal", "omega", "delta")):
+        var = float(np.var(yy[:, j]))
+        out[o] = {"teacher_sd": round(math.sqrt(var), 4), "r2": round(1 - float(np.mean((pred[:, j] - yy[:, j]) ** 2)) / var, 3) if var > 0 else None}
+    return out
+
+
+def to_probe_units(brain):
+    """The brain's vector in the probe's units (the graded box mapped to [0, 1]), with the centres."""
+    u = enc.read_encoder(brain)
+    z = list(map(float, u))
+    for i, e in enumerate(b.entries()):
+        if e.name in ("wiring.excitatory", "wiring.inhibitory", "wiring.gap"):
+            z[i] = u[i] * 1.5 / b.WIRING_HIGH
+        elif e.name.startswith("sensory."):
+            z[i] = (10.0 * u[i] - 5.0 + b.SENSORY_BOUND) / (2 * b.SENSORY_BOUND)
+    z = [min(max(v, 0.0), 1.0) for v in z]
+    centres = ((brain.topology.probe_centres.detach().numpy() + 1.0) / 2.0).tolist()
+    return [*z, *centres]
+
+
+def start_refine(seed):
+    x0 = json.loads((OUT / "imitation_answer.json").read_text())["z"]
+    return b._strategy(x0, REFINE["sigma0"], seed)
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    record = {"description": __doc__, "teacher": TEACHER}
+    answer_path = OUT / "imitation_answer.json"
+    if answer_path.exists():
+        # Resumed: the imitation ran once (its losses and fits are in the log it wrote), and its
+        # answer is reused; only the grading and the refinement run again.
+        z = json.loads(answer_path.read_text())["z"]
+        record["training"] = "resumed from imitation_answer.json; the losses and fits are in imitation_d.log"
+    else:
+        brain = p.encoded_brain()
+        b.write(brain, [0.5] * (b.N_ENCODER + b.POOLS))
+        brain.topology.probe_centres = torch.nn.Parameter(torch.zeros(b.POOLS))
+        log = []
+        for round_ in range(ROUNDS):
+            x, y = rollouts(brain)
+            print("round", round_, "samples", len(x), flush=True)
+            train(brain, x, y, log)
+            record[f"round{round_}_fit"] = fit_quality(brain, x, y)
+            print("  fit", record[f"round{round_}_fit"], flush=True)
+        record["training"] = log
+        z = to_probe_units(brain)
+        answer_path.write_text(json.dumps({"z": z}))
+        # The centres were a trained parameter; the profile and the refinement write them as data.
+        brain.topology._parameters.pop("probe_centres", None)
+        record["imitation_seconds"] = time.time() - t0
+    record["imitation_answer"] = {"z": z, "profile": b.profile(z)}
+    record["imitation_answer"]["grade"] = b._simulate_full(0, z, REFINE["check"] + 900_000)
+    g = record["imitation_answer"]["grade"]
+    print("imitation answer: D_fit", round(g["D_fit"], 2), g["fit_passes"], json.dumps(record["imitation_answer"]["profile"]), flush=True)
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        history = cr.run_fit({}, fit=0, cma_seed=REFINE["cma"], seed_base=REFINE["fit"], cap=REFINE["cap"], use_rule=False,
+                             state_dir=OUT / "refine", pool=pool, scales={}, objective=b.GuardedObjective(),
+                             simulate=b.simulate_stage2, stop=p.readiness_stop, strategy_factory=start_refine)
+        b.STAGES[3] = {"check": REFINE["check"], **REFINE}
+        record["refine"] = b._stage(3, pool, history, lambda v: list(v))
+    record["wall_hours"] = (time.time() - t0) / 3600
+    (OUT.parent / "imitation_d.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

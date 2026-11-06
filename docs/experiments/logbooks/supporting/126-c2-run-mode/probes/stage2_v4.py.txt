@@ -1,0 +1,137 @@
+"""C.2's stage 2 re-run against benchmark v4's D_fit: does v4 alone keep the run mode responsive?
+
+Description, discarded seeds, for planning C.2's run-mode change. The staged pilot's stage 2 (on
+v3's D_fit) pinned the speed and curvature readouts off the squash: its worm holds the lawn by not
+running. v4's D_fit adds the activity family, which catches that worm. Here stage 2 restarts from
+the staged pilot's stage-1 answer (all 196 parameters, sigma0 0.1, the box unchanged), on the
+corrected wiring, scored by v4's ranking score against its band centres at n = 200 on D_fit's
+families (small lawn, uniform well, kinematics, activity). CMA 9449; fit animals 700,000,000 +
+200·k + i; run through its cap of 500 generations as the pilot's stage 2 was (the readiness stop
+recorded, not used). Every 50 generations the answer is profiled (each output's pre-squash 5/50/95th
+percentiles, the primitive shares and the time on the lawn over one 1,800-s reference episode,
+seed 99,670,000) and graded on D_fit's assays on one population (701,000,000 + 200·c + i).
+Run from the repository root.
+"""
+
+import json
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery as cr
+import cma_recovery_v2 as v2
+import npe_recovery as nr
+
+OUT = Path("build/c2-run-mode")
+CAP = 500
+EVERY = 50
+SIGMA0 = 0.1
+CMA_SEED = 9449
+FIT_BASE = 700_000_000
+CHECK_BASE = 701_000_000
+PROFILE_SEED = 99_670_000
+
+
+class V4FitObjective:
+    """v4's ranking score against the band centres at n = 200, on D_fit's families; picklable."""
+
+    def __init__(self) -> None:
+        bands = bg.load_bands_v4()
+        self.scales = v2.band_scales_v2(bands)
+        self.family_map = {f: tuple(bands["families"][f]) for f in bands["fit_families"]}
+        centres = {}
+        for family, stats in self.family_map.items():
+            family_bands = bg.family_bands_v2(bands, family, p.ANIMALS)
+            for s in stats:
+                centres[f"{family}/{s}"] = float(family_bands[s].centre)
+        self.truth = {"statistics": centres}
+
+    def __call__(self, record):
+        return v2.ranking_score(self.truth, record, self.scales, self.family_map)
+
+
+def simulate_v4(k, z, seed_base):
+    """Run simulation k at z on D_fit's two assays; return its v4-graded statistics."""
+    bands = bg.load_bands_v4()
+    start = time.perf_counter()
+    populations, _ = bg.simulate_v2(p.ARM, p.controller(z), p.population_seeds(seed_base, k), bands, assays=p.FIT_ASSAYS)
+    graded = bg.grade_populations_v4(populations, None, bands, presence=False)
+    return nr._finite({
+        "k": k, "z": list(map(float, z)),
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "z_scores": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "fit_passes": {f: all(r["passes"] for r in graded["families"][f].values()) for f in bands["fit_families"]},
+        "D_fit": graded["D_fit"], "seconds": time.perf_counter() - start,
+    })
+
+
+def start(seed):
+    import cma
+
+    x0 = json.loads(p.STAGED_PILOT_PATH.read_text())["stage1"]["answer_full"]
+    return cma.CMAEvolutionStrategy(x0, SIGMA0, {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": cr.POPSIZE, "seed": seed, "verbose": -9})
+
+
+def profile(z):
+    """Return each output's pre-squash percentiles, the primitive shares and the time on the lawn."""
+    import torch
+    from quantumnematode.connectome import encoder as enc
+    from quantumnematode.evaluation.reference import run_reference
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    path = p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+    brain = p.encoded_brain()
+    enc.write_encoder(brain, z)
+    episode = run_reference(load_simulation_config(str(path)), brain, PROFILE_SEED, 1800, record_density=False)
+    prim = np.array([str(s.primitive) for s in episode.behaviour])
+    on = np.array([bool(s.on_lawn) for s in episode.behaviour])
+    states = torch.from_numpy(np.asarray(episode.features, dtype=np.float32))
+    topo = brain.topology
+    with torch.no_grad():
+        mean, _ = topo.forward_with_hidden_batched(states[:, : topo.n_food_features], modulators=brain._unpack_modulators(states))
+    out = {o: np.percentile(mean[:, i].numpy(), [5, 50, 95]).round(2).tolist() for i, o in enumerate(("speed", "curvature", "reversal", "omega", "delta"))}
+    out["primitive_shares"] = {k: round(float(np.mean(prim == k)), 3) for k in sorted(set(prim))}
+    out["time_on_lawn"] = round(float(on.mean()), 3)
+    return out
+
+
+def _check(item):
+    g, z = item
+    return g, simulate_v4(g // EVERY, z, CHECK_BASE)
+
+
+def main():
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        history = cr.run_fit(
+            {}, fit=0, cma_seed=CMA_SEED, seed_base=FIT_BASE, cap=CAP, use_rule=False,
+            state_dir=OUT / "stage2_v4", pool=pool, scales={}, objective=V4FitObjective(),
+            simulate=simulate_v4, stop=p.readiness_stop, strategy_factory=start,
+        )
+        gens = list(range(EVERY, len(history["answers"]) + 1, EVERY))
+        checks = dict(pool.map(_check, [(g, history["answers"][g - 1]) for g in gens]))
+    points = []
+    for g in [0, *gens]:
+        z = json.loads(p.STAGED_PILOT_PATH.read_text())["stage1"]["answer_full"] if g == 0 else history["answers"][g - 1]
+        point = {"generation": g, "profile": profile(z)}
+        if g:
+            c = checks[g]
+            point |= {"D_fit": c["D_fit"], "fit_passes": c["fit_passes"],
+                      "z": {k: v for k, v in c["z_scores"].items() if k.split("/")[0] in ("activity", "kinematics", "small_lawn")}}
+        points.append(point)
+        print(g, json.dumps({k: point["profile"][k] for k in ("speed", "curvature", "primitive_shares", "time_on_lawn")}),
+              "D_fit", None if not g else round(point["D_fit"], 2), flush=True)
+    record = {"description": __doc__, "cap": CAP, "medians": history["medians"], "sigmas": history["sigmas"],
+              "stop_rule_recorded": history.get("stop"), "answer": history["answers"][-1], "points": points,
+              "wall_hours": (time.time() - t0) / 3600}
+    (OUT / "stage2_v4.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

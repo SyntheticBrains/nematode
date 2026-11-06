@@ -1,0 +1,42 @@
+"""Each output's pre-squash range at the box centre, the stage-1 answer and the stage-2 answer.
+
+Two 1,800-s reference episodes on Scheer's small lawn each (seeds 99,660,000-99,660,001,
+discarded), on the wiring the staged fit ran on (the López-Cruz overrides excluded). Description for
+planning C.2's run-mode change. Run from the repository root.
+"""
+import json, sys
+import numpy as np
+import quantumnematode.agent  # noqa: F401
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as probe
+from quantumnematode.connectome import encoder as enc
+from quantumnematode.evaluation.reference import run_reference
+from quantumnematode.utils.config_loader import load_simulation_config
+import torch
+
+staged = json.loads(probe.STAGED_PILOT_PATH.read_text())
+POINTS = {
+    "box centre": [0.5] * 196,
+    "stage 1 answer": staged["stage1"]["answer_full"],
+    "stage 2 answer": staged["stage2_extended"]["answer"],
+}
+path = probe.FORAGING / f"{probe.bg.ARMS[probe.ARM]}_assay_scheer_lawn.yml"
+brain, _, _ = probe.harness.build_brain(path, 1, {"encoder_modulator_tying": "per_couple", "sign_override_exclude": ["lopezcruz2019"]})
+config = load_simulation_config(str(path))
+out = {}
+for name, z in POINTS.items():
+    enc.write_encoder(brain, z)
+    eps = [run_reference(config, brain, s, 1800, record_density=False) for s in (99_660_000, 99_660_001)]
+    prim = np.concatenate([[str(s.primitive) for s in e.behaviour] for e in eps])
+    on = np.concatenate([[bool(s.on_lawn) for s in e.behaviour] for e in eps])
+    feats = np.concatenate([np.asarray(e.features, dtype=np.float32) for e in eps])
+    topo = brain.topology
+    with torch.no_grad():
+        states = torch.from_numpy(feats)
+        mean, hidden = topo.forward_with_hidden_batched(states[:, : topo.n_food_features], modulators=brain._unpack_modulators(states))
+    rec = {o: np.percentile(mean[:, k].numpy(), [5, 50, 95]).round(2).tolist() for k, o in enumerate(("speed", "curvature", "reversal", "omega", "delta"))}
+    rec["primitive_shares"] = {k: round(float(np.mean(prim == k)), 3) for k in sorted(set(prim))}
+    rec["time_on_lawn"] = round(float(on.mean()), 3)
+    out[name] = rec
+    print(name, json.dumps(rec), flush=True)
+json.dump(out, open("build/c2-run-mode/profile_points.json", "w"), indent=1)

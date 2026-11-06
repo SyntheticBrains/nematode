@@ -15,7 +15,10 @@ The jobs cover the hand-placed and the data-layer connectome arms, untrained:
 - a built brain's topology state (every chemical and gap weight, sensory gain, readout and wiring
   buffer, the encoder's among them; not the PPO critic, which no sign reaches), for each
   per-connection config whose runs are recorded and for one encoded config, since the jobs above
-  do not read the per-connection sign table.
+  do not read the per-connection sign table;
+- the encoded brain's forward path at two recorded vectors (the staged pilot's stage-1 and
+  stage-2 answers): the batched evaluator on Scheer's small lawn and the per-step runner for 300
+  steps, as above.
 
 Usage::
 
@@ -129,6 +132,11 @@ def per_step_job(arm: str) -> str:
     config = load_simulation_config(str(path))
     brain, _, _ = harness.build_brain(path, BRAIN_SEED, ARMS[arm])
     episode = run_reference(config, brain, PER_STEP_SEED, PER_STEP_STEPS, record_density=True)
+    return _episode_digest(episode)
+
+
+def _episode_digest(episode: Any) -> str:  # noqa: ANN401 - a reference episode
+    """Digest a per-step episode's log: its features, outputs, modulators and behaviour."""
     behaviour = np.array(
         [[s.x, s.y, s.heading_rad, s.concentration, s.dc_dt] for s in episode.behaviour],
         dtype=np.float64,
@@ -152,11 +160,62 @@ def brain_job(config: str) -> str:
     return _digest([state[name].detach().cpu().numpy() for name in sorted(state)])
 
 
+ENCODED_CONFIG = FORAGING / (
+    "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives"
+    "_assay_scheer_lawn.yml"
+)
+STAGED_PILOT = (
+    _REPO / "docs/experiments/logbooks/supporting/122-c2-encoder/readiness/pilot_staged.json"
+)
+ENCODED_VECTORS = ("stage1", "stage2")
+
+
+def _encoded_brain(vector: str) -> Any:  # noqa: ANN401 - a brain
+    """Build the encoded brain at the fixed seed and write one recorded vector into it."""
+    from quantumnematode.connectome import encoder as enc
+
+    staged = json.loads(STAGED_PILOT.read_text())
+    z = (
+        staged["stage1"]["answer_full"]
+        if vector == "stage1"
+        else staged["stage2_extended"]["answer"]
+    )
+    brain, _, _ = harness.build_brain(
+        ENCODED_CONFIG,
+        BRAIN_SEED,
+        {"encoder_modulator_tying": "per_couple"},
+    )
+    enc.write_encoder(brain, z)
+    return brain
+
+
+def encoded_job(kind: str, vector: str) -> str:
+    """Run the encoded brain at a recorded vector, batched or per step; return the digest."""
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+    from quantumnematode.evaluation.reference import run_reference
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    config = load_simulation_config(str(ENCODED_CONFIG))
+    brain = _encoded_brain(vector)
+    if kind == "encoded_batched":
+        seeds = [ANIMAL_BASE + i for i in range(ANIMALS)]
+        trajectories = BatchedEvaluator(config, BatchedConnectome(brain), seeds).run()
+        return _digest([np.asarray(getattr(trajectories, name)) for name in (*ARRAYS, *TOTALS)])
+    episode = run_reference(config, brain, PER_STEP_SEED, PER_STEP_STEPS, record_density=True)
+    return _episode_digest(episode)
+
+
 def jobs() -> list[tuple[str, str, str]]:
     """Return every job as (kind, arm, assay)."""
     out = [("batched", arm, assay) for arm in ARMS for assay in ASSAYS]
     out += [("per_step", arm, "scheer_lawn") for arm in ARMS]
     out += [("brain", config, "-") for config in BRAIN_CONFIGS]
+    out += [
+        (kind, vector, "scheer_lawn")
+        for vector in ENCODED_VECTORS
+        for kind in ("encoded_batched", "encoded_per_step")
+    ]
     return out
 
 
@@ -165,6 +224,8 @@ def run_job(job: tuple[str, str, str]) -> str:
     kind, arm, assay = job
     if kind == "brain":
         return brain_job(arm)
+    if kind.startswith("encoded_"):
+        return encoded_job(kind, arm)
     return batched_job(arm, assay) if kind == "batched" else per_step_job(arm)
 
 
@@ -230,6 +291,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{len(digests)} jobs recorded at {_describe(state)}")
         return 0
     baseline = json.loads(baseline_path.read_text())
+    missing = sorted(set(baseline["digests"]) - set(digests))
+    extra = sorted(set(digests) - set(baseline["digests"]))
+    if missing or extra:
+        print(f"the baseline's jobs differ from this run's: missing {missing}, extra {extra}")
+        print("record the baseline again on the code before the change")
+        return 1
     rows = [
         {"job": job, "identical": digests[job] == baseline["digests"][job]}
         for job in baseline["digests"]
