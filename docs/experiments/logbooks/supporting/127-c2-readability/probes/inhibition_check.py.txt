@@ -1,0 +1,71 @@
+"""Does mgl-1 move once inhibition is on? A representability check with no fitting (description).
+
+The readability probe's generation-150 answer, with only its inhibitory wiring scale changed: 0.005
+(as fitted), 0.1, 0.25, 0.5 and 0.74 (its excitatory scale; the tie). At each level, on 200 paired
+animals (99,800,000 + i): the wild type and mgl-1 on López-Cruz's food removal (each 2-min bin's
+reorientations, early 8-12 min and late 34-42 min, mgl-1's ratio to its wild type), the wild type's
+small-lawn statistics, and tph-1, pdfr-1 and tax-4's differences from it on their v4 bands.
+
+The branch, fixed before the run: if mgl-1's early ratio is 0.8 or lower at any level, three
+screens follow (inhibition tied, inhibition floored, tph-1 fitted); otherwise the result is written
+up. Run from the repository root.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, staged_bc as b, readability as rd
+
+Z = json.loads(Path("build/c2-run-mode/readability.json").read_text())["answer"]
+SEEDS = [99_800_000 + i for i in range(200)]
+LEVELS = (0.005, 0.1, 0.25, 0.5, 0.74)
+INH = next(i for i, e in enumerate(b.entries()) if e.name == "wiring.inhibitory")
+
+
+def at_level(level):
+    z = list(Z)
+    z[INH] = level / b.WIRING_HIGH  # the graded box maps z on [0, 1] to a scale on [0, 0.75]
+    return z
+
+
+def job(item):
+    level, kind = item
+    z, bands = at_level(level), bg.load_bands_v4()
+    if kind in ("wt_search", "mgl-1"):
+        pops, _ = bg.simulate_v2(p.ARM, rd.controller(z, "mgl-1" if kind == "mgl-1" else None), SEEDS, bands, assays=("local_search",))
+        r = rd.search_reading(pops["local_search"])
+        return level, kind, {"early": r["early"], "late": r["late"], "statistics": r["statistics"]}
+    clf = bg.classifier(bands)
+    mutant = None if kind == "wt_lawn" else kind
+    pops, _ = bg.simulate_v2(p.ARM, rd.controller(z, mutant), SEEDS, bands, assays=("small_lawn",))
+    return level, kind, bg.family_values("small_lawn", pops["small_lawn"], clf)
+
+
+def main():
+    jobs = [(lv, k) for lv in LEVELS for k in ("wt_search", "mgl-1", "wt_lawn", *p.MUTANTS)]
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        results = list(pool.map(job, jobs))
+    by = {}
+    for lv, k, r in results:
+        by.setdefault(lv, {})[k] = r
+    bands = bg.load_bands_v4()
+    out = {}
+    for lv in LEVELS:
+        d = by[lv]
+        wt, m = d["wt_search"], d["mgl-1"]
+        mutants = {k: p.mutant_reading(k, d["wt_lawn"], d[k], bands, len(SEEDS)) for k in p.MUTANTS}
+        out[lv] = {"wt_search": wt, "mgl1_search": m, "mgl1_early_ratio": m["early"] / wt["early"] if wt["early"] else None,
+                   "mgl1_late_ratio": m["late"] / wt["late"] if wt["late"] else None, "wt_lawn": d["wt_lawn"],
+                   "mutants": {k: {"passes": v["passes"], **{s: {"delta": x["delta"], "z": x["z"]} for s, x in v["statistics"].items()}} for k, v in mutants.items()}}
+        lawn = d["wt_lawn"]
+        print(f"inh {lv}: mgl-1 early ratio {out[lv]['mgl1_early_ratio']:.3f} late {out[lv]['mgl1_late_ratio']:.3f} | wt early {wt['early']:.2f} late {wt['late']:.2f} | "
+              f"lawn roaming {lawn['roaming_fraction']:.3f} on-lawn {lawn['time_on_lawn']:.3f} exits/h {lawn['exits_per_on_lawn_hour']:.2f} | "
+              + " ".join(f"{k} d{v['roaming_fraction']['delta']:+.3f}({'P' if v['passes'] else 'F'})" for k, v in out[lv]["mutants"].items()), flush=True)
+    triggered = any((r["mgl1_early_ratio"] or 1) <= 0.8 for r in out.values())
+    Path("build/c2-run-mode/inhibition_check.json").write_text(json.dumps(nr._finite({"description": __doc__, "levels": out, "screens_triggered": triggered}), indent=1) + "\n")
+    print("screens triggered:", triggered)
+
+
+if __name__ == "__main__":
+    main()

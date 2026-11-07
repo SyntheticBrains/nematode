@@ -1,0 +1,41 @@
+{
+ "description": "mgl-1 on answers that keep inhibition on (description; 200 paired animals at 99,810,000 + i).\n\nThe gradient-trained imitation answer kept its inhibitory scale at 0.75; read mgl-1 there as\ntrained and with inhibition at 0.005, and on the imitation's refinement (0.09) as fitted.\n",
+ "answers": {
+  "imitation (inh 0.75)": {
+   "wt": {
+    "early": 5.646666666666666,
+    "late": 5.619000000000001
+   },
+   "mgl-1": {
+    "early": 5.646666666666667,
+    "late": 5.590999999999999
+   },
+   "early_ratio": 1.0000000000000002,
+   "late_ratio": 0.9950169069229398
+  },
+  "refine gen 200 (inh 0.09)": {
+   "wt": {
+    "early": 2.671666666666667,
+    "late": 1.503
+   },
+   "mgl-1": {
+    "early": 1.6166666666666665,
+    "late": 1.5299999999999998
+   },
+   "early_ratio": 0.6051154086088583,
+   "late_ratio": 1.0179640718562875
+  },
+  "imitation, inh set to 0.005": {
+   "wt": {
+    "early": 5.7683333333333335,
+    "late": 3.886
+   },
+   "mgl-1": {
+    "early": 5.793333333333333,
+    "late": 3.8590000000000004
+   },
+   "early_ratio": 1.0043340075122795,
+   "late_ratio": 0.9930519814719506
+  }
+ }
+}

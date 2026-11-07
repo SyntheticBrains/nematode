@@ -1,0 +1,95 @@
+"""Why mgl-1 is inert in C.2's fitted answer (description; one reference episode, seed 99,790,000).
+
+On the readability probe's generation-150 answer, over one per-step episode of López-Cruz's food
+removal: (1) what the 16 removed edges' presynaptic sensory neurons inject, on food and off; (2) how
+AIA, ADE and the four motor pools change when the edges go, within each step's four settling passes
+(the network starts every step from its injected sensors; only the modulator pools persist); (3) the
+shortest synaptic path from AIA and ADE to the pooled motor classes, against the four passes; (4) the
+pools' response to a unit nudge of AIA, ADE and comparison interneurons at the first pass.
+"""
+import json, sys
+from collections import deque
+from pathlib import Path
+import numpy as np, torch
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, staged_bc as b, readability as rd
+from quantumnematode.evaluation.reference import run_reference
+from quantumnematode.utils.config_loader import load_simulation_config
+
+Z = json.loads(Path("build/c2-run-mode/readability.json").read_text())["checkpoints"]["150"]
+Z = json.loads(Path("build/c2-run-mode/readability.json").read_text())["answer"]
+SEED = 99_790_000
+
+def built(mutant=None):
+    brain = rd.mgl1_brain() if mutant else p.encoded_brain()
+    b.write(brain, Z)
+    return brain
+
+def settle(brain, states, nudge=None):
+    topo = brain.topology
+    nf = topo.n_food_features
+    mods = brain._unpack_modulators(states)
+    with torch.no_grad():
+        h = topo._sensor_current_batched(states[:, :nf], None, None, None, None)
+        h0 = h.clone()
+        enc_ = topo.encoder
+        recurrent = enc_.chemical() + topo.g_gap * enc_.gap_scale()
+        held = topo._held_current(mods)
+        passes = []
+        for k in range(topo.forward_pass_depth):
+            pre = h @ recurrent
+            if held is not None:
+                pre = pre + held
+            h = torch.tanh(pre)
+            if nudge is not None and k == 0:
+                h = h.clone(); h[:, nudge] += 0.1
+            passes.append(h.clone())
+        return h0, passes, topo._pool_motor_classes(h)
+
+def main():
+    path = p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_food_removal_lopezcruz.yml"
+    cfg = load_simulation_config(str(path))
+    wt = built()
+    ep = run_reference(cfg, wt, SEED, cfg.max_steps if hasattr(cfg, "max_steps") else 4000, record_density=False)
+    states = torch.from_numpy(np.asarray(ep.features, dtype=np.float32))
+    on = np.array([bool(s.on_lawn) for s in ep.behaviour])
+    names = wt.topology.neuron_names
+    idx = {n: i for i, n in enumerate(names)}
+    _, pairs = rd._mgl1_mask()
+    pre = sorted({a for a, _ in pairs}); post = sorted({c for _, c in pairs})
+    h0, passes, pools = settle(wt, states)
+    m = built("mgl-1")
+    h0m, passesm, poolsm = settle(m, states)
+    out = {"steps": len(states), "on_food_steps": int(on.sum()), "off_food_steps": int((~on).sum())}
+    off = ~on
+    out["injected"] = {n: {"on_food_mean_abs": float(h0[on, idx[n]].abs().mean()), "off_food_mean_abs": float(h0[off, idx[n]].abs().mean()),
+                           "after_4_passes_off_mean_abs": float(passes[-1][off, idx[n]].abs().mean())} for n in pre}
+    out["targets"] = {n: {"pass1_off_wt": float(passes[0][off, idx[n]].mean()), "pass1_off_mgl1": float(passesm[0][off, idx[n]].mean()),
+                          "pass4_off_wt": float(passes[-1][off, idx[n]].mean()), "pass4_off_mgl1": float(passesm[-1][off, idx[n]].mean())} for n in post}
+    out["pools_off_max_abs_change"] = float((poolsm[off] - pools[off]).abs().max())
+    out["pools_on_max_abs_change"] = float((poolsm[on] - pools[on]).abs().max())
+    # shortest path on the fitted recurrent matrix's nonzero entries
+    with torch.no_grad():
+        R = (wt.topology.encoder.chemical() + wt.topology.g_gap * wt.topology.encoder.gap_scale()).numpy()
+    motor = [i for n, i in idx.items() if any(n.startswith(c) and n[len(c):].isdigit() for c in ("VB", "DB", "VA", "DA"))]
+    def hops(src):
+        dist = {src: 0}; q = deque([src])
+        while q:
+            u = q.popleft()
+            for v in np.nonzero(R[u])[0]:
+                if v not in dist:
+                    dist[v] = dist[u] + 1; q.append(v)
+        return min((dist[t] for t in motor if t in dist), default=None)
+    out["hops_to_motor"] = {n: hops(idx[n]) for n in ("AIAL", "AIAR", "ADEL", "ADER", "AWCL", "ASKL", "AIBL", "AIYL", "AVAL", "AVBL", "RIML")}
+    # nudge gains (off food)
+    base = pools[off].numpy()
+    gains = {}
+    for n in ("AIAL", "ADEL", "AIBL", "AIYL", "AIZL", "AVAL", "AVBL", "RIML"):
+        _, _, pn = settle(wt, states[off], nudge=idx[n])
+        gains[n] = float(np.abs(pn.numpy() - base).mean() / 0.1)
+    out["pool_gain_per_unit_nudge_at_pass1_off"] = gains
+    print(json.dumps(out, indent=1))
+    Path("build/c2-run-mode/mgl1_diagnosis.json").write_text(json.dumps({"description": __doc__, **out}, indent=1) + "\n")
+
+if __name__ == "__main__":
+    main()

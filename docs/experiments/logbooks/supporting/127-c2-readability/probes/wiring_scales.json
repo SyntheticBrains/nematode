@@ -1,0 +1,72 @@
+{
+ "description": "The wiring scales of every fitted C.2 answer, and the MGL-1 edges' weight in the last (description).\n\nFor each answer, the three wiring scales in the encoder's units (the graded box holds each on\n[0, 0.75]). For the readability probe's generation-150 answer, the 16 removed edges' composed\nweights onto AIA and ADE against each target's whole input (chemical and gap, absolute).\n",
+ "scales": {
+  "guarded wide, generation 250 (D_fit only)": {
+   "excitatory": 0.7499281214935112,
+   "inhibitory": 0.029730912338807397,
+   "gap": 0.6562169103870968
+  },
+  "ablation without the imitation, generation 250": {
+   "excitatory": 0.72328876751269,
+   "inhibitory": 0.0731358372554809,
+   "gap": 0.5072448878012341
+  },
+  "imitation's refinement, generation 200": {
+   "excitatory": 0.5702357805798985,
+   "inhibitory": 0.09044305684657535,
+   "gap": 0.7469222235547709
+  },
+  "imitation answer (gradient, projected on the box)": {
+   "excitatory": 0.75,
+   "inhibitory": 0.75,
+   "gap": 0.75
+  },
+  "readability probe, generation 150 (all six families)": {
+   "excitatory": 0.7399807929920427,
+   "inhibitory": 0.004729715625313919,
+   "gap": 0.6789712976192558
+  }
+ },
+ "readability_gen150_mgl1_edges": {
+  "AIAL": {
+   "removed": [
+    -0.0004243134753778577,
+    -0.0005657512811012566,
+    -0.0032530699390918016,
+    -0.0020508484449237585,
+    -7.071891013765708e-05,
+    -0.00014143782027531415,
+    -7.071891013765708e-05
+   ],
+   "removed_sum_abs": 0.006576858781045303,
+   "all_input_sum_abs": 1.9964704513549805
+  },
+  "AIAR": {
+   "removed": [
+    -0.00025540392380207777,
+    -0.0032563998829573393,
+    -0.002234784187749028,
+    -0.00025540392380207777,
+    -0.0005108078476041555
+   ],
+   "removed_sum_abs": 0.006512799765914679,
+   "all_input_sum_abs": 1.7647581100463867
+  },
+  "ADEL": {
+   "removed": [
+    -0.004233886953443289
+   ],
+   "removed_sum_abs": 0.004233886953443289,
+   "all_input_sum_abs": 1.5993685722351074
+  },
+  "ADER": {
+   "removed": [
+    -0.0015657361363992095,
+    -0.0011743021896108985,
+    -0.002348604379221797
+   ],
+   "removed_sum_abs": 0.005088642705231905,
+   "all_input_sum_abs": 2.4028210639953613
+  }
+ }
+}

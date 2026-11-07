@@ -1,0 +1,40 @@
+"""The wiring scales of every fitted C.2 answer, and the MGL-1 edges' weight in the last (description).
+
+For each answer, the three wiring scales in the encoder's units (the graded box holds each on
+[0, 0.75]). For the readability probe's generation-150 answer, the 16 removed edges' composed
+weights onto AIA and ADE against each target's whole input (chemical and gap, absolute).
+"""
+import json, sys
+from pathlib import Path
+import numpy as np, torch
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import c2_encoder_probe as p, staged_bc as b, readability as rd
+
+S = "docs/experiments/logbooks/supporting/126-c2-run-mode/probes/"
+ANSWERS = {
+    "guarded wide, generation 250 (D_fit only)": json.load(open(S + "guarded_wide.json"))["answer"],
+    "ablation without the imitation, generation 250": json.load(open(S + "guarded_stage1.json"))["answer"],
+    "imitation's refinement, generation 200": json.load(open(S + "imitation_d.json"))["refine"]["answer"],
+    "imitation answer (gradient, projected on the box)": json.load(open(S + "imitation_d.json"))["imitation_answer"]["z"],
+    "readability probe, generation 150 (all six families)": json.load(open("build/c2-run-mode/readability.json"))["answer"],
+}
+ents = b.entries()
+scales = {}
+for name, z in ANSWERS.items():
+    u = b.to_encoder(z)
+    scales[name] = {e.name.split(".")[-1]: e.value(x) for e, x in zip(ents, u) if e.name in ("wiring.excitatory", "wiring.inhibitory", "wiring.gap")}
+brain = p.encoded_brain(); b.write(brain, ANSWERS["readability probe, generation 150 (all six families)"])
+t = brain.topology
+with torch.no_grad():
+    C = t.encoder.chemical().numpy(); G = (t.g_gap * t.encoder.gap_scale()).numpy()
+idx = {n: i for i, n in enumerate(t.neuron_names)}
+_, pairs = rd._mgl1_mask()
+edges = {}
+for post in ("AIAL", "AIAR", "ADEL", "ADER"):
+    j = idx[post]
+    removed = [float(C[idx[a], j]) for a, c in pairs if c == post]
+    edges[post] = {"removed": removed, "removed_sum_abs": float(np.abs(removed).sum()), "all_input_sum_abs": float(np.abs(C[:, j]).sum() + np.abs(G[:, j]).sum())}
+out = {"description": __doc__, "scales": scales, "readability_gen150_mgl1_edges": edges}
+Path("build/c2-run-mode/wiring_scales.json").write_text(json.dumps(out, indent=1) + "\n")
+for k, v in scales.items(): print(f"{k:55s}", {a: round(x, 3) for a, x in v.items()})
+for k, v in edges.items(): print(k, round(v["removed_sum_abs"], 4), "of", round(v["all_input_sum_abs"], 3))
