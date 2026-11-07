@@ -755,6 +755,23 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - modulator signs fixed where receptor biology resolves them;
     - a representability check, then one fit on all six families (a D37 amendment).
 
+  *(Added 2026-11-07; [Logbook 128](../../../docs/experiments/logbooks/128-c2-identifiability.md), probes
+  on discarded seeds.)* **Wild-type data do not identify C.2's perturbation responses.**
+
+  - **The constraints, prototyped in scripts** (the maintainer's decision: prototype first). Tying
+    or flooring inhibition, with PDF held excitatory, did not keep the knockouts effective: their
+    effects faded as the wild type's fit improved.
+  - **Two signs the fit reversed:**
+    - PDF made excitatory (PDFR-1, Gαs) gives pdfr-1 the real direction (−0.21);
+    - ser-5 made excitatory (Gαq) gives tph-1 a passing +0.18.
+  - **A draft literature table** resolves 24 of the 54 receptors with free signs, to be checked
+    entry by entry before it enters the package.
+  - **pdfr-1 cannot be a held-out test:** graded by magnitude alone, an inert knockout passes.
+  - **Fitted with its three mutants for 60 generations,** the wild type improves (D 2.48, 3
+    families), but the mutants trade against it, and the branch fixed before the run is not met.
+  - **Next:** C.2's design goes back to the maintainer. The options are a larger fit of the wild
+    type with its mutants, accepting the limit for this model class, or a change of model class.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 

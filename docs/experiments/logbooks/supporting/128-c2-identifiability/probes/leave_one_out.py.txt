@@ -1,0 +1,147 @@
+"""Leave one mutant out: fit the wild type with tph-1 and tax-4, hold out pdfr-1 (description, discarded).
+
+Fitted to wild-type behaviour alone, C.2's perturbation responses stayed undetermined in every fit,
+with or without the inhibition and PDF constraints (`prototypes.py`). Here two of Scheer's mutants
+join the objective, and the third is held out: does pdfr-1 then come out right without being fitted?
+
+- The model and constraints are V2's: the inhibitory scale floored at 0.09, PDF's strengths held
+  excitatory (PDFR-1 couples to Galpha-s).
+- The start is V2's last answer (its generation-90 readout: D 2.07).
+- The objective is v4's ranking score on the six families plus tph-1's and tax-4's two lawn
+  differences, each graded on its own 64-animal band against its wild type on the same animals and
+  entered as one more family: 1,000 x undefined + the root mean square over eight equal families of
+  10·asinh(z/10). Both guards apply.
+- The search: sep-CMA at population 24, sigma0 0.03, 64 animals a candidate, 60 generations on 16
+  workers.
+
+Readouts every 10 generations on the search's mean, on 200 animals (752,000,000 + i): every family
+graded, mgl-1 against its wild type, and the three mutants. The stop rule, fixed before the run: at
+generation 30, stop unless each of tph-1 and tax-4 passes or its roaming z has come at least 1
+closer to 0 than at generation 0. The branch, fixed before the run: if both fitted mutants pass at
+the end with the readout D no more than 0.5 above its start, and pdfr-1 (held out) roams less and
+passes, a design around predicting held-out mutants is viable; otherwise the mutants are reported
+as unidentified.
+
+Seeds: fit animals 750,000,000 + 64·k + i; CMA 9485. Run from the repository root.
+"""
+
+import json
+import math
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery_v2 as v2
+import guarded_wide as gw
+import npe_recovery as nr
+import prototypes as pr
+import readability as rd
+import screens as s
+import staged_bc as b
+
+OUT = Path("build/c2-run-mode/leave_one_out")
+START = Path("build/c2-run-mode/prototypes/V2.json")
+FITTED, HELD_OUT = ("tph-1", "tax-4"), "pdfr-1"
+POPSIZE, SIGMA0, CAP, EVERY, WORKERS, BASE, CMA_SEED = 24, 0.03, 60, 10, 16, 750_000_000, 9485
+s.READ_SEEDS = [752_000_000 + i for i in range(200)]
+
+
+def simulate(k, z):
+    gw._OUTPUTS.clear()
+    b._TALLY["steps"], b._TALLY["count"] = None, 0
+    bands = bg.load_bands_v4()
+    seeds = [BASE + s.ANIMALS * k + i for i in range(s.ANIMALS)]
+    populations, chemotaxis = bg.simulate_v2(p.ARM, rd.controller(z), seeds, bands)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=False)
+    share = b._TALLY["steps"] / max(b._TALLY["count"], 1)
+    out = np.concatenate(gw._OUTPUTS) if gw._OUTPUTS else np.zeros((1, 5))
+    spread = np.percentile(out, 95, axis=0) - np.percentile(out, 5, axis=0)
+    clf = bg.classifier(bands)
+    wild = bg.family_values("small_lawn", populations["small_lawn"], clf)
+    mutant_z = {}
+    for m in FITTED:
+        mutated, _ = bg.simulate_v2(p.ARM, rd.controller(z, m), seeds, bands, assays=("small_lawn",))
+        reading = p.mutant_reading(m, wild, bg.family_values("small_lawn", mutated["small_lawn"], clf), bands, s.ANIMALS)
+        mutant_z[m] = {st: r["z"] for st, r in reading["statistics"].items()}
+    return nr._finite({
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "D": graded["D"], "mutant_z": mutant_z,
+        "motor_saturated_share": float(np.mean(share > b.SATURATED_SHARE)),
+        "output_spread": dict(zip(("speed", "curvature", "reversal", "omega", "delta"), map(float, spread))),
+    })
+
+
+class Objective(rd.Objective):
+    def __call__(self, record):
+        score = v2.ranking_score(self.truth, record, self.scales, self.family_map)
+        undefined = math.floor(score / 1000.0)
+        dc = score - 1000.0 * undefined
+        terms = []
+        for m in FITTED:
+            zs = [z for z in record.get("mutant_z", {}).get(m, {}).values() if z is not None]
+            terms.append(math.sqrt(np.mean([(10 * math.asinh(z / 10)) ** 2 for z in zs])) if zs else 10.0)
+        score = 1000.0 * undefined + math.sqrt((6 * dc**2 + sum(t**2 for t in terms)) / (6 + len(terms)))
+        if record.get("motor_saturated_share", 0.0) > b.SATURATED_SHARE:
+            score += b.PENALTY
+        spread = record.get("output_spread", {})
+        if min(spread.get("speed", 0.0), spread.get("reversal", 0.0)) < gw.SPREAD_FLOOR:
+            score += gw.RESPONSIVE_PENALTY
+        return score
+
+
+def stop_reason(g, readouts):
+    if g != 30:
+        return None
+    for m in FITTED:
+        now, first = readouts[30]["mutants"][m], readouts[0]["mutants"][m]
+        if not now["passes"] and abs(now["roaming_fraction"]["z"]) > abs(first["roaming_fraction"]["z"]) - 1.0:
+            return f"{m} neither passes nor came 1 closer by generation 30"
+    return None
+
+
+def main():
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    x0 = list(json.loads(START.read_text())["answer"])
+    lower, upper = pr.bounds("V2", len(x0))
+    x0 = [min(max(x, lo), hi) for x, lo, hi in zip(x0, lower, upper)]
+    es = cma.CMAEvolutionStrategy(x0, SIGMA0, {"CMA_diagonal": True, "bounds": [lower, upper], "popsize": POPSIZE, "seed": CMA_SEED, "verbose": -9})
+    objective = Objective()
+    history = {"medians": [], "best": [], "best_D": [], "sigmas": []}
+    readouts, reason, t0 = {}, None, time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        readouts[0] = s.readout(pool, x0)
+        s._print("L1", 0, readouts[0])
+        for g in range(1, CAP + 1):
+            points = es.ask()
+            ks = [POPSIZE * (g - 1) + m for m in range(POPSIZE)]
+            records = list(pool.map(simulate, ks, [list(map(float, x)) for x in points]))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            history["medians"].append(float(np.median(scores)))
+            history["best"].append(float(np.min(scores)))
+            history["best_D"].append(float(records[int(np.argmin(scores))]["D"]))
+            history["sigmas"].append(float(es.sigma))
+            print(f"L1 gen {g}: median {history['medians'][-1]:.2f} best {history['best'][-1]:.2f} (D64 {history['best_D'][-1]:.2f}) sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+            if g % EVERY == 0:
+                z = np.clip(es.result.xfavorite, lower, upper).tolist()
+                readouts[g] = s.readout(pool, z)
+                s._print("L1", g, readouts[g])
+                reason = stop_reason(g, readouts)
+                (OUT.parent / "leave_one_out.json").write_text(json.dumps(nr._finite({"description": __doc__, **history, "readouts": readouts, "stopped": reason, "answer": z, "wall_hours": (time.time() - t0) / 3600}), indent=1) + "\n")
+                if reason:
+                    print(f"L1 stopped at generation {g}: {reason}", flush=True)
+                    break
+    print(f"L1 done in {(time.time() - t0) / 3600:.2f} h; stopped: {reason}", flush=True)
+
+
+if __name__ == "__main__":
+    main()
