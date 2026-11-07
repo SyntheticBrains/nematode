@@ -1,0 +1,51 @@
+"""Can tph-1 matter at all? Serotonin's strengths at their bounds (description; 200 animals, 99,830,000 + i).
+
+On the leave-one-out screen's last answer (generation 30), serotonin's per-ligand strengths are set
+to the box's extremes: the fixed-sign group at its maximum (3.0), and the fitted group (ser-5) at
+-3, 0 or +3. At each, the wild type's small-lawn roaming and tph-1's change from it, with its v4
+grade. Real tph-1 roams more.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, staged_bc as b, readability as rd
+
+Z = json.loads(Path("build/c2-run-mode/leave_one_out.json").read_text())["answer"]
+SEEDS = [99_830_000 + i for i in range(200)]
+ENTS = b.entries()
+FIXED = next(i for i, e in enumerate(ENTS) if e.name == "modulator.fixed.serotonin")
+FITTED = next(i for i, e in enumerate(ENTS) if e.name == "modulator.fitted.serotonin")
+LEVELS = {"as fitted": None, "fixed max, ser-5 -3": -3.0, "fixed max, ser-5 0": 0.0, "fixed max, ser-5 +3": 3.0}
+
+
+def vector(name):
+    z = list(Z)
+    if LEVELS[name] is not None:
+        z[FIXED] = ENTS[FIXED].unit(3.0)
+        z[FITTED] = ENTS[FITTED].unit(LEVELS[name])
+    return z
+
+
+def job(item):
+    name, mutant = item
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    pops, _ = bg.simulate_v2(p.ARM, rd.controller(vector(name), mutant), SEEDS, bands, assays=("small_lawn",))
+    return name, mutant, bg.family_values("small_lawn", pops["small_lawn"], clf)
+
+
+def main():
+    print("as fitted:", {ENTS[i].name: round(ENTS[i].value(Z[i]), 4) for i in (FIXED, FITTED)})
+    with ProcessPoolExecutor(max_workers=8, initializer=nr._worker_setup) as pool:
+        res = list(pool.map(job, [(n, m) for n in LEVELS for m in (None, "tph-1")]))
+    by = {(n, m): v for n, m, v in res}
+    bands = bg.load_bands_v4(); out = {}
+    for n in LEVELS:
+        r = p.mutant_reading("tph-1", by[(n, None)], by[(n, "tph-1")], bands, len(SEEDS))
+        out[n] = {"wild_roaming": by[(n, None)]["roaming_fraction"], "tph1": r}
+        print(f"{n:22s} wild roaming {by[(n, None)]['roaming_fraction']:.3f} tph-1 change {r['statistics']['roaming_fraction']['delta']:+.3f} z {r['statistics']['roaming_fraction']['z']:.2f} passes {r['passes']}")
+    Path("build/c2-run-mode/tph1_capacity.json").write_text(json.dumps(nr._finite({"description": __doc__, "as_fitted": {ENTS[i].name: ENTS[i].value(Z[i]) for i in (FIXED, FITTED)}, "levels": out}), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

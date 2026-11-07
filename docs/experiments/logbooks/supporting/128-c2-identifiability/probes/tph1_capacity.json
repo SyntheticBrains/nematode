@@ -1,0 +1,97 @@
+{
+ "description": "Can tph-1 matter at all? Serotonin's strengths at their bounds (description; 200 animals, 99,830,000 + i).\n\nOn the leave-one-out screen's last answer (generation 30), serotonin's per-ligand strengths are set\nto the box's extremes: the fixed-sign group at its maximum (3.0), and the fitted group (ser-5) at\n-3, 0 or +3. At each, the wild type's small-lawn roaming and tph-1's change from it, with its v4\ngrade. Real tph-1 roams more.\n",
+ "as_fitted": {
+  "modulator.fixed.serotonin": 0.6354779383045133,
+  "modulator.fitted.serotonin": -1.5804595824357437
+ },
+ "levels": {
+  "as fitted": {
+   "wild_roaming": 0.3122059971017724,
+   "tph1": {
+    "statistics": {
+     "roaming_fraction": {
+      "delta": 0.005911105585538534,
+      "z": -5.165963023813752,
+      "scale": 0.051216374312670475,
+      "direction": 1,
+      "passes": false
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.09487288428877705,
+      "z": 0.08159198161627933,
+      "scale": 0.27973247318303884,
+      "direction": 0,
+      "passes": true
+     }
+    },
+    "passes": false
+   }
+  },
+  "fixed max, ser-5 -3": {
+   "wild_roaming": 0.25783137775649256,
+   "tph1": {
+    "statistics": {
+     "roaming_fraction": {
+      "delta": 0.06028572493081835,
+      "z": -4.104298271573998,
+      "scale": 0.051216374312670475,
+      "direction": 1,
+      "passes": false
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.47662534313545635,
+      "z": 1.4462975322546037,
+      "scale": 0.27973247318303884,
+      "direction": 0,
+      "passes": true
+     }
+    },
+    "passes": false
+   }
+  },
+  "fixed max, ser-5 0": {
+   "wild_roaming": 0.22484806086310175,
+   "tph1": {
+    "statistics": {
+     "roaming_fraction": {
+      "delta": 0.09326904182420917,
+      "z": -3.4602988214756523,
+      "scale": 0.051216374312670475,
+      "direction": 1,
+      "passes": false
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.4600830774372936,
+      "z": 1.3871615102192263,
+      "scale": 0.27973247318303884,
+      "direction": 0,
+      "passes": true
+     }
+    },
+    "passes": false
+   }
+  },
+  "fixed max, ser-5 +3": {
+   "wild_roaming": 0.13648994354269584,
+   "tph1": {
+    "statistics": {
+     "roaming_fraction": {
+      "delta": 0.18162715914461508,
+      "z": -1.7351060778232201,
+      "scale": 0.051216374312670475,
+      "direction": 1,
+      "passes": true
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.40271184582302993,
+      "z": 1.1820682975455457,
+      "scale": 0.27973247318303884,
+      "direction": 0,
+      "passes": true
+     }
+    },
+    "passes": true
+   }
+  }
+ }
+}

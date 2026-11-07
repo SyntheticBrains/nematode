@@ -1,0 +1,53 @@
+{
+ "description": "PDF's fitted sign, and pdfr-1 with it forced excitatory (description; 200 animals at 99,820,000 + i).\n\nPDFR-1 couples to Galpha-s, which the layer's rule signs excitatory. On the readability probe's\ngeneration-150 answer: the fitted PDF strengths, then pdfr-1's lawn difference from its wild type\nas fitted and with PDF's strengths set to their absolute values (each strength's magnitude kept).\n",
+ "pdf_entries": {
+  "modulator.fitted.pdf-1": -1.066568848778997,
+  "modulator.fitted.pdf-2": -2.9971043990445714
+ },
+ "variants": {
+  "as fitted": {
+   "wild_roaming": 0.2255267803275758,
+   "pdfr1": {
+    "statistics": {
+     "roaming_fraction": {
+      "delta": 0.09308434459164674,
+      "z": 3.2524116724599006,
+      "scale": 0.04488581024848594,
+      "direction": 0,
+      "passes": false
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.4556890777870869,
+      "z": 1.58333963344109,
+      "scale": 0.2621862945677769,
+      "direction": 0,
+      "passes": true
+     }
+    },
+    "passes": false
+   }
+  },
+  "excitatory": {
+   "wild_roaming": 0.5303030303030303,
+   "pdfr1": {
+    "statistics": {
+     "roaming_fraction": {
+      "delta": -0.21169190538380772,
+      "z": -3.537623937641066,
+      "scale": 0.04488581024848594,
+      "direction": 0,
+      "passes": false
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -11.898443059152907,
+      "z": -10.0,
+      "scale": 0.2621862945677769,
+      "direction": 0,
+      "passes": false
+     }
+    },
+    "passes": false
+   }
+  }
+ }
+}

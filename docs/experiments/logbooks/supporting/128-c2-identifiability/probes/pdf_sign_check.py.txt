@@ -1,0 +1,51 @@
+"""PDF's fitted sign, and pdfr-1 with it forced excitatory (description; 200 animals at 99,820,000 + i).
+
+PDFR-1 couples to Galpha-s, which the layer's rule signs excitatory. On the readability probe's
+generation-150 answer: the fitted PDF strengths, then pdfr-1's lawn difference from its wild type
+as fitted and with PDF's strengths set to their absolute values (each strength's magnitude kept).
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, staged_bc as b, readability as rd
+
+Z = json.loads(Path("build/c2-run-mode/readability.json").read_text())["answer"]
+SEEDS = [99_820_000 + i for i in range(200)]
+ENTS = b.entries()
+PDF = [i for i, e in enumerate(ENTS) if e.name.startswith("modulator.") and "pdf" in e.name]
+
+
+def variant(kind):
+    z = list(Z)
+    if kind == "excitatory":
+        for i in PDF:
+            e = ENTS[i]
+            value = e.value(z[i])
+            z[i] = e.unit(abs(value)) if hasattr(e, "unit") else z[i]
+    return z
+
+
+def job(item):
+    kind, mutant = item
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    pops, _ = bg.simulate_v2(p.ARM, rd.controller(variant(kind), mutant), SEEDS, bands, assays=("small_lawn",))
+    return kind, mutant, bg.family_values("small_lawn", pops["small_lawn"], clf)
+
+
+def main():
+    print("PDF entries:", {ENTS[i].name: round(ENTS[i].value(Z[i]), 4) for i in PDF})
+    jobs = [(k, m) for k in ("as fitted", "excitatory") for m in (None, "pdfr-1")]
+    with ProcessPoolExecutor(max_workers=4, initializer=nr._worker_setup) as pool:
+        res = list(pool.map(job, jobs))
+    by = {(k, m): v for k, m, v in res}
+    bands = bg.load_bands_v4(); out = {"pdf_entries": {ENTS[i].name: ENTS[i].value(Z[i]) for i in PDF}, "variants": {}}
+    for k in ("as fitted", "excitatory"):
+        r = p.mutant_reading("pdfr-1", by[(k, None)], by[(k, "pdfr-1")], bands, len(SEEDS))
+        out["variants"][k] = {"wild_roaming": by[(k, None)]["roaming_fraction"], "pdfr1": r}
+        print(k, "wild roaming", round(by[(k, None)]["roaming_fraction"], 3), "pdfr-1 roaming change", round(r["statistics"]["roaming_fraction"]["delta"], 3), "passes", r["passes"])
+    Path("build/c2-run-mode/pdf_sign_check.json").write_text(json.dumps(nr._finite({"description": __doc__, **out}), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,97 @@
+"""Fit the wild type with its three mutants, signs from receptor biology (description, discarded seeds).
+
+Wild-type data alone left C.2's perturbation responses undetermined. With signs from receptor
+biology they can be represented in the right direction: PDF excitatory (PDFR-1, Galpha-s) turns
+pdfr-1's change to -0.21 (`pdf_sign_check.json`), and serotonin's fixed-sign group at its maximum
+with ser-5 excitatory (Galpha-q, in vivo) gives tph-1 +0.18, passing (`tph1_capacity.json`).
+
+- The model and bounds: V2's (the inhibitory scale at least 0.09, PDF's strengths excitatory), with
+  ser-5's strength held excitatory too.
+- The start: the capacity check's last point, the leave-one-out screen's answer with serotonin's
+  fixed-sign group at 3.0 and ser-5 at +3.
+- The objective: v4's ranking score on the six families plus each of tph-1's, pdfr-1's and
+  tax-4's two lawn differences on its own 64-animal band, each mutant one more family (nine
+  equal families), with both guards.
+- The search: sep-CMA at population 24, sigma0 0.05, 64 animals a candidate, 60 generations on 16
+  workers.
+
+Readouts every 10 generations on the search's mean, on 200 animals (762,000,000 + i). The stop
+rule, fixed before the run: at generation 30, stop if the readout D is more than 1 above its start,
+or if fewer than two mutants pass and their mean |z| has not fallen by at least 1. The branch, fixed
+before the run: if at the end the wild type passes at least four families and at least two mutants
+pass, the package change and W's design follow; otherwise the result is written up.
+
+Seeds: fit animals 760,000,000 + 64·k + i; CMA 9486. Run from the repository root.
+"""
+import json, math, sys, time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, staged_bc as b
+import leave_one_out as L, prototypes as pr, screens as s, tph1_capacity as tc
+
+OUT = Path("build/c2-run-mode/fit_mutants.json")
+L.FITTED = ("tph-1", "pdfr-1", "tax-4")
+L.BASE = 760_000_000
+s.READ_SEEDS = [762_000_000 + i for i in range(200)]
+POPSIZE, SIGMA0, CAP, EVERY, WORKERS, CMA_SEED = 24, 0.05, 60, 10, 16, 9486
+
+
+def bounds(n):
+    lower, upper = pr.bounds("V2", n)
+    lower[tc.FITTED] = 0.5  # ser-5's signed strength held at or above zero
+    return lower, upper
+
+
+def mean_abs_z(readout):
+    return float(np.mean([abs(readout["mutants"][m]["roaming_fraction"]["z"]) for m in L.FITTED]))
+
+
+def stop_reason(g, readouts):
+    if g != 30:
+        return None
+    now, first = readouts[30], readouts[0]
+    if now["D"] > first["D"] + 1.0:
+        return "the readout D more than 1 above its start"
+    passing = sum(bool(now["mutants"][m]["passes"]) for m in L.FITTED)
+    if passing < 2 and mean_abs_z(now) > mean_abs_z(first) - 1.0:
+        return "fewer than two mutants pass and their mean |z| has not fallen by 1"
+    return None
+
+
+def main():
+    import cma
+    x0 = tc.vector("fixed max, ser-5 +3")
+    lower, upper = bounds(len(x0))
+    x0 = [min(max(x, lo), hi) for x, lo, hi in zip(x0, lower, upper)]
+    es = cma.CMAEvolutionStrategy(x0, SIGMA0, {"CMA_diagonal": True, "bounds": [lower, upper], "popsize": POPSIZE, "seed": CMA_SEED, "verbose": -9})
+    objective = L.Objective()
+    history = {"medians": [], "best": [], "best_D": [], "sigmas": []}
+    readouts, reason, t0 = {}, None, time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        readouts[0] = s.readout(pool, x0)
+        s._print("M", 0, readouts[0])
+        for g in range(1, CAP + 1):
+            points = es.ask()
+            ks = [POPSIZE * (g - 1) + m for m in range(POPSIZE)]
+            records = list(pool.map(L.simulate, ks, [list(map(float, x)) for x in points]))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            history["medians"].append(float(np.median(scores))); history["best"].append(float(np.min(scores)))
+            history["best_D"].append(float(records[int(np.argmin(scores))]["D"])); history["sigmas"].append(float(es.sigma))
+            print(f"M gen {g}: median {history['medians'][-1]:.2f} best {history['best'][-1]:.2f} (D64 {history['best_D'][-1]:.2f}) sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+            if g % EVERY == 0:
+                z = np.clip(es.result.xfavorite, lower, upper).tolist()
+                readouts[g] = s.readout(pool, z)
+                s._print("M", g, readouts[g])
+                reason = stop_reason(g, readouts)
+                OUT.write_text(json.dumps(nr._finite({"description": __doc__, **history, "readouts": readouts, "stopped": reason, "answer": z, "wall_hours": (time.time() - t0) / 3600}), indent=1) + "\n")
+                if reason:
+                    print(f"M stopped at generation {g}: {reason}", flush=True)
+                    break
+    print(f"M done in {(time.time() - t0) / 3600:.2f} h; stopped: {reason}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,159 @@
+"""C.2 with two data constraints, prototyped in a script (description, discarded seeds).
+
+Logbook 127 found two freedoms the fit uses to discard what the perturbations test: every fit drives
+the inhibitory wiring scale near zero, and the fitted PDF couplings came out inhibitory, where
+PDFR-1 couples to Galpha-s, which the layer's rule signs excitatory. Forcing PDF excitatory on the
+readability answer turns pdfr-1's roaming change from +0.09 to -0.21, the real direction
+(`pdf_sign_check.json`). Two variants, each `screens.py`'s search on all six families at 64 animals
+a candidate, with both guards, on 8 workers:
+
+- V1: the two chemical scales tied (the inhibitory scale is the excitatory one, so the connectome's
+  counts and signs set the balance) and PDF's two strengths held excitatory; from the imitation
+  answer (its scales already equal); population 48, sigma0 0.1, a cap of 300 generations.
+- V2: the inhibitory scale floored at 0.09 and PDF held excitatory; from the imitation's refinement
+  (mgl-1 at 0.61 of its wild type), its PDF strengths made positive; population 24, sigma0 0.05, a
+  cap of 200 generations.
+
+Readouts every 10 generations on the search's mean, on 200 shared animals (742,000,000 + i): every
+family graded, mgl-1 against its wild type, and the three Scheer mutants. Stop rules, timed after
+the search's transient (V2's at two-thirds of V1's generations):
+
+1. the median score still above 1,000 at generation 60 (V2: 40);
+2. the readout D not at least 1 below its generation-0 readout by generation 120 (V2: 80);
+3. from generation 150 (V2: 100), three readouts in a row with mgl-1's early ratio at 0.9 or above
+   and pdfr-1's roaming change not negative.
+
+Seeds: V1 and V2 fit on 740 and 741 M (64·k + i), CMA 9483 and 9484. Run from the repository root:
+`prototypes.py V1` and `prototypes.py V2`, in parallel.
+"""
+
+import json
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import inhibition_check as ic
+import npe_recovery as nr
+import readability as rd
+import screens as s
+import staged_bc as b
+import guarded_wide as gw
+
+OUT = Path("build/c2-run-mode/prototypes")
+REC = json.loads(Path("docs/experiments/logbooks/supporting/126-c2-run-mode/probes/imitation_d.json").read_text())
+ENTS = b.entries()
+EXC = next(i for i, e in enumerate(ENTS) if e.name == "wiring.excitatory")
+PDF = [i for i, e in enumerate(ENTS) if e.name in ("modulator.fitted.pdf-1", "modulator.fitted.pdf-2")]
+WORKERS = 8
+s.READ_SEEDS = [742_000_000 + i for i in range(200)]
+VARIANTS = {
+    "V1": {"base": 740_000_000, "cma": 9483, "tie": True, "floor": None, "popsize": 48, "sigma0": 0.1, "cap": 300, "scale": 1.0},
+    "V2": {"base": 741_000_000, "cma": 9484, "tie": False, "floor": 0.09, "popsize": 24, "sigma0": 0.05, "cap": 200, "scale": 2 / 3},
+}
+
+
+def constrain(name, z):
+    """Return the vector the brain is written from: the tie applied (PDF's sign is held by the bounds)."""
+    z = list(map(float, z))
+    if VARIANTS[name]["tie"]:
+        z[ic.INH] = z[EXC]
+    return z
+
+
+def start(name):
+    z = list(REC["imitation_answer"]["z"] if name == "V1" else REC["refine"]["answer"])
+    for i in PDF:
+        z[i] = max(z[i], 1.0 - z[i])  # the signed range is symmetric about unit 0.5: keep the magnitude, make it positive
+    floor = VARIANTS[name]["floor"]
+    if floor is not None:
+        z[ic.INH] = max(z[ic.INH], floor / b.WIRING_HIGH)
+    return z
+
+
+def bounds(name, n):
+    lower, upper = [0.0] * n, [1.0] * n
+    for i in PDF:
+        lower[i] = 0.5
+    floor = VARIANTS[name]["floor"]
+    if floor is not None:
+        lower[ic.INH] = floor / b.WIRING_HIGH
+    return lower, upper
+
+
+def simulate(name, k, z):
+    gw._OUTPUTS.clear()
+    b._TALLY["steps"], b._TALLY["count"] = None, 0
+    bands = bg.load_bands_v4()
+    seeds = [VARIANTS[name]["base"] + s.ANIMALS * k + i for i in range(s.ANIMALS)]
+    populations, chemotaxis = bg.simulate_v2(p.ARM, rd.controller(constrain(name, z)), seeds, bands)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=False)
+    share = b._TALLY["steps"] / max(b._TALLY["count"], 1)
+    out = np.concatenate(gw._OUTPUTS) if gw._OUTPUTS else np.zeros((1, 5))
+    spread = np.percentile(out, 95, axis=0) - np.percentile(out, 5, axis=0)
+    return nr._finite({
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "D": graded["D"],
+        "motor_saturated_share": float(np.mean(share > b.SATURATED_SHARE)),
+        "output_spread": dict(zip(("speed", "curvature", "reversal", "omega", "delta"), map(float, spread))),
+    })
+
+
+def stop_reason(name, g, history, readouts):
+    f = VARIANTS[name]["scale"]
+    if g == round(60 * f) and history["medians"][-1] > 1000:
+        return "the median score still above 1,000"
+    if g == round(120 * f) and readouts[g]["D"] > readouts[0]["D"] - 1.0:
+        return "the readout D not 1 below its start"
+    if g >= round(150 * f):
+        recent = [readouts[k] for k in sorted(readouts) if k > 0][-3:]
+        if len(recent) == 3 and all((r["mgl1"]["early_ratio"] or 1.0) >= 0.9 and r["mutants"]["pdfr-1"]["roaming_fraction"]["delta"] >= 0 for r in recent):
+            return "three readouts with neither mgl-1 below 0.9 nor pdfr-1 the right way"
+    return None
+
+
+def main(name):
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    cfg = VARIANTS[name]
+    x0 = start(name)
+    lower, upper = bounds(name, len(x0))
+    es = cma.CMAEvolutionStrategy(x0, cfg["sigma0"], {"CMA_diagonal": True, "bounds": [lower, upper], "popsize": cfg["popsize"], "seed": cfg["cma"], "verbose": -9})
+    objective = s.Objective(False)
+    history = {"medians": [], "best": [], "best_D": [], "sigmas": []}
+    readouts, reason, t0 = {}, None, time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        readouts[0] = s.readout(pool, constrain(name, x0))
+        s._print(name, 0, readouts[0])
+        for g in range(1, cfg["cap"] + 1):
+            points = es.ask()
+            ks = [cfg["popsize"] * (g - 1) + m for m in range(cfg["popsize"])]
+            records = list(pool.map(simulate, [name] * cfg["popsize"], ks, [list(map(float, x)) for x in points]))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            history["medians"].append(float(np.median(scores)))
+            history["best"].append(float(np.min(scores)))
+            history["best_D"].append(float(records[int(np.argmin(scores))]["D"]))
+            history["sigmas"].append(float(es.sigma))
+            print(f"{name} gen {g}: median {history['medians'][-1]:.2f} best {history['best'][-1]:.2f} (D64 {history['best_D'][-1]:.2f}) sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+            if g % 10 == 0:
+                z = np.clip(es.result.xfavorite, lower, upper).tolist()
+                readouts[g] = s.readout(pool, constrain(name, z))
+                s._print(name, g, readouts[g])
+                reason = stop_reason(name, g, history, readouts)
+                (OUT / f"{name}.json").write_text(json.dumps(nr._finite({"description": __doc__, "variant": name, **cfg, **history, "readouts": readouts, "stopped": reason, "answer": constrain(name, z), "wall_hours": (time.time() - t0) / 3600}), indent=1) + "\n")
+                if reason:
+                    print(f"{name} stopped at generation {g}: {reason}", flush=True)
+                    break
+    print(f"{name} done in {(time.time() - t0) / 3600:.2f} h; stopped: {reason}", flush=True)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])
