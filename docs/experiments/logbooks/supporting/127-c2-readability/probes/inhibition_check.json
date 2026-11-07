@@ -1,0 +1,321 @@
+{
+ "description": "Does mgl-1 move once inhibition is on? A representability check with no fitting (description).\n\nThe readability probe's generation-150 answer, with only its inhibitory wiring scale changed: 0.005\n(as fitted), 0.1, 0.25, 0.5 and 0.74 (its excitatory scale; the tie). At each level, on 200 paired\nanimals (99,800,000 + i): the wild type and mgl-1 on L\u00f3pez-Cruz's food removal (each 2-min bin's\nreorientations, early 8-12 min and late 34-42 min, mgl-1's ratio to its wild type), the wild type's\nsmall-lawn statistics, and tph-1, pdfr-1 and tax-4's differences from it on their v4 bands.\n\nThe branch, fixed before the run: if mgl-1's early ratio is 0.8 or lower at any level, three\nscreens follow (inhibition tied, inhibition floored, tph-1 fitted); otherwise the result is written\nup. Run from the repository root.\n",
+ "levels": {
+  "0.005": {
+   "wt_search": {
+    "early": 4.375,
+    "late": 1.9689999999999999,
+    "statistics": {
+     "gamma_per_min": 0.06264745956866591,
+     "early_late_ratio": 2.2219400711020825
+    }
+   },
+   "mgl1_search": {
+    "early": 4.3933333333333335,
+    "late": 1.9929999999999999,
+    "statistics": {
+     "gamma_per_min": 0.06160018064032552,
+     "early_late_ratio": 2.2043820036795454
+    }
+   },
+   "mgl1_early_ratio": 1.0041904761904763,
+   "mgl1_late_ratio": 1.0121889283900458,
+   "wt_lawn": {
+    "roaming_fraction": 0.21485594505396485,
+    "roaming_bout_s": 243.9240506329114,
+    "dwelling_bout_s": 921.7015706806283,
+    "exits_per_on_lawn_hour": 0.18464008563018464,
+    "pre_exit_enrichment": 0.29570743522772525,
+    "time_on_lawn": 0.9939931286711736
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.03908313646204922,
+      "z": -4.518278932120752
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.01707674876029433,
+      "z": -0.19651707967092402
+     }
+    },
+    "pdfr-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.10900559454305339,
+      "z": 3.6071173102386838
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.24934028192461644,
+      "z": 0.7963084264794772
+     }
+    },
+    "tax-4": {
+     "passes": true,
+     "roaming_fraction": {
+      "delta": -0.0382827140300504,
+      "z": 1.7445471283424836
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.007462841273235127,
+      "z": -0.8747425668981661
+     }
+    }
+   }
+  },
+  "0.1": {
+   "wt_search": {
+    "early": 5.041666666666667,
+    "late": 1.8509999999999998,
+    "statistics": {
+     "gamma_per_min": 0.1134112121613007,
+     "early_late_ratio": 2.7237529263461195
+    }
+   },
+   "mgl1_search": {
+    "early": 4.426666666666667,
+    "late": 2.46,
+    "statistics": {
+     "gamma_per_min": 0.09761383424031275,
+     "early_late_ratio": 1.7994579945799458
+    }
+   },
+   "mgl1_early_ratio": 0.8780165289256198,
+   "mgl1_late_ratio": 1.3290113452188008,
+   "wt_lawn": {
+    "roaming_fraction": 0.171747579358839,
+    "roaming_bout_s": 253.98671096345515,
+    "dwelling_bout_s": 1266.9415807560138,
+    "exits_per_on_lawn_hour": 0.2588007997663604,
+    "pre_exit_enrichment": 0.16158575397449432,
+    "time_on_lawn": 0.990674797471735
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.021918598934860978,
+      "z": -4.853416625046857
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.04143587328672199,
+      "z": -0.1094370054512655
+     }
+    },
+    "pdfr-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.11567233161046342,
+      "z": 3.75564391654262
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.537843823654374,
+      "z": 1.8966845624837085
+     }
+    },
+    "tax-4": {
+     "passes": true,
+     "roaming_fraction": {
+      "delta": -0.019921043665570237,
+      "z": 2.1564063275324323
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.0062092466451798,
+      "z": -0.8712417523466978
+     }
+    }
+   }
+  },
+  "0.25": {
+   "wt_search": {
+    "early": 5.163333333333333,
+    "late": 3.751,
+    "statistics": {
+     "gamma_per_min": null,
+     "early_late_ratio": 1.3765218164045143
+    }
+   },
+   "mgl1_search": {
+    "early": 5.153333333333333,
+    "late": 3.5509999999999997,
+    "statistics": {
+     "gamma_per_min": 0.04816104100724214,
+     "early_late_ratio": 1.451234394067399
+    }
+   },
+   "mgl1_early_ratio": 0.9980632666236282,
+   "mgl1_late_ratio": 0.9466808850973073,
+   "wt_lawn": {
+    "roaming_fraction": 0.05548979345331562,
+    "roaming_bout_s": 223.0097087378641,
+    "dwelling_bout_s": 8688.444444444445,
+    "exits_per_on_lawn_hour": 1.7480372025606956,
+    "pre_exit_enrichment": -0.008823126786648948,
+    "time_on_lawn": 0.9190923421923222
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.012596978050022689,
+      "z": -5.035421325885905
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.013585394005827478,
+      "z": -0.30612946187747064
+     }
+    },
+    "pdfr-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.012690153298255763,
+      "z": 1.4613291265877832
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.7302785771386882,
+      "z": -2.9400381307585346
+     }
+    },
+    "tax-4": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.009968948612466264,
+      "z": 2.8268501400539736
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.725994502041365,
+      "z": -2.881329096077752
+     }
+    }
+   }
+  },
+  "0.5": {
+   "wt_search": {
+    "early": 3.0766666666666667,
+    "late": 3.076,
+    "statistics": {
+     "gamma_per_min": 0.16134016183842392,
+     "early_late_ratio": 1.0002167316861725
+    }
+   },
+   "mgl1_search": {
+    "early": 3.0833333333333335,
+    "late": 3.0829999999999997,
+    "statistics": {
+     "gamma_per_min": 0.16782497924908363,
+     "early_late_ratio": 1.000108119796735
+    }
+   },
+   "mgl1_early_ratio": 1.0021668472372698,
+   "mgl1_late_ratio": 1.0022756827048114,
+   "wt_lawn": {
+    "roaming_fraction": 0.0,
+    "roaming_bout_s": null,
+    "dwelling_bout_s": null,
+    "exits_per_on_lawn_hour": 4.491926276300767,
+    "pre_exit_enrichment": 0.0,
+    "time_on_lawn": 0.27251916879653293
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.0,
+      "z": -5.281377394019887
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.0036373122631507826,
+      "z": -0.24456097083671532
+     }
+    },
+    "pdfr-1": {
+     "passes": true,
+     "roaming_fraction": {
+      "delta": 0.000184945441094877,
+      "z": 1.182728656017405
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.47940718032952745,
+      "z": 1.6738024190017948
+     }
+    },
+    "tax-4": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.0,
+      "z": 2.603242858646798
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.6106249993370518,
+      "z": 0.8513424513909982
+     }
+    }
+   }
+  },
+  "0.74": {
+   "wt_search": {
+    "early": 3.0533333333333332,
+    "late": 3.034,
+    "statistics": {
+     "gamma_per_min": null,
+     "early_late_ratio": 1.006372225884421
+    }
+   },
+   "mgl1_search": {
+    "early": 3.0500000000000003,
+    "late": 3.046,
+    "statistics": {
+     "gamma_per_min": null,
+     "early_late_ratio": 1.0013131976362444
+    }
+   },
+   "mgl1_early_ratio": 0.9989082969432316,
+   "mgl1_late_ratio": 1.003955174686882,
+   "wt_lawn": {
+    "roaming_fraction": 0.0,
+    "roaming_bout_s": null,
+    "dwelling_bout_s": null,
+    "exits_per_on_lawn_hour": 5.453015427769986,
+    "pre_exit_enrichment": 0.0,
+    "time_on_lawn": 0.23760858456821665
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.0,
+      "z": -5.281377394019887
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.04620238763444906,
+      "z": -0.0923974594397155
+     }
+    },
+    "pdfr-1": {
+     "passes": true,
+     "roaming_fraction": {
+      "delta": 0.0,
+      "z": 1.178608301721225
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.25659664465286536,
+      "z": -1.1333764466811742
+     }
+    },
+    "tax-4": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.0,
+      "z": 2.603242858646798
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.4187498230283673,
+      "z": -2.02331118575976
+     }
+    }
+   }
+  }
+ },
+ "screens_triggered": false
+}

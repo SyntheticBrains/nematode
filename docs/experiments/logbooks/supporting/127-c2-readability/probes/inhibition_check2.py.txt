@@ -1,0 +1,48 @@
+"""mgl-1 on answers that keep inhibition on (description; 200 paired animals at 99,810,000 + i).
+
+The gradient-trained imitation answer kept its inhibitory scale at 0.75; read mgl-1 there as
+trained and with inhibition at 0.005, and on the imitation's refinement (0.09) as fitted.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, staged_bc as b, readability as rd
+import inhibition_check as ic
+
+S = "docs/experiments/logbooks/supporting/126-c2-run-mode/probes/imitation_d.json"
+REC = json.loads(Path(S).read_text())
+ANSWERS = {"imitation (inh 0.75)": REC["imitation_answer"]["z"], "refine gen 200 (inh 0.09)": REC["refine"]["answer"]}
+SEEDS = [99_810_000 + i for i in range(200)]
+
+
+def variants():
+    out = dict(ANSWERS)
+    z = list(ANSWERS["imitation (inh 0.75)"]); z[ic.INH] = 0.005 / b.WIRING_HIGH
+    out["imitation, inh set to 0.005"] = z
+    return out
+
+
+def job(item):
+    name, kind = item
+    z = variants()[name]
+    pops, _ = bg.simulate_v2(p.ARM, rd.controller(z, "mgl-1" if kind == "mgl-1" else None), SEEDS, bg.load_bands_v4(), assays=("local_search",))
+    r = rd.search_reading(pops["local_search"])
+    return name, kind, {"early": r["early"], "late": r["late"]}
+
+
+def main():
+    jobs = [(n, k) for n in variants() for k in ("wt", "mgl-1")]
+    with ProcessPoolExecutor(max_workers=6, initializer=nr._worker_setup) as pool:
+        res = list(pool.map(job, jobs))
+    by = {}
+    for n, k, r in res:
+        by.setdefault(n, {})[k] = r
+    out = {n: {**d, "early_ratio": d["mgl-1"]["early"] / d["wt"]["early"], "late_ratio": d["mgl-1"]["late"] / d["wt"]["late"]} for n, d in by.items()}
+    for n, d in out.items():
+        print(f"{n:30s} wt early {d['wt']['early']:.2f} late {d['wt']['late']:.2f} | mgl-1 early ratio {d['early_ratio']:.3f} late {d['late_ratio']:.3f}")
+    Path("build/c2-run-mode/inhibition_check2.json").write_text(json.dumps(nr._finite({"description": __doc__, "answers": out}), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

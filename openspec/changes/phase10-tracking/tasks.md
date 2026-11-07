@@ -734,6 +734,27 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - the cost, about 10 h a fit as run;
     - then the readiness restarts, and slow noise's control re-run.
 
+  *(Added 2026-11-07; [Logbook 127](../../../docs/experiments/logbooks/127-c2-readability.md), probes
+  on discarded seeds.)* **Fitted on every family, C.2 reaches five of six; its perturbations stay
+  unreadable.**
+
+  - **The re-assessment** (2026-11-06, the maintainer's decision):
+    - fit C.2 on every family, as C.1 is;
+    - hold out the perturbations, Scheer's three mutants and López-Cruz's mgl-1;
+    - check readability first;
+    - W at four core arms, its compute decided after the fit.
+  - **The probe:** 5 of 6 families pass at generation 150 (D 1.77), local search with presence.
+    Chemotaxis fails on its flip fraction.
+  - **The perturbations:** tph-1 is inert, pdfr-1 reversed and mgl-1 inert; tax-4 passes. Every fit
+    drives the inhibitory wiring scale to 0.005–0.09 of its [0, 0.75] box, so every inhibitory
+    perturbation is inert. The one answer that kept some inhibition carries mgl-1 at 0.61× (real
+    0.31×).
+  - **Next, C.2's change** (the maintainer's decision, 2026-11-07):
+    - Logbook 126's procedure, built into the encoder;
+    - one chemical scale for both signs;
+    - modulator signs fixed where receptor biology resolves them;
+    - a representability check, then one fit on all six families (a D37 amendment).
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 

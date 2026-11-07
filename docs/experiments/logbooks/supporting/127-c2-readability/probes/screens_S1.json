@@ -1,0 +1,445 @@
+{
+ "description": "Three short screens on the perturbations' readability (description, discarded seeds).\n\nThe inhibition checks found mgl-1 inert on the readability probe's answer at every inhibitory scale\n(its wild type collapses above 0.25), but at 0.61 of its wild type's early search on the imitation's\nrefinement as fitted (inhibitory scale 0.09). Each screen is a short sep-CMA refinement on all six of\nv4's families, as `readability.py` scores them (both guards), at 64 animals a candidate (the stored\n64-animal bands), population 24, 40 generations, 5 workers:\n\n- S1: from the imitation's refinement (generation 200), the inhibitory scale floored at 0.09. Does\n  mgl-1's effect survive while the fit improves? Stop if mgl-1's early ratio exceeds 0.9 at two\n  readouts in a row, or if D has not improved on its generation-0 readout by generation 30.\n- S2: from the readability answer (generation 150), the inhibitory scale floored at 0.1, the highest\n  level at which its wild type still holds the lawn. Does mgl-1 move as the fit adapts? Stop if D\n  is more than 1 above its generation-0 readout at generation 20, or if mgl-1's early ratio is above\n  0.95 at generation 30.\n- S3: from the readability answer, inhibition free, with tph-1's two lawn differences added to the\n  objective as a seventh family. Does pinning serotonin's role move pdfr-1? Stop if, at generation\n  30, tph-1's roaming z has not come at least 1 closer to 0 than at generation 0.\n\nReadouts at generations 0, 10, 20, 30 and 40, on the CMA mean, on 200 paired animals shared by the\nthree screens (733,000,000 + i): every family graded (D, D_fit, passes), mgl-1 on food removal\nagainst its wild type, and the three Scheer mutants against theirs.\n\nSeeds: S1, S2 and S3 fit on 730, 731 and 732 M (64\u00b7k + i), CMA 9480, 9481 and 9482. Run from the\nrepository root: `screens.py S1` (and S2, S3), in parallel.\n",
+ "screen": "S1",
+ "base": 730000000,
+ "cma": 9480,
+ "floor": 0.09,
+ "tph1": false,
+ "medians": [
+  1011.6646395957387,
+  1010.8362198079667,
+  1660.9067715434323,
+  1007.8184588575773,
+  2016.489741651037,
+  1009.2123643217036,
+  1011.342569757714,
+  1007.7944042267779,
+  1008.6188078479696,
+  510.56946919931374,
+  1008.2471405784963,
+  1007.1674576282354,
+  1007.4162516198014,
+  659.9422560888784,
+  1010.1111154484236,
+  13.285301723516728,
+  510.44974145274784,
+  1007.4752215005622,
+  511.2396681816597,
+  1010.8519779072722
+ ],
+ "best": [
+  7.340506639534076,
+  6.459308722157214,
+  7.196891642074569,
+  6.831621276700714,
+  8.557265702082832,
+  8.193176187268568,
+  7.522693973937967,
+  7.7252335859237995,
+  7.154838930379026,
+  6.14499298974439,
+  7.471164062878339,
+  5.952486825708921,
+  5.952668533041084,
+  6.724459938434489,
+  6.722272123164805,
+  6.658080248233035,
+  6.944482201402145,
+  5.351297025093726,
+  5.8047347019570505,
+  6.972769432803424
+ ],
+ "best_D": [
+  4.166164929719935,
+  4.746857380223148,
+  4.728410275504605,
+  4.888189588605138,
+  4.892567786469062,
+  4.4734735779319985,
+  4.363097731980978,
+  4.124920532576606,
+  3.9671620677018073,
+  3.085847615901671,
+  3.9227149297421944,
+  3.4321472106583193,
+  3.2536837859305145,
+  3.8422635558294225,
+  3.963999162411044,
+  3.309716188420614,
+  3.6568052639039963,
+  3.8207932026940012,
+  3.488931591587726,
+  4.151441004360043
+ ],
+ "sigmas": [
+  0.0963156542775351,
+  0.09329034001760923,
+  0.09103844576673775,
+  0.08917434204356864,
+  0.0878218620626648,
+  0.08684746887222305,
+  0.08606286943851624,
+  0.0853999962011681,
+  0.08476375350132051,
+  0.08428868445113202,
+  0.08389012791136398,
+  0.08357937135859066,
+  0.08337140311541061,
+  0.08318408138687433,
+  0.08328920364944342,
+  0.08328879874744106,
+  0.08342517195253173,
+  0.08369568893431607,
+  0.08385635809921527,
+  0.08407074509697031
+ ],
+ "readouts": {
+  "0": {
+   "D": 5.040014465882482,
+   "D_fit": 4.944412438131519,
+   "family_passes": {
+    "small_lawn": false,
+    "kinematics": false,
+    "activity": false,
+    "uniform_lawn": false,
+    "local_search": false,
+    "chemotaxis": true
+   },
+   "fails": {
+    "small_lawn/roaming_bout_s": -3.679958254143156,
+    "small_lawn/pre_exit_enrichment": -5.189664250533598,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/roaming_speed_median": 10.0,
+    "kinematics/roaming_speed_p90": 3.3039344238857247,
+    "kinematics/roaming_survival_5min": -4.406691054595286,
+    "activity/flip_fraction": -7.884163750989716,
+    "activity/onset_rate_per_min": -5.132098478916512,
+    "uniform_lawn/roaming_bout_s": -6.313194593512963,
+    "local_search/gamma_per_min": 10.0
+   },
+   "search": {
+    "early": 2.6750000000000003,
+    "late": 1.566
+   },
+   "mgl1": {
+    "early": 1.6583333333333332,
+    "late": 1.614,
+    "early_ratio": 0.6199376947040497
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": -0.020267060389216496,
+      "z": -5.6770918634879575
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.11292138839578836,
+      "z": -0.6612401619675593
+     }
+    },
+    "pdfr-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.6637037668380431,
+      "z": 10.0
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.732352720872282,
+      "z": -2.9479490848265693
+     }
+    },
+    "tax-4": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.12317652910480242,
+      "z": 5.3661389148922565
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.7474484627458352,
+      "z": -2.9412418750096054
+     }
+    }
+   }
+  },
+  "10": {
+   "D": 5.726619520063562,
+   "D_fit": 5.997601204856369,
+   "family_passes": {
+    "small_lawn": false,
+    "kinematics": false,
+    "activity": false,
+    "uniform_lawn": false,
+    "local_search": false,
+    "chemotaxis": true
+   },
+   "fails": {
+    "small_lawn/roaming_bout_s": -4.5475895687368295,
+    "small_lawn/exits_per_on_lawn_hour": 10.0,
+    "small_lawn/pre_exit_enrichment": -3.092230356737497,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/roaming_speed_median": 10.0,
+    "kinematics/roaming_speed_p90": 5.352272213687493,
+    "kinematics/roaming_survival_5min": -4.121547277244618,
+    "activity/flip_fraction": -9.596494705981003,
+    "activity/onset_rate_per_min": -8.552272046159311,
+    "uniform_lawn/roaming_bout_s": -7.463552707378232,
+    "local_search/gamma_per_min": 10.0
+   },
+   "search": {
+    "early": 0.051666666666666666,
+    "late": 0.022000000000000002
+   },
+   "mgl1": {
+    "early": 0.6816666666666666,
+    "late": 0.06800000000000002,
+    "early_ratio": 13.193548387096774
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.008904521090659867,
+      "z": -5.10751656903648
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.2850309714800545,
+      "z": 0.7613775103662801
+     }
+    },
+    "pdfr-1": {
+     "passes": true,
+     "roaming_fraction": {
+      "delta": -0.037042798529716384,
+      "z": 0.35334084359472523
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": 0.36762638753477717,
+      "z": 1.2474613206654965
+     }
+    },
+    "tax-4": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": 0.04739379425048312,
+      "z": 3.6663035584149912
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -1.2361267016233959,
+      "z": -4.305934935558469
+     }
+    }
+   }
+  },
+  "20": {
+   "D": 5.076820053191075,
+   "D_fit": 6.045412690174705,
+   "family_passes": {
+    "small_lawn": false,
+    "kinematics": false,
+    "activity": false,
+    "uniform_lawn": false,
+    "local_search": false,
+    "chemotaxis": true
+   },
+   "fails": {
+    "small_lawn/exits_per_on_lawn_hour": 10.0,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/dwelling_speed_median": -6.550988073714721,
+    "kinematics/dwelling_speed_p90": -6.612185087309166,
+    "kinematics/roaming_speed_median": 10.0,
+    "kinematics/roaming_speed_p90": 3.5460357629282697,
+    "kinematics/roaming_survival_5min": -4.406691054595286,
+    "activity/pause_share": 3.7275171729713654,
+    "activity/flip_fraction": -8.873553015831035,
+    "activity/onset_rate_per_min": -8.93965768027372,
+    "uniform_lawn/roaming_bout_s": -5.062929930395308,
+    "local_search/log_early_late_ratio": 3.1816200340922456
+   },
+   "search": {
+    "early": 0.385,
+    "late": 0.028999999999999998
+   },
+   "mgl1": {
+    "early": 0.36999999999999994,
+    "late": 0.028000000000000004,
+    "early_ratio": 0.9610389610389609
+   },
+   "mutants": {
+    "tph-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": -0.012510728490321837,
+      "z": -5.525649439009741
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.09221287270288103,
+      "z": -0.5872104454413803
+     }
+    },
+    "pdfr-1": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": -0.1889311981638934,
+      "z": -3.0305437023971886
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.7226987492197172,
+      "z": -2.9111280463032565
+     }
+    },
+    "tax-4": {
+     "passes": false,
+     "roaming_fraction": {
+      "delta": -0.0201275471805184,
+      "z": 2.151774375721502
+     },
+     "exits_per_on_lawn_hour": {
+      "delta": -0.9148641824057018,
+      "z": -3.4087705117898848
+     }
+    }
+   }
+  }
+ },
+ "stopped": "mgl-1's early ratio above 0.9 at two readouts in a row",
+ "answer": [
+  0.5455118431928503,
+  0.12065114948091789,
+  0.782487466087113,
+  0.9838890309637853,
+  0.19978399759481952,
+  0.14557940071357595,
+  0.2755577708923849,
+  0.6434163549794385,
+  0.5475207610220271,
+  0.44225536999858467,
+  0.16791117188636454,
+  0.3327193616177561,
+  0.12627808166908638,
+  0.6294991289036427,
+  0.6445283374268647,
+  0.027337147177618527,
+  0.6409189819185002,
+  0.8421325250076985,
+  0.3777631038522212,
+  0.47807016107466166,
+  0.3541282319744409,
+  0.5430611643937621,
+  0.3671012737323384,
+  0.34169745726694134,
+  0.737455616070432,
+  0.7404096855302909,
+  0.3587540536843189,
+  0.44543075868160353,
+  0.6183248249992819,
+  0.5628985861847415,
+  0.8395234187094142,
+  0.29075883615523407,
+  0.3565488777352668,
+  0.2147570773651427,
+  0.41510478661449846,
+  0.8703968374879492,
+  0.9035951197155127,
+  0.9001256356930775,
+  0.10201794976723963,
+  0.9737670898344083,
+  0.08180693081679513,
+  0.004244899116217142,
+  0.9479216218721214,
+  0.4078861818896324,
+  0.980671786272047,
+  0.8218237310593124,
+  0.7029165512799718,
+  0.436179020880331,
+  0.5603394849242387,
+  0.9163312266676608,
+  0.4572616823053349,
+  0.08023536656671484,
+  0.3535139593036011,
+  0.998827755197031,
+  0.16684965428530607,
+  0.6599049329103509,
+  0.7161844144903342,
+  0.330721600081887,
+  0.2702633653532938,
+  0.019004240112587376,
+  0.7538892482870853,
+  0.30705004550538706,
+  0.45322680438105545,
+  0.6797580697162146,
+  0.7642336495089745,
+  0.020235000106094348,
+  0.3112232228717273,
+  0.24710814519159247,
+  0.5531905061362932,
+  0.5544903300913477,
+  0.683022655144917,
+  0.48533196368373677,
+  0.31030952565500775,
+  0.8930435539917805,
+  0.6017966224698978,
+  0.2926428040963953,
+  0.4792526848384091,
+  0.3107323286518643,
+  0.7217802194329614,
+  0.01640353944235486,
+  0.2907995569369245,
+  0.5349742424864024,
+  0.00059875104081048,
+  0.6972915733474547,
+  0.6345615801627078,
+  0.007053613560256399,
+  0.8500203413349456,
+  0.21412963687107744,
+  0.6450859721567873,
+  0.9438339212551655,
+  0.7747766199905025,
+  0.5699490308477645,
+  0.01211611485151144,
+  0.5311378653238004,
+  0.3285617448450681,
+  0.9789603344470983,
+  0.5476506290956684,
+  0.3287054489803521,
+  0.20734851823359257,
+  0.3861563323670094,
+  0.9934441332240287,
+  0.3963124119494642,
+  0.9118537864197942,
+  0.8763624422538709,
+  0.28920047714579666,
+  0.2865838181305964,
+  0.9305049678927363,
+  0.5552146282285582,
+  0.5917742586600473,
+  0.49071611272637417,
+  0.8586759873033643,
+  0.21993119255577803,
+  0.02697997486409736,
+  0.8785271189247098,
+  0.47830325788105654,
+  0.6289969404033308,
+  0.04474419017717322,
+  0.09537543553673464,
+  0.2407559485290493,
+  0.9771636260680286,
+  0.23988254953359697,
+  0.2072730648715027,
+  0.38441188498726614,
+  0.26943315251752814,
+  0.24728959020814573,
+  0.6943261231759683,
+  0.29308846237194897,
+  0.546691569155436,
+  0.9691066455788264,
+  0.27431526642568294,
+  0.6553433169199614,
+  0.1336515757301237,
+  0.5708438119390582,
+  0.7224684309579348,
+  0.21280443269455424,
+  0.044938630705057096
+ ],
+ "wall_hours": 0.7034924691915512
+}

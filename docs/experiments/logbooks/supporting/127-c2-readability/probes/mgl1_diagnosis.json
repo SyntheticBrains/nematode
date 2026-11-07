@@ -1,0 +1,114 @@
+{
+ "description": "Why mgl-1 is inert in C.2's fitted answer (description; one reference episode, seed 99,790,000).\n\nOn the readability probe's generation-150 answer, over one per-step episode of L\u00f3pez-Cruz's food\nremoval: (1) what the 16 removed edges' presynaptic sensory neurons inject, on food and off; (2) how\nAIA, ADE and the four motor pools change when the edges go, within each step's four settling passes\n(the network starts every step from its injected sensors; only the modulator pools persist); (3) the\nshortest synaptic path from AIA and ADE to the pooled motor classes, against the four passes; (4) the\npools' response to a unit nudge of AIA, ADE and comparison interneurons at the first pass.\n",
+ "steps": 5400,
+ "on_food_steps": 2700,
+ "off_food_steps": 2700,
+ "injected": {
+  "ASEL": {
+   "on_food_mean_abs": 0.16471289098262787,
+   "off_food_mean_abs": 0.04034632816910744,
+   "after_4_passes_off_mean_abs": 0.7237963080406189
+  },
+  "ASER": {
+   "on_food_mean_abs": 0.16471298038959503,
+   "off_food_mean_abs": 0.04034632816910744,
+   "after_4_passes_off_mean_abs": 0.7054530382156372
+  },
+  "ASGL": {
+   "on_food_mean_abs": 0.043207816779613495,
+   "off_food_mean_abs": 0.05668973550200462,
+   "after_4_passes_off_mean_abs": 0.5832206010818481
+  },
+  "ASGR": {
+   "on_food_mean_abs": 0.043207645416259766,
+   "off_food_mean_abs": 0.05668973550200462,
+   "after_4_passes_off_mean_abs": 0.6210043430328369
+  },
+  "ASKL": {
+   "on_food_mean_abs": 0.2010939121246338,
+   "off_food_mean_abs": 0.042356714606285095,
+   "after_4_passes_off_mean_abs": 0.49322134256362915
+  },
+  "ASKR": {
+   "on_food_mean_abs": 0.20109379291534424,
+   "off_food_mean_abs": 0.042356714606285095,
+   "after_4_passes_off_mean_abs": 0.4304330348968506
+  },
+  "AVM": {
+   "on_food_mean_abs": 0.0,
+   "off_food_mean_abs": 0.0,
+   "after_4_passes_off_mean_abs": 0.16059212386608124
+  },
+  "AWCL": {
+   "on_food_mean_abs": 0.07321755588054657,
+   "off_food_mean_abs": 0.0480169914662838,
+   "after_4_passes_off_mean_abs": 0.4493316411972046
+  },
+  "AWCR": {
+   "on_food_mean_abs": 0.07321760058403015,
+   "off_food_mean_abs": 0.0480169914662838,
+   "after_4_passes_off_mean_abs": 0.49142974615097046
+  },
+  "FLPL": {
+   "on_food_mean_abs": 0.0,
+   "off_food_mean_abs": 0.0,
+   "after_4_passes_off_mean_abs": 0.6085110306739807
+  },
+  "FLPR": {
+   "on_food_mean_abs": 0.0,
+   "off_food_mean_abs": 0.0,
+   "after_4_passes_off_mean_abs": 0.6252300143241882
+  }
+ },
+ "targets": {
+  "ADEL": {
+   "pass1_off_wt": 0.0001281770964851603,
+   "pass1_off_mgl1": 0.0001281770964851603,
+   "pass4_off_wt": -0.051915593445301056,
+   "pass4_off_mgl1": -0.0544561930000782
+  },
+  "ADER": {
+   "pass1_off_wt": 0.0001281770964851603,
+   "pass1_off_mgl1": 0.0001281770964851603,
+   "pass4_off_wt": 0.03229844942688942,
+   "pass4_off_mgl1": 0.029505135491490364
+  },
+  "AIAL": {
+   "pass1_off_wt": -0.2616526782512665,
+   "pass1_off_mgl1": -0.2616211771965027,
+   "pass4_off_wt": -0.5901074409484863,
+   "pass4_off_mgl1": -0.5918834805488586
+  },
+  "AIAR": {
+   "pass1_off_wt": -0.2577347755432129,
+   "pass1_off_mgl1": -0.2577010691165924,
+   "pass4_off_wt": -0.5340113043785095,
+   "pass4_off_mgl1": -0.535872220993042
+  }
+ },
+ "pools_off_max_abs_change": 0.00021909363567829132,
+ "pools_on_max_abs_change": 7.959222421050072e-05,
+ "hops_to_motor": {
+  "AIAL": 2,
+  "AIAR": 2,
+  "ADEL": 1,
+  "ADER": 2,
+  "AWCL": 2,
+  "ASKL": 2,
+  "AIBL": 2,
+  "AIYL": 2,
+  "AVAL": 1,
+  "AVBL": 1,
+  "RIML": 1
+ },
+ "pool_gain_per_unit_nudge_at_pass1_off": {
+  "AIAL": 0.004956128541380167,
+  "ADEL": 0.04369664937257767,
+  "AIBL": 0.019155576825141907,
+  "AIYL": 0.003979417961090803,
+  "AIZL": 0.016013246029615402,
+  "AVAL": 0.1538161039352417,
+  "AVBL": 0.027832919731736183,
+  "RIML": 0.03802428022027016
+ }
+}

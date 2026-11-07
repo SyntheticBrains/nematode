@@ -1,0 +1,33 @@
+"""Serotonin's pool in the guarded answer, and what tph-1 and pdfr-1 change (description).
+
+The guarded wide probe's answer (Logbook 126, D_fit only), one 1,800-s reference episode on
+Scheer's small lawn at the profile seed (99,670,000), for the wild type, tph-1 and pdfr-1: each
+ligand pool's mean and SD over the episode, the speed output's median and the primitive shares.
+"""
+import json, sys
+from pathlib import Path
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, staged_bc as b, stage2_v4 as s
+from quantumnematode.evaluation.reference import run_reference
+from quantumnematode.utils.config_loader import load_simulation_config
+
+Z = json.load(open("docs/experiments/logbooks/supporting/126-c2-run-mode/probes/guarded_wide.json"))["answer"]
+ligs = list(p.layer_spec().ligands)
+cfg = load_simulation_config(str(p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"))
+timescales = {e.name: e.value(u) for e, u in zip(b.entries(), b.to_encoder(Z)) if e.block == "timescale"}
+out = {"description": __doc__, "timescales_s": timescales, "genotypes": {}}
+for mutant in ("", "tph-1", "pdfr-1"):
+    brain = p.encoded_brain(p.KNOCKOUT_GENES.get(mutant, ())); b.write(brain, Z)
+    ep = run_reference(cfg, brain, s.PROFILE_SEED, 1800, record_density=False)
+    m = np.asarray(ep.modulators, dtype=np.float64)
+    prim = np.array([str(x.primitive) for x in ep.behaviour])
+    out["genotypes"][mutant or "wild type"] = {
+        "pools": {l: {"mean": float(m[:, i].mean()), "sd": float(m[:, i].std())} for i, l in enumerate(ligs)},
+        "speed_output_median": float(np.median(np.asarray(ep.means)[:, 0])),
+        "shares": {k: float(np.mean(prim == k)) for k in sorted(set(prim))},
+    }
+Path("build/c2-run-mode/serotonin_check.json").write_text(json.dumps(out, indent=1) + "\n")
+print("timescales", {k: round(v, 1) for k, v in timescales.items()})
+for g, d in out["genotypes"].items():
+    print(g, "serotonin", round(d["pools"]["serotonin"]["mean"], 4), "±", round(d["pools"]["serotonin"]["sd"], 4), {k: round(v, 3) for k, v in d["shares"].items()})
