@@ -771,6 +771,10 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     families), but the mutants trade against it, and the branch fixed before the run is not met.
   - **Next:** C.2's design goes back to the maintainer. The options are a larger fit of the wild
     type with its mutants, accepting the limit for this model class, or a change of model class.
+    *(2026-11-07, the maintainer's decision.)* One overnight fit of the wild type with its mutants
+    comes first, with its branches fixed beforehand: W is designed around such fits if it works,
+    and otherwise the limit is accepted. A change of model class goes to Phase 11, scoped with
+    neural data.
 
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.

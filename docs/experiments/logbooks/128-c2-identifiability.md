@@ -136,6 +136,13 @@ The maintainer decides C.2's design from here. Three directions are open:
 
 Whatever is chosen, the draft receptor table is checked entry by entry before it enters the package.
 
+**The maintainer's decision (2026-11-07):**
+
+- **First, one larger fit of the wild type with its mutants,** run overnight with its branches fixed beforehand:
+  - **if it works** (in both of two populations, at least four families pass, and tph-1 and tax-4 pass), W is designed around fits of the wild type with its mutants;
+  - **if not,** the limit is accepted for this model class.
+- **A change of model class goes to Phase 11.** It is scoped with neural data to constrain the new dynamics, such as whole-brain imaging or the Randi 2023 signal-propagation atlas, rather than as a bare dynamics change. More free dynamics fitted to the same behavioural data would most likely leave the responses unidentified again.
+
 ## Seeds
 
 All discarded:
