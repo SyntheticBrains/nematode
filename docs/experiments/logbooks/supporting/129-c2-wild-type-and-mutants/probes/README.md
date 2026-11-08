@@ -8,5 +8,7 @@ Each `*.py.txt` is a probe script as it was run, beside the record it wrote. The
 2. **`overnight_grade`** reads `overnight.json`.
 3. **`speednoise`** reads `overnight.json`.
 4. **`continuation`** reads `overnight.json`, and writes `continuation.json`.
+5. **`onset_check`** reads `continuation.json`: `onset_check.py` runs the first round and `onset_check.py 2` the second, writing `onset_check.json` and `onset_check_2.json`. The committed script is the version with both rounds; the first round ran before the second was added.
+6. **`grade_nudged`** reads `continuation.json`, applying the second round's CEP +0.8 nudge.
 
 `overnight.py` and `continuation.py` save their state every generation and resume from it.

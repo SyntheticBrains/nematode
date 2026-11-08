@@ -1,0 +1,38 @@
+"""The continuation's answer with CEP's food-contact gain raised by 0.8, graded in full (description).
+
+`onset_check_2.json`: on one population of 200 (99,850,000 + i), raising CEP's food-contact gain
+by 0.8 brought the on-lawn onset rate inside its band (z -2.95) with no other statistic failing
+and all three mutants passing. CEP is the dopaminergic food-contact sensor, so the change acts on
+food only. Here that answer is graded as the continuation's was: 5 fresh populations of 200
+(795,000,000 + 200·g + i), every family with presence, and the three mutants. The verdict, fixed
+before the run: the wild type passes in at least 3 of 5, and tph-1 and tax-4 each in at least 3 of 5.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import npe_recovery as nr, continuation as C, onset_check as oc
+
+C.GRADE_BASE = 795_000_000
+VARIANT = {"sensory.CEP.contact": 0.8}
+
+
+def vector():
+    oc.VARIANTS["nudged"] = VARIANT
+    return oc.vector("nudged")
+
+
+def main():
+    z = vector()
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        final = C.grade(pool, z)
+    for g, w in sorted(final["populations"].items()):
+        fails = {f"{f}/{n}": round(r["z"], 2) for f, rs in w["families"].items() for n, r in rs.items() if not r["passes"]}
+        print(f"population {g}: wild type {w['wild_type_passes']} D {w['D']:.2f} fails {fails} LS {(w['local_search_presence'] or {}).get('present')} chem {(w['chemotaxis_presence'] or {}).get('present')} "
+              f"mutants {({m: (round(r['statistics']['roaming_fraction']['delta'], 3), r['passes']) for m, r in w['mutants'].items()})} reversal share {w['reversal_share']['value']:.3f}", flush=True)
+    print(f"wild type {final['wild_type_passing']}/5, mutants {final['mutants_passing']}, verdict passed {final['passed']}")
+    Path("build/c2-run-mode/grade_nudged.json").write_text(json.dumps(nr._finite({"description": __doc__, "variant": VARIANT, "answer": z, "grade": final}), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

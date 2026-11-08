@@ -1,0 +1,87 @@
+{
+ "description": "Can the on-lawn onset rate come inside its band? Nudges with no fitting (description; 200 animals, 99,850,000 + i).\n\nOn the continuation's answer, whose wild type misses only on the on-lawn onset rate in three of\nfive populations (z -3.12 to -3.14): the reversal readout's bias (fitted at -2.98, its box bound -3)\nraised by 0.1, 0.2 or 0.4; the reversal output's noise log-SD raised by 0.2; and CEP's food-contact\ngain raised by 0.4. Each graded on all four assays without presence, with the three mutants.\n",
+ "variants": {
+  "as fitted": {
+   "D": 1.6992512077401425,
+   "onset_z": -3.2664600657551777,
+   "fails": {
+    "small_lawn/roaming_bout_s": 3.4248923494971706,
+    "activity/onset_rate_per_min": -3.2664600657551777
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  },
+  "bias +0.1": {
+   "D": 1.6375726602093594,
+   "onset_z": -2.9084320029171025,
+   "fails": {
+    "small_lawn/roaming_bout_s": 3.170196790949916,
+    "kinematics/roaming_speed_p90": -3.128184726596647,
+    "chemotaxis/flip_fraction": 3.3085348267552215
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  },
+  "bias +0.2": {
+   "D": 1.6408901327771839,
+   "onset_z": -2.539880171402987,
+   "fails": {
+    "small_lawn/roaming_bout_s": 3.455761589849259,
+    "kinematics/roaming_speed_p90": -3.3243232128379354,
+    "chemotaxis/flip_fraction": 3.675309272640354
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  },
+  "bias +0.4": {
+   "D": 1.9267886486282109,
+   "onset_z": -1.9293263357278685,
+   "fails": {
+    "small_lawn/roaming_bout_s": 4.139920285595924,
+    "kinematics/dwelling_speed_median": 4.555243027723351,
+    "kinematics/roaming_speed_p90": -3.6718316800353406,
+    "chemotaxis/flip_fraction": 4.3877923057869355
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  },
+  "reversal noise +0.2": {
+   "D": 1.6149750496647413,
+   "onset_z": -2.6118727314031513,
+   "fails": {
+    "small_lawn/roaming_bout_s": 3.409354634931418,
+    "kinematics/roaming_speed_p90": -3.1231989349135207,
+    "chemotaxis/flip_fraction": 3.668014325981085
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  },
+  "CEP contact +0.4": {
+   "D": 1.6465918815614242,
+   "onset_z": -3.1534206680782066,
+   "fails": {
+    "activity/onset_rate_per_min": -3.1534206680782066
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  }
+ }
+}

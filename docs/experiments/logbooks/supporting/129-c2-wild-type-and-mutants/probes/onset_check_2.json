@@ -1,0 +1,66 @@
+{
+ "description": "Can the on-lawn onset rate come inside its band? Nudges with no fitting (description; 200 animals, 99,850,000 + i).\n\nOn the continuation's answer, whose wild type misses only on the on-lawn onset rate in three of\nfive populations (z -3.12 to -3.14): the reversal readout's bias (fitted at -2.98, its box bound -3)\nraised by 0.1, 0.2 or 0.4; the reversal output's noise log-SD raised by 0.2; and CEP's food-contact\ngain raised by 0.4. Each graded on all four assays without presence, with the three mutants.\n",
+ "variants": {
+  "as fitted": {
+   "D": 1.6992512077401425,
+   "onset_z": -3.2664600657551777,
+   "fails": {
+    "small_lawn/roaming_bout_s": 3.4248923494971706,
+    "activity/onset_rate_per_min": -3.2664600657551777
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  },
+  "CEP contact +0.8": {
+   "D": 1.7030197518739705,
+   "onset_z": -2.948649202394999,
+   "fails": {},
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  },
+  "CEP contact +1.2": {
+   "D": 1.7062990337748722,
+   "onset_z": -2.678632164339433,
+   "fails": {},
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": false
+   }
+  },
+  "CEP contact +1.59 (box max)": {
+   "D": 1.8988703050058404,
+   "onset_z": -2.2807254815135027,
+   "fails": {
+    "small_lawn/roaming_bout_s": 3.403529527849584,
+    "small_lawn/exits_per_on_lawn_hour": 3.1449323790736416,
+    "small_lawn/pre_exit_enrichment": -3.5831259083867293,
+    "small_lawn/time_on_lawn": -3.189258507097456,
+    "kinematics/dwelling_speed_median": 3.126195427926547
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": false
+   }
+  },
+  "CEP +0.8, bias +0.05": {
+   "D": 1.6820327483762132,
+   "onset_z": -2.9174361402763775,
+   "fails": {
+    "chemotaxis/flip_fraction": 3.2070697460078534
+   },
+   "mutants": {
+    "tph-1": true,
+    "pdfr-1": true,
+    "tax-4": true
+   }
+  }
+ }
+}

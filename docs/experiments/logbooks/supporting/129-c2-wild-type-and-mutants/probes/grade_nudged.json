@@ -1,0 +1,1341 @@
+{
+ "description": "The continuation's answer with CEP's food-contact gain raised by 0.8, graded in full (description).\n\n`onset_check_2.json`: on one population of 200 (99,850,000 + i), raising CEP's food-contact gain\nby 0.8 brought the on-lawn onset rate inside its band (z -2.95) with no other statistic failing\nand all three mutants passing. CEP is the dopaminergic food-contact sensor, so the change acts on\nfood only. Here that answer is graded as the continuation's was: 5 fresh populations of 200\n(795,000,000 + 200\u00b7g + i), every family with presence, and the three mutants. The verdict, fixed\nbefore the run: the wild type passes in at least 3 of 5, and tph-1 and tax-4 each in at least 3 of 5.\n",
+ "variant": {
+  "sensory.CEP.contact": 0.8
+ },
+ "answer": [
+  0.9233450638853269,
+  0.5241820079278244,
+  0.8945701204897418,
+  0.5868774982935703,
+  0.11534065304406123,
+  0.009214942546655969,
+  0.308056939912843,
+  0.8564113881556048,
+  0.6081760191038708,
+  0.6001754491231497,
+  0.3902199075167734,
+  0.2232506994422489,
+  0.013816154005833591,
+  0.8954236246961882,
+  0.6708074437021374,
+  0.12099132108945572,
+  0.8219224565474168,
+  0.4652871485743515,
+  0.5074427738146038,
+  0.1059834155240662,
+  0.061948047926412425,
+  0.8870496024129811,
+  0.0069240451928863425,
+  0.20815882409410869,
+  0.7233349129385547,
+  0.3954945453626582,
+  0.5216176769826404,
+  0.3754842980690096,
+  0.35008163739597586,
+  0.2589359845387882,
+  0.46508267832761463,
+  0.20436811908359936,
+  0.5744694694724509,
+  0.2236347096840603,
+  0.7927272007163391,
+  0.4214997496021705,
+  0.9996710505674767,
+  0.9879654846563987,
+  0.0038163826830135655,
+  0.7384305997769203,
+  0.8020861817918559,
+  0.14602721958090864,
+  0.9394282239907761,
+  0.3018544461023255,
+  0.8333427911977074,
+  0.9012187019048432,
+  0.639379467260073,
+  0.14500783889538188,
+  0.4102049185160771,
+  0.9351376598599277,
+  0.6921262720751343,
+  0.1390500486703946,
+  0.24332934831104042,
+  0.9916251289585091,
+  0.25492453249108266,
+  0.48166831496095514,
+  0.9135860252264818,
+  0.5824808348957381,
+  0.4243814030389055,
+  0.1288598004249093,
+  0.9987600691459049,
+  0.34472920380813166,
+  0.7417675939279678,
+  0.14049206385203716,
+  0.9059320274969417,
+  0.0030199240531338296,
+  0.018785258688558452,
+  0.2627379443496785,
+  0.7399201258435084,
+  0.591811457704815,
+  0.7377683919138218,
+  0.8093785917464835,
+  0.6325967178113985,
+  0.3594741873970998,
+  0.4999189976206997,
+  0.20470639040205424,
+  0.6951960924876133,
+  0.002862008053544432,
+  0.5847873553320817,
+  0.1332547651041206,
+  0.578009438884087,
+  0.5329607910559881,
+  0.22213376152321873,
+  0.6725559718578977,
+  0.33490584172163673,
+  0.03591121475858775,
+  0.3779039028993352,
+  0.8982252481375039,
+  0.22419937296183512,
+  0.8556463875556373,
+  0.8737074112062748,
+  0.8736018400588861,
+  0.10137031341211317,
+  0.9190837407721484,
+  0.2905693959138682,
+  0.8735180206292174,
+  0.13090159834000203,
+  0.282068343851965,
+  0.2945946864609573,
+  0.5327365103665267,
+  0.8037063446237409,
+  0.1938020977705972,
+  0.8347954252414247,
+  0.9993788559315832,
+  6.691233437806858e-05,
+  0.16750739655202326,
+  0.6383227398299312,
+  0.00014690402696343073,
+  0.4925728314872707,
+  0.49987306143568355,
+  0.1702395298116387,
+  0.023132447160039715,
+  0.03343337421324323,
+  0.9639684234070248,
+  0.3653654783412268,
+  0.65636239881475,
+  0.19425190628426675,
+  0.002282504916721302,
+  0.5664516101143684,
+  0.7641616762671972,
+  0.02464173671033719,
+  0.000547978189431559,
+  0.16260917445046905,
+  0.7187317092534888,
+  0.7397854877968059,
+  0.9986579982513583,
+  0.7400646568434959,
+  0.5766143082400705,
+  0.7518175958032123,
+  0.3837361259264893,
+  0.6475520993453461,
+  0.17354281286295556,
+  0.5929933167346371,
+  0.31542613664462194,
+  0.2703694242517249,
+  0.4566679502204205,
+  0.17178669509195063
+ ],
+ "grade": {
+  "populations": {
+   "0": {
+    "families": {
+     "small_lawn": {
+      "roaming_fraction": {
+       "value": 0.25589053287351204,
+       "z": 2.389256711829285,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 265.0,
+       "z": 2.1273534556078206,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 838.1954887218045,
+       "z": -1.020647672863095,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "value": 0.6487929691845589,
+       "z": -0.3118206741086204,
+       "passes": true
+      },
+      "pre_exit_enrichment": {
+       "value": 0.09067287467731078,
+       "z": -2.9356496889854755,
+       "passes": true
+      },
+      "time_on_lawn": {
+       "value": 0.976831627219578,
+       "z": -0.20851689767397077,
+       "passes": true
+      }
+     },
+     "kinematics": {
+      "dwelling_speed_median": {
+       "value": 0.013446611470509332,
+       "z": 0.8367763961287566,
+       "passes": true
+      },
+      "dwelling_speed_p90": {
+       "value": 0.02821479984110951,
+       "z": -0.011727440166348873,
+       "passes": true
+      },
+      "roaming_speed_median": {
+       "value": 0.039725257374112616,
+       "z": 2.551982403757074,
+       "passes": true
+      },
+      "roaming_speed_p90": {
+       "value": 0.06249185292091676,
+       "z": -2.655326339853899,
+       "passes": true
+      },
+      "roaming_survival_5min": {
+       "value": 0.09666973641235416,
+       "z": -2.2095221445981825,
+       "passes": true
+      }
+     },
+     "activity": {
+      "pause_share": {
+       "value": 0.49558771465910234,
+       "z": 0.42594567903676467,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.13412147732675742,
+       "z": 0.1600944324487644,
+       "passes": true
+      },
+      "onset_rate_per_min": {
+       "value": 1.6128115807738874,
+       "z": -2.9774654461508403,
+       "passes": true
+      }
+     },
+     "uniform_lawn": {
+      "roaming_fraction": {
+       "value": 0.24924708655231112,
+       "z": 0.4008572480745045,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 259.5681818181818,
+       "z": -2.3156646206974827,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 905.2894736842105,
+       "z": -0.6492411969420284,
+       "passes": true
+      }
+     },
+     "local_search": {
+      "gamma_per_min": {
+       "value": 0.13803201734158915,
+       "z": 0.7187410376657144,
+       "passes": true
+      },
+      "log_early_late_ratio": {
+       "value": 1.1096621248546947,
+       "z": -0.7551073120075181,
+       "passes": true
+      }
+     },
+     "chemotaxis": {
+      "drift_mm_s": {
+       "value": 0.007935958988620364,
+       "z": -1.1098137929330656,
+       "passes": true
+      },
+      "log_quintile_ratio": {
+       "value": 0.2735002707985886,
+       "z": -1.4637082326258102,
+       "passes": true
+      },
+      "weathervane_deg_s": {
+       "value": 0.45532331550549765,
+       "z": 0.10392083317096108,
+       "passes": true
+      },
+      "onset_per_min": {
+       "value": 3.869692870265896,
+       "z": 2.922514831187165,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.08601586012807755,
+       "z": 3.074530256094485,
+       "passes": true
+      }
+     }
+    },
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": true,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "wild_type_passes": true,
+    "local_search_presence": {
+     "lower_bound": 2.853413172780389,
+     "present": true
+    },
+    "chemotaxis_presence": {
+     "lower_bounds": {
+      "drift_mm_s": 0.007451486226761991,
+      "log_quintile_ratio": 0.21973744800572756
+     },
+     "present": true
+    },
+    "D": 1.6829046230206781,
+    "D_fit": 1.7445535611854075,
+    "reversal_share": {
+     "value": 0.07052444444444445,
+     "windows": [
+      "local_search",
+      "chemotaxis"
+     ],
+     "reference": {
+      "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+      "value": 0.17338425496607937,
+      "frames": 2048900
+     }
+    },
+    "small_lawn_values": {
+     "roaming_fraction": 0.25589053287351204,
+     "roaming_bout_s": 265.0,
+     "dwelling_bout_s": 838.1954887218045,
+     "exits_per_on_lawn_hour": 0.6487929691845589,
+     "pre_exit_enrichment": 0.09067287467731078,
+     "time_on_lawn": 0.976831627219578
+    },
+    "mutants": {
+     "tph-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": 0.24113207737945414,
+        "z": -0.5732722105610062,
+        "scale": 0.051216374312670475,
+        "direction": 1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.02011233638965204,
+        "z": -0.18566532694155313,
+        "scale": 0.27973247318303884,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "pdfr-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.06386990592277245,
+        "z": -0.24433372760143537,
+        "scale": 0.04488581024848594,
+        "direction": 0,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.15728655313868722,
+        "z": 0.445207965878808,
+        "scale": 0.2621862945677769,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "tax-4": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.029045447013080927,
+        "z": 1.9517425152977097,
+        "scale": 0.044582397092487396,
+        "direction": -1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.2637024637712322,
+        "z": -0.11748067018309866,
+        "scale": 0.3580865566071098,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     }
+    }
+   },
+   "1": {
+    "families": {
+     "small_lawn": {
+      "roaming_fraction": {
+       "value": 0.24827278805437933,
+       "z": 2.1789115208138856,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 275.0617283950617,
+       "z": 2.570212476379308,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 894.6949602122016,
+       "z": -0.7696327125532897,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "value": 0.689993314018275,
+       "z": -0.10352849488721087,
+       "passes": true
+      },
+      "pre_exit_enrichment": {
+       "value": 0.1450790124996373,
+       "z": -2.1552708345244294,
+       "passes": true
+      },
+      "time_on_lawn": {
+       "value": 0.9743756786102064,
+       "z": -0.606457164996309,
+       "passes": true
+      }
+     },
+     "kinematics": {
+      "dwelling_speed_median": {
+       "value": 0.0133704170292937,
+       "z": 0.7319576541103343,
+       "passes": true
+      },
+      "dwelling_speed_p90": {
+       "value": 0.02841635893907521,
+       "z": 0.16274385462764843,
+       "passes": true
+      },
+      "roaming_speed_median": {
+       "value": 0.0401973942217215,
+       "z": 3.0403709961194187,
+       "passes": true
+      },
+      "roaming_speed_p90": {
+       "value": 0.06326865317242755,
+       "z": -2.46379852664754,
+       "passes": true
+      },
+      "roaming_survival_5min": {
+       "value": 0.07862598285417456,
+       "z": -2.619631614314449,
+       "passes": true
+      }
+     },
+     "activity": {
+      "pause_share": {
+       "value": 0.4968568734150349,
+       "z": 0.4653039924039092,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.13299764476569478,
+       "z": 0.07000982812927826,
+       "passes": true
+      },
+      "onset_rate_per_min": {
+       "value": 1.6142520496511161,
+       "z": -2.971076113792549,
+       "passes": true
+      }
+     },
+     "uniform_lawn": {
+      "roaming_fraction": {
+       "value": 0.23287880440711248,
+       "z": 0.21973707155441216,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 263.55555555555554,
+       "z": -2.179849088158861,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 925.2894736842105,
+       "z": -0.6130313667295915,
+       "passes": true
+      }
+     },
+     "local_search": {
+      "gamma_per_min": {
+       "value": 0.12695023132980898,
+       "z": 0.44972504539096747,
+       "passes": true
+      },
+      "log_early_late_ratio": {
+       "value": 1.1881762975154782,
+       "z": -0.5457379753783318,
+       "passes": true
+      }
+     },
+     "chemotaxis": {
+      "drift_mm_s": {
+       "value": 0.008060081909125872,
+       "z": -1.1021421596674112,
+       "passes": true
+      },
+      "log_quintile_ratio": {
+       "value": 0.31480204674539325,
+       "z": -1.4099712315192021,
+       "passes": true
+      },
+      "weathervane_deg_s": {
+       "value": -0.08222827164339781,
+       "z": -0.5049672624840356,
+       "passes": true
+      },
+      "onset_per_min": {
+       "value": 3.8690547977844387,
+       "z": 2.9218379370440246,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.0868195503326373,
+       "z": 3.1139816827840714,
+       "passes": false
+      }
+     }
+    },
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": true,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": false
+    },
+    "wild_type_passes": false,
+    "local_search_presence": {
+     "lower_bound": 3.0664030882961306,
+     "present": true
+    },
+    "chemotaxis_presence": {
+     "lower_bounds": {
+      "drift_mm_s": 0.0075785705193317015,
+      "log_quintile_ratio": 0.26057444680509206
+     },
+     "present": true
+    },
+    "D": 1.6686301040005846,
+    "D_fit": 1.7405148567691404,
+    "reversal_share": {
+     "value": 0.07041666666666667,
+     "windows": [
+      "local_search",
+      "chemotaxis"
+     ],
+     "reference": {
+      "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+      "value": 0.17338425496607937,
+      "frames": 2048900
+     }
+    },
+    "small_lawn_values": {
+     "roaming_fraction": 0.24827278805437933,
+     "roaming_bout_s": 275.0617283950617,
+     "dwelling_bout_s": 894.6949602122016,
+     "exits_per_on_lawn_hour": 0.689993314018275,
+     "pre_exit_enrichment": 0.1450790124996373,
+     "time_on_lawn": 0.9743756786102064
+    },
+    "mutants": {
+     "tph-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": 0.24456743946482037,
+        "z": -0.5061967462887068,
+        "scale": 0.051216374312670475,
+        "direction": 1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": -0.18803461273681965,
+        "z": -0.9297582338464794,
+        "scale": 0.27973247318303884,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "pdfr-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.05166731681926162,
+        "z": 0.027524773692354582,
+        "scale": 0.04488581024848594,
+        "direction": 0,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.20158171097490862,
+        "z": 0.6141533255485172,
+        "scale": 0.2621862945677769,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "tax-4": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.03366538199487609,
+        "z": 1.8481156292823395,
+        "scale": 0.044582397092487396,
+        "direction": -1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.26806327773861705,
+        "z": -0.10530256998100278,
+        "scale": 0.3580865566071098,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     }
+    }
+   },
+   "2": {
+    "families": {
+     "small_lawn": {
+      "roaming_fraction": {
+       "value": 0.25228968413528124,
+       "z": 2.2898281757409693,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 269.54653937947495,
+       "z": 2.327465792021264,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 858.2564102564103,
+       "z": -0.9315213272539498,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "value": 0.6031363088057902,
+       "z": -0.5426421714685916,
+       "passes": true
+      },
+      "pre_exit_enrichment": {
+       "value": 0.22481361724917032,
+       "z": -1.0115910585670476,
+       "passes": true
+      },
+      "time_on_lawn": {
+       "value": 0.9785345807466993,
+       "z": 0.06741468299277091,
+       "passes": true
+      }
+     },
+     "kinematics": {
+      "dwelling_speed_median": {
+       "value": 0.013581278136769548,
+       "z": 1.0220338811106748,
+       "passes": true
+      },
+      "dwelling_speed_p90": {
+       "value": 0.028529624303945993,
+       "z": 0.2607873320184993,
+       "passes": true
+      },
+      "roaming_speed_median": {
+       "value": 0.039683714427648224,
+       "z": 2.5090094791715822,
+       "passes": true
+      },
+      "roaming_speed_p90": {
+       "value": 0.06247229010231203,
+       "z": -2.6601497469784845,
+       "passes": true
+      },
+      "roaming_survival_5min": {
+       "value": 0.048705000462198715,
+       "z": -3.2996940072415746,
+       "passes": false
+      }
+     },
+     "activity": {
+      "pause_share": {
+       "value": 0.4928979735141481,
+       "z": 0.3425332025717367,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.13527442622161212,
+       "z": 0.252512955093604,
+       "passes": true
+      },
+      "onset_rate_per_min": {
+       "value": 1.6236463579210691,
+       "z": -2.9294067943356437,
+       "passes": true
+      }
+     },
+     "uniform_lawn": {
+      "roaming_fraction": {
+       "value": 0.23913234197482125,
+       "z": 0.28893442641982076,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 263.35748792270533,
+       "z": -2.186595549064212,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 927.5668449197861,
+       "z": -0.6089082054410474,
+       "passes": true
+      }
+     },
+     "local_search": {
+      "gamma_per_min": {
+       "value": 0.14100359349545127,
+       "z": 0.7908775603166133,
+       "passes": true
+      },
+      "log_early_late_ratio": {
+       "value": 1.1323549462463725,
+       "z": -0.6945936391252041,
+       "passes": true
+      }
+     },
+     "chemotaxis": {
+      "drift_mm_s": {
+       "value": 0.008714235121767437,
+       "z": -1.0617110811325412,
+       "passes": true
+      },
+      "log_quintile_ratio": {
+       "value": 0.3068717668449222,
+       "z": -1.4202891766927026,
+       "passes": true
+      },
+      "weathervane_deg_s": {
+       "value": 0.2716149000713389,
+       "z": -0.10416685534798024,
+       "passes": true
+      },
+      "onset_per_min": {
+       "value": 3.790184216619272,
+       "z": 2.8381687050865256,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.08514557087739784,
+       "z": 3.03180962521317,
+       "passes": true
+      }
+     }
+    },
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": false,
+     "activity": true,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "wild_type_passes": false,
+    "local_search_presence": {
+     "lower_bound": 2.913228174137943,
+     "present": true
+    },
+    "chemotaxis_presence": {
+     "lower_bounds": {
+      "drift_mm_s": 0.008244876626505655,
+      "log_quintile_ratio": 0.25479881965960494
+     },
+     "present": true
+    },
+    "D": 1.6591461555629,
+    "D_fit": 1.7235245308264362,
+    "reversal_share": {
+     "value": 0.07178888888888889,
+     "windows": [
+      "local_search",
+      "chemotaxis"
+     ],
+     "reference": {
+      "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+      "value": 0.17338425496607937,
+      "frames": 2048900
+     }
+    },
+    "small_lawn_values": {
+     "roaming_fraction": 0.25228968413528124,
+     "roaming_bout_s": 269.54653937947495,
+     "dwelling_bout_s": 858.2564102564103,
+     "exits_per_on_lawn_hour": 0.6031363088057902,
+     "pre_exit_enrichment": 0.22481361724917032,
+     "time_on_lawn": 0.9785345807466993
+    },
+    "mutants": {
+     "tph-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": 0.25124676246102834,
+        "z": -0.3757829267662351,
+        "scale": 0.051216374312670475,
+        "direction": 1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.13583600204451884,
+        "z": 0.2280287441759775,
+        "scale": 0.27973247318303884,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "pdfr-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.053483605987669075,
+        "z": -0.012939888933819562,
+        "scale": 0.04488581024848594,
+        "direction": 0,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.17833981275716204,
+        "z": 0.5255068222823506,
+        "scale": 0.2621862945677769,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "tax-4": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.03444855297077959,
+        "z": 1.8305488085867454,
+        "scale": 0.044582397092487396,
+        "direction": -1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.22454503387727687,
+        "z": -0.22683252707762763,
+        "scale": 0.3580865566071098,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     }
+    }
+   },
+   "3": {
+    "families": {
+     "small_lawn": {
+      "roaming_fraction": {
+       "value": 0.24285970497242523,
+       "z": 2.0294426134285772,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 277.05882352941177,
+       "z": 2.658113039866973,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 915.2574525745257,
+       "z": -0.6782779959861317,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "value": 0.7747836613908443,
+       "z": 0.32513700057048306,
+       "passes": true
+      },
+      "pre_exit_enrichment": {
+       "value": 0.31979799057004743,
+       "z": 0.35082501084614276,
+       "passes": true
+      },
+      "time_on_lawn": {
+       "value": 0.9711523807450306,
+       "z": -1.1287319427473586,
+       "passes": true
+      }
+     },
+     "kinematics": {
+      "dwelling_speed_median": {
+       "value": 0.01353294864986757,
+       "z": 0.9555482433313437,
+       "passes": true
+      },
+      "dwelling_speed_p90": {
+       "value": 0.028481251020573584,
+       "z": 0.21891500043633697,
+       "passes": true
+      },
+      "roaming_speed_median": {
+       "value": 0.03966245840283326,
+       "z": 2.4870217862152373,
+       "passes": true
+      },
+      "roaming_speed_p90": {
+       "value": 0.06254356003514247,
+       "z": -2.642577437551665,
+       "passes": true
+      },
+      "roaming_survival_5min": {
+       "value": 0.07979589393801967,
+       "z": -2.593041159470124,
+       "passes": true
+      }
+     },
+     "activity": {
+      "pause_share": {
+       "value": 0.4981789870945607,
+       "z": 0.50630450889763,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.13277573195501757,
+       "z": 0.052221655374807385,
+       "passes": true
+      },
+      "onset_rate_per_min": {
+       "value": 1.5995882927344225,
+       "z": -3.0361185579876633,
+       "passes": true
+      }
+     },
+     "uniform_lawn": {
+      "roaming_fraction": {
+       "value": 0.2363632391812482,
+       "z": 0.25829343536619653,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 261.3526570048309,
+       "z": -2.2548828972525334,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 929.7074468085107,
+       "z": -0.6050326638938907,
+       "passes": true
+      }
+     },
+     "local_search": {
+      "gamma_per_min": {
+       "value": 0.13654904327349826,
+       "z": 0.6827410878362281,
+       "passes": true
+      },
+      "log_early_late_ratio": {
+       "value": 1.2014106712307688,
+       "z": -0.5104466139391103,
+       "passes": true
+      }
+     },
+     "chemotaxis": {
+      "drift_mm_s": {
+       "value": 0.007982049667473332,
+       "z": -1.1069650782582499,
+       "passes": true
+      },
+      "log_quintile_ratio": {
+       "value": 0.27630763598791114,
+       "z": -1.4600556200485793,
+       "passes": true
+      },
+      "weathervane_deg_s": {
+       "value": 0.5624249830542752,
+       "z": 0.22523557198724983,
+       "passes": true
+      },
+      "onset_per_min": {
+       "value": 3.8439799840795903,
+       "z": 2.8952375193322735,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.08485656296386053,
+       "z": 3.0176228472122197,
+       "passes": true
+      }
+     }
+    },
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": true,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "wild_type_passes": true,
+    "local_search_presence": {
+     "lower_bound": 3.106192676781973,
+     "present": true
+    },
+    "chemotaxis_presence": {
+     "lower_bounds": {
+      "drift_mm_s": 0.007488095182091622,
+      "log_quintile_ratio": 0.22708771945271544
+     },
+     "present": true
+    },
+    "D": 1.628014218757396,
+    "D_fit": 1.6852279956308542,
+    "reversal_share": {
+     "value": 0.06943444444444444,
+     "windows": [
+      "local_search",
+      "chemotaxis"
+     ],
+     "reference": {
+      "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+      "value": 0.17338425496607937,
+      "frames": 2048900
+     }
+    },
+    "small_lawn_values": {
+     "roaming_fraction": 0.24285970497242523,
+     "roaming_bout_s": 277.05882352941177,
+     "dwelling_bout_s": 915.2574525745257,
+     "exits_per_on_lawn_hour": 0.7747836613908443,
+     "pre_exit_enrichment": 0.31979799057004743,
+     "time_on_lawn": 0.9711523807450306
+    },
+    "mutants": {
+     "tph-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": 0.24921789675205755,
+        "z": -0.4153965412830453,
+        "scale": 0.051216374312670475,
+        "direction": 1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": -0.21477121666985055,
+        "z": -1.0253374264543258,
+        "scale": 0.27973247318303884,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "pdfr-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.05066846991266427,
+        "z": 0.049777839885607564,
+        "scale": 0.04488581024848594,
+        "direction": 0,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.15134041373721485,
+        "z": 0.42252890322500003,
+        "scale": 0.2621862945677769,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "tax-4": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.023309807268401594,
+        "z": 2.080395080407221,
+        "scale": 0.044582397092487396,
+        "direction": -1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.059951505692583784,
+        "z": -0.6864798529762204,
+        "scale": 0.3580865566071098,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     }
+    }
+   },
+   "4": {
+    "families": {
+     "small_lawn": {
+      "roaming_fraction": {
+       "value": 0.2498931503767855,
+       "z": 2.223653820577543,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 268.9830508474576,
+       "z": 2.3026642897636953,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 901.2432432432432,
+       "z": -0.7405401040425419,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "value": 0.6721403666629175,
+       "z": -0.19378573242201377,
+       "passes": true
+      },
+      "pre_exit_enrichment": {
+       "value": 0.12573625546410072,
+       "z": -2.4327152402788847,
+       "passes": true
+      },
+      "time_on_lawn": {
+       "value": 0.9724379306573335,
+       "z": -0.9204327650667151,
+       "passes": true
+      }
+     },
+     "kinematics": {
+      "dwelling_speed_median": {
+       "value": 0.013679413187887896,
+       "z": 1.1570357584396018,
+       "passes": true
+      },
+      "dwelling_speed_p90": {
+       "value": 0.028520808047642295,
+       "z": 0.25315590447160763,
+       "passes": true
+      },
+      "roaming_speed_median": {
+       "value": 0.03942069008196758,
+       "z": 2.236931392924836,
+       "passes": true
+      },
+      "roaming_speed_p90": {
+       "value": 0.06245056225966445,
+       "z": -2.665506962272749,
+       "passes": true
+      },
+      "roaming_survival_5min": {
+       "value": 0.07868953832017349,
+       "z": -2.618187086801127,
+       "passes": true
+      }
+     },
+     "activity": {
+      "pause_share": {
+       "value": 0.49331395798228395,
+       "z": 0.35543343824061874,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.13344545188651652,
+       "z": 0.10590532420970034,
+       "passes": true
+      },
+      "onset_rate_per_min": {
+       "value": 1.644931969108388,
+       "z": -2.8349925057140175,
+       "passes": true
+      }
+     },
+     "uniform_lawn": {
+      "roaming_fraction": {
+       "value": 0.23434524721486572,
+       "z": 0.23596372123217302,
+       "passes": true
+      },
+      "roaming_bout_s": {
+       "value": 251.9294117647059,
+       "z": -2.575851824377123,
+       "passes": true
+      },
+      "dwelling_bout_s": {
+       "value": 953.1880108991826,
+       "z": -0.562521301943117,
+       "passes": true
+      }
+     },
+     "local_search": {
+      "gamma_per_min": {
+       "value": 0.13730899216153447,
+       "z": 0.7011892336473662,
+       "passes": true
+      },
+      "log_early_late_ratio": {
+       "value": 1.2208919467017556,
+       "z": -0.45849699027469093,
+       "passes": true
+      }
+     },
+     "chemotaxis": {
+      "drift_mm_s": {
+       "value": 0.008243495036390219,
+       "z": -1.090805991917343,
+       "passes": true
+      },
+      "log_quintile_ratio": {
+       "value": 0.33251304156061,
+       "z": -1.386927773310281,
+       "passes": true
+      },
+      "weathervane_deg_s": {
+       "value": 0.33674042343272764,
+       "z": -0.030398761557444684,
+       "passes": true
+      },
+      "onset_per_min": {
+       "value": 3.8508920598472836,
+       "z": 2.9025701402179216,
+       "passes": true
+      },
+      "flip_fraction": {
+       "value": 0.08495286281302769,
+       "z": 3.0223500000605212,
+       "passes": true
+      }
+     }
+    },
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": true,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "wild_type_passes": true,
+    "local_search_presence": {
+     "lower_bound": 3.1796353419416548,
+     "present": true
+    },
+    "chemotaxis_presence": {
+     "lower_bounds": {
+      "drift_mm_s": 0.007792073099047279,
+      "log_quintile_ratio": 0.2785079218650208
+     },
+     "present": true
+    },
+    "D": 1.6609566068486612,
+    "D_fit": 1.73687546372077,
+    "reversal_share": {
+     "value": 0.06884,
+     "windows": [
+      "local_search",
+      "chemotaxis"
+     ],
+     "reference": {
+      "source": "Roberts et al. 2016, off food: the share of tracked frames in the tracker's reverse state, all cohorts",
+      "value": 0.17338425496607937,
+      "frames": 2048900
+     }
+    },
+    "small_lawn_values": {
+     "roaming_fraction": 0.2498931503767855,
+     "roaming_bout_s": 268.9830508474576,
+     "dwelling_bout_s": 901.2432432432432,
+     "exits_per_on_lawn_hour": 0.6721403666629175,
+     "pre_exit_enrichment": 0.12573625546410072,
+     "time_on_lawn": 0.9724379306573335
+    },
+    "mutants": {
+     "tph-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": 0.23569364123410247,
+        "z": -0.6794577072568597,
+        "scale": 0.051216374312670475,
+        "direction": 1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": -0.03760221405247577,
+        "z": -0.39198585092434846,
+        "scale": 0.27973247318303884,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "pdfr-1": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.052226326063113004,
+        "z": 0.015070743326037672,
+        "scale": 0.04488581024848594,
+        "direction": 0,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.025109819135339273,
+        "z": -0.058924922612735055,
+        "scale": 0.2621862945677769,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     },
+     "tax-4": {
+      "statistics": {
+       "roaming_fraction": {
+        "delta": -0.024935247495977225,
+        "z": 2.043935842376489,
+        "scale": 0.044582397092487396,
+        "direction": -1,
+        "passes": true
+       },
+       "exits_per_on_lawn_hour": {
+        "delta": 0.17162243313683667,
+        "z": -0.3746252876936217,
+        "scale": 0.3580865566071098,
+        "direction": 0,
+        "passes": true
+       }
+      },
+      "passes": true
+     }
+    }
+   }
+  },
+  "wild_type_passing": 3,
+  "mutants_passing": {
+   "tph-1": 5,
+   "pdfr-1": 5,
+   "tax-4": 5
+  },
+  "passed": true
+ }
+}
