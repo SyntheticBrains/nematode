@@ -97,6 +97,13 @@ Usage::
     uv run python scripts/analysis/c2_encoder_probe.py readiness
     uv run python scripts/analysis/c2_encoder_probe.py read
     uv run python scripts/analysis/c2_encoder_probe.py smoke
+
+**reproduce** converts the probe procedure's passing answer (Logbook 129's ``grade_nudged.json``)
+into the package's encoding, entry by entry by name (:func:`package_vector`), with the procedure's
+options (:data:`PROCEDURE_SETTINGS`). It checks that the package's forward computes what the probe's
+patched forward did: every output within 1e-5 on one reference episode's recorded states on
+Scheer's small lawn and one on food removal, and every step's primitive the same. The answer's
+five-population grade, on the probe's own populations, is reported beside the probe's, not gated.
 """
 
 from __future__ import annotations
@@ -1745,6 +1752,318 @@ def _speed_noise_control(workers: int) -> int:
     return 0 if record["passes"] else 1
 
 
+# ---------------------------------------------------------------------------------------------
+# The fitting procedure's options, and the probe answer's reproduction
+# ---------------------------------------------------------------------------------------------
+
+# The procedure's encoder: per-ligand tying, the soft-capped readout with pool centres, the graded
+# box with an inhibition floor, PDFR-1's and SER-5's cited signs, and slow speed noise.
+PROCEDURE_SETTINGS: dict[str, Any] = {
+    "encoder_modulator_tying": "per_ligand",
+    "encoder_readout": "soft_cap",
+    "encoder_pool_centres": True,
+    "encoder_box": "graded",
+    "encoder_inhibition_floor": 0.09,
+    "encoder_speed_noise": "ou",
+    "modulator_receptor_signs": ["pdfr-1", "ser-5"],
+}
+PROCEDURE_OPTIONS: dict[str, Any] = {
+    "speed_noise": True,
+    "box": "graded",
+    "inhibition_floor": 0.09,
+    "pool_centres": True,
+}
+PROBE_ANSWER_PATH = (
+    _REPO
+    / "docs/experiments/logbooks/supporting/129-c2-wild-type-and-mutants/probes/grade_nudged.json"
+)
+REPRODUCE_PATH = (
+    _REPO / "docs/experiments/logbooks/supporting/130-c2-encoder-procedure/reproduce.json"
+)
+REPRODUCE_GRADE_BASE = 795_000_000
+REPRODUCE_REFERENCE_SEED = 99_860_000
+REPRODUCE_STEPS = {"scheer_lawn": 2_400, "food_removal_lopezcruz": 5_400}
+REPRODUCE_TOLERANCE = 1e-5
+_PROBE_CAP = 2.0
+_PROBE_WIRING = ("wiring.excitatory", "wiring.inhibitory", "wiring.gap")
+
+
+def _probe_layout() -> tuple[list[Any], Any]:
+    """Return the probe scripts' base entries (per-ligand, default layer) and their timescale."""
+    from quantumnematode.connectome import encoder as enc
+
+    base = enc.encoder_entries(layer_spec(), "per_ligand")
+    tau = enc.encoder_entries(layer_spec(), "per_ligand", speed_noise=True)[-1]
+    return base, tau
+
+
+def probe_values(probe_z: list[float] | np.ndarray) -> dict[str, float]:
+    """Return each value a probe-layout vector writes, by entry name.
+
+    The probe scripts' vectors carry the base entries under per-ligand tying on the default layer,
+    with the three wiring scales on [0, 0.75] and the sensory gains on [-2, 2] by their own map,
+    then the four pool centres (-1 + 2u), then the speed noise's timescale.
+    """
+    from quantumnematode.connectome import encoder as enc
+
+    base, tau = _probe_layout()
+    n = len(base)
+    values: dict[str, float] = {}
+    for entry, u in zip(base, probe_z[:n], strict=True):
+        if entry.name in _PROBE_WIRING:
+            values[entry.name] = 0.75 * float(u)
+        elif entry.name.startswith("sensory."):
+            values[entry.name] = -2.0 + 4.0 * float(u)
+        else:
+            values[entry.name] = entry.value(float(u))
+    for pool, u in zip(enc.POOLS, probe_z[n : n + len(enc.POOLS)], strict=True):
+        values[f"readout.centre.{pool}"] = -1.0 + 2.0 * float(u)
+    values[enc.SPEED_NOISE_ENTRY] = tau.value(float(probe_z[n + len(enc.POOLS)]))
+    return values
+
+
+def package_vector(probe_z: list[float] | np.ndarray, entries: list[Any]) -> np.ndarray:
+    """Map a probe-layout vector onto a package encoder's entries, entry by entry by name.
+
+    A couple signed at load from a cited receptor coupling is named
+    ``modulator.fixed.<ligand>.<receptor>`` in the package; in the probe it was the ligand's fitted
+    group, ``modulator.fitted.<ligand>``, held non-negative by a bound. Its value moves onto the
+    fixed-strength log range, raised to that range's floor if below it.
+    """
+    values = probe_values(probe_z)
+    out = []
+    for entry in entries:
+        if entry.name in values:
+            value = values[entry.name]
+        else:
+            kind, ligand = entry.name.split(".")[1:3]
+            if kind != "fixed":
+                msg = f"no probe value for {entry.name}"
+                raise KeyError(msg)
+            value = max(values[f"modulator.fitted.{ligand}"], entry.low)
+        out.append(min(1.0, max(0.0, entry.unit(value))))
+    return np.asarray(out)
+
+
+def _probe_brain(probe_z: list[float] | np.ndarray) -> Any:  # noqa: ANN401 - a brain
+    """Return the probe scripts' brain: per-ligand tying and slow noise, the probe vector written."""
+    import torch
+    from quantumnematode.connectome import encoder as enc
+
+    brain = encoded_brain((), encoder_modulator_tying="per_ligand", encoder_speed_noise="ou")
+    base, _ = _probe_layout()
+    n = len(base)
+    units = []
+    for entry, u in zip(base, probe_z[:n], strict=True):
+        if entry.name in _PROBE_WIRING:
+            units.append(float(u) * 0.75 / 1.5)
+        elif entry.name.startswith("sensory."):
+            units.append((-2.0 + 4.0 * float(u) + 5.0) / 10.0)
+        else:
+            units.append(float(u))
+    units.append(float(probe_z[n + len(enc.POOLS)]))
+    enc.write_encoder(brain, units)
+    centres = np.asarray(probe_z[n : n + len(enc.POOLS)], dtype=np.float32)
+    brain.topology.probe_centres = torch.from_numpy(-1.0 + 2.0 * centres)
+    return brain
+
+
+def _probe_forward(self: Any, h: Any, modulators: Any) -> tuple[Any, Any]:  # noqa: ANN401 - the topology and its tensors
+    """Settle and read out as the probe scripts' patched forward did: centres, readout, then cap."""
+    import torch
+    from quantumnematode.brain.arch import connectome_ppo as cp
+
+    encoder = self.encoder
+    recurrent = encoder.chemical() + self.g_gap * encoder.gap_scale()
+    held = self._held_current(modulators)
+    for _ in range(self.forward_pass_depth):
+        preact = h @ recurrent
+        if held is not None:
+            preact = preact + held
+        h = cp._settling_tanh(preact)
+    pooled = self._pool_motor(h) - self.probe_centres
+    mean = pooled @ self.readout.T + self.readout_bias
+    return _PROBE_CAP * torch.tanh(mean / _PROBE_CAP), h
+
+
+def _with_forward(probe: bool) -> Any:  # noqa: ANN401, FBT001 - a context manager; the probe's or the package's
+    """Return a context in which the topology's encoded forward is the probe's when ``probe``."""
+    import contextlib
+
+    from quantumnematode.brain.arch import connectome_ppo as cp
+
+    @contextlib.contextmanager
+    def swapped() -> Any:  # noqa: ANN401 - a generator context
+        original = cp.ConnectomeTopology._forward_encoded
+        if probe:
+            cp.ConnectomeTopology._forward_encoded = _probe_forward  # type: ignore[method-assign]
+        try:
+            yield
+        finally:
+            cp.ConnectomeTopology._forward_encoded = original  # type: ignore[method-assign]
+
+    return swapped()
+
+
+def _episode(brain: Any, protocol: str, *, probe: bool) -> Any:  # noqa: ANN401 - a brain and its episode
+    """Run one reference episode, with the probe's forward in place when ``probe``."""
+    from quantumnematode.evaluation.reference import run_reference
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    config = load_simulation_config(str(FORAGING / f"{bg.ARMS[ARM]}_assay_{protocol}.yml"))
+    with _with_forward(probe):
+        return run_reference(config, brain, REPRODUCE_REFERENCE_SEED, REPRODUCE_STEPS[protocol])
+
+
+def _forward_outputs(brain: Any, states: Any, *, probe: bool) -> np.ndarray:  # noqa: ANN401 - a brain and its states
+    """Return the pre-squash outputs a brain's forward gives on recorded states."""
+    import torch
+
+    topology = brain.topology
+    with _with_forward(probe), torch.no_grad():
+        mean, _ = topology.forward_with_hidden_batched(
+            states[:, : topology.n_food_features],
+            modulators=brain._unpack_modulators(states),
+        )
+    return mean.numpy()
+
+
+def reproduce_forwards(probe_z: list[float] | np.ndarray) -> dict[str, Any]:
+    """Compare the package's forward with the probe's on the probe answer, episode by episode."""
+    import torch
+    from quantumnematode.connectome import encoder as enc
+
+    probe = _probe_brain(probe_z)
+    package = encoded_brain((), **PROCEDURE_SETTINGS)
+    enc.write_encoder(package, package_vector(probe_z, list(package.topology.encoder.entries)))
+    out: dict[str, Any] = {}
+    for protocol in REPRODUCE_STEPS:
+        theirs = _episode(probe, protocol, probe=True)
+        ours = _episode(package, protocol, probe=False)
+        states = torch.from_numpy(np.asarray(theirs.features, dtype=np.float32))
+        diff = np.abs(
+            _forward_outputs(package, states, probe=False)
+            - _forward_outputs(probe, states, probe=True),
+        )
+        same = [
+            str(a.primitive) == str(b.primitive)
+            for a, b in zip(theirs.behaviour, ours.behaviour, strict=True)
+        ]
+        out[protocol] = {
+            "steps": len(states),
+            "max_output_difference": float(diff.max()),
+            "primitives_identical": all(same),
+            "first_differing_step": None if all(same) else same.index(False),
+        }
+    out["passes"] = all(
+        r["max_output_difference"] <= REPRODUCE_TOLERANCE and r["primitives_identical"]
+        for r in out.values()
+    )
+    return out
+
+
+def _procedure_controller(z: np.ndarray, mutant: str | None = None) -> Callable[[Path], Any]:
+    """Write a package vector, or a mutant's encoding of it, into a procedure brain."""
+    from quantumnematode.connectome import encoder as enc
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain = encoded_brain(KNOCKOUT_GENES.get(mutant or "", ()), **PROCEDURE_SETTINGS)
+    spec = brain.topology.modulator_spec
+    tax4 = mutant == "tax-4"
+    enc.write_encoder(
+        brain,
+        enc.tax4_vector(spec, z, "per_ligand", **PROCEDURE_OPTIONS) if tax4 else z,
+    )
+    return lambda _path: BatchedConnectome(brain)
+
+
+def _reproduce_wild(item: tuple[int, list[float]]) -> tuple[int, dict[str, Any]]:
+    g, z = item
+    bands = bg.load_bands_v4()
+    seeds = population_seeds(REPRODUCE_GRADE_BASE, g)
+    controller_of = _procedure_controller(np.asarray(z))
+    populations, chemotaxis = bg.simulate_v2(ARM, controller_of, seeds, bands)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=True)
+    clf = bg.classifier(bands)
+    return g, nr._finite(
+        {
+            "wild_type_passes": graded["wild_type_passes"],
+            "D": graded["D"],
+            "fails": {
+                f"{f}/{n}": r["z"]
+                for f, rs in graded["families"].items()
+                for n, r in rs.items()
+                if not r["passes"]
+            },
+            "small_lawn_values": bg.family_values("small_lawn", populations["small_lawn"], clf),
+        },
+    )
+
+
+def _reproduce_mutant(
+    item: tuple[int, str, list[float], dict[str, float]],
+) -> tuple[int, str, bool]:
+    g, mutant, z, wild = item
+    bands = bg.load_bands_v4()
+    clf = bg.classifier(bands)
+    seeds = population_seeds(REPRODUCE_GRADE_BASE, g)
+    populations, _ = bg.simulate_v2(
+        ARM,
+        _procedure_controller(np.asarray(z), mutant),
+        seeds,
+        bands,
+        assays=("small_lawn",),
+    )
+    values = bg.family_values("small_lawn", populations["small_lawn"], clf)
+    return g, mutant, bool(mutant_reading(mutant, wild, values, bands, ANIMALS)["passes"])
+
+
+def _reproduce(workers: int) -> int:
+    """Reproduce the probe answer in the package: the forward parity, then a five-population grade."""
+    probe_record = json.loads(PROBE_ANSWER_PATH.read_text())
+    probe_z = probe_record["answer"]
+    forwards = reproduce_forwards(probe_z)
+    print(json.dumps(forwards, indent=2), flush=True)
+    package = encoded_brain((), **PROCEDURE_SETTINGS)
+    z = package_vector(probe_z, list(package.topology.encoder.entries)).tolist()
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        wilds = dict(pool.map(_reproduce_wild, [(g, z) for g in range(GRADE_POPULATIONS)]))
+        jobs = [(g, m, z, wilds[g]["small_lawn_values"]) for g in wilds for m in MUTANTS]
+        for g, mutant, passes in pool.map(_reproduce_mutant, jobs):
+            wilds[g].setdefault("mutants", {})[mutant] = passes
+    theirs = probe_record["grade"]["populations"]
+    grade = {
+        str(g): {
+            "package": {k: v for k, v in w.items() if k != "small_lawn_values"},
+            "probe": {
+                "wild_type_passes": theirs[str(g)]["wild_type_passes"],
+                "D": theirs[str(g)]["D"],
+                "mutants": {m: r["passes"] for m, r in theirs[str(g)]["mutants"].items()},
+            },
+        }
+        for g, w in sorted(wilds.items())
+    }
+    record = {
+        "description": (
+            "Description: the probe procedure's passing answer (Logbook 129, grade_nudged.json) "
+            "converted into the package encoding. The forward parity is the gate; the "
+            "five-population grade, on the probe's own populations, is reported beside the probe's."
+        ),
+        "settings": PROCEDURE_SETTINGS,
+        "forwards": forwards,
+        "grade": grade,
+        "package_wild_type_passing": sum(bool(w["wild_type_passes"]) for w in wilds.values()),
+        "probe_wild_type_passing": sum(bool(t["wild_type_passes"]) for t in theirs.values()),
+    }
+    _write(REPRODUCE_PATH, record)
+    print(
+        f"forward parity {forwards['passes']} | wild type: package "
+        f"{record['package_wild_type_passing']} of 5, probe {record['probe_wild_type_passing']}",
+        flush=True,
+    )
+    return 0 if forwards["passes"] else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI: the cost pilot, the feasibility check, the readiness probe, its reading, a smoke."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -1765,6 +2084,7 @@ def main(argv: list[str] | None = None) -> int:
             "readiness",
             "read",
             "smoke",
+            "reproduce",
         ),
     )
     parser.add_argument("--workers", type=int, default=16)
@@ -1784,6 +2104,7 @@ def main(argv: list[str] | None = None) -> int:
         "readiness": lambda: _readiness(args.workers),
         "read": _read,
         "smoke": lambda: _smoke(args.workers),
+        "reproduce": lambda: _reproduce(args.workers),
     }
     return stages[args.stage]()
 

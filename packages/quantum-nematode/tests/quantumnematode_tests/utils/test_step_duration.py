@@ -488,12 +488,16 @@ _PINNED_FIELD_COUNTS = {
 # sign table applies, structure, so it is not step-coupled. ``encoder_speed_noise`` chooses the
 # speed noise's process; its timescale is the encoder's, in worm-seconds, its correlation taken at
 # the converted ``modulator_step_seconds``, which the loader refuses unless it comes to the step.
+# Audited 2026-11-08: ``encoder_readout``, ``encoder_pool_centres``, ``encoder_box`` and
+# ``encoder_inhibition_floor`` shape the encoder's readout and its unit box, and
+# ``modulator_receptor_signs`` chooses which cited receptor signs the layer applies: all structure,
+# none step-coupled.
 _EXPECTED_FIELD_COUNTS = {
     "ForagingConfig": 22,
     "LawnConfig": 14,
     "SensingConfig": 20,
     "RewardConfig": 15,
-    "ConnectomePPOBrainConfig": 97,
+    "ConnectomePPOBrainConfig": 102,
     "MLPPPOBrainConfig": 68,
 }
 

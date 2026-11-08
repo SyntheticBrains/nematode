@@ -266,6 +266,37 @@ def test_the_slow_noise_brain_matches_the_per_step_brain() -> None:
     assert np.corrcoef(speed[:-1], speed[1:])[0, 1] > 0.5
 
 
+@pytest.mark.slow
+def test_the_procedure_brain_matches_the_per_step_brain() -> None:
+    """Covers the batched-evaluation scenario "The two runners agree" with the procedure's options.
+
+    The encoded wild type under per-ligand tying with the soft-capped readout, pool centres, the
+    graded box, the inhibition floor, PDFR-1's and SER-5's cited signs and slow speed noise, on
+    Scheer's small lawn, seeds 5001-5032: features, action means and derivatives within 1e-5 over
+    50 steps, the sampled actions within 1e-5, and trajectories over 300.
+    """
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain, config = p.encoded_brain(
+        "scheer_lawn",
+        encoder_modulator_tying="per_ligand",
+        encoder_readout="soft_cap",
+        encoder_pool_centres=True,
+        encoder_box="graded",
+        encoder_inhibition_floor=0.09,
+        encoder_speed_noise="ou",
+        modulator_receptor_signs=["pdfr-1", "ser-5"],
+    )
+    assert brain.topology.encoder.pool_centres is not None
+    refs = p.references(config, brain, _STEPS, _ENCODED_SEEDS)
+    batched = BatchedConnectome(brain)
+    actions = p.logging_actions(batched)
+    trajectories, log = p.run_batched(config, batched, _ENCODED_SEEDS, _STEPS)
+    assert p.state_mismatches(refs, log, _STATE_STEPS) == []
+    assert p.action_mismatches(refs, actions, _STATE_STEPS) == []
+    assert p.trajectory_mismatches(refs, trajectories, log) == []
+
+
 def test_a_slow_noise_animal_is_the_same_alone_and_in_a_batch() -> None:
     """Covers the batched-evaluation scenario "An animal alone matches the animal in a batch".
 

@@ -229,3 +229,31 @@ def test_the_speed_noise_control_reads_undefined_statistics_as_failing() -> None
     reading = probe.read_speed_noise_control(none, scales, -0.5)
     assert reading["best_tau_s"] is None
     assert not reading["passes_rise"]
+
+
+def test_a_probe_vector_maps_onto_the_package_by_name() -> None:
+    """Covers "The probe procedure's answer reproduces in the package": the converter's map.
+
+    A probe-layout vector at every unit 0.5 (wiring scales 0.375, sensory gains 0, PDF's and ser-5's
+    signed groups 0, the centres 0) lands on the package's procedure entries by name: the graded
+    entries keep their unit, the inhibitory scale is re-based on its floor, the cited groups sit at
+    their log range's floor, and the timescale and centres keep theirs.
+    """
+    brain = probe.encoded_brain((), **probe.PROCEDURE_SETTINGS)
+    entries = list(brain.topology.encoder.entries)
+    base, _ = probe._probe_layout()
+    z = probe.package_vector(np.full(len(base) + 5, 0.5), entries)
+    unit = {e.name: float(u) for e, u in zip(entries, z, strict=True)}
+    assert len(z) == len(entries) == 137
+    assert unit["wiring.excitatory"] == pytest.approx(0.5)
+    assert unit["wiring.inhibitory"] == pytest.approx((0.375 - 0.09) / (0.75 - 0.09))
+    assert unit["sensory.AWC.concentration"] == pytest.approx(0.5)
+    for name in (
+        "modulator.fixed.pdf-1.pdfr-1",
+        "modulator.fixed.pdf-2.pdfr-1",
+        "modulator.fixed.serotonin.ser-5",
+    ):
+        assert unit[name] == pytest.approx(0.0)
+    assert unit["modulator.fixed.serotonin"] == pytest.approx(0.5)
+    assert unit["timescale.speed_noise"] == pytest.approx(0.5)
+    assert all(unit[f"readout.centre.{p}"] == pytest.approx(0.5) for p in ("VB", "DB", "VA", "DA"))

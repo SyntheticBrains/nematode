@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypedDict, Unpack
 
 import numpy as np
 import torch
@@ -81,6 +81,8 @@ POOLS: tuple[str, ...] = ("VB", "DB", "VA", "DA")
 TIMESCALE_POOLS: tuple[str, ...] = ("monoamine", "neuropeptide")
 Tying = Literal["per_couple", "per_ligand"]
 Kind = Literal["linear", "log"]
+Box = Literal["wide", "graded"]
+Readout = Literal["linear", "soft_cap"]
 
 # Scales of 0.5-0.75 leave the settled network graded; at 1.5 more than half of it saturates.
 _WIRING_RANGE = (0.0, 1.5)
@@ -95,6 +97,24 @@ _TIMESCALE_RANGE_S = (10.0, 3000.0)
 # upper end 0.997; the longest stays below every assay phase.
 _SPEED_NOISE_TIMESCALE_RANGE_S = (0.25, 300.0)
 SPEED_NOISE_ENTRY = "timescale.speed_noise"
+# The graded box keeps every wiring scale at or below the graded range's top, and the sensory
+# gains small enough that a strongly driven sensory layer does not saturate the network behind it.
+_GRADED_WIRING_RANGE = (0.0, 0.75)
+_GRADED_SENSORY_RANGE = (-2.0, 2.0)
+# A pool centre is subtracted from a pooled motor rate, which lies in [-1, 1].
+_CENTRE_RANGE = (-1.0, 1.0)
+# The soft-capped readout's bound on each output's pre-squash value: within it the action squash
+# stays responsive, so no output can be held constant by driving it off the squash.
+READOUT_CAP = 2.0
+
+
+class EntryOptions(TypedDict, total=False):
+    """The options that change the encoder's entries, as ``encoder_entries`` takes them."""
+
+    speed_noise: bool
+    box: Box
+    inhibition_floor: float | None
+    pool_centres: bool
 
 
 @dataclass(frozen=True)
@@ -147,23 +167,47 @@ def _tied_name(spec: LayerSpec, index: int) -> str:
     row = spec.rows[index]
     if row.kind == "drive":
         return f"drive.{spec.drives[row.drive]}"
+    if row.sign_source is not None:
+        # A couple signed from a cited receptor coupling keeps a strength of its own, so its
+        # magnitude is not tied to the ligand's other fixed couples.
+        return f"fixed.{spec.ligands[row.ligand]}.{row.receptor}"
     kind = "fixed" if row.sign is not None else "fitted"
     return f"{kind}.{spec.ligands[row.ligand]}"
 
 
-def encoder_entries(
+def encoder_entries(  # noqa: PLR0913 - the layer, the tying and each option
     spec: LayerSpec,
     tying: Tying = "per_couple",
     *,
     speed_noise: bool = False,
+    box: Box = "wide",
+    inhibition_floor: float | None = None,
+    pool_centres: bool = False,
 ) -> list[EncoderEntry]:
     """Return every encoder parameter, in the fixed order a vector carries them.
 
-    With ``speed_noise`` the speed noise's timescale is appended last, so a vector without it is a
-    prefix of one with it.
+    With ``speed_noise`` the speed noise's timescale is appended after the base entries, and with
+    ``pool_centres`` the four pool centres after that, so a vector without an option is a prefix of
+    one with it. ``box="graded"`` narrows the wiring scales and the sensory gains;
+    ``inhibition_floor`` raises the inhibitory scale's lower bound.
     """
+    wiring_range = _GRADED_WIRING_RANGE if box == "graded" else _WIRING_RANGE
+    sensory_range = _GRADED_SENSORY_RANGE if box == "graded" else _SENSORY_RANGE
+    inhibitory_range = wiring_range
+    if inhibition_floor is not None:
+        if not wiring_range[0] <= inhibition_floor < wiring_range[1]:
+            msg = (
+                f"inhibition_floor {inhibition_floor!r} lies outside the {box} box's wiring range "
+                f"[{wiring_range[0]}, {wiring_range[1]})"
+            )
+            raise ValueError(msg)
+        inhibitory_range = (inhibition_floor, wiring_range[1])
     entries = [
-        EncoderEntry(f"wiring.{name}", "wiring", *_WIRING_RANGE)
+        EncoderEntry(
+            f"wiring.{name}",
+            "wiring",
+            *(inhibitory_range if name == "inhibitory" else wiring_range),
+        )
         for name in ("excitatory", "inhibitory", "gap")
     ]
     entries += [
@@ -171,13 +215,12 @@ def encoder_entries(
         for group in TRANSMITTER_GROUPS
     ]
     entries += [
-        EncoderEntry(f"sensory.{cls}.{feature}", "sensory", *_SENSORY_RANGE)
+        EncoderEntry(f"sensory.{cls}.{feature}", "sensory", *sensory_range)
         for cls in AMPHID_CLASSES
         for feature in _CHEMICAL_FEATURES
     ]
     entries += [
-        EncoderEntry(f"sensory.{cls}.contact", "sensory", *_SENSORY_RANGE)
-        for cls in CONTACT_CLASSES
+        EncoderEntry(f"sensory.{cls}.contact", "sensory", *sensory_range) for cls in CONTACT_CLASSES
     ]
     entries += [
         EncoderEntry(f"readout.{output}.{pool}", "readout", *_READOUT_RANGE)
@@ -209,39 +252,40 @@ def encoder_entries(
                 kind="log",
             ),
         )
+    if pool_centres:
+        entries += [
+            EncoderEntry(f"readout.centre.{pool}", "readout", *_CENTRE_RANGE) for pool in POOLS
+        ]
     return entries
 
 
 def encoder_parameters(
     spec: LayerSpec,
     tying: Tying = "per_couple",
-    *,
-    speed_noise: bool = False,
+    **options: Unpack[EntryOptions],
 ) -> list[str]:
     """Return the encoder parameters' names, in the order a vector carries them."""
-    return [entry.name for entry in encoder_entries(spec, tying, speed_noise=speed_noise)]
+    return [entry.name for entry in encoder_entries(spec, tying, **options)]
 
 
 def box_centre(
     spec: LayerSpec,
     tying: Tying = "per_couple",
-    *,
-    speed_noise: bool = False,
+    **options: Unpack[EntryOptions],
 ) -> np.ndarray:
     """Return the unit box's centre, every coordinate 0.5."""
-    return np.full(len(encoder_entries(spec, tying, speed_noise=speed_noise)), 0.5)
+    return np.full(len(encoder_entries(spec, tying, **options)), 0.5)
 
 
 def tax4_vector(
     spec: LayerSpec,
     z: Sequence[float] | np.ndarray,
     tying: Tying = "per_couple",
-    *,
-    speed_noise: bool = False,
+    **options: Unpack[EntryOptions],
 ) -> np.ndarray:
     """Return a vector's tax-4 encoding: the tax-4 classes' sensory gains at 0, all else kept."""
     out = np.asarray(z, dtype=np.float64).copy()
-    for k, entry in enumerate(encoder_entries(spec, tying, speed_noise=speed_noise)):
+    for k, entry in enumerate(encoder_entries(spec, tying, **options)):
         if entry.block == "sensory" and entry.name.split(".")[1] in TAX4_CLASSES:
             out[k] = entry.unit(0.0)
     return out
@@ -356,7 +400,7 @@ class CompactEncoder(nn.Module):
     timescales_s: torch.Tensor
     speed_noise_timescale_s: torch.Tensor
 
-    def __init__(  # noqa: PLR0913 - the topology's wiring, its layer, the tying and the option
+    def __init__(  # noqa: PLR0913 - the topology's wiring, its layer, the tying and the options
         self,
         connectome: Connectome,
         neuron_index: Mapping[str, int],
@@ -364,15 +408,21 @@ class CompactEncoder(nn.Module):
         spec: LayerSpec,
         tying: Tying = "per_couple",
         *,
-        speed_noise: bool = False,
+        readout: Readout = "linear",
+        **options: Unpack[EntryOptions],
     ) -> None:
         super().__init__()
         n = len(neuron_index)
         self.n_neurons = n
         self.tying: Tying = tying
         self.spec = spec
-        self.speed_noise = speed_noise
-        self.entries = encoder_entries(spec, tying, speed_noise=speed_noise)
+        self.speed_noise = options.get("speed_noise", False)
+        self.readout_mode: Readout = readout
+        self.entries = encoder_entries(spec, tying, **options)
+        # Subtracted from the pooled motor rates before the readout; written from the vector.
+        self.pool_centres: nn.Parameter | None = (
+            nn.Parameter(torch.zeros(len(POOLS))) if options.get("pool_centres", False) else None
+        )
         counts = np.zeros((n, n), dtype=np.float64)
         for syn in connectome.chemical_synapses:
             counts[neuron_index[syn.pre], neuron_index[syn.post]] = float(syn.weight)
@@ -424,11 +474,11 @@ class CompactEncoder(nn.Module):
         monoamine = [name in MONOAMINES for name in spec.ligands]
         self.register_buffer("monoamine_mask", torch.tensor(monoamine, dtype=torch.bool))
         self.register_buffer("timescales_s", torch.full((2,), 60.0))
-        if speed_noise:
+        if self.speed_noise:
             # Registered only with the option, so a default encoder's state is unchanged. Held, not
             # learned: a learned timescale would change what each stored previous step means.
-            centre = self.entries[-1].value(0.5)
-            self.register_buffer("speed_noise_timescale_s", torch.tensor(centre))
+            entry = next(e for e in self.entries if e.name == SPEED_NOISE_ENTRY)
+            self.register_buffer("speed_noise_timescale_s", torch.tensor(entry.value(0.5)))
 
     def chemical(self) -> torch.Tensor:
         """Return the ``(N, N)`` chemical weights, indexed ``[pre, post]``."""
@@ -492,6 +542,8 @@ class CompactEncoder(nn.Module):
         params = [self.wiring, self.unsigned, self.sensory]
         if self.tying == "per_ligand":
             params.append(self.tied_strength)
+        if self.pool_centres is not None:
+            params.append(self.pool_centres)
         return params
 
 
@@ -556,11 +608,11 @@ def write_encoder(brain: object, z: Sequence[float] | np.ndarray) -> None:
                     strengths.to(device),
                 ),
             )
-        encoder.timescales_s.copy_(
-            torch.tensor(values[cursor : cursor + len(TIMESCALE_POOLS)], dtype=torch.float32),
-        )
+        encoder.timescales_s.copy_(take(len(TIMESCALE_POOLS)))
         if encoder.speed_noise:
-            encoder.speed_noise_timescale_s.copy_(torch.tensor(values[-1], dtype=torch.float32))
+            encoder.speed_noise_timescale_s.copy_(take(1)[0])
+        if encoder.pool_centres is not None:
+            encoder.pool_centres.copy_(take(len(POOLS)))
     step = brain.config.modulator_step_seconds  # type: ignore[attr-defined]
     brain._modulator_decay = encoder.decay(step)  # type: ignore[attr-defined]  # noqa: SLF001 - the brain's own decay
     brain._speed_noise_rho = encoder.speed_noise_rho(step)  # type: ignore[attr-defined]  # noqa: SLF001 - the brain's own correlation
@@ -593,6 +645,8 @@ def read_encoder(brain: object) -> np.ndarray:
         ]
         if encoder.speed_noise:
             parts.append(encoder.speed_noise_timescale_s.reshape(1))
+        if encoder.pool_centres is not None:
+            parts.append(encoder.pool_centres)
         values = np.concatenate([p.detach().cpu().double().numpy().ravel() for p in parts])
     return np.array(
         [entry.unit(float(v)) for entry, v in zip(encoder.entries, values, strict=True)],

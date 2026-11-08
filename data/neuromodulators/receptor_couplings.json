@@ -1,0 +1,563 @@
+{
+ "description": "Each receptor of the neuromodulator layer's fitted couples, with its G-protein coupling and the sign it implies under receptor_signs.json's rule (Galpha-i/o-coupled and ligand-gated Cl- channels -1, Galpha-q- or Galpha-s-coupled +1), where a cited assay without a promiscuous or chimeric G protein, or in vivo genetics, establishes it; otherwise the sign is null. 'verified' records that the quote was checked verbatim against the source, with the date and the source read. A brain applies a receptor's sign only when it names the receptor in modulator_receptor_signs and the entry is signed and verified.",
+ "rule": {
+  "Galpha-i/o": -1,
+  "Galpha-q": 1,
+  "Galpha-s": 1,
+  "Cl- channel": -1
+ },
+ "receptors": {
+  "aex-2": {
+   "coupling": "Galpha-s",
+   "sign": 1,
+   "evidence": "in vivo",
+   "citation": "Mahoney et al. 2008, PNAS 105:16350 (PMID 18852466, PMC2570992)",
+   "quote": "We found that aex-2 functions in the nervous system and activates a Gsα signaling pathway to regulate defecation.",
+   "note": "Genetic epistasis: gsa-1(ce81) Gαs gain of function 'completely suppresses the Exp defects in aex-2 mutants', while egl-30(js126) Gαq gain of function and dgk-1 loss 'have only mild effects'; GABAergic acy-1(gf) also suppresses. Wang & Sieburth 2013 (PLoS Genet 9:e1003831, PMC3784516) places PKA downstream. The only heterologous assay (Wang et al. 2013 Curr Biol 23:746, PMC3651789, NLP-40 ligand) used CHO cells with promiscuous Gα16, so it does not bear on coupling. Gain-of-function suppression shows Gαs acts downstream, not that AEX-2 binds Gαs directly.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2570992/ (Mahoney et al. 2008 PNAS, PMC HTML full text)"
+   }
+  },
+  "ckr-1": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "both",
+   "citation": "Chen et al. 2022, Cell Rep 38:110330 (PMID 35139370); quote from its bioRxiv preprint doi:10.1101/2021.12.08.471862",
+   "quote": "We demonstrate in vivo and in vitro that CKR-1 is a Gαq protein coupled receptor for NLP-18.",
+   "note": "In vivo: of four Gα subtypes only egl-30 (Gαq) was required for full omega turns, egl-8 (PLCβ) mutants matched, and ckr-1 loss did not enhance egl-30 or egl-8 defects (same pathway). Heterologous: NLP-18 evoked CKR-1-dependent 'outward Ca2+-gated chloride currents' in Xenopus oocytes injected with CKR-1 cRNA alone (no promiscuous G protein). Quote and assay details read in the preprint (the published Cell Rep full text could not be opened; its abstract confirms the oocyte currents). The layer's ligand is NLP-12; Ramachandran et al. 2021 (eLife, PMC8626090) showed NLP-12 activates CKR-1 only in CHO/Gα16 cells. Coupling is taken as a receptor property.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.biorxiv.org/content/10.1101/2021.12.08.471862v1.full (bioRxiv preprint of Chen et al. 2022 Cell Rep, cited as the quote's source)"
+   }
+  },
+  "ckr-2": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "in vivo",
+   "citation": "Hu, Vashlishan-Murray & Kaplan 2015, J Neurosci 35:1038 (PMID 25609620, PMC4300317)",
+   "quote": "The egl-30 and ckr-2 single mutants were both resistant to aldicarb-induced paralysis but double mutants did not exhibit additive defects. These results suggest that NLP-12 stimulates ACh release by activating EGL-30.",
+   "note": "Also: eat-16 (RGS for EGL-30) increased mEPSC rate, reduced in eat-16; ckr-2 doubles; egl-30 and egl-8 required for NLP-12/aldicarb potentiation of evoked release, rescued in cholinergic motor neurons. Caveat: potentiation of tonic release persists in egl-30(lf) and egl-8 mutants. Hu 2015 states 'CKR-2 receptors are coupled to G-proteins containing a Gαq-subunit (Janssen et al., 2008)', but the Janssen et al. 2008 Endocrinology 149:2826 full text could not be opened to check whether Gα16 was omitted, so the heterologous side is unverified.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4300317/ (Hu, Vashlishan-Murray & Kaplan 2015 J Neurosci, PMC HTML full text)"
+   }
+  },
+  "dmsr-1": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "heterologous",
+   "citation": "Rossi et al. 2025, Curr Biol 35:2183 (PMID 40273913, PMC7617803)",
+   "quote": "Altogether, these results demonstrate that DMSR-1 is a Gi/o-coupled receptor.",
+   "note": "Xenopus oocytes with GIRK channels: FLP-11-3 increased K+ current, 'abolished by pertussis toxin (PTX)', to the same extent as the Gi/o-coupled muscarinic M2 control; no promiscuous G protein. Earlier, Iannacone et al. 2017 (eLife 6:e19837, PMC5241116) assayed DMSR-1 only in CHO/Gα16 cells and inferred Gi/o indirectly from goa-1 mutants being defective in FLP-13-induced sleep (Gα downstream of the ligand, not placed on the receptor). Beets 2023's DMSR-1 oocyte GIRK recordings (Fig S12C) compared isoform EC50s and tested no PTX. No conflicting Gq/Gs report found.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7617803/fullTextXML (Rossi et al. 2025 Curr Biol, Europe PMC full text)"
+   }
+  },
+  "dmsr-2": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMID 37656621, PMC7615250)",
+   "quote": null,
+   "note": "NLP-13 receptor in the CHO/aequorin/Gα16 screen only; no second-messenger assay or Gα genetics found (searched through 2026). Fitted.",
+   "verified": false
+  },
+  "dmsr-3": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-14 receptor in the Gα16 screen only. De Fruyt et al. 2026 (Genetics 234:iyag188, PMC13732711) gives DMSR-3 a behavioural role (attenuating O2-evoked arousal) with no cAMP/PTX/GIRK assay or Gα epistasis. Fitted.",
+   "verified": false
+  },
+  "dmsr-5": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-1 receptor in the Gα16 screen only; no coupling assay found 2023–2026. Fitted.",
+   "verified": false
+  },
+  "dmsr-6": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-1 receptor in the Gα16 screen only; later papers use dmsr-6 as an expression marker. Fitted.",
+   "verified": false
+  },
+  "dmsr-7": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "heterologous",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMID 37656621, PMC7615250)",
+   "quote": "Our results thus suggest that DMSR-7 responds to diverse RFamide peptides by activating the Gi/o pathway, not the calcium pathway, which is in agreement with functional studies.",
+   "note": "Xenopus oocytes with GIRK1/2: FLP-1 activation blocked by pertussis toxin 'to the same extent as the known Gi/o-coupled muscarinic M2 receptor'; HEK CRE-luciferase: decreased cAMP for 10 FLP ligands; no Ca2+ response in CHO cells without Gα16. In vivo studies (Marquina-Solis et al. 2022 bioRxiv; Thapliyal et al. 2023) describe DMSR-7 as inhibitory but do not place it upstream of a specific Gα.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7615250/fullTextXML (Beets et al. 2023 Cell Rep, Europe PMC full text)"
+   }
+  },
+  "dmsr-8": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-12 receptor in the Gα16 screen only; Pu et al. 2023 (Nat Commun, PMC10728192) reports mutant phenotypes without a Gα test. Fitted.",
+   "verified": false
+  },
+  "egl-6": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "both",
+   "citation": "Ringstad & Horvitz 2008, Nat Neurosci 11:1168 (PMID 18806786, PMC2963311); Beets et al. 2023, Cell Rep 42:113058 (PMID 37656621, PMC7615250)",
+   "quote": "Our data show that egl-6 function strongly depends on goa-1, suggesting that EGL-6 couples to a Go signaling pathway.",
+   "note": "In vivo: goa-1(lf) strongly suppresses the egg-laying defect of egl-6(n592gf) and of egl-6 overexpression (authors note some goa-1-independent signalling). Heterologous: Ringstad & Horvitz found FLP-10/FLP-17 activate EGL-6 co-expressed with GIRK1/GIRK4 in Xenopus oocytes (Gβγ readout, no PTX test); Beets 2023: 'Activation of EGL-6 inhibited cAMP signaling in response to all RFamide ligands' (HEK CRE-luciferase, no Gα16).",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=2963311 (Ringstad & Horvitz 2008 Nat Neurosci, NCBI PMC XML full text)"
+   }
+  },
+  "frpr-15": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "Single FLP-8-1 pair in the Gα16 screen; later mentions are computational. Fitted.",
+   "verified": false
+  },
+  "frpr-16": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Reilly et al. 2021, Commun Biol 4:1018 (PMID 34465863, PMC8408276)",
+   "quote": null,
+   "note": "FLP-3 (and NLP-23) activation in CHO-K1 cells 'stably expressing apo-aequorin ... and human Gα16', as in Beets 2023. Fitted.",
+   "verified": false
+  },
+  "frpr-18": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Mertens et al. 2005, Biochem Biophys Res Commun 330:967 (PMID 15809090); Larsen et al. 2013, Int J Parasitol Drugs Drug Resist 3:1 (PMID 24533288, PMC3862401)",
+   "quote": "Screening in cells lacking the promiscuous Galpha16 suggests that T19F4.1a and b are both linked to the Gq pathway.",
+   "note": "T19F4.1 = frpr-18 (FLP-2 receptor). Mertens 2005 read from the abstract only. Independently, Larsen 2013 (CHO cells transfected with the receptor alone, FLIPR Ca2+): 'Pre-incubation with U-73122 prevented Ca2+ release in response to FLP-2A, indicating that FLP-2R is coupled to the Gqα signaling pathway.' Larsen's yeast arm, which responded only in the Gq-chimera strain, uses chimeric Gα and is supportive only. Chen et al. 2016 (Genetics, PMC5105848) gives an in vivo arousal role without Gα epistasis.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=15809090 (Mertens et al. 2005 BBRC, PubMed abstract) and https://pmc.ncbi.nlm.nih.gov/articles/PMC3862401/ (Larsen et al. 2013, PMC HTML full text)"
+   }
+  },
+  "frpr-19": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Marques et al. 2021, PLoS Genet 17:e1009880 (PMID 34748554, PMC8601619)",
+   "quote": null,
+   "note": "FLP-14/FLP-8 activation in CHO-K1 cells with aequorin 'and the promiscuous Gα16 protein'; nociceptive role is behavioural. Fitted.",
+   "verified": false
+  },
+  "frpr-3": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Chew et al. 2018, Neuron 99:1233 (PMID 30146306, PMC6162336)",
+   "quote": "when frpr-3 was expressed in cells expressing aequorin but lacking Gα16, each of the FLP-20 peptides still robustly evoked calcium transients, suggesting that FRPR-3 acts through a calcium-mobilizing second-messenger pathway such as Gαq/PLCβ (Figure S4A).",
+   "note": "Ca2+/aequorin without a promiscuous G protein (Fig S4A). The Gαq assignment is inferential: no PLC inhibitor, PTX or Gα genetics. Mertens et al. 2005 (Ann NY Acad Sci 1040:410, PMID 15891075; C26F1.6) reported CHO Ca2+ responses but whether Gα16 was present could not be checked (abstract only).",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6162336/fullTextXML (Chew et al. 2018 Neuron, Europe PMC full text)"
+   }
+  },
+  "frpr-4": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Nelson et al. 2015, PLoS One 10:e0142938 (PMID 26571132, PMC4646455)",
+   "quote": null,
+   "note": "FLP-13 activation tested in CHO/mtAEQ/Gα16 cells, which the paper says report receptor activation 'regardless of the type of G-protein that couples'. Cianciulli et al. 2019 (Genetics 213:267, PMC6727807) shows FLP-13-dependent cAMP/PKA reduction in DVA but uses no frpr-4 allele, so Gα/cAMP is placed downstream of the ligand, not the receptor. Fitted.",
+   "verified": false
+  },
+  "frpr-6": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-33 receptor in the Gα16 screen only. Fitted.",
+   "verified": false
+  },
+  "frpr-7": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250); Oranth et al. 2018, Neuron 100:1414 (PMID 30392795)",
+   "quote": null,
+   "note": "FLP-1 receptor in the Gα16 screen. Oranth et al. 2018 (FLP-1/FRPR-7 in motor neurons) could not be opened (paywalled; abstract only); its abstract and secondary accounts describe no coupling assay. Unresolved pending a read of Oranth's supplementary figures. Fitted.",
+   "verified": false
+  },
+  "frpr-8": {
+   "coupling": "Galpha-s",
+   "sign": null,
+   "evidence": "heterologous",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMID 37656621, PMC7615250), Fig S8C–G",
+   "quote": "By contrast, activation of FRPR-8 increased cAMP levels, although these results were less conclusive, because three ligands evoked a significant cAMP response in control cells and three other peptides did not activate the receptor in the absence of Gα16 (Figures S8C–S8G).",
+   "note": "Sign left null deliberately: a single HEK CRE-luciferase experiment (no Gα16, 10 µM FLPs) that the authors themselves call less conclusive, because three peptides raised cAMP in empty-vector cells too; no PTX or forskolin arm, no replication, no in vivo Gα test. The coupling field records the tentative Gαs reading; if accepted, the rule would give +1. A Ca2+ test in CHO cells lacking Gα16 was also run (Fig S8F).",
+   "verified": false
+  },
+  "frpr-9": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-19 receptor in the Gα16 screen; Pu et al. 2023 gives an immunity phenotype without a Gα experiment. Fitted.",
+   "verified": false
+  },
+  "gnrr-1": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Lindemans et al. 2009, PNAS 106:1642 (PMID 19164555, PMC2629444)",
+   "quote": "Omission of Gα16 in the receptor assay suggests that Ce-GnRHR—just as insect AKH receptors and vertebrate GnRH receptors (27)—signals through a Gαq protein with IP3 and DAG as second messengers.",
+   "note": "HEK293T Fluo-4 Ca2+ assay; abstract: 'Ce-AKH-GnRH activated its receptor through a Galpha(q) protein with Ca(2+) as a second messenger.' Ligand NLP-47 (AKH-GnRH-like). No cAMP or in vivo Gα test.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2629444/ (Lindemans et al. 2009 PNAS, PMC HTML full text)"
+   }
+  },
+  "gnrr-3": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Frooninckx 2015, PhD thesis, KU Leuven, 'Novel gonadotropin-releasing hormone, tachykinin and neuromedin U neuropeptide signaling systems in Caenorhabditis elegans' (Lirias, https://lirias.kuleuven.be/server/api/core/bitstreams/5321d407-00cb-44c7-adca-fbc76e09f5d7/content)",
+   "quote": "Addition of NLP-2-1, NLP-2-2, NLP-2-3, NLP-22 or NLP-23-2 at a concentration of 10 µM elicited a strong aequorin bioluminescence response, suggesting that the receptor can couple to Gαq-type proteins (figure 3.7).",
+   "note": "Grey literature: a PhD thesis, not peer reviewed; the same laboratory's journal papers report only Galpha16 data. From a PhD thesis, not peer reviewed: the journal paper from the same lab (Van der Auwera et al. 2020, Sci Rep 10:9929, PMC7303124) reports only CHO/Gα16 data. Thesis assays: Ca2+ in CHO cells lacking Gα16 (Fig 3.7F), and a CRE-luciferase cAMP rise in HEK293T cells ('suggesting that this receptor can couple to the endogenous Gαs in these cells', Fig 3.8). Both readings are excitatory under the rule. Drop to null if thesis data are not accepted.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://lirias.kuleuven.be/server/api/core/bitstreams/5321d407-00cb-44c7-adca-fbc76e09f5d7/content (Frooninckx 2015 KU Leuven PhD thesis, 214-page PDF, downloaded and text-extracted)"
+   }
+  },
+  "gnrr-6": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Van der Auwera et al. 2020, Sci Rep 10:9929 (PMC7303124)",
+   "quote": null,
+   "note": "NLP-2/NLP-22/NLP-23 activation shown only in CHO/aequorin/Gα16 cells (Van der Auwera 2020; Beets 2023). In the Frooninckx 2015 thesis GNRR-6 showed no activity, so it has no Gα16-free test. Behavioural genetics (lethargus quiescence) without Gα epistasis. Fitted.",
+   "verified": false
+  },
+  "nmur-1": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Frooninckx 2015, PhD thesis, KU Leuven, 'Novel gonadotropin-releasing hormone, tachykinin and neuromedin U neuropeptide signaling systems in Caenorhabditis elegans' (Lirias, https://lirias.kuleuven.be/server/api/core/bitstreams/5321d407-00cb-44c7-adca-fbc76e09f5d7/content); Watteyne et al. 2020, Nat Commun 11:2076 (PMC7190830)",
+   "quote": "When the receptor construct was expressed in CHO cells lacking the promiscuous Gα16, a similar response was measured, indicating that NMUR-1 can signal through the release of calcium (figure 2.12).",
+   "note": "Grey literature: a PhD thesis, not peer reviewed; the same laboratory's journal papers report only Galpha16 data. From a PhD thesis, not peer reviewed (NLP-44-1/-3, Gα16-free EC50s about 15 nM and 0.7 µM). The journal paper (Watteyne et al. 2020) reports only CHO/Gα16 data, and Wibisono et al. 2022 (PMC8869846) has no coupling assay. A Ca2+ rise without Gα16 implies Gαq, though no PLC inhibitor or cAMP test was reported. Drop to null if thesis data are not accepted.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://lirias.kuleuven.be/server/api/core/bitstreams/5321d407-00cb-44c7-adca-fbc76e09f5d7/content (Frooninckx 2015 KU Leuven PhD thesis, PDF)"
+   }
+  },
+  "nmur-2": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "none found",
+   "citation": "Lindemans et al. 2009, Biochem Biophys Res Commun 379:760 (PMID 19133232)",
+   "quote": null,
+   "note": "Deorphanised (Ce-PK-R) in HEK293T cells with NLP-44 (EC50 18 nM), but the full text could not be opened, so whether a promiscuous G protein was co-expressed or Gαq inferred is unknown; the abstract states no coupling. Beets 2023 used Gα16. Fitted.",
+   "verified": false
+  },
+  "npr-1": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "heterologous",
+   "citation": "Kubiak et al. 2003, J Biol Chem 278:33724 (PMID 12821653); Gershkovich et al. 2019, Cell Commun Signal 17:123 (PMID 31533726, PMC6751662)",
+   "quote": "AF9 treatments linked both cloned receptor variants to activation of Gi/Go proteins and cAMP inhibition, thus allowing for classification of NPR-1 as an inhibitory G protein-coupled receptor.",
+   "note": "Kubiak 2003 (abstract quoted): CHO membranes, AF9 (= FLP-21) stimulated [35S]GTPγS binding, abolished by pertussis toxin, plus inhibition of forskolin-stimulated cAMP for both the 215F ('social') and 215V ('solitary') variants; no promiscuous G protein. Independent replication in Gershkovich 2019 (HEK293 CRE-luciferase, endogenous G proteins only): FLP-21 lowered forskolin-stimulated cAMP, with no IP accumulation in mock-transfected cells. Rogers et al. 2003 (Nat Neurosci 6:1178, oocyte GIRK) could not be opened. No in vivo study places NPR-1 upstream of a specific Gα.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=12821653 (Kubiak et al. 2003 JBC 278:33724, PubMed abstract)"
+   }
+  },
+  "npr-10": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Reilly et al. 2021, Commun Biol 4:1018 (PMID 34465863, PMC8408276)",
+   "quote": null,
+   "note": "FLP-3 activation of both isoforms in CHO cells 'stably expressing the promiscuous G protein, Gα16'. Gershkovich 2019 explicitly did not test NPR-10 and treated NPR-4 as 'representative', so a Gi/o call would be extrapolation. The Lowery et al. 2003 patent (US 6,632,621) states no G protein for any receptor. Fitted.",
+   "verified": false
+  },
+  "npr-11": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "heterologous",
+   "citation": "Gershkovich et al. 2019, Cell Commun Signal 17:123 (PMID 31533726, PMC6751662)",
+   "quote": "Activation of most C. elegans NPRs led to the inhibition of intracellular cAMP production, indicating coupling to Gi/o proteins (Additional file 1: Table S4).",
+   "note": "HEK293 CRE-luciferase with endogenous G proteins: FLP-21 at 10 µM lowered forskolin-stimulated cAMP to about 0.21 (Table S4, read by the delegated search), with no IP accumulation. The classic NPR-11 papers are promiscuous-G only: Chalasani et al. 2010 (HEK293 with Gα16Z) and Fadda et al. 2020 (CHO/Gα16). No in vivo Gα epistasis found.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6751662/fullTextXML (Gershkovich et al. 2019 Cell Commun Signal) and its Additional file 1 (https://static-content.springer.com/esm/art%3A10.1186%2Fs12964-019-0436-1/MediaObjects/12964_2019_436_MOESM1_ESM.docx)"
+   }
+  },
+  "npr-17": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "in vivo",
+   "citation": "Mills et al. 2016, J Neurosci 36:5498 (PMID 27194330, PMC4871985)",
+   "quote": "The RNAi knockdown of goa-1 in all NPR-17-expressing neurons, using the npr-17 promoter or, specifically in the ASIs, using either the srg-47 or gpa-4 promoters, had no effect on basal aversive responses off food but abolished morphine or 5-HT-dependent stimulation (Fig. 4).",
+   "note": "Cell-specific goa-1 RNAi in the receptor's own neurons phenocopies loss of NPR-17 (Fig. 4 titled 'NPR-17 is a Gαo-coupled receptor'), but the authors hedge ('Gαo/i may also be involved in NPR-17 signaling'), the readout is behavioural, and morphine is an exogenous agonist. The only heterologous assay (Cheong et al. 2015 eLife, NLP-24) used promiscuous Gα15. The layer's couple is flp-24 → npr-17 from Bentley 2016; npr-17 is an unverified synonym in gene_synonyms.json and flp-24 has no producer, so this couple never loads.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4871985/ (Mills et al. 2016 J Neurosci, PMC HTML full text)"
+   }
+  },
+  "npr-2": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Ezcurra et al. 2016, J Neurosci 36:3157 (PMID 26985027, PMC4792932)",
+   "quote": null,
+   "note": "FLP-21 activates NPR-2a/b only in CHO cells with 'the human Gα16 subunit' (also Beets 2023). Not in Gershkovich 2019's native-G panel; Luo et al. 2015 (Genetics) has no Gα or cAMP work. Fitted.",
+   "verified": false
+  },
+  "npr-22": {
+   "coupling": "Galpha-q",
+   "sign": null,
+   "evidence": "heterologous",
+   "citation": "Ohno et al. 2017, eLife 6:e28877 (PMID 28847365, PMC5576490)",
+   "quote": "LURY-1-1 and -2 induced concentration-dependent robust increases in [Ca2+]i in CHO-NPR-22a cells (EC50 = 1.44 × 10−8 and 2.18 × 10−8 M, respectively) (Figure 2E).",
+   "note": "Sign withdrawn on checking (unsupported, 2026-11-08): The quote is verbatim (1 occurrence), but the source does not establish a Gαq coupling. I grepped the whole full text: zero occurrences of 'Gα'/'Galpha' in any form, and no mention of aequorin, Gα16, pertussis toxin, forskolin, IP accumulation or a PLC inhibitor. The paper reports only a Ca2+ rise in a stable CHO-NPR-22a line and never names a G protein, and it does not state the line's G-protein complement, so the assay cannot even be confirmed as promiscuous-G-free. Gαq here is the compiler's inference from the readout, which the draft's own note concedes ('Weakest positive call'). Under the draft's stated rule (a cited assay must establish the coupling) this entry should be nulled, or re-grounded on a source that names the G protein. Weakest positive call. Stable CHO lines, fluorometric Ca2+; the paper never mentions aequorin, Gα16, PTX or forskolin (grep count 0), so the rise runs through endogenous G proteins. Gαq is inferred from that readout: the authors name no G protein and ran no IP, cAMP or PTX test. LURY-1 = NLP-72, the layer's ligand. Mertens et al. 2006 (Peptides 27:1291; FLP-7) could not be opened. No in vivo Gα epistasis (Palamiuc et al. 2017 has none).",
+   "verified": false
+  },
+  "npr-3": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "heterologous",
+   "citation": "Kubiak et al. 2003, J Biol Chem 278:42115 (PMID 12937167); Gershkovich et al. 2019, Cell Commun Signal 17:123 (PMC6751662)",
+   "quote": "FLP15-R activation was abolished in the transfected cells pretreated with pertussis toxin, suggesting a preferential receptor coupling to Gi/Go proteins.",
+   "note": "C10C6.2 = npr-3. [35S]GTPγS binding on transfected CHO membranes, PTX-sensitive, no promiscuous G protein. Corroborated by Gershkovich 2019: FLP-15-2 inhibited forskolin-stimulated cAMP in HEK293 with endogenous G proteins, with no IP signal. (Its Gqi chimera result is not native evidence.)",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=12937167 (Kubiak et al. 2003 JBC 278:42115, PubMed abstract)"
+   }
+  },
+  "npr-32": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "NLP-64-2 pairing from the Gα16 screen only. Lead to chase: for anandamide (not a peptide), Shimizu et al. 2022 (J Neurosci, PMC8808735) states AEA acts 'through the NPR-19/NPR-32 GPCR–GOA-1 Goα pathway' citing Pastuhov et al. 2012/2016. The Pastuhov 2016 (Genes Cells 21:696) abstract shows NPR-19/NPR-32 are required for AEA inhibition of axon regeneration but mentions no Gα, and its full text could not be opened, so a receptor-level goa-1 link is unverified. Fitted.",
+   "verified": false
+  },
+  "npr-34": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "SNET-1 (elevenin) pairing from the Gα16 screen; Istiban et al. 2024 (PMC11004728) states the pair 'is yet to be explored in vivo'. Fitted.",
+   "verified": false
+  },
+  "npr-35": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "both",
+   "citation": "Aoki et al. 2024, Nat Commun 15:9504 (PMID 39489735, PMC11532408)",
+   "quote": "Treatment with the cell-permeable Ca2+ chelator BAPTA-AM suppressed the currents evoked by NLP-10-1 in oocytes expressing NPR-35, as well as in oocytes expressing the known Gαq-coupled mGluR1 receptor, suggesting that NPR-35 is also Gαq-coupled.",
+   "note": "Xenopus oocytes injected with NPR-35 cRNA alone (no promiscuous G protein or GIRK), Ca2+-activated Cl- current, BAPTA-sensitive, with mGluR1 as the Gq control. In vivo: 'AIY activity induced by AVK photoactivation was mostly abolished by mutation of egl-30, encoding Gαq'. That is a whole-animal mutant, so it shows a requirement rather than an ordering.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC11532408/fullTextXML (Aoki et al. 2024 Nat Commun, Europe PMC full text)"
+   }
+  },
+  "npr-37": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "NLP-17 pairing from the Gα16 screen only; other literature is expression atlases. Fitted.",
+   "verified": false
+  },
+  "npr-39": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-8/FLP-14 pairing from the Gα16 screen. Wang et al. 2025 (iScience) predicts NPR-39 binding only computationally; that paper's gsa-1/acy-1 epistasis concerns FRPR-10, not NPR-39. Fitted.",
+   "verified": false
+  },
+  "npr-4": {
+   "coupling": "Galpha-i/o",
+   "sign": -1,
+   "evidence": "heterologous",
+   "citation": "Gershkovich et al. 2019, Cell Commun Signal 17:123 (PMID 31533726, PMC6751662)",
+   "quote": "Activation of most C. elegans NPRs led to the inhibition of intracellular cAMP production, indicating coupling to Gi/o proteins (Additional file 1: Table S4).",
+   "note": "HEK293 with CRE-luciferase and endogenous G proteins: NPR-4b (the only isoform tested) lowered forskolin-stimulated cAMP to about 0.23 with FLP-18-5 (Table S4, read by the delegated search from the supplementary file), with no IP accumulation in mock-transfected cells. Cohen et al. 2009 (Cell Metab 9:375, oocyte assay) could not be opened. No in vivo Gα epistasis found.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6751662/fullTextXML (Gershkovich et al. 2019) and its Additional file 1 docx (Table S4)"
+   }
+  },
+  "npr-40": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250); De Fruyt et al. 2026, Genetics 234:iyag188 (PMC13732711)",
+   "quote": null,
+   "note": "Gα16 screen only. De Fruyt 2026 gives an in vivo role (O2-evoked arousal) without any Gα experiment and only speculates that NPR-40 'presumably has an excitatory role'. Fitted.",
+   "verified": false
+  },
+  "npr-41": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "NLP-13 pairing from the Gα16 screen only. Fitted.",
+   "verified": false
+  },
+  "npr-42": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "Single NLP-3-3 pairing from the Gα16 screen. The NLP-3 egg-laying work identified NPR-36, not NPR-42, as its receptor (Butt et al. 2024, Curr Biol). Fitted.",
+   "verified": false
+  },
+  "npr-43": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "NLP-17 pairing from the Gα16 screen only; no other primary literature. Fitted.",
+   "verified": false
+  },
+  "npr-5": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Kubiak et al. 2008, Biopolymers 90:339 (PMID 17879267); Gershkovich et al. 2019, Cell Commun Signal 17:123 (PMC6751662)",
+   "quote": "Only NPR-5b activation drove IP accumulation and a slight cAMP increase, suggesting coupling to Gq and Gs (Additional file 1: Tables S4 and S5).",
+   "note": "Gershkovich 2019: in mock-transfected HEK293 (endogenous Gq, no promiscuous or chimeric G protein) NPR-5b gave large IP accumulation with FLP-18-5 and FLP-21, and raised cAMP, the opposite of the other NPRs tested. Kubiak 2008 abstract: 'Gq protein coupling seems to be the main but not the exclusive signaling pathway ... A weak Gs-mediated receptor activation was also detected' (U-73122-sensitive Ca2+; its methods could not be checked for a promiscuous G protein). Gq and Gs are both excitatory under the rule. Only NPR-5b was tested natively.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6751662/fullTextXML (Gershkovich et al. 2019) and its Additional file 1 docx (Tables S4, S5); https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=17879267 (Kubiak et al. 2008 abstract)"
+   }
+  },
+  "npr-8": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "none found",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "FLP-27 pairing comes from the Gα16 screen; no native-G heterologous assay found. Sellegounder et al. 2019 and Palani et al. 2023 are in vivo without Gα tests. Yang, Wu & Wang 2021 (Ecotoxicol Environ Saf 225:112732, nanoplastic RNAi) place NPR-8 'upstream of' GOA-1, GSA-1 and GPA-10 at once; three mutually exclusive Gα assignments on a toxicity readout do not determine coupling. Fitted.",
+   "verified": false
+  },
+  "ntr-1": {
+   "coupling": "Galpha-q",
+   "sign": null,
+   "evidence": "heterologous",
+   "citation": "Beets et al. 2012, Science 338:543 (PMID 23112336); quote from Odekunle & Elphick 2020, Front Endocrinol 11:225 review (PMC7181382)",
+   "quote": "Nematocin causes a dose-dependent increase in intracellular Ca2+ and cAMP in cells transfected with NTR-1 but not in cells transfected with NTR-2.",
+   "note": "Sign withdrawn on checking (unsupported, 2026-11-08): The quote is verbatim (1 occurrence) in the review that the draft names as the quote's source, so it is not fabricated. But it does not establish native coupling: it is a secondary description that states no assay conditions — in particular whether a promiscuous G protein was present — and the primary (Beets 2012 Science) remains unopenable, so the Gα16-free claim in the draft's note is still unverified. Its PubMed abstract contains no coupling data. Meanwhile the independent primary I could read, Garrison et al. 2012, used a promiscuous G protein for exactly this receptor ('we expressed ntr-1 and ntr-2 cDNAs in HEK293T cells with the promiscuous G protein Gα15') and reports the opposite direction when both receptors are present ('cells cotransfected with both receptors responded to nematocin with decreases in intracellular cyclic adenosine monophosphate (cAMP), suggesting coupling to a signaling pathway that antagonizes adenylyl cyclase'). On the reachable evidence this entry should be nulled until Beets 2012 is read. Beets 2012 reportedly measured Ca2+ in CHO cells lacking Gα16 and a CRE-luciferase cAMP rise, both increasing (Gαq and Gαs, both excitatory under the rule); the primary full text and supplement could not be opened, so the quote is from a review describing it. Conflict: Garrison et al. 2012 (Science 338:540, PMC3597094) showed NTR-1 Ca2+ responses only with promiscuous Gα15, and cells co-transfected with NTR-1 and NTR-2 'responded to nematocin with decreases in intracellular cyclic adenosine monophosphate (cAMP)' (an inhibitory, heteromer reading). A reviewer may prefer null until Beets 2012 is read.",
+   "verified": false
+  },
+  "pdfr-1": {
+   "coupling": "Galpha-s",
+   "sign": 1,
+   "evidence": "both",
+   "citation": "Janssen et al. 2008, J Biol Chem 283:15241 (PMID 18390545, PMC3258896); Flavell et al. 2013, Cell 154:1023 (PMC3942133)",
+   "quote": "This resulted in a clear and dose-dependent increase of CRE-luciferase activity for PDFR-1a and PDFR-1b (Fig. 2, a and b), suggesting that they signal through Gαs.",
+   "note": "The sign is isoforms a and b's: Janssen et al. 2008 report that PDFR-1c, the least potent isoform, inhibits forskolin-induced cAMP and 'might signal through a Galpha-i/o type of G protein'. In vivo, Flavell et al. 2013 support Galpha-s and cAMP downstream of PDFR-1. HEK293 CRE-luciferase without Gα16; no Ca2+ response in CHO cells lacking Gα16 ('these receptors do not signal through Gαq'). Conflict: the PDFR-1c splice isoform inhibited forskolin-induced cAMP ('PDFR-1c might signal through a Gαi/o type of G protein') and was the least potent isoform. In vivo, Flavell 2013: pdfr-1::acy-1(P260S) (constitutive adenylyl cyclase) prolongs roaming and rescues pdfr-1 exploration, and BlaC (light-activated adenylyl cyclase) in PDFR-1 cells triggers roaming, consistent with Gαs/cAMP. The sign follows the dominant a/b isoforms and the in vivo cAMP evidence.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3258896/ (Janssen et al. 2008 JBC, PMC HTML full text) and https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=3942133 (Flavell et al. 2013 Cell)"
+   }
+  },
+  "seb-3": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Chew et al. 2018, Phil Trans R Soc B 373:20170368 (PMID 30201834, PMC6158228)",
+   "quote": null,
+   "note": "NLP-49-2 activation was shown only in CHO cells 'together with the calcium indicator aequorin and the promiscuous Gα16 protein'. Jee et al. 2013 (Nat Neurosci; PMC3848202) characterised the seb-3(eg696) gain-of-function allele but did no G-protein epistasis or second-messenger assay. Quach et al. 2025 (PMC11957542) has no coupling assay either. Secretin-family homology (CRF/PDF receptor-like) would suggest Gαs but is not an assay; fitted.",
+   "verified": false
+  },
+  "ser-5": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "in vivo",
+   "citation": "Zahratka et al. 2015, J Neurophysiol 113:1041 (PMID 25411461, PMC4329441); Williams et al. 2018, J Neurosci 38:2069 (PMID 29358363, PMC5824741)",
+   "quote": "As predicted (Harris et al. 2009), both SER-5 and EGL-30 Gαq were required for the 5-HT inhibition of the 1-octanol-dependent somal Ca2+ signal (Fig. 4C).",
+   "note": "ASH GCaMP3 imaging in ser-5(tm2654) and egl-30(n686sd) animals; Williams 2018 replicates with high-K+ depolarisation ('dependent on the 5-HT receptor SER-5 and the Gαq subunit EGL-30 to which it is coupled'). Caveats: egl-30(n686sd) is a whole-animal reduction-of-function allele, so this is a co-requirement in one response, not an epistatic ordering. It conflicts with the common Gαs annotation (Hapiak 2009 clustering; Harris 2009 '5-HT6-like'; Cunningham 2012/2014 'predicted'), which has no assay behind it, but both readings are excitatory. In ASH, 5-HT lowers somal Ca2+ yet 'increases ASH depolarization' and potentiates aversion, consistent with an excitatory sign. No heterologous SER-5 assay found; Carre-Pierrat et al. 2006 (Invert Neurosci 6:189) ran adenylate-cyclase assays on candidate 5-HT receptors but could not be opened to see whether SER-5 was among them. This updates receptor_signs.json, where ser-5 is null on phylogeny.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4329441/ (Zahratka et al. 2015 J Neurophysiol, PMC HTML full text) and https://pmc.ncbi.nlm.nih.gov/articles/PMC5824741/ (Williams et al. 2018 J Neurosci)"
+   }
+  },
+  "sprr-1": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250)",
+   "quote": null,
+   "note": "NLP-42 pairing from the Gα16 screen only; Peymen et al. 2019 tested SPRR-1 in the same Gα16 cells (not activated by NLP-38). No functional work on C. elegans sex-peptide-receptor homologs found. Fitted.",
+   "verified": false
+  },
+  "sprr-2": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Peymen et al. 2019, PLoS Genet 15:e1007945 (PMID 30779740, PMC6380545)",
+   "quote": null,
+   "note": "NLP-38 (MIP) activation only in CHO cells that 'stably co-express the promiscuous Gα16 protein'; no cAMP or Gα16-free test; the rest of the paper is behavioural. Fitted.",
+   "verified": false
+  },
+  "tkr-1": {
+   "coupling": null,
+   "sign": null,
+   "evidence": "promiscuous-G only",
+   "citation": "Beets et al. 2023, Cell Rep 42:113058 (PMC7615250); Sakai et al. 2021, Biochem Biophys Res Commun 559:197 (PMID 33945998)",
+   "quote": null,
+   "note": "The Frooninckx 2015 thesis tested TKR-1 only with Gα16. Sakai 2021 (NLP-58 ligands) could not be opened, and its abstract names no cell line, readout or G protein. Istiban et al. 2024: 'To date, neither receptor-ligand interaction has been validated in vivo.' Do not confuse with the longevity tyrosine-kinase tkr-1/old-1. Fitted.",
+   "verified": false
+  },
+  "tkr-2": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Frooninckx 2015, PhD thesis, KU Leuven, 'Novel gonadotropin-releasing hormone, tachykinin and neuromedin U neuropeptide signaling systems in Caenorhabditis elegans' (Lirias, https://lirias.kuleuven.be/server/api/core/bitstreams/5321d407-00cb-44c7-adca-fbc76e09f5d7/content)",
+   "quote": "A dose-dependent increase in aequorin bioluminescence was seen upon activation of the receptor by TK-1, TK-2a and TK-2b, indicating that the endogenous Gαq in these cells can couple this receptor to a Ca2+ response (figure 3.4).",
+   "note": "Grey literature: a PhD thesis, not peer reviewed; the same laboratory's journal papers report only Galpha16 data. From a PhD thesis, not peer reviewed: the data never reached a journal (Beets 2023 lists no prior TKR-2 ligand). CHO cells lacking Gα16 gave EC50s essentially equal to those with Gα16. Also, HEK293T CRE-luciferase: 'Addition of TK-1 or TK-2a at a concentration of 10 µM elicits a strong cAMP response, suggesting that the receptor can couple to Gαs (figure 3.5).' Gq and Gs are both excitatory. Names: the thesis's T07C12.15 = nlp-58, and TK-1/TK-2a/TK-2b = NLP-58-1/2/3. Drop to null if thesis data are not accepted.",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://lirias.kuleuven.be/server/api/core/bitstreams/5321d407-00cb-44c7-adca-fbc76e09f5d7/content (Frooninckx 2015 KU Leuven PhD thesis, PDF)"
+   }
+  },
+  "trhr-1": {
+   "coupling": "Galpha-q",
+   "sign": 1,
+   "evidence": "heterologous",
+   "citation": "Van Sinay et al. 2017, PNAS 114:E4065 (PMID 28461507, PMC5441806)",
+   "quote": "When expression of Gα16 was omitted, TRH-1 peptides elicited strong calcium responses (Fig. S1A), indicating that TRHR-1 can couple to endogenous Gαq proteins in CHO cells and can signal through the calcium pathway.",
+   "note": "CHO/aequorin without Gα16; EC50 0.09 and 0.14 nM. The layer's ligand nlp-54 is the TRH-1 precursor (Beets 2023 Table S1: TRHR-1, NLP-54-(1,2)).",
+   "verified": {
+    "date": "2026-11-08",
+    "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5441806/ (Van Sinay et al. 2017 PNAS, PMC HTML full text)"
+   }
+  }
+ }
+}
