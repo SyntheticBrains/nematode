@@ -776,6 +776,19 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     and otherwise the limit is accepted. A change of model class goes to Phase 11, scoped with
     neural data.
 
+  *(Added 2026-11-08; [Logbook 129](../../../docs/experiments/logbooks/129-c2-wild-type-and-mutants.md), probes
+  on discarded seeds.)* **C.2 fitted to the wild type with its three mutants: every mutant passes
+  in 5 of 5 populations, and the wild type misses by hundredths.**
+
+  - **The fit:** the mutants at half the objective, PDF and ser-5 signed from receptor biology, 150
+    generations, then 50 more with slow speed noise.
+  - **The grade:** tph-1, pdfr-1 and tax-4 pass in 5 of 5, and so does presence. The wild type passes
+    in 0 of 5. Three populations fail one statistic, the on-lawn onset rate, at −3.12 to −3.14
+    against 3.078.
+  - **Next, C.2's change:** the procedure built into the encoder and the fit. Its open questions are
+    the on-lawn onset rate, the start (without the imitation of C.1), the fit split and a held-out
+    test, F.0b-ii, and the compute.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 

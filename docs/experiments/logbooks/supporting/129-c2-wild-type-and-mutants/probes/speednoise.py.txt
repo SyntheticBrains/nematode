@@ -1,0 +1,76 @@
+"""Slow speed noise on the overnight fit's answer, with no fitting (description; 200 animals, 99,840,000 + i).
+
+The overnight fit misses the wild type on the roaming speed's 10-s window 90th percentile (4 of 5
+populations, z -3.08 to -3.21) and on the small lawn's roaming-bout length. C.2's speed output has
+no state-dependent spread, which is what `encoder_speed_noise: ou` was built for: the speed's
+sampling noise follows a slow Ornstein-Uhlenbeck process, so 10-s window speeds spread more.
+
+Here the probe model gains that option, with the speed noise's timescale appended as the vector's
+last entry (every earlier index unchanged). On the overnight answer, timescales of 0.25 s
+(correlation 0.018, nearly independent), 3, 10, 30 and 100 s: the D_fit families on the small lawn
+and the uniform well (kinematics and activity derived from the small lawn), and the three mutants.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+import numpy as np, torch
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, staged_bc as b, readability as rd
+from quantumnematode.connectome import encoder as enc
+
+p._BRAIN_SETTINGS["encoder_speed_noise"] = "ou"
+ENTRIES = enc.encoder_entries(p.layer_spec(), b.TYING, speed_noise=True)
+TAU = ENTRIES[-1]
+N = b.N_ENCODER  # 132 encoder entries before the speed noise's timescale
+SEEDS = [99_840_000 + i for i in range(200)]
+TAUS = (0.25, 3.0, 10.0, 30.0, 100.0)
+
+
+def controller(z, mutant=None):
+    """The probe model's controller on a 137-vector: 132 encoder units, 4 pool centres, the timescale."""
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain = rd.mgl1_brain() if mutant == "mgl-1" else p.encoded_brain(p.KNOCKOUT_GENES.get(mutant or "", ()))
+    units = list(b.to_encoder(z[: N + b.POOLS])) + [float(z[N + b.POOLS])]
+    if mutant == "tax-4":
+        units = list(enc.tax4_vector(brain.topology.modulator_spec, units, b.TYING, speed_noise=True))
+    enc.write_encoder(brain, units)
+    brain.topology.probe_centres = torch.from_numpy(-1.0 + 2.0 * np.asarray(z[N : N + b.POOLS], dtype=np.float32))
+    return lambda _path: BatchedConnectome(brain)
+
+
+def extend(z, tau_s):
+    return list(map(float, z[: N + b.POOLS])) + [TAU.unit(tau_s)]
+
+
+def job(item):
+    tau, kind = item
+    z = extend(json.loads(Path("build/c2-run-mode/overnight.json").read_text())["answer"], tau)
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    if kind == "wild":
+        pops, _ = bg.simulate_v2(p.ARM, controller(z), SEEDS, bands, assays=("small_lawn", "uniform_lawn"))
+        graded = bg.grade_populations_v4(pops, None, bands, presence=False)
+        return tau, kind, {"families": {f: {n: {"value": r["value"], "z": r["z"], "passes": r["passes"]} for n, r in rs.items()} for f, rs in graded["families"].items()},
+                           "small_lawn": bg.family_values("small_lawn", pops["small_lawn"], clf)}
+    pops, _ = bg.simulate_v2(p.ARM, controller(z, kind), SEEDS, bands, assays=("small_lawn",))
+    return tau, kind, bg.family_values("small_lawn", pops["small_lawn"], clf)
+
+
+def main():
+    jobs = [(t, k) for t in TAUS for k in ("wild", *p.MUTANTS)]
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        res = list(pool.map(job, jobs))
+    by = {(t, k): v for t, k, v in res}
+    bands = bg.load_bands_v4(); out = {}
+    for t in TAUS:
+        w = by[(t, "wild")]
+        fails = {f"{f}/{n}": round(r["z"], 2) for f, rs in w["families"].items() for n, r in rs.items() if not r["passes"]}
+        kin = {n: round(r["z"], 2) for n, r in w["families"]["kinematics"].items()}
+        mut = {m: p.mutant_reading(m, w["small_lawn"], by[(t, m)], bands, len(SEEDS)) for m in p.MUTANTS}
+        out[t] = {"families": w["families"], "mutants": mut}
+        print(f"tau {t:6.2f} s: fails {fails} | kinematics z {kin} | mutants " + " ".join(f"{m} {r['statistics']['roaming_fraction']['delta']:+.3f}({'P' if r['passes'] else 'F'})" for m, r in mut.items()), flush=True)
+    Path("build/c2-run-mode/speednoise.json").write_text(json.dumps(nr._finite({"description": __doc__, "taus": out}), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()
