@@ -1894,6 +1894,7 @@ def _with_forward(probe: bool) -> Any:  # noqa: ANN401, FBT001 - a context manag
 
     @contextlib.contextmanager
     def swapped() -> Any:  # noqa: ANN401 - a generator context
+        """Swap the forward in for the context's span, and restore it on any exit."""
         original = cp.ConnectomeTopology._forward_encoded
         if probe:
             cp.ConnectomeTopology._forward_encoded = _probe_forward  # type: ignore[method-assign]
@@ -1978,6 +1979,7 @@ def _procedure_controller(z: np.ndarray, mutant: str | None = None) -> Callable[
 
 
 def _reproduce_wild(item: tuple[int, list[float]]) -> tuple[int, dict[str, Any]]:
+    """Grade population ``g`` of the converted answer with presence; keep its small-lawn values."""
     g, z = item
     bands = bg.load_bands_v4()
     seeds = population_seeds(REPRODUCE_GRADE_BASE, g)
@@ -2003,6 +2005,7 @@ def _reproduce_wild(item: tuple[int, list[float]]) -> tuple[int, dict[str, Any]]
 def _reproduce_mutant(
     item: tuple[int, str, list[float], dict[str, float]],
 ) -> tuple[int, str, bool]:
+    """Grade one mutant on population ``g`` against that population's wild type."""
     g, mutant, z, wild = item
     bands = bg.load_bands_v4()
     clf = bg.classifier(bands)

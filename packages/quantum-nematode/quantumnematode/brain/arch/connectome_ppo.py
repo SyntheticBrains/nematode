@@ -1385,6 +1385,11 @@ def _data_layer_spec(config: ConnectomePPOBrainConfig, names: list[str]) -> Laye
     return spec
 
 
+def _cited_rows(spec: LayerSpec) -> list[str]:
+    """Return the names of the layer rows signed at load from a cited receptor coupling, sorted."""
+    return sorted(row.name for row in spec.rows if row.sign_source is not None)
+
+
 def encoder_options(config: ConnectomePPOBrainConfig) -> EntryOptions:
     """Return the encoder's entry options a config sets, as ``encoder_entries`` takes them."""
     return {
@@ -2533,7 +2538,8 @@ class ConnectomeTopology(nn.Module):
         if encoder.readout_mode == "soft_cap":
             mean = READOUT_CAP * torch.tanh(mean / READOUT_CAP)
         if self.forward_observer is not None:
-            self.forward_observer(mean.detach(), h.detach())
+            # Copies, so an observer that edits its arguments cannot touch what the forward returns.
+            self.forward_observer(mean.detach().clone(), h.detach().clone())
         return mean, h
 
     def modulator_layer_strengths(self) -> torch.Tensor:
@@ -4959,6 +4965,20 @@ class ConnectomePPOBrain(ClassicalBrain):
                 all_components["training_state"].state["encoder_speed_noise"] = (
                     self.config.encoder_speed_noise
                 )
+            if self.config.encoder_readout != "linear":
+                # Recorded only off the default, as the speed noise's mode is.
+                all_components["training_state"].state["encoder_readout"] = (
+                    self.config.encoder_readout
+                )
+        if self.config.modulator_receptor_signs:
+            # The cited signs and the rows they fix, recorded only when set: under per-ligand tying
+            # a signed brain's strength tensors have the shapes an unsigned one's have.
+            all_components["training_state"].state["modulator_receptor_signs"] = sorted(
+                self.config.modulator_receptor_signs,
+            )
+            all_components["training_state"].state["modulator_cited_rows"] = _cited_rows(
+                self.topology.modulator_spec,
+            )
         if self.config.gap_normalisation != "degree":
             # Recorded only off the default, so a default brain saves exactly what it did before
             # the option existed. A mismatch on load is refused by the gap-matrix wiring check.
@@ -5026,6 +5046,41 @@ class ConnectomePPOBrain(ClassicalBrain):
         "plasticity_plastic_readout",
         "plasticity_plastic_tensors",
     )
+
+    def _reject_encoder_procedure_mismatch(self, components: dict[str, WeightComponent]) -> None:
+        """Refuse weights saved under another readout mode or another set of cited signs.
+
+        Neither changes a tensor's shape, so a mismatch would load silently: a soft-capped readout
+        reads the same weights differently from a linear one, and a couple signed at load reads its
+        strength as a fixed-sign magnitude where an unsigned brain reads a signed gain. A file that
+        records neither was saved with the linear readout and no cited signs.
+        """
+        if "training_state" not in components:
+            return
+        state = components["training_state"].state
+        saved_readout = state.get("encoder_readout", "linear")
+        if self._encoded and saved_readout != self.config.encoder_readout:
+            msg = (
+                f"These weights were saved with encoder_readout={saved_readout!r}, and this brain "
+                f"has {self.config.encoder_readout!r}: the readout maps the same weights to "
+                "different outputs under the two."
+            )
+            raise ValueError(msg)
+        saved_rows = state.get("modulator_cited_rows", [])
+        current_rows = (
+            _cited_rows(self.topology.modulator_spec)
+            if self.config.modulator_receptor_signs
+            else []
+        )
+        saved_signs = state.get("modulator_receptor_signs", [])
+        current_signs = sorted(self.config.modulator_receptor_signs)
+        if saved_signs != current_signs or saved_rows != current_rows:
+            msg = (
+                f"These weights were saved with modulator_receptor_signs={saved_signs!r} fixing "
+                f"rows {saved_rows!r}, and this brain has {current_signs!r} fixing "
+                f"{current_rows!r}: the layer's strengths mean different things under the two."
+            )
+            raise ValueError(msg)
 
     def _reject_speed_noise_mismatch(self, components: dict[str, WeightComponent]) -> None:
         """Refuse weights saved under the other speed-noise mode.
@@ -5184,6 +5239,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         self._reject_plasticity_identity_mismatch(components)
         self._reject_gap_coupling_mismatch(components)
         self._reject_speed_noise_mismatch(components)
+        self._reject_encoder_procedure_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
             self._load_topology_state(topology_state)

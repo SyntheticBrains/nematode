@@ -20,6 +20,7 @@ import torch
 from quantumnematode.brain.arch import BrainParams
 from quantumnematode.brain.arch.connectome_ppo import ConnectomePPOBrain, ConnectomePPOBrainConfig
 from quantumnematode.brain.arch.dtypes import DeviceType
+from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome import encoder as enc
 from quantumnematode.connectome import neuromodulator_layer as layer
 from quantumnematode.utils.config_loader import load_simulation_config
@@ -49,6 +50,7 @@ PROCEDURE: dict[str, object] = {
 
 
 def _config(**overrides: object) -> ConnectomePPOBrainConfig:
+    """Return the encoded small-lawn brain's config with overrides, unvalidated as model_copy is."""
     container = load_simulation_config(str(_ASSAY)).brain
     assert container is not None
     assert isinstance(container.config, ConnectomePPOBrainConfig)
@@ -56,15 +58,18 @@ def _config(**overrides: object) -> ConnectomePPOBrainConfig:
 
 
 def _brain(**overrides: object) -> ConnectomePPOBrain:
+    """Build an encoded brain with overrides on the CPU; construction applies the refusals."""
     return ConnectomePPOBrain(config=_config(**overrides), device=DeviceType.CPU)
 
 
 def _vector(brain: ConnectomePPOBrain, seed: int = 3) -> np.ndarray:
+    """Return a seeded unit vector away from the box's edges, sized to the brain's encoder."""
     n = len(brain.topology.encoder.entries)  # type: ignore[union-attr]
     return np.random.default_rng(seed).uniform(0.15, 0.85, size=n)
 
 
 def _params(step: int) -> BrainParams:
+    """Return step ``step``'s varying senses, satiety and intake."""
     return BrainParams(
         food_concentration=0.1 * (step % 5),
         food_lateral_gradient=0.05 * (step % 3) - 0.05,
@@ -77,6 +82,7 @@ def _params(step: int) -> BrainParams:
 
 
 def _means(brain: ConnectomePPOBrain, steps: int = 6) -> np.ndarray:
+    """Return the brain's squashed action means over a short episode of varying senses."""
     brain.prepare_episode()
     out = []
     for t in range(steps):
@@ -86,6 +92,7 @@ def _means(brain: ConnectomePPOBrain, steps: int = 6) -> np.ndarray:
 
 
 def _values(brain: ConnectomePPOBrain) -> dict[str, float]:
+    """Return each encoder parameter's value, by name, as the brain carries it."""
     entries = brain.topology.encoder.entries  # type: ignore[union-attr]
     z = enc.read_encoder(brain)
     return {e.name: e.value(float(u)) for e, u in zip(entries, z, strict=True)}
@@ -119,10 +126,12 @@ class TestDefaults:
         ],
     )
     def test_the_options_need_the_encoder(self, key: str, value: object) -> None:
+        """Each readout or box option away from its default is refused without the encoder."""
         with pytest.raises(ValueError, match=key):
             ConnectomePPOBrainConfig(**{key: value})  # type: ignore[arg-type]
 
     def test_receptor_signs_need_the_data_layer(self) -> None:
+        """Cited receptor signs are refused without the data layer."""
         with pytest.raises(ValueError, match="modulator_receptor_signs"):
             ConnectomePPOBrainConfig(modulator_receptor_signs=["pdfr-1"])
 
@@ -161,6 +170,7 @@ class TestReadout:
         np.testing.assert_array_equal(_means(without), _means(with_centres))
 
     def test_centres_move_the_readout(self) -> None:
+        """Centres away from zero change the actions, so the readout reads them."""
         brain = _brain(encoder_pool_centres=True)
         z = _vector(brain)
         enc.write_encoder(brain, z)
@@ -170,6 +180,7 @@ class TestReadout:
         assert not np.allclose(before, _means(brain))
 
     def test_the_centres_are_learnable(self) -> None:
+        """The pool centres are among PPO's learnable parameters."""
         brain = _brain(encoder_pool_centres=True)
         centres = brain.topology.encoder.pool_centres  # type: ignore[union-attr]
         assert centres is not None
@@ -224,6 +235,7 @@ class TestCounts:
             assert [e.name for e in entries[-4:]] == [f"readout.centre.{p}" for p in enc.POOLS]
 
     def test_a_procedure_vector_round_trips(self) -> None:
+        """A vector with every procedure option on reads back as written."""
         brain = _brain(**PROCEDURE)
         z = _vector(brain)
         enc.write_encoder(brain, z)
@@ -245,6 +257,58 @@ class TestObserver:
         assert len(seen) == len(watched)
         assert not seen[0][0].requires_grad
         assert seen[0][1].shape[-1] == brain.topology.n_neurons
+
+    def test_an_observer_that_edits_its_arguments_changes_nothing(self) -> None:
+        """The observer receives copies: editing them in place leaves the forward's outputs."""
+        brain = _brain(**PROCEDURE)
+        enc.write_encoder(brain, _vector(brain))
+        quiet = _means(brain)
+
+        def vandal(mean: torch.Tensor, h: torch.Tensor) -> None:
+            mean.add_(100.0)
+            h.zero_()
+
+        brain.topology.forward_observer = vandal
+        edited = _means(brain)
+        brain.topology.forward_observer = None
+        np.testing.assert_array_equal(quiet, edited)
+
+
+class TestCheckpoints:
+    @staticmethod
+    def _saved(brain: ConnectomePPOBrain) -> dict[str, WeightComponent]:
+        saved = brain.get_weight_components(components={"topology", "training_state"})
+        return {k: WeightComponent(name=k, state=dict(v.state)) for k, v in saved.items()}
+
+    def test_matching_weights_load(self) -> None:
+        """Weights saved under the procedure's options load into a brain with the same options."""
+        brain = _brain(**PROCEDURE)
+        z = _vector(brain)
+        enc.write_encoder(brain, z)
+        other = _brain(**PROCEDURE)
+        other.load_weight_components(self._saved(brain))
+        np.testing.assert_allclose(enc.read_encoder(other), z, atol=1e-6)
+
+    def test_another_readout_mode_is_refused(self) -> None:
+        """Same shapes, another readout: a soft-capped brain refuses linear weights and back."""
+        capped, linear = _brain(encoder_readout="soft_cap"), _brain()
+        with pytest.raises(ValueError, match="encoder_readout"):
+            capped.load_weight_components(self._saved(linear))
+        with pytest.raises(ValueError, match="encoder_readout"):
+            linear.load_weight_components(self._saved(capped))
+
+    def test_other_cited_signs_are_refused(self) -> None:
+        """Same per-ligand shapes, other cited signs: the load is refused either way."""
+        signed, unsigned = _brain(modulator_receptor_signs=["pdfr-1", "ser-5"]), _brain()
+        assert len(signed.topology.encoder.entries) == len(unsigned.topology.encoder.entries)  # type: ignore[union-attr]
+        with pytest.raises(ValueError, match="modulator_receptor_signs"):
+            signed.load_weight_components(self._saved(unsigned))
+        with pytest.raises(ValueError, match="modulator_receptor_signs"):
+            unsigned.load_weight_components(self._saved(signed))
+        with pytest.raises(ValueError, match="modulator_receptor_signs"):
+            _brain(modulator_receptor_signs=["pdfr-1"]).load_weight_components(
+                self._saved(signed),
+            )
 
 
 class TestReceptorSigns:

@@ -234,26 +234,35 @@ def test_the_speed_noise_control_reads_undefined_statistics_as_failing() -> None
 def test_a_probe_vector_maps_onto_the_package_by_name() -> None:
     """Covers "The probe procedure's answer reproduces in the package": the converter's map.
 
-    A probe-layout vector at every unit 0.5 (wiring scales 0.375, sensory gains 0, PDF's and ser-5's
-    signed groups 0, the centres 0) lands on the package's procedure entries by name: the graded
-    entries keep their unit, the inhibitory scale is re-based on its floor, the cited groups sit at
-    their log range's floor, and the timescale and centres keep theirs.
+    Each probe coordinate carries its own value, so a positional copy cannot pass. The graded
+    entries keep their unit, the inhibitory scale is re-based on its floor, a cited group takes its
+    fitted value on the log range, and the timescale and each centre land on their own names,
+    though the probe stored the centres before the timescale and the package after it.
     """
     brain = probe.encoded_brain((), **probe.PROCEDURE_SETTINGS)
     entries = list(brain.topology.encoder.entries)
-    base, _ = probe._probe_layout()
-    z = probe.package_vector(np.full(len(base) + 5, 0.5), entries)
-    unit = {e.name: float(u) for e, u in zip(entries, z, strict=True)}
-    assert len(z) == len(entries) == 137
-    assert unit["wiring.excitatory"] == pytest.approx(0.5)
-    assert unit["wiring.inhibitory"] == pytest.approx((0.375 - 0.09) / (0.75 - 0.09))
-    assert unit["sensory.AWC.concentration"] == pytest.approx(0.5)
-    for name in (
-        "modulator.fixed.pdf-1.pdfr-1",
-        "modulator.fixed.pdf-2.pdfr-1",
-        "modulator.fixed.serotonin.ser-5",
-    ):
-        assert unit[name] == pytest.approx(0.0)
-    assert unit["modulator.fixed.serotonin"] == pytest.approx(0.5)
-    assert unit["timescale.speed_noise"] == pytest.approx(0.5)
-    assert all(unit[f"readout.centre.{p}"] == pytest.approx(0.5) for p in ("VB", "DB", "VA", "DA"))
+    base, tau = probe._probe_layout()
+    names = [e.name for e in base]
+    n = len(base)
+    z = np.full(n + 5, 0.5)
+    z[names.index("wiring.excitatory")] = 0.2
+    z[names.index("wiring.inhibitory")] = 0.6
+    z[names.index("sensory.AWC.concentration")] = 0.7
+    fitted_pdf = next(e for e in base if e.name == "modulator.fitted.pdf-1")
+    z[names.index("modulator.fitted.pdf-1")] = fitted_pdf.unit(1.5)
+    centres = [0.1, 0.3, 0.6, 0.9]
+    z[n : n + 4] = centres
+    z[n + 4] = 0.35
+    out = probe.package_vector(z, entries)
+    unit = {e.name: float(u) for e, u in zip(entries, out, strict=True)}
+    value = {e.name: e.value(float(u)) for e, u in zip(entries, out, strict=True)}
+    assert len(out) == len(entries) == 137
+    assert unit["wiring.excitatory"] == pytest.approx(0.2)
+    assert value["wiring.inhibitory"] == pytest.approx(0.75 * 0.6)
+    assert unit["wiring.inhibitory"] == pytest.approx((0.45 - 0.09) / (0.75 - 0.09))
+    assert unit["sensory.AWC.concentration"] == pytest.approx(0.7)
+    assert value["modulator.fixed.pdf-1.pdfr-1"] == pytest.approx(1.5)
+    assert value["modulator.fixed.pdf-2.pdfr-1"] == pytest.approx(0.001)
+    assert value["timescale.speed_noise"] == pytest.approx(tau.value(0.35))
+    for pool, u in zip(("VB", "DB", "VA", "DA"), centres, strict=True):
+        assert unit[f"readout.centre.{pool}"] == pytest.approx(u)

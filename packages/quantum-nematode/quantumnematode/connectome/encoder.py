@@ -186,10 +186,13 @@ def encoder_entries(  # noqa: PLR0913 - the layer, the tying and each option
 ) -> list[EncoderEntry]:
     """Return every encoder parameter, in the fixed order a vector carries them.
 
-    With ``speed_noise`` the speed noise's timescale is appended after the base entries, and with
-    ``pool_centres`` the four pool centres after that, so a vector without an option is a prefix of
-    one with it. ``box="graded"`` narrows the wiring scales and the sensory gains;
-    ``inhibition_floor`` raises the inhibitory scale's lower bound.
+    The base entries come first. With ``speed_noise`` the speed noise's timescale follows them,
+    and with ``pool_centres`` the four pool centres follow that. So a vector is a prefix of the
+    same vector with more options only where the speed-noise setting is unchanged: adding pool
+    centres appends four coordinates, and adding speed noise without centres appends one, but
+    adding speed noise to a vector that carries centres inserts the timescale's coordinate before
+    them. ``box="graded"`` narrows the wiring scales and the sensory gains; ``inhibition_floor``
+    raises the inhibitory scale's lower bound.
     """
     wiring_range = _GRADED_WIRING_RANGE if box == "graded" else _WIRING_RANGE
     sensory_range = _GRADED_SENSORY_RANGE if box == "graded" else _SENSORY_RANGE
