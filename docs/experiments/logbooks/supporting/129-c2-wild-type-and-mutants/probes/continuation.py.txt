@@ -1,0 +1,142 @@
+"""The overnight fit continued with slow speed noise (description, discarded seeds).
+
+The overnight fit's answer misses the wild type on two statistics: the roaming speed's 10-s window
+90th percentile and the small lawn's roaming-bout length (`overnight_grade.json`). Slow speed noise
+at 3 s fixes both on that answer, but shifts the roaming speed's median up and the on-lawn onset
+rate down (`speednoise.json`), as an answer tuned without it would. Here the fit continues with the
+noise on and its timescale fitted:
+
+- the model, bounds and objective: `overnight.py`'s (the six families plus the three mutants at half
+  the objective, both guards), on `speednoise.py`'s model (the timescale appended as the last entry,
+  on [0, 1] in its log units over 0.25-300 s);
+- the start: the overnight answer with the timescale at 3 s;
+- the search: sep-CMA at population 48, sigma0 0.03, 200 animals a candidate, 50 generations on 16
+  workers, saved every generation and resumable.
+
+Readouts every 10 generations on 200 animals (786,000,000 + i). The stop rule, fixed before the run:
+at generation 30, stop if the readout D is more than 0.5 above its generation-0 readout. The
+verdict, fixed before the run: the final answer graded with presence on 5 populations
+(790,000,000 + 200·g + i) passes if the wild type passes in at least 3 of 5, and tph-1 and tax-4
+each pass in at least 3 of 5.
+
+Seeds: fit animals 785,000,000 + 200·k + i; CMA 9488. Run from the repository root.
+"""
+
+import json
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import fit_mutants as F
+import leave_one_out as L
+import npe_recovery as nr
+import overnight as O
+import readability as rd
+import screens as s
+import speednoise as sn
+
+rd.controller = sn.controller  # every simulation, readout and mutant runs on the speed-noise model
+L.FITTED = ("tph-1", "pdfr-1", "tax-4")
+L.BASE = 785_000_000
+s.ANIMALS = 200
+s.READ_SEEDS = [786_000_000 + i for i in range(200)]
+GRADE_BASE = 790_000_000
+OUT = Path("build/c2-run-mode/continuation")
+POPSIZE, SIGMA0, CAP, EVERY, WORKERS, CMA_SEED = 48, 0.03, 50, 10, 16, 9488
+
+
+def stop_reason(g, readouts):
+    if g == 30 and readouts[30]["D"] > readouts[0]["D"] + 0.5:
+        return "the readout D more than 0.5 above its start at generation 30"
+    return None
+
+
+def _wild(item):
+    g, z = item
+    bands = bg.load_bands_v4()
+    populations, chemotaxis = bg.simulate_v2(p.ARM, sn.controller(z), p.population_seeds(GRADE_BASE, g), bands)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=True)
+    clf = bg.classifier(bands)
+    return g, bg._finite({
+        "families": {f: {n: {"value": r["value"], "z": r["z"], "passes": r["passes"]} for n, r in rs.items()} for f, rs in graded["families"].items()},
+        "family_passes": graded["family_passes"], "wild_type_passes": graded["wild_type_passes"],
+        "local_search_presence": graded.get("local_search_presence"), "chemotaxis_presence": graded.get("chemotaxis_presence"),
+        "D": graded["D"], "D_fit": graded["D_fit"], "reversal_share": graded["reversal_share"],
+        "small_lawn_values": bg.family_values("small_lawn", populations["small_lawn"], clf),
+    })
+
+
+def _mutant(item):
+    g, name, z, wild_values = item
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    mutated, _ = bg.simulate_v2(p.ARM, sn.controller(z, name), p.population_seeds(GRADE_BASE, g), bands, assays=("small_lawn",))
+    return g, name, p.mutant_reading(name, wild_values, bg.family_values("small_lawn", mutated["small_lawn"], clf), bands, p.ANIMALS)
+
+
+def grade(pool, z):
+    wilds = dict(pool.map(_wild, [(g, z) for g in range(5)]))
+    for g, name, reading in pool.map(_mutant, [(g, m, z, wilds[g]["small_lawn_values"]) for g in range(5) for m in p.MUTANTS]):
+        wilds[g].setdefault("mutants", {})[name] = reading
+    wt = sum(bool(w["wild_type_passes"]) for w in wilds.values())
+    mutants = {m: sum(bool(w["mutants"][m]["passes"]) for w in wilds.values()) for m in p.MUTANTS}
+    passed = wt >= 3 and mutants["tph-1"] >= 3 and mutants["tax-4"] >= 3
+    return {"populations": wilds, "wild_type_passing": wt, "mutants_passing": mutants, "passed": passed}
+
+
+def main():
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    base = json.loads(Path("build/c2-run-mode/overnight.json").read_text())["answer"]
+    lower, upper = F.bounds(len(base))
+    lower, upper = lower + [0.0], upper + [1.0]
+    state = OUT / "state.pkl"
+    if state.exists():
+        es, history, readouts = pickle.loads(state.read_bytes())
+    else:
+        x0 = [min(max(x, lo), hi) for x, lo, hi in zip(sn.extend(base, 3.0), lower, upper)]
+        es = cma.CMAEvolutionStrategy(x0, SIGMA0, {"CMA_diagonal": True, "bounds": [lower, upper], "popsize": POPSIZE, "seed": CMA_SEED, "verbose": -9})
+        history, readouts = {"medians": [], "best": [], "best_D": [], "sigmas": [], "tau_s": []}, {}
+    objective = O.Objective()
+    reason, t0 = None, time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        if 0 not in readouts:
+            readouts[0] = s.readout(pool, list(es.mean))
+            s._print("C", 0, readouts[0])
+        while len(history["medians"]) < CAP and reason is None:
+            g = len(history["medians"]) + 1
+            points = es.ask()
+            ks = [POPSIZE * (g - 1) + m for m in range(POPSIZE)]
+            records = list(pool.map(L.simulate, ks, [list(map(float, x)) for x in points]))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            history["medians"].append(float(np.median(scores))); history["best"].append(float(np.min(scores)))
+            history["best_D"].append(float(records[int(np.argmin(scores))]["D"])); history["sigmas"].append(float(es.sigma))
+            history["tau_s"].append(float(sn.TAU.value(float(np.clip(es.result.xfavorite[-1], 0, 1)))))
+            print(f"C gen {g}: median {history['medians'][-1]:.2f} best {history['best'][-1]:.2f} (D {history['best_D'][-1]:.2f}) tau {history['tau_s'][-1]:.2f} s sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+            if g % EVERY == 0:
+                z = np.clip(es.result.xfavorite, lower, upper).tolist()
+                readouts[g] = s.readout(pool, z)
+                s._print("C", g, readouts[g])
+                reason = stop_reason(g, readouts)
+            state.write_bytes(pickle.dumps((es, history, readouts)))
+        z = np.clip(es.result.xfavorite, lower, upper).tolist()
+        final = grade(pool, z)
+    for g, w in sorted(final["populations"].items()):
+        fails = {f"{f}/{n}": round(r["z"], 2) for f, rs in w["families"].items() for n, r in rs.items() if not r["passes"]}
+        print(f"C grade {g}: wild type {w['wild_type_passes']} D {w['D']:.2f} fails {fails} mutants {({m: r['passes'] for m, r in w['mutants'].items()})}", flush=True)
+    record = {"description": __doc__, **history, "readouts": readouts, "stopped": reason, "answer": z, "grade": final}
+    (OUT.parent / "continuation.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"C done: stopped {reason}; wild type {final['wild_type_passing']}/5, mutants {final['mutants_passing']}, verdict passed {final['passed']}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

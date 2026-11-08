@@ -1,0 +1,65 @@
+"""Can the on-lawn onset rate come inside its band? Nudges with no fitting (description; 200 animals, 99,850,000 + i).
+
+On the continuation's answer, whose wild type misses only on the on-lawn onset rate in three of
+five populations (z -3.12 to -3.14): the reversal readout's bias (fitted at -2.98, its box bound -3)
+raised by 0.1, 0.2 or 0.4; the reversal output's noise log-SD raised by 0.2; and CEP's food-contact
+gain raised by 0.4. Each graded on all four assays without presence, with the three mutants.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, speednoise as sn
+
+Z = json.loads(Path("build/c2-run-mode/continuation.json").read_text())["answer"]
+SEEDS = [99_850_000 + i for i in range(200)]
+ROUND = sys.argv[1] if len(sys.argv) > 1 else "1"
+IDX = {e.name: i for i, e in enumerate(sn.ENTRIES)}
+VARIANTS = {"as fitted": {}, "bias +0.1": {"readout.reversal.bias": 0.1}, "bias +0.2": {"readout.reversal.bias": 0.2},
+            "bias +0.4": {"readout.reversal.bias": 0.4}, "reversal noise +0.2": {"noise.reversal": 0.2}, "CEP contact +0.4": {"sensory.CEP.contact": 0.4}}
+# The second round, after the first: larger CEP nudges, alone and with a small bias.
+ROUND2 = {"CEP contact +0.8": {"sensory.CEP.contact": 0.8}, "CEP contact +1.2": {"sensory.CEP.contact": 1.2},
+          "CEP contact +1.59 (box max)": {"sensory.CEP.contact": 1.59}, "CEP +0.8, bias +0.05": {"sensory.CEP.contact": 0.8, "readout.reversal.bias": 0.05}}
+if ROUND == "2":
+    VARIANTS = {"as fitted": {}, **ROUND2}
+
+
+def vector(name):
+    z = list(Z)
+    for entry, delta in VARIANTS[name].items():
+        i, e = IDX[entry], sn.ENTRIES[IDX[entry]]
+        if entry.startswith("sensory."):  # the graded box: value = -2 + 4u
+            z[i] = min(1.0, max(0.0, z[i] + delta / 4.0))
+        else:
+            z[i] = e.unit(min(e.high, max(e.low, e.value(z[i]) + delta)))
+    return z
+
+
+def job(item):
+    name, kind = item
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    if kind == "wild":
+        pops, chem = bg.simulate_v2(p.ARM, sn.controller(vector(name)), SEEDS, bands)
+        graded = bg.grade_populations_v4(pops, chem, bands, presence=False)
+        return name, kind, {"fails": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items() if not r["passes"]},
+                            "onset": graded["families"]["activity"]["onset_rate_per_min"]["z"], "D": graded["D"],
+                            "small_lawn": bg.family_values("small_lawn", pops["small_lawn"], clf)}
+    pops, _ = bg.simulate_v2(p.ARM, sn.controller(vector(name), kind), SEEDS, bands, assays=("small_lawn",))
+    return name, kind, bg.family_values("small_lawn", pops["small_lawn"], clf)
+
+
+def main():
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        res = list(pool.map(job, [(n, k) for n in VARIANTS for k in ("wild", *p.MUTANTS)]))
+    by = {(n, k): v for n, k, v in res}
+    bands = bg.load_bands_v4(); out = {}
+    for n in VARIANTS:
+        w = by[(n, "wild")]
+        mut = {m: p.mutant_reading(m, w["small_lawn"], by[(n, m)], bands, len(SEEDS)) for m in p.MUTANTS}
+        out[n] = {"D": w["D"], "onset_z": w["onset"], "fails": w["fails"], "mutants": {m: r["passes"] for m, r in mut.items()}}
+        print(f"{n:20s} D {w['D']:.2f} onset z {w['onset']:+.2f} fails {({k: round(v, 2) for k, v in w['fails'].items()})} mutants {out[n]['mutants']}", flush=True)
+    Path(f"build/c2-run-mode/onset_check{'' if ROUND == '1' else '_2'}.json").write_text(json.dumps(nr._finite({"description": __doc__, "variants": out}), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

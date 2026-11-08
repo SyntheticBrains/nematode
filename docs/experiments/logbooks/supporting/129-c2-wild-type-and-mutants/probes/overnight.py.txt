@@ -1,0 +1,171 @@
+"""One decisive fit of the wild type with its three mutants (description, discarded seeds).
+
+The 60-generation screen (`fit_mutants.py`: population 24, 64 animals, each mutant one family of
+nine) traded the mutants against the wild type: tph-1 passed at its start and was lost, tax-4 passed
+at generations 20-40 and was lost. This fit asks whether that trade-off is the search's budget or
+the model's limit.
+
+- The model and bounds: `fit_mutants.py`'s (the inhibitory scale at least 0.09; PDF's and ser-5's
+  strengths excitatory, after PDFR-1's Galpha-s and SER-5's Galpha-q couplings).
+- The start: the screen's last answer (generation 60, D 2.48).
+- The objective: v4's ranking score on the six families plus tph-1's, pdfr-1's and tax-4's two
+  lawn differences, each on its 200-animal band against its wild type on the same animals, the
+  mutants weighted to half the objective: 1,000 x undefined + sqrt((6·Dc^2 + 2·sum of the mutants'
+  terms^2) / 12), each mutant's term the root mean square of 10·asinh(z/10). Both guards apply.
+- The search: sep-CMA at population 48, sigma0 0.05, 200 animals a candidate, a cap of 150
+  generations on 16 workers, saved every generation and resumable.
+
+Readouts every 10 generations on the search's mean, on 200 animals (772,000,000 + i). Stop rules,
+fixed before the run and timed after the transient:
+
+1. at generation 50, stop if the readout D is more than 1 above its generation-0 readout;
+2. at generation 100, stop if neither tph-1 nor tax-4 has passed at any readout from 60 to 100.
+
+The verdict, fixed before the run: at the end, the last answer is graded on two populations, the
+readout one and a confirmation one (773,000,000 + i). If in both the wild type passes at least four
+families and tph-1 and tax-4 both pass, W is designed around fits of the wild type with its mutants.
+Otherwise the limit is accepted for this model class.
+
+Seeds: fit animals 770,000,000 + 200·k + i; CMA 9487. Run from the repository root.
+"""
+
+import json
+import math
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-run-mode")
+import cma_recovery_v2 as v2
+import fit_mutants as F
+import guarded_wide as gw
+import leave_one_out as L
+import npe_recovery as nr
+import readability as rd
+import screens as s
+import staged_bc as b
+
+OUT = Path("build/c2-run-mode/overnight")
+START = Path("build/c2-run-mode/fit_mutants.json")
+L.FITTED = ("tph-1", "pdfr-1", "tax-4")
+L.BASE = 770_000_000
+s.ANIMALS = 200
+READ, CONFIRM = [772_000_000 + i for i in range(200)], [773_000_000 + i for i in range(200)]
+s.READ_SEEDS = READ
+POPSIZE, SIGMA0, CAP, EVERY, WORKERS, CMA_SEED, MUTANT_WEIGHT = 48, 0.05, 150, 10, 16, 9487, 2.0
+
+
+class Objective(rd.Objective):
+    def __call__(self, record):
+        score = v2.ranking_score(self.truth, record, self.scales, self.family_map)
+        undefined = math.floor(score / 1000.0)
+        dc = score - 1000.0 * undefined
+        terms = []
+        for m in L.FITTED:
+            zs = [z for z in record.get("mutant_z", {}).get(m, {}).values() if z is not None]
+            terms.append(math.sqrt(np.mean([(10 * math.asinh(z / 10)) ** 2 for z in zs])) if zs else 10.0)
+        n = 6 + MUTANT_WEIGHT * len(terms)
+        score = 1000.0 * undefined + math.sqrt((6 * dc**2 + MUTANT_WEIGHT * sum(t**2 for t in terms)) / n)
+        if record.get("motor_saturated_share", 0.0) > b.SATURATED_SHARE:
+            score += b.PENALTY
+        spread = record.get("output_spread", {})
+        if min(spread.get("speed", 0.0), spread.get("reversal", 0.0)) < gw.SPREAD_FLOOR:
+            score += gw.RESPONSIVE_PENALTY
+        return score
+
+
+def stop_reason(g, readouts):
+    if g == 50 and readouts[50]["D"] > readouts[0]["D"] + 1.0:
+        return "the readout D more than 1 above its start at generation 50"
+    if g == 100:
+        window = [readouts[k] for k in range(60, 101, 10)]
+        if not any(r["mutants"][m]["passes"] for r in window for m in ("tph-1", "tax-4")):
+            return "neither tph-1 nor tax-4 passed at any readout from 60 to 100"
+    return None
+
+
+def _read_on(item):
+    """A readout job on given animals: the workers' seed list is set per job, since the main
+    process's assignment does not reach them."""
+    kind, z, seeds = item
+    s.READ_SEEDS = seeds
+    try:
+        return s._read_job((kind, z))
+    finally:
+        s.READ_SEEDS = READ
+
+
+def readout_on(pool, z, seeds):
+    import benchmark_grade as bg
+    import c2_encoder_probe as p
+
+    results = dict(pool.map(_read_on, [(k, z, seeds) for k in ("wild", "mgl-1", *p.MUTANTS)]))
+    w, bands = results["wild"], bg.load_bands_v4()
+    mutants = {}
+    for m in p.MUTANTS:
+        r = p.mutant_reading(m, w["small_lawn"], results[m], bands, len(seeds))
+        mutants[m] = {"passes": r["passes"], **{st: {"delta": x["delta"], "z": x["z"]} for st, x in r["statistics"].items()}}
+    early = results["mgl-1"]["early"] / w["search"]["early"] if w["search"]["early"] else None
+    return {"D": w["D"], "D_fit": w["D_fit"], "family_passes": w["family_passes"], "fails": w["fails"],
+            "search": {"early": w["search"]["early"], "late": w["search"]["late"]},
+            "mgl1": {"early": results["mgl-1"]["early"], "late": results["mgl-1"]["late"], "early_ratio": early},
+            "mutants": mutants}
+
+
+def verdict(readout):
+    families = sum(bool(v) for v in readout["family_passes"].values())
+    return families >= 4 and readout["mutants"]["tph-1"]["passes"] and readout["mutants"]["tax-4"]["passes"]
+
+
+def main():
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    lower, upper = F.bounds(len(json.loads(START.read_text())["answer"]))
+    state = OUT / "state.pkl"
+    if state.exists():
+        es, history, readouts = pickle.loads(state.read_bytes())
+    else:
+        x0 = [min(max(x, lo), hi) for x, lo, hi in zip(json.loads(START.read_text())["answer"], lower, upper)]
+        es = cma.CMAEvolutionStrategy(x0, SIGMA0, {"CMA_diagonal": True, "bounds": [lower, upper], "popsize": POPSIZE, "seed": CMA_SEED, "verbose": -9})
+        history, readouts = {"medians": [], "best": [], "best_D": [], "sigmas": []}, {}
+    objective = Objective()
+    reason, t0 = None, time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        if 0 not in readouts:
+            readouts[0] = s.readout(pool, list(es.mean))
+            s._print("N", 0, readouts[0])
+        while len(history["medians"]) < CAP and reason is None:
+            g = len(history["medians"]) + 1
+            points = es.ask()
+            ks = [POPSIZE * (g - 1) + m for m in range(POPSIZE)]
+            records = list(pool.map(L.simulate, ks, [list(map(float, x)) for x in points]))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            history["medians"].append(float(np.median(scores))); history["best"].append(float(np.min(scores)))
+            history["best_D"].append(float(records[int(np.argmin(scores))]["D"])); history["sigmas"].append(float(es.sigma))
+            print(f"N gen {g}: median {history['medians'][-1]:.2f} best {history['best'][-1]:.2f} (D {history['best_D'][-1]:.2f}) sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+            if g % EVERY == 0:
+                z = np.clip(es.result.xfavorite, lower, upper).tolist()
+                readouts[g] = s.readout(pool, z)
+                s._print("N", g, readouts[g])
+                reason = stop_reason(g, readouts)
+            state.write_bytes(pickle.dumps((es, history, readouts)))
+        z = np.clip(es.result.xfavorite, lower, upper).tolist()
+        confirm = readout_on(pool, z, CONFIRM)
+    last = readouts[max(readouts)]
+    s._print("N confirm", len(history["medians"]), confirm)
+    passed = verdict(last) and verdict(confirm)
+    record = {"description": __doc__, **history, "readouts": readouts, "confirm": confirm, "stopped": reason,
+              "verdict": {"readout": verdict(last), "confirm": verdict(confirm), "passed": passed}, "answer": z}
+    (OUT.parent / "overnight.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"N done: stopped {reason}; verdict passed {passed} (readout {verdict(last)}, confirm {verdict(confirm)})", flush=True)
+
+
+if __name__ == "__main__":
+    main()

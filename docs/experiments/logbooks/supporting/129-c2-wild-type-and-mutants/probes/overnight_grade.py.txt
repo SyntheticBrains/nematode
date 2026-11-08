@@ -1,0 +1,55 @@
+"""The overnight fit's answer graded in full (description; discarded populations 780,000,000 + 200·g + i).
+
+Generation 150 of `overnight.json`, on 5 populations of 200, every family graded with presence, and
+the three Scheer mutants on the small lawn on each population's animals, as `full_grade.py` grades
+(Logbook 126), with the overnight fit's constraints (`rd.controller` on its answer).
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-run-mode")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, readability as rd
+
+BASE = 780_000_000
+Z = json.loads(Path("build/c2-run-mode/overnight.json").read_text())["answer"]
+
+
+def wild(g):
+    bands = bg.load_bands_v4()
+    populations, chemotaxis = bg.simulate_v2(p.ARM, rd.controller(Z), p.population_seeds(BASE, g), bands)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=True)
+    clf = bg.classifier(bands)
+    return g, bg._finite({
+        "families": {f: {n: {"value": r["value"], "z": r["z"], "passes": r["passes"]} for n, r in rs.items()} for f, rs in graded["families"].items()},
+        "family_passes": graded["family_passes"], "wild_type_passes": graded["wild_type_passes"],
+        "local_search_presence": graded.get("local_search_presence"), "chemotaxis_presence": graded.get("chemotaxis_presence"),
+        "D": graded["D"], "D_fit": graded["D_fit"], "reversal_share": graded["reversal_share"],
+        "small_lawn_values": bg.family_values("small_lawn", populations["small_lawn"], clf),
+    })
+
+
+def mutant(item):
+    g, name, wild_values = item
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    mutated, _ = bg.simulate_v2(p.ARM, rd.controller(Z, name), p.population_seeds(BASE, g), bands, assays=("small_lawn",))
+    return g, name, p.mutant_reading(name, wild_values, bg.family_values("small_lawn", mutated["small_lawn"], clf), bands, p.ANIMALS)
+
+
+def main():
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        wilds = dict(pool.map(wild, range(5)))
+        mutants = list(pool.map(mutant, [(g, m, wilds[g]["small_lawn_values"]) for g in range(5) for m in p.MUTANTS]))
+    for g, name, reading in mutants:
+        wilds[g].setdefault("mutants", {})[name] = reading
+    passing = sum(bool(w["wild_type_passes"]) for w in wilds.values())
+    for g, w in sorted(wilds.items()):
+        fails = {f"{f}/{n}": round(r["z"], 2) for f, rs in w["families"].items() for n, r in rs.items() if not r["passes"]}
+        print(g, "wild type", w["wild_type_passes"], "D", round(w["D"], 2), "D_fit", round(w["D_fit"], 2), "fails", fails,
+              "LS present", (w["local_search_presence"] or {}).get("present"), "chem present", (w["chemotaxis_presence"] or {}).get("present"),
+              "mutants", {m: r["passes"] for m, r in w["mutants"].items()}, "reversal share", round(w["reversal_share"]["value"], 3), flush=True)
+    print("populations passing the wild type:", passing, "of 5")
+    Path("build/c2-run-mode/overnight_grade.json").write_text(json.dumps(bg._finite({"description": __doc__, "answer": Z, "populations": wilds, "populations_passing": passing}), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()
