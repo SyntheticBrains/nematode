@@ -101,3 +101,27 @@ resting potential for the Cl⁻ channels.
   ser-2, tyra-2, lgc-55 (−1); ser-6 (+1, its coupling Gαs in vivo but Gq-like in oocytes, excitatory
   either way).
 - **Fitted:** ser-5, whose Gαs coupling rests only on phylogenetic clustering.
+
+## `receptor_couplings.json`
+
+Each receptor of the layer's 105 fitted couples (54 genes), with its G-protein coupling and the sign
+it would take under `receptor_signs.json`'s rule. A coupling is accepted only from an assay without
+a promiscuous or chimeric G protein (a heterologous cAMP rise or fall, pertussis-toxin-sensitive
+GIRK currents or GTPγS binding, Ca²⁺ or IP without Gα16 or Gαqi/qs chimeras), or from in vivo
+genetics placing the receptor with a specific Gα (gsa-1, goa-1, egl-30). Sequence family alone is
+not accepted. Compiled 2026-11-07 by a literature pass; every signed entry's quote was then checked
+verbatim against its source on 2026-11-08, and each records the source read. The table changes
+nothing by itself: a brain applies a receptor's sign only when it names the receptor in
+`modulator_receptor_signs`.
+
+- **Signed, +1 (14):** aex-2, ckr-1, ckr-2, frpr-18, frpr-3, gnrr-1, gnrr-3, nmur-1, npr-35, npr-5, pdfr-1, ser-5, tkr-2, trhr-1.
+- **Signed, −1 (8):** dmsr-1, dmsr-7, egl-6, npr-1, npr-11, npr-17, npr-3, npr-4.
+- **Unresolved (null):** the rest, 32. For most, the only assay is Beets et al. 2023's screen with
+  the promiscuous Gα16. npr-22 and ntr-1 were drafted with signs and withdrawn on checking: npr-22's
+  source names no G protein, and ntr-1's quote came from a review while an independent primary used
+  Gα15.
+- **Caveats in the entries' notes:** gnrr-3, nmur-1 and tkr-2 rest on a PhD thesis; PDFR-1's sign is
+  its isoforms a and b's (isoform c inhibits cAMP, Janssen et al. 2008); ser-5's rests on a
+  co-requirement with a reduction-of-function Gαq allele in ASH. ser-5 is null in
+  `receptor_signs.json`, and this table resolves it without changing that file.
+- **Licence:** facts and short quotations from the cited publications, with their citations.

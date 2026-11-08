@@ -12,7 +12,8 @@ input and a strength:
 - **drives:** sensory inputs onto named cells, outside the ligands.
 
 ``load_data_layer`` reads the vendored layer placed from Bentley et al. 2016 and Ripoll-Sánchez et
-al. 2023. ``hand_placed_spec`` writes the four-pathway serotonin and PDF circuit in the same form.
+al. 2023; named receptors can take a cited sign from ``receptor_couplings.json``.
+``hand_placed_spec`` writes the four-pathway serotonin and PDF circuit in the same form.
 ``receptor_placement_null`` moves each receptor gene's cells, class by class, to classes of the
 same size.
 """
@@ -34,6 +35,10 @@ if TYPE_CHECKING:
     from quantumnematode.connectome.neuromodulators import ModulatorCircuit
 
 LAYER_PATH = Path(__file__).resolve().parents[4] / "data" / "neuromodulators" / "layer.json"
+# Each fitted couple's receptor, with its G-protein coupling and the sign it implies where a cited
+# assay establishes it; read only when a brain names receptors to sign.
+RECEPTOR_COUPLINGS_PATH = LAYER_PATH.with_name("receptor_couplings.json")
+CITED_SIGN_SOURCE = "receptor_couplings"
 DEFAULT_TIMESCALE_S = 60.0
 LayerSensitivity = Literal["none", "ec50_500nM"]
 LayerSource = Literal["bentley2016", "ripollsanchez2023"]
@@ -53,7 +58,8 @@ class Row:
     ``kind`` is ``couple``, ``link`` or ``drive``. A couple or link reads ligand ``ligand``'s pool;
     a drive reads sensory input ``drive``. ``sign`` is +1 or -1 for a fixed row and ``None`` for a
     fitted one. ``receptor`` is the gene whose knockout removes the row (a couple's own receptor, or
-    the gene a link is tagged to).
+    the gene a link is tagged to). ``sign_source`` names where a couple's sign came from when it was
+    signed at load from a cited receptor coupling, and is ``None`` for the layer's own signs.
     """
 
     kind: Literal["couple", "link", "drive"]
@@ -63,6 +69,7 @@ class Row:
     drive: int = -1
     receptor: str | None = None
     name: str = ""
+    sign_source: str | None = None
 
 
 @dataclass(frozen=True)
@@ -85,19 +92,50 @@ class LayerSpec:
         return row.ligand if row.kind != "drive" else len(self.ligands) + row.drive
 
 
-def load_data_layer(  # noqa: C901 - one filter per option
+def cited_receptor_signs(
+    receptors: Sequence[str],
+    path: Path = RECEPTOR_COUPLINGS_PATH,
+) -> dict[str, int]:
+    """Return each named receptor's cited sign, refusing any the table cannot sign.
+
+    A receptor is signed only when the table resolves its coupling to a sign and its quote has been
+    checked against the source.
+    """
+    table = json.loads(path.read_text())["receptors"]
+    signs: dict[str, int] = {}
+    for receptor in receptors:
+        entry = table.get(receptor)
+        if entry is None:
+            msg = f"receptor {receptor!r} is not in {path.name}"
+            raise ValueError(msg)
+        if entry["sign"] is None:
+            msg = f"receptor {receptor!r} has no resolved sign in {path.name}: {entry['note']}"
+            raise ValueError(msg)
+        if not entry.get("verified"):
+            msg = f"receptor {receptor!r}'s coupling in {path.name} has not been checked at source"
+            raise ValueError(msg)
+        signs[receptor] = int(entry["sign"])
+    return signs
+
+
+def load_data_layer(  # noqa: C901, PLR0913 - one filter per option
     names: Sequence[str],
     path: Path = LAYER_PATH,
     *,
     sensitivity: LayerSensitivity = "none",
     sources: Sequence[LayerSource] | None = None,
+    receptor_signs: Sequence[str] = (),
+    couplings_path: Path = RECEPTOR_COUPLINGS_PATH,
 ) -> LayerSpec:
     """Read the vendored layer onto the neurons in ``names``.
 
     ``sensitivity="ec50_500nM"`` keeps only the couples within Ripoll-Sánchez's potency rule.
     ``sources`` keeps only the cells those sources place; a couple left with no cells, or a ligand
-    with no producers, is dropped.
+    with no producers, is dropped. ``receptor_signs`` names receptors whose fitted couples take the
+    sign of their cited coupling (``cited_receptor_signs``); a couple the layer already fixes keeps
+    its own sign, and a named receptor left with no fitted couple is refused.
     """
+    cited = cited_receptor_signs(receptor_signs, couplings_path) if receptor_signs else {}
     data = json.loads(path.read_text())
     present = set(names)
     keep = set(sources) if sources is not None else None
@@ -126,16 +164,25 @@ def load_data_layer(  # noqa: C901 - one filter per option
         cells = cells_of(couple["cells"])
         if not cells:
             continue
+        fixed = couple["sign_class"] == "fixed"
+        signed_here = not fixed and couple["receptor"] in cited
         rows.append(
             Row(
                 kind="couple",
                 cells=cells,
-                sign=couple["sign"] if couple["sign_class"] == "fixed" else None,
+                sign=(
+                    couple["sign"] if fixed else cited[couple["receptor"]] if signed_here else None
+                ),
                 ligand=index[couple["ligand"]],
                 receptor=couple["receptor"],
                 name=couple["id"],
+                sign_source=CITED_SIGN_SOURCE if signed_here else None,
             ),
         )
+    unsigned = sorted(set(cited) - {row.receptor for row in rows if row.sign_source is not None})
+    if unsigned:
+        msg = f"receptor_signs names receptors with no fitted couple in the layer: {unsigned}"
+        raise ValueError(msg)
     drives = tuple(d["name"] for d in data["drives"])
     for i, drive in enumerate(data["drives"]):
         cells = tuple(c for c in drive["cells"] if c in present)

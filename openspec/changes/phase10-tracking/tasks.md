@@ -790,6 +790,22 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     whether a fit reaches CEP's route by itself, the start (without the imitation of C.1), the fit split and a held-out
     test, F.0b-ii, and the compute.
 
+  *(Added 2026-11-08: change `add-c2-encoder-procedure`; [Logbook 130](../../../docs/experiments/logbooks/130-c2-encoder-procedure.md).)*
+  **C.2's fitting procedure is in the encoder.** Each piece is off by default and byte-identical:
+
+  - the soft-capped readout and pool centres;
+  - the graded box and the inhibition floor;
+  - cited receptor signs (PDFR-1, SER-5) from a checked table of 54 receptors;
+  - an optional forward observer for a fit's guards.
+
+  The package's forward computes what the probe scripts' did on Logbook 129's passing answer. The
+  maintainer's decisions (2026-11-08) carry to the next change, the fit and its registration:
+
+  - the floor at 0.09;
+  - PDFR-1 and SER-5 on, the table's other 20 signed receptors off;
+  - a clean, staged start, with a readiness pilot first;
+  - held-out cohorts in every fit, plus one tax-4 leave-one-out.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 

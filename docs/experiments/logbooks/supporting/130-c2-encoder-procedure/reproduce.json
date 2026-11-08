@@ -1,0 +1,143 @@
+{
+  "description": "Description: the probe procedure's passing answer (Logbook 129, grade_nudged.json) converted into the package encoding. The forward parity is the gate; the five-population grade, on the probe's own populations, is reported beside the probe's.",
+  "settings": {
+    "encoder_modulator_tying": "per_ligand",
+    "encoder_readout": "soft_cap",
+    "encoder_pool_centres": true,
+    "encoder_box": "graded",
+    "encoder_inhibition_floor": 0.09,
+    "encoder_speed_noise": "ou",
+    "modulator_receptor_signs": [
+      "pdfr-1",
+      "ser-5"
+    ]
+  },
+  "forwards": {
+    "scheer_lawn": {
+      "steps": 2400,
+      "max_output_difference": 7.152557373046875e-07,
+      "primitives_identical": true,
+      "first_differing_step": null
+    },
+    "food_removal_lopezcruz": {
+      "steps": 5400,
+      "max_output_difference": 4.76837158203125e-07,
+      "primitives_identical": true,
+      "first_differing_step": null
+    },
+    "passes": true
+  },
+  "grade": {
+    "0": {
+      "package": {
+        "wild_type_passes": true,
+        "D": 1.683616373343428,
+        "fails": {},
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      },
+      "probe": {
+        "wild_type_passes": true,
+        "D": 1.6829046230206781,
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      }
+    },
+    "1": {
+      "package": {
+        "wild_type_passes": false,
+        "D": 1.6777089817507527,
+        "fails": {
+          "chemotaxis/flip_fraction": 3.1139816827840714
+        },
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      },
+      "probe": {
+        "wild_type_passes": false,
+        "D": 1.6686301040005846,
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      }
+    },
+    "2": {
+      "package": {
+        "wild_type_passes": false,
+        "D": 1.6592174147517986,
+        "fails": {
+          "kinematics/roaming_survival_5min": -3.3007188404198833
+        },
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      },
+      "probe": {
+        "wild_type_passes": false,
+        "D": 1.6591461555629,
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      }
+    },
+    "3": {
+      "package": {
+        "wild_type_passes": true,
+        "D": 1.6206611244109717,
+        "fails": {},
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      },
+      "probe": {
+        "wild_type_passes": true,
+        "D": 1.628014218757396,
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      }
+    },
+    "4": {
+      "package": {
+        "wild_type_passes": true,
+        "D": 1.6595059283736255,
+        "fails": {},
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      },
+      "probe": {
+        "wild_type_passes": true,
+        "D": 1.6609566068486612,
+        "mutants": {
+          "tph-1": true,
+          "pdfr-1": true,
+          "tax-4": true
+        }
+      }
+    }
+  },
+  "package_wild_type_passing": 3,
+  "probe_wild_type_passing": 3
+}

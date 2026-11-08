@@ -33,7 +33,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, Unpack, cast
 
 import numpy as np
 import torch
@@ -87,7 +87,11 @@ from quantumnematode.brain.weights import WeightComponent
 from quantumnematode.connectome.encoder import (
     AMPHID_CLASSES,
     CONTACT_CLASSES,
+    READOUT_CAP,
+    Box,
     CompactEncoder,
+    EntryOptions,
+    Readout,
     Tying,
     box_centre,
     write_encoder,
@@ -118,7 +122,7 @@ from quantumnematode.logging_config import logger
 from quantumnematode.utils.seeding import ensure_seed, get_rng, set_global_seed
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from quantumnematode.brain.arch._node_noise_schedule import NodeNoiseSchedule
     from quantumnematode.brain.arch._telemetry import UpdateTelemetry
@@ -595,6 +599,26 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
     # draw; tau is the encoder's last parameter, held under PPO, and PPO scores the speed by its
     # exact conditional density given the previous step. Default "none" is byte-identical.
     encoder_speed_noise: SpeedNoise = "none"
+    # The encoder only. "soft_cap" passes each output's pre-squash value through 2 tanh(x / 2), so
+    # no output can be held constant by driving it off the action squash. Default "linear" is
+    # byte-identical.
+    encoder_readout: Readout = "linear"
+    # The encoder only. Four fitted centres, one per pooled motor class, subtracted from the pooled
+    # rates before the readout, so a large readout weight on an offset pool does not act as a second
+    # bias. Appended after every other parameter; learnable under PPO. Default false.
+    encoder_pool_centres: bool = False
+    # The encoder only. "graded" holds the wiring scales on [0, 0.75] and the sensory gains on
+    # [-2, 2], where the settled network stays graded rather than saturating. Bounds only the unit
+    # vector a fit writes, not PPO's raw tensors. Default "wide".
+    encoder_box: Box = "wide"
+    # The encoder only. A lower bound on the inhibitory wiring scale, inside the box's wiring range,
+    # so a fit cannot switch signed inhibition off. Default None.
+    encoder_inhibition_floor: float | None = None
+    # The data layer only. Receptor genes whose fitted couples take the sign of their cited
+    # G-protein coupling from data/neuromodulators/receptor_couplings.json (Galpha-i/o and Cl-
+    # channels inhibitory, Galpha-q and Galpha-s excitatory). Under per-ligand tying each keeps a
+    # strength of its own. Default empty, byte-identical.
+    modulator_receptor_signs: list[str] = Field(default_factory=list)
 
     # PPO hyperparameters (mirror MLPPPOBrainConfig)
     learning_rate: float = _DEFAULT_LEARNING_RATE
@@ -635,6 +659,7 @@ class ConnectomePPOBrainConfig(PlasticityConfigMixin, PPOStabiliserConfig, Brain
             _freeze_wiring_refusal,
             _modulators_refusal,
             _encoder_refusal,
+            _encoder_procedure_refusal,
             _speed_noise_refusal,
             _sign_override_refusal,
         ):
@@ -1162,6 +1187,7 @@ def _data_layer_keys_set(config: ConnectomePPOBrainConfig) -> list[str]:
             ("modulator_layer_sources", config.modulator_layer_sources is None),
             ("modulator_layer_null", config.modulator_layer_null == "none"),
             ("modulator_layer_null_seed", config.modulator_layer_null_seed is None),
+            ("modulator_receptor_signs", not config.modulator_receptor_signs),
         )
         if not unset
     ]
@@ -1279,6 +1305,36 @@ def _encoder_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     return None
 
 
+def _encoder_procedure_refusal(config: ConnectomePPOBrainConfig) -> str | None:
+    """Return why the encoder's readout and box options cannot run here, or ``None``."""
+    if config.encoder == "none":
+        set_away = [
+            key
+            for key, unset in (
+                ("encoder_readout", config.encoder_readout == "linear"),
+                ("encoder_pool_centres", not config.encoder_pool_centres),
+                ("encoder_box", config.encoder_box == "wide"),
+                ("encoder_inhibition_floor", config.encoder_inhibition_floor is None),
+            )
+            if not unset
+        ]
+        if set_away:
+            return f"{', '.join(set_away)} read only with encoder='compact'."
+        return None
+    if config.encoder_readout not in ("linear", "soft_cap"):
+        return f"Unsupported encoder_readout: {config.encoder_readout!r}"
+    if config.encoder_box not in ("wide", "graded"):
+        return f"Unsupported encoder_box: {config.encoder_box!r}"
+    if config.encoder_inhibition_floor is not None:
+        high = 0.75 if config.encoder_box == "graded" else 1.5
+        if not 0.0 <= config.encoder_inhibition_floor < high:
+            return (
+                f"encoder_inhibition_floor must lie in [0, {high}) on the {config.encoder_box} "
+                f"box; got {config.encoder_inhibition_floor}."
+            )
+    return None
+
+
 def _speed_noise_refusal(config: ConnectomePPOBrainConfig) -> str | None:
     """Return why slow speed noise cannot run here, or ``None`` when it can.
 
@@ -1317,6 +1373,7 @@ def _data_layer_spec(config: ConnectomePPOBrainConfig, names: list[str]) -> Laye
         names,
         sensitivity=config.modulator_layer_sensitivity,
         sources=config.modulator_layer_sources,
+        receptor_signs=tuple(config.modulator_receptor_signs),
     )
     unknown = sorted(set(config.modulator_timescales_s or {}) - set(spec.ligands))
     if unknown:
@@ -1326,6 +1383,21 @@ def _data_layer_spec(config: ConnectomePPOBrainConfig, names: list[str]) -> Laye
         assert config.modulator_layer_null_seed is not None  # noqa: S101 - checked by the refusal
         spec = receptor_placement_null(spec, config.modulator_layer_null_seed, names)
     return spec
+
+
+def _cited_rows(spec: LayerSpec) -> list[str]:
+    """Return the names of the layer rows signed at load from a cited receptor coupling, sorted."""
+    return sorted(row.name for row in spec.rows if row.sign_source is not None)
+
+
+def encoder_options(config: ConnectomePPOBrainConfig) -> EntryOptions:
+    """Return the encoder's entry options a config sets, as ``encoder_entries`` takes them."""
+    return {
+        "speed_noise": config.encoder_speed_noise == "ou",
+        "box": config.encoder_box,
+        "inhibition_floor": config.encoder_inhibition_floor,
+        "pool_centres": config.encoder_pool_centres,
+    }
 
 
 def _layer_decay(config: ConnectomePPOBrainConfig, spec: LayerSpec) -> np.ndarray:
@@ -1355,7 +1427,10 @@ def _reject_unsupported_dynamics(config: ConnectomePPOBrainConfig) -> None:
     if (refusal := _gap_coupling_refusal(config)) is not None:
         raise ValueError(refusal)
     refusal = (
-        _encoder_refusal(config) or _speed_noise_refusal(config) or _encoder_step_refusal(config)
+        _encoder_refusal(config)
+        or _encoder_procedure_refusal(config)
+        or _speed_noise_refusal(config)
+        or _encoder_step_refusal(config)
     )
     if refusal is not None:
         raise ValueError(refusal)
@@ -1637,6 +1712,9 @@ class ConnectomeTopology(nn.Module):
         self.dynamics = dynamics
         # The compact encoder, attached by the brain once the topology is built; None without it.
         self.encoder: CompactEncoder | None = None
+        # Called after each encoded settling with the step's outputs and settled hidden state, both
+        # detached; it cannot change what the forward returns. None by default.
+        self.forward_observer: Callable[[torch.Tensor, torch.Tensor], None] | None = None
         # Set by update telemetry: the batched settling then keeps its second-to-last iterate,
         # detached, so the settled state's distance from a fixed point can be read. Off, nothing
         # is kept; on, the forward computes exactly what it computes off.
@@ -2402,7 +2480,8 @@ class ConnectomeTopology(nn.Module):
         connectome: Connectome,
         tying: Tying,
         *,
-        speed_noise: bool = False,
+        readout: Readout = "linear",
+        **options: Unpack[EntryOptions],
     ) -> None:
         """Fix the wiring from data and hand the policy to the compact encoder.
 
@@ -2420,7 +2499,8 @@ class ConnectomeTopology(nn.Module):
             cast("torch.Tensor", self.chem_sign),
             self.modulator_spec,
             tying,
-            speed_noise=speed_noise,
+            readout=readout,
+            **options,
         ).to(device)
         self.readout_bias = nn.Parameter(torch.zeros(self.readout.shape[0], device=device))
         unread = [self.w_chem, self.food_gains]
@@ -2451,7 +2531,15 @@ class ConnectomeTopology(nn.Module):
             h = _settling_tanh(preact)
         if self.capture_penultimate:
             self.penultimate = previous.detach()
-        mean = self._pool_motor(h) @ self.readout.T + self.readout_bias
+        pooled = self._pool_motor(h)
+        if encoder.pool_centres is not None:
+            pooled = pooled - encoder.pool_centres
+        mean = pooled @ self.readout.T + self.readout_bias
+        if encoder.readout_mode == "soft_cap":
+            mean = READOUT_CAP * torch.tanh(mean / READOUT_CAP)
+        if self.forward_observer is not None:
+            # Copies, so an observer that edits its arguments cannot touch what the forward returns.
+            self.forward_observer(mean.detach().clone(), h.detach().clone())
         return mean, h
 
     def modulator_layer_strengths(self) -> torch.Tensor:
@@ -4063,12 +4151,14 @@ class ConnectomePPOBrain(ClassicalBrain):
             # Before the rule is built, so its optimiser holds the encoder's parameters; written at
             # the unit box's centre, so a fresh encoded brain does not depend on its seed.
             tying = config.encoder_modulator_tying
-            speed_noise = config.encoder_speed_noise == "ou"
-            self.topology.attach_encoder(connectome, tying, speed_noise=speed_noise)
-            write_encoder(
-                self,
-                box_centre(self.topology.modulator_spec, tying, speed_noise=speed_noise),
+            options = encoder_options(config)
+            self.topology.attach_encoder(
+                connectome,
+                tying,
+                readout=config.encoder_readout,
+                **options,
             )
+            write_encoder(self, box_centre(self.topology.modulator_spec, tying, **options))
 
         # Learning rule: owns the critic (constructed inside the rule at this
         # exact point — same torch-RNG draw order as the pre-extraction
@@ -4875,6 +4965,20 @@ class ConnectomePPOBrain(ClassicalBrain):
                 all_components["training_state"].state["encoder_speed_noise"] = (
                     self.config.encoder_speed_noise
                 )
+            if self.config.encoder_readout != "linear":
+                # Recorded only off the default, as the speed noise's mode is.
+                all_components["training_state"].state["encoder_readout"] = (
+                    self.config.encoder_readout
+                )
+        if self.config.modulator_receptor_signs:
+            # The cited signs and the rows they fix, recorded only when set: under per-ligand tying
+            # a signed brain's strength tensors have the shapes an unsigned one's have.
+            all_components["training_state"].state["modulator_receptor_signs"] = sorted(
+                self.config.modulator_receptor_signs,
+            )
+            all_components["training_state"].state["modulator_cited_rows"] = _cited_rows(
+                self.topology.modulator_spec,
+            )
         if self.config.gap_normalisation != "degree":
             # Recorded only off the default, so a default brain saves exactly what it did before
             # the option existed. A mismatch on load is refused by the gap-matrix wiring check.
@@ -4942,6 +5046,41 @@ class ConnectomePPOBrain(ClassicalBrain):
         "plasticity_plastic_readout",
         "plasticity_plastic_tensors",
     )
+
+    def _reject_encoder_procedure_mismatch(self, components: dict[str, WeightComponent]) -> None:
+        """Refuse weights saved under another readout mode or another set of cited signs.
+
+        Neither changes a tensor's shape, so a mismatch would load silently: a soft-capped readout
+        reads the same weights differently from a linear one, and a couple signed at load reads its
+        strength as a fixed-sign magnitude where an unsigned brain reads a signed gain. A file that
+        records neither was saved with the linear readout and no cited signs.
+        """
+        if "training_state" not in components:
+            return
+        state = components["training_state"].state
+        saved_readout = state.get("encoder_readout", "linear")
+        if self._encoded and saved_readout != self.config.encoder_readout:
+            msg = (
+                f"These weights were saved with encoder_readout={saved_readout!r}, and this brain "
+                f"has {self.config.encoder_readout!r}: the readout maps the same weights to "
+                "different outputs under the two."
+            )
+            raise ValueError(msg)
+        saved_rows = state.get("modulator_cited_rows", [])
+        current_rows = (
+            _cited_rows(self.topology.modulator_spec)
+            if self.config.modulator_receptor_signs
+            else []
+        )
+        saved_signs = state.get("modulator_receptor_signs", [])
+        current_signs = sorted(self.config.modulator_receptor_signs)
+        if saved_signs != current_signs or saved_rows != current_rows:
+            msg = (
+                f"These weights were saved with modulator_receptor_signs={saved_signs!r} fixing "
+                f"rows {saved_rows!r}, and this brain has {current_signs!r} fixing "
+                f"{current_rows!r}: the layer's strengths mean different things under the two."
+            )
+            raise ValueError(msg)
 
     def _reject_speed_noise_mismatch(self, components: dict[str, WeightComponent]) -> None:
         """Refuse weights saved under the other speed-noise mode.
@@ -5100,6 +5239,7 @@ class ConnectomePPOBrain(ClassicalBrain):
         self._reject_plasticity_identity_mismatch(components)
         self._reject_gap_coupling_mismatch(components)
         self._reject_speed_noise_mismatch(components)
+        self._reject_encoder_procedure_mismatch(components)
         topology_state = components["topology"].state if "topology" in components else None
         if topology_state is not None:
             self._load_topology_state(topology_state)
