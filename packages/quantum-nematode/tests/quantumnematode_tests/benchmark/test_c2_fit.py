@@ -1,0 +1,593 @@
+"""C.2's registered fit: its objective, procedure, verdict, recovery, seeds and guards.
+
+Covers the controller-fit spec's scenarios "A later stage keeps the search's steps", "Stage 1 fits
+only its subset", "A plateau does not stop a stage", "The mutants weigh half", "A statistic at its
+bar", "tph-1's leaving is not scored", "A statistic undefined in most noise populations", "A resume
+with changed settings", "A fitted mutant fails the verdict", "pdfr-1 does not decide", "tax-4 is
+never scored", "The fit refuses before the recovery is recorded", "A changed config stops a run", "A
+failed pilot blocks the recovery", "The longest stage stays inside its sub-block", "The real halves
+reproduce W's minimum" and "The smoke reads no held-out track"; and the fit-recovery spec's "The
+preflight fails", "The recovery falls short", "A truth whose statistic flips" and "The preflight
+runs once".
+"""
+
+from __future__ import annotations
+
+import itertools
+import json
+import math
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+
+import numpy as np
+import pytest
+
+_REPO = Path(__file__).resolve().parents[5]
+sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
+import benchmark_grade as bg  # noqa: E402  # pyright: ignore[reportMissingImports]
+import c2_fit as fit  # noqa: E402  # pyright: ignore[reportMissingImports]
+import cma_recovery_v2 as v2  # noqa: E402  # pyright: ignore[reportMissingImports]
+
+
+@pytest.fixture(scope="module")
+def bands() -> dict[str, Any]:
+    """Return benchmark v4's bands."""
+    return bg.load_bands_v4()
+
+
+def _record(truth: dict[str, Any], **overrides: Any) -> dict[str, Any]:
+    """Return a record at the truth, responsive and unsaturated, with overrides applied."""
+    record = {
+        "statistics": dict(truth["statistics"]),
+        "delta": {m: dict(d) for m, d in truth["delta"].items()},
+        "saturated": 0.0,
+        "spread": {"speed": 1.0, "reversal": 1.0},
+    }
+    record.update(overrides)
+    return record
+
+
+def _at_z(truth: dict[str, Any], bands: dict[str, Any], key: str, z: float) -> float:
+    return truth["statistics"][key] + z * v2.band_scales_v2(bands)[key]
+
+
+# ---------------------------------------------------------------------------------------------
+# The objective
+# ---------------------------------------------------------------------------------------------
+
+
+def test_the_mutants_weigh_half(bands: dict[str, Any]) -> None:
+    """Covers "The mutants weigh half": six families at 1 and three mutants at 3 give sqrt(5)."""
+    truth = fit.band_truth(bands)
+    unit = 10 * math.sinh(0.1)  # compresses to exactly 1
+    three = 10 * math.sinh(0.3)  # compresses to exactly 3
+    record = _record(truth)
+    for key in truth["statistics"]:
+        record["statistics"][key] = _at_z(truth, bands, key, unit)
+    scales = fit.mutant_scales(bands)
+    for m in fit.MUTANTS:
+        for s in fit.GRADED[m]:
+            record["delta"][m][s] = truth["delta"][m][s] + three * scales[m][s]
+    objective = fit.Objective(truth, bands, families=None, mutants=fit.MUTANTS)
+    assert objective.distance(record) == pytest.approx(math.sqrt(5.0), rel=1e-9)
+    assert objective(record) == pytest.approx(math.sqrt(5.0), rel=1e-9)
+
+
+def test_a_statistic_at_its_bar(bands: dict[str, Any]) -> None:
+    """Covers "A statistic at its bar": its failure term is 10 x 0.5 = 5."""
+    truth = fit.band_truth(bands)
+    sd = dict.fromkeys(truth["statistics"], fit.SD_FLOOR)
+    objective = fit.Objective(truth, bands, families=None, mutants=(), sd=sd)
+    key = "activity/onset_rate_per_min"
+    record = _record(truth)
+    record["statistics"][key] = _at_z(truth, bands, key, float(bands["bars"]["wild_type"]))
+    assert objective.failure(record) == pytest.approx(5.0, abs=1e-9)
+    assert fit.phi(0.0) == 0.5
+
+
+def test_tph1_leaving_is_not_scored(bands: dict[str, Any]) -> None:
+    """Covers "tph-1's leaving is not scored": its exits difference moves no term."""
+    truth = fit.band_truth(bands)
+    sd = {
+        **dict.fromkeys(truth["statistics"], 1.0),
+        **{f"{m}/{s}": 1.0 for m in fit.MUTANTS for s in fit.GRADED[m]},
+    }
+    objective = fit.Objective(truth, bands, families=None, mutants=fit.MUTANTS, sd=sd)
+    near = _record(truth)
+    far = _record(truth)
+    far["delta"]["tph-1"]["exits_per_on_lawn_hour"] += 50.0
+    assert objective(far) == objective(near)
+    assert fit.GRADED["tph-1"] == ("roaming_fraction",)
+    reading = fit.mutant_reading("tph-1", far["delta"]["tph-1"], bands)
+    assert reading["statistics"]["exits_per_on_lawn_hour"]["graded"] is False
+    assert reading["statistics"]["exits_per_on_lawn_hour"]["passes"] is None
+    assert reading["passes"] is True
+
+
+def test_tax4_is_never_scored_in_the_leave_one_out(bands: dict[str, Any]) -> None:
+    """Covers "tax-4 is never scored": a leave-one-out score ignores tax-4's differences."""
+    truth = fit.band_truth(bands)
+    sd = {
+        **dict.fromkeys(truth["statistics"], 1.0),
+        **{f"{m}/{s}": 1.0 for m in fit.MUTANTS for s in fit.GRADED[m]},
+    }
+    mutants = fit.RUNS["loo"].mutants
+    assert "tax-4" not in mutants
+    objective = fit.Objective(truth, bands, families=None, mutants=mutants, sd=sd)
+    near, far = _record(truth), _record(truth)
+    far["delta"]["tax-4"] = dict.fromkeys(fit.LAWN_DIFFERENCES, 10.0)
+    assert objective(far) == objective(near)
+
+
+def test_an_undefined_statistic_and_the_guards(bands: dict[str, Any]) -> None:
+    """An undefined statistic ranks a thousand behind; saturation and a pinned output are paid."""
+    truth = fit.band_truth(bands)
+    objective = fit.Objective(truth, bands, families=fit.FIT_FAMILIES, mutants=())
+    record = _record(truth)
+    record["statistics"]["kinematics/dwelling_speed_p90"] = None
+    assert objective(record) == pytest.approx(1000.0)
+    pinned = _record(truth, saturated=0.6, spread={"speed": 0.25, "reversal": 1.0})
+    assert objective(pinned) == pytest.approx(500.0 + 300.0 * 0.5)
+
+
+def test_a_statistic_undefined_in_most_noise_populations(bands: dict[str, Any]) -> None:
+    """Covers "A statistic undefined in most noise populations": its SD is the floor."""
+    truth = fit.band_truth(bands)
+    key = "small_lawn/roaming_fraction"
+    scale = v2.band_scales_v2(bands)[key]
+    populations = []
+    for p in range(30):
+        record = _record(truth)
+        record["statistics"][key] = truth["statistics"][key] + (p % 2) * 2.0 * scale
+        record["statistics"]["small_lawn/exits_per_on_lawn_hour"] = None if p else 0.5
+        populations.append(record)
+    sd = fit.noise_sd(populations, truth, bands, fit.MUTANTS)
+    assert sd[key] == pytest.approx(float(np.std([(p % 2) * 2.0 for p in range(30)], ddof=1)))
+    assert sd["small_lawn/exits_per_on_lawn_hour"] == fit.SD_FLOOR
+    assert sd["small_lawn/time_on_lawn"] == fit.SD_FLOOR  # no spread at all
+    assert set(sd) >= {f"{m}/{s}" for m in fit.MUTANTS for s in fit.GRADED[m]}
+
+
+# ---------------------------------------------------------------------------------------------
+# The procedure, on fake simulations
+# ---------------------------------------------------------------------------------------------
+
+
+def _fake_entries() -> list[Any]:
+    blocks = ["wiring", "sensory", "readout", "noise", "modulator", "timescale", "readout"]
+    names = ["w", "s", "r", "n", "m", "timescale.speed_noise", "readout.centre.VB"]
+    return [
+        SimpleNamespace(name=n, block=b, unit=lambda _v: 0.123)
+        for n, b in zip(names, blocks, strict=True)
+    ]
+
+
+@pytest.fixture
+def fake_run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, bands: dict[str, Any]) -> dict:
+    """Run the procedure on fake simulations: every candidate and readout seen, every hand-off."""
+    seen: dict[str, Any] = {"candidates": {}, "carried": []}
+    truth = fit.band_truth(bands)
+
+    def generation(_pool, _run, stage, _g, candidates, _path):
+        seen["candidates"].setdefault(stage, []).extend(candidates)
+        out = []
+        for z in candidates:
+            record = _record(truth)
+            key = "small_lawn/roaming_fraction"
+            record["statistics"][key] = truth["statistics"][key] + 0.01 * float(np.sum(z))
+            out.append(record)
+        return out
+
+    def readout(_pool, z, _seeds, _truth):
+        seen.setdefault("readouts", []).append(list(z))
+        return {"spread": {"speed": 1.0, "reversal": 1.0}, "time_on_lawn": 0.9, "D_fit": 1.0}
+
+    original_fresh = fit.fresh
+
+    def fresh(x0, sigma0, seed, popsize):
+        seen.setdefault("fresh", []).append({"x0": list(x0), "sigma0": sigma0})
+        return original_fresh(x0, sigma0, seed, popsize)
+
+    original = fit.carried
+
+    def carried(strategy, x0, seed, popsize):
+        new = original(strategy, x0, seed, popsize)
+        seen["carried"].append(
+            {
+                "sigma": float(strategy.sigma),
+                "stds": np.asarray(strategy.stds).copy(),
+                "x0": list(x0),
+                "new_sigma": float(new.sigma),
+                "new_stds": np.asarray(new.stds).copy(),
+                "new_mean": np.asarray(new.result.xfavorite).copy(),
+            },
+        )
+        return new
+
+    monkeypatch.setattr(fit, "BUILD", tmp_path)
+    monkeypatch.setattr(fit, "entries", _fake_entries)
+    monkeypatch.setattr(fit, "_generation", generation)
+    monkeypatch.setattr(fit, "readout", readout)
+    monkeypatch.setattr(fit, "noise_step", lambda *_a: [_record(truth), _record(truth)])
+    monkeypatch.setattr(fit, "carried", carried)
+    monkeypatch.setattr(fit, "fresh", fresh)
+    monkeypatch.setattr(fit, "head", lambda: "head")
+    monkeypatch.setattr(fit, "manifest_digest", lambda: "digest")
+    layout = fit.Layout(1, animals=1, popsize=4)
+    run = fit.Run("fake", layout, (1, 2, 3, 4), generations=(3, 3, 3, 45))
+    record = fit.procedure(run, truth, pool=None)
+    return {"seen": seen, "record": record, "run": run, "truth": truth}
+
+
+def test_stage_one_fits_only_its_subset(fake_run: dict) -> None:
+    """Covers "Stage 1 fits only its subset": every other parameter stays at 0.5."""
+    subset = fit.subset_indices(_fake_entries())
+    assert subset == [0, 1, 2, 3, 6]
+    for z in fake_run["seen"]["candidates"][0]:
+        assert [z[i] for i in range(7) if i not in subset] == [0.5, 0.5]
+    # 2a starts fresh from stage 1's answer, the timescale set to 1 s (the fake entry's 0.123).
+    answer = fake_run["record"]["answers"]["1"]
+    assert answer[5] == 0.5
+    starts = fake_run["seen"]["fresh"]
+    assert [s["sigma0"] for s in starts] == [0.2, 0.1]
+    assert starts[0]["x0"] == [0.5] * 5
+    assert starts[1]["x0"] == [*answer[:5], 0.123, answer[6]]
+
+
+def test_each_stage_reads_its_start_point_first(fake_run: dict) -> None:
+    """Each stage's first readout reads its start point in the box, not CMA's internal mean."""
+    answers = fake_run["record"]["answers"]
+    readouts = fake_run["seen"]["readouts"]
+    # Stage 1 reads 0, 3; 2a reads 0, 3; 2b reads 0, 3; the final stage reads 0, 10, ..., 40, 45.
+    starts = [readouts[0], readouts[2], readouts[4]]
+    assert starts[0] == [0.5] * 7
+    assert np.allclose(starts[2], answers["2a"], atol=1e-12)
+    assert min(answers["2a"]) < 0.05  # near a bound, where the two differ
+
+
+def test_a_later_stage_keeps_the_search_steps(fake_run: dict) -> None:
+    """Covers "A later stage keeps the search's steps": sigma, steps and mean carried twice."""
+    hands = fake_run["seen"]["carried"]
+    assert len(hands) == 2  # 2a -> 2b, 2b -> final
+    answers = fake_run["record"]["answers"]
+    for hand, previous in zip(hands, ("2a", "2b"), strict=True):
+        assert hand["new_sigma"] == pytest.approx(hand["sigma"])
+        assert np.allclose(hand["new_stds"], hand["stds"])
+        assert np.allclose(hand["new_mean"], answers[previous])
+
+
+def test_a_plateau_does_not_stop_a_stage(fake_run: dict) -> None:
+    """Covers "A plateau does not stop a stage": the final stage runs its count, plateau read."""
+    final = fake_run["record"]["histories"]["final"]["medians"]
+    assert len(final) == 45
+    assert fake_run["record"]["plateau_generation"] is not None
+    assert fake_run["record"]["plateau_generation"] <= 45
+    assert fake_run["record"]["noise"]["populations"] == 2
+
+
+def test_a_resume_with_changed_settings(fake_run: dict) -> None:
+    """Covers "A resume with changed settings": the saved state is refused."""
+    run = fake_run["run"]
+    changed = fit.Run(run.name, run.layout, run.cma_seeds, generations=(3, 3, 3, 46))
+    with pytest.raises(RuntimeError, match="other settings"):
+        fit.procedure(changed, fake_run["truth"], pool=None)
+    # Resumed with its own settings, the finished run returns its answer unchanged.
+    again = fit.procedure(run, fake_run["truth"], pool=None)
+    assert again["answer"] == fake_run["record"]["answer"]
+
+
+def test_the_pilot_kills_on_the_mean_of_its_last_readouts() -> None:
+    """Stage 1's kill rule reads the mean of its last three readouts, not the last one alone."""
+    stage1, stage2a = fit.STAGES[0], fit.STAGES[1]
+    good = {"spread": {"speed": 1.0, "reversal": 1.0}, "time_on_lawn": 0.85, "D_fit": 2.0}
+    dip = {**good, "time_on_lawn": 0.60}
+    # A last readout below the bar with a mean above it (0.767) does not kill; the reverse does.
+    assert fit._kill(stage1, {120: dip, 130: good, 140: good, 150: dip}) is None
+    assert fit._kill(stage1, {130: dip, 140: dip, 150: {**good, "time_on_lawn": 0.95}}) is not None
+    pinned = {**good, "spread": {"speed": 1.0, "reversal": 0.2}}
+    assert fit._kill(stage1, {130: pinned, 140: pinned, 150: good}) is not None
+    assert fit._kill(stage2a, {280: {**good, "D_fit": 2.6}, 290: good, 300: good}) is None
+    assert (
+        fit._kill(stage2a, {290: {**good, "D_fit": 3.0}, 300: {**good, "D_fit": 3.0}}) is not None
+    )
+    assert fit._kill(fit.STAGES[2], {200: {**good, "D_fit": 9.0}}) is None
+
+
+# ---------------------------------------------------------------------------------------------
+# The verdict
+# ---------------------------------------------------------------------------------------------
+
+
+def _grade(*, wild: bool, **mutants: bool) -> dict[str, Any]:
+    passes = {"tph-1": True, "pdfr-1": True, "tax-4": True, **mutants}
+    return {
+        "wild_type_passes": wild,
+        "passes": {"activity/onset_rate_per_min": wild},
+        "z": {"activity/onset_rate_per_min": -2.0 if wild else -3.3},
+        "statistics": {},
+        "mutants": {m: {"passes": p} for m, p in passes.items()},
+    }
+
+
+def test_a_fitted_mutant_fails_the_verdict() -> None:
+    """Covers "A fitted mutant fails the verdict": the wild type 4 of 5, tax-4 2 of 5."""
+    taxes = [True, True, False, False, False]
+    grades = [_grade(wild=g < 4, **{"tax-4": t}) for g, t in enumerate(taxes)]
+    reading = fit.verdict(grades)
+    assert reading["wild_type_passes"] == 4
+    assert reading["passes"] is False
+    assert reading["diagnosis"]["mutant_failures"]["tax-4"] == 3
+    assert reading["diagnosis"]["statistics"]["activity/onset_rate_per_min"][4] == -3.3
+
+
+def test_pdfr1_does_not_decide() -> None:
+    """Covers "pdfr-1 does not decide": pdfr-1 in 1 of 5 leaves a pass."""
+    grades = [_grade(wild=True, **{"pdfr-1": g == 0}) for g in range(5)]
+    reading = fit.verdict(grades)
+    assert reading["passes"] is True
+    assert reading["mutant_passes"]["pdfr-1"] == 1
+    # Only the first five populations enter the verdict.
+    assert fit.verdict([*grades, *[_grade(wild=False)] * 10])["passes"] is True
+
+
+# ---------------------------------------------------------------------------------------------
+# F.0b-ii
+# ---------------------------------------------------------------------------------------------
+
+
+def _preflight(monkeypatch: pytest.MonkeyPatch, distances: dict[str, float], bands: dict) -> dict:
+    monkeypatch.setattr(
+        fit,
+        "recovery_distance",
+        lambda _o, r, _b: distances[r.get("kind", "reference")],
+    )
+
+    def run(kind: str) -> dict[str, Any]:
+        return {"kind": kind, "statistics": {"a": 1.0}, "delta": {"tph-1": {"s": 0.1}}}
+
+    repeats = [run("floor")] * 10 + [run("oracle")] * 10
+    return fit.preflight_record(run("floor"), repeats, [run("prior")], [run("centre")], bands)
+
+
+def test_the_preflight_checks(monkeypatch: pytest.MonkeyPatch, bands: dict[str, Any]) -> None:
+    """Covers "The preflight fails": an oracle gain of 0.80 stops the recovery."""
+    good = {"floor": 0.36, "oracle": 0.37, "prior": 6.4, "centre": 5.95, "reference": 1.13}
+    record = _preflight(monkeypatch, good, bands)
+    assert record["passed"] is True
+    assert record["wild_type_reference_gain"] == pytest.approx((6.4 - 1.13) / (6.4 - 0.36))
+    assert record["gate_line_D"] == pytest.approx(6.4 - 0.75 * (6.4 - 0.36))
+    oracle = 6.4 - 0.80 * (6.4 - 0.36)
+    assert _preflight(monkeypatch, {**good, "oracle": oracle}, bands)["checks"]["oracle"] is False
+    centre = 6.4 - 0.30 * (6.4 - 0.36)
+    assert _preflight(monkeypatch, {**good, "centre": centre}, bands)["passed"] is False
+
+
+def test_a_truth_whose_statistic_flips() -> None:
+    """Covers "A truth whose statistic flips": a repeat losing a statistic is named."""
+    observation = {"statistics": {"a": 1.0, "b": 2.0}, "delta": {"tph-1": {"s": 0.1}}}
+    flipped = {"statistics": {"a": 1.0, "b": None}, "delta": {"tph-1": {"s": 0.1}}}
+    assert fit.definedness_flips(observation, [observation, flipped]) == ["b"]
+    assert fit.definedness_flips(observation, [observation]) == []
+
+
+def test_the_recovery_falls_short() -> None:
+    """Covers "The recovery falls short": a gain of 0.70 does not clear the gate."""
+    preflight = {"prior_D": 6.4, "floor": 0.4}
+    assert fit.recovery_gate(6.4 - 0.70 * 6.0, preflight)["passes"] is False
+    assert fit.recovery_gate(6.4 - 0.80 * 6.0, preflight)["passes"] is True
+
+
+def test_the_preflight_runs_once(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Covers "The preflight runs once": an existing record is refused."""
+    path = tmp_path / "recovery_preflight.json"
+    path.write_text("{}\n")
+    monkeypatch.setattr(fit, "RECOVERY_PREFLIGHT_PATH", path)
+    assert fit._recovery_preflight(1) == 1
+
+
+def test_the_recovery_distance_at_the_truth_is_zero(bands: dict[str, Any]) -> None:
+    """The recovery distance is 0 at the truth, and a mutant enters at half its weight."""
+    truth = fit.band_truth(bands)
+    assert fit.recovery_distance(truth, _record(truth), bands) == pytest.approx(0.0)
+    moved = _record(truth)
+    scale = fit.mutant_scales(bands)["tax-4"]["roaming_fraction"]
+    moved["delta"]["tax-4"]["roaming_fraction"] += 2.0 * scale
+    # tax-4 grades two statistics: its term is sqrt(4 / 2); weight 2 of 12.
+    assert fit.recovery_distance(truth, moved, bands) == pytest.approx(math.sqrt(2 * 2.0 / 12))
+
+
+# ---------------------------------------------------------------------------------------------
+# Seeds
+# ---------------------------------------------------------------------------------------------
+
+# Every earlier registered or probe block at or above 100,000,000 (the seed table).
+EARLIER = (
+    (110_000_000, 126_001_000),
+    (400_000_000, 442_001_000),
+    (470_000_000, 475_100_000),
+    (500_000_000, 542_002_000),
+    (600_000_000, 646_001_000),
+    (700_000_000, 795_001_000),
+    (800_000_000, 878_003_000),
+    (880_000_000, 880_002_000),
+)
+
+
+def _blocks() -> dict[str, tuple[int, int]]:
+    blocks = {}
+    for name, run in fit.RUNS.items():
+        for use, span in run.layout.spans(run.generations).items():
+            blocks[f"{name} {use}"] = span
+    n = fit.ANIMALS
+    blocks["truth"] = (fit.TRUTH_BASE, fit.TRUTH_BASE + n * (fit.TRUTH_REPEATS + 1) - 1)
+    blocks["prior"] = (fit.PRIOR_BASE, fit.PRIOR_BASE + n * fit.PRIOR_DRAWS - 1)
+    blocks["centre"] = (fit.CENTRE_BASE, fit.CENTRE_BASE + n * fit.CENTRE_REPEATS - 1)
+    blocks["speed noise"] = (fit.SPEED_NOISE_BASE, fit.SPEED_NOISE_BASE + n)
+    blocks["stand-in"] = (885_000_000, 887_100_000 + 4 * n - 1)
+    return blocks
+
+
+def test_seed_blocks_do_not_overlap() -> None:
+    """Every block is disjoint from the others and from every earlier block in the seed table."""
+    ranges = sorted(_blocks().items(), key=lambda kv: kv[1][0])
+    for (a, (_, a_end)), (b, (b_start, _)) in itertools.pairwise(ranges):
+        assert a_end < b_start, f"{a} overlaps {b}"
+    for name, (start, end) in _blocks().items():
+        for first, last in EARLIER:
+            assert end < first or start > last, f"{name} overlaps an earlier block"
+
+
+def test_the_longest_stage_stays_inside_its_sub_block() -> None:
+    """Covers "The longest stage stays inside its sub-block": 2a's last candidate."""
+    layout = fit.Layout(960_000_000)
+    last = layout.candidate_seeds(1, 300, fit.POPSIZE - 1)[-1]
+    assert last < layout.candidate_seeds(2, 1, 0)[0]
+    assert last == 960_000_000 + 4_000_000 + 200 * 14_400 - 1
+    smoke = fit.RUNS["smoke"]
+    for start, end in smoke.layout.spans(smoke.generations).values():
+        assert 99_880_000 <= start <= end <= 99_889_999
+
+
+# ---------------------------------------------------------------------------------------------
+# The guards
+# ---------------------------------------------------------------------------------------------
+
+
+def test_a_changed_config_stops_a_run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Covers "A changed config stops a run": a manifest file that changes is refused."""
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "x.py").write_text("x = 1\n")
+    (tmp_path / "a.yml").write_text("a: 1\n")
+    monkeypatch.setattr(fit, "MANIFEST_FILES", ("a.yml",))
+    monkeypatch.setattr(fit, "PACKAGE", "pkg")
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(fit.manifest(tmp_path)))
+    assert fit.manifest_matches(path, tmp_path)
+    (tmp_path / "a.yml").write_text("a: 2\n")
+    assert not fit.manifest_matches(path, tmp_path)
+    (tmp_path / "a.yml").write_text("a: 1\n")
+    (tmp_path / "pkg" / "x.py").write_text("x = 2\n")
+    assert not fit.manifest_matches(path, tmp_path)
+
+
+def _guards(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **state: Any) -> None:
+    parts = state.get("parts", "")
+    launch = tmp_path / "launch.md"
+    launch.write_text("# Launch\n" + "".join(f"\n## Part {p}\n" for p in parts))
+    records = {
+        "speed": state.get("speed", {"passes": True}),
+        "pilot": state.get("pilot", {"go": True}),
+        "preflight": state.get("preflight", {"passed": True}),
+        "recovery": state.get("recovery", {"gate": {"passes": True}}),
+    }
+    paths = {}
+    for name, record in records.items():
+        paths[name] = tmp_path / f"{name}.json"
+        paths[name].write_text(json.dumps(record))
+    monkeypatch.setattr(fit, "LAUNCH_PATH", launch)
+    monkeypatch.setattr(fit, "SPEED_NOISE_PATH", paths["speed"])
+    monkeypatch.setattr(fit, "PILOT_PATH", paths["pilot"])
+    monkeypatch.setattr(fit, "RECOVERY_PREFLIGHT_PATH", paths["preflight"])
+    monkeypatch.setattr(fit, "RECOVERY_PATH", paths["recovery"])
+    monkeypatch.setattr(fit, "manifest_matches", lambda *_a: state.get("manifest", True))
+    monkeypatch.setattr(fit.bg, "v4_is_valid", lambda: True)
+    monkeypatch.setattr(fit.cr, "launch_committed", lambda *_a, **_k: state.get("committed", True))
+    monkeypatch.setattr(fit, "committed", lambda _p: state.get("preflight_committed", True))
+
+
+def test_every_stage_refuses_before_its_part(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Covers "The fit refuses before the recovery is recorded" and the earlier parts' guards."""
+    _guards(monkeypatch, tmp_path, manifest=False, parts="ABC")
+    assert "manifest" in fit.guard("pilot")
+    _guards(monkeypatch, tmp_path, committed=False, parts="ABC")
+    assert "Part A" in fit.guard("pilot")
+    _guards(monkeypatch, tmp_path, speed={"passes": False}, parts="ABC")
+    assert "speed noise" in fit.guard("pilot")
+    _guards(monkeypatch, tmp_path, parts="A")
+    assert fit.guard("pilot") is None
+    assert "Part B" in fit.guard("recovery-preflight")
+    _guards(monkeypatch, tmp_path, parts="AB")
+    assert fit.guard("recovery-preflight") is None
+    assert fit.guard("recovery") is None
+    for stage in ("run", "grade", "read", "loo"):
+        assert "Part C" in fit.guard(stage)
+    _guards(monkeypatch, tmp_path, parts="AB", preflight_committed=False)
+    assert "uncommitted" in fit.guard("recovery")
+    _guards(monkeypatch, tmp_path, parts="AB", preflight={"passed": False})
+    assert "not passed" in fit.guard("recovery")
+    _guards(monkeypatch, tmp_path, parts="ABC", recovery={"gate": {"passes": False}})
+    assert "gate" in fit.guard("run")
+    _guards(monkeypatch, tmp_path, parts="ABC")
+    assert all(fit.guard(s) is None for s in ("run", "grade", "read", "loo"))
+
+
+def test_a_failed_pilot_blocks_the_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Covers "A failed pilot blocks the recovery": the go rule's failure refuses the preflight."""
+    _guards(monkeypatch, tmp_path, parts="AB", pilot={"go": False})
+    assert "go rule" in fit.guard("recovery-preflight")
+
+
+# ---------------------------------------------------------------------------------------------
+# The held-out reading
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.slow
+def test_the_real_halves_reproduce_w_minimum(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Covers "The real halves reproduce W's minimum" and "The smoke reads no held-out track"."""
+    from quantumnematode.benchmark import references as refs
+
+    bands = bg.load_bands_v4()
+    clf = bg.classifier(bands)
+    tracks = refs.load_scheer_tracks()
+    sets = fit.date_sets(tracks)
+    per_date = fit.tallies(tracks, sets["N2_unread"], clf)
+    reading = fit.held_out_distances(per_date, [], [], bands)
+    recorded = json.loads(fit.W_MINIMUM_PATH.read_text())["w_minimum"]["fitted"]
+    assert reading["dates"] == 26
+    assert reading["real_halves"]["p95"] == pytest.approx(recorded["minimum_95th"], rel=1e-12)
+    assert reading["real_halves"]["median"] == pytest.approx(recorded["median"], rel=1e-12)
+    assert len(sets["PD1074_held_out"]) == 573
+    # The band reference draws band-cohort animals only.
+    picked: list[np.ndarray] = []
+    original = fit.tallies
+    monkeypatch.setattr(
+        fit,
+        "tallies",
+        lambda t, rows, c: picked.append(rows) or original(t, rows, c),
+    )
+    reference = fit.band_reference(tracks, clf, populations=2)
+    assert all((tracks.side[rows] == refs.BANDS).all() for rows in picked)
+    assert len(reference) == 2
+    # With its own date sets, the reading never asks for the held-out ones.
+    monkeypatch.setattr(fit, "date_sets", lambda _t: pytest.fail("read held-out dates"))
+    band_rows = tracks.arm("PD1074_od2_Data")
+    band_rows = band_rows[tracks.side[band_rows] == refs.BANDS]
+    out = fit.held_out_reading(
+        reference,
+        sets={"bands": band_rows},
+        splits=2,
+        reference_populations=1,
+    )
+    assert out["bands"]["answer"]["n"] == 2 * 2 * 2
+
+
+def test_the_restart_spread_is_zero_between_equal_answers(bands: dict[str, Any]) -> None:
+    """The restart spread reads 0 between identical populations, on W's families and all six."""
+    truth = fit.band_truth(bands)
+    spread = fit.restart_spread([_record(truth)] * 3, [_record(truth)] * 3, bands)
+    assert spread == {"populations": 3, "w_families": 0.0, "all_six": 0.0}
+
+
+def test_the_noise_free_control_point_drops_the_timescale(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without the OU noise the timescale leaves the vector, and the centres keep their place."""
+    monkeypatch.setattr(fit, "entries", _fake_entries)
+    assert fit._without_noise([0, 1, 2, 3, 4, 5, 6]) == [0, 1, 2, 3, 4, 6]
