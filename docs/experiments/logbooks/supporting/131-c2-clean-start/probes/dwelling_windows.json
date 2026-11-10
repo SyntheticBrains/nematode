@@ -1,0 +1,45 @@
+{
+ "description": "Do on-lawn reversals speed up the fit's dwelling windows? (description; discarded seeds)\n\nThe third continuation's answer trades the on-lawn onset rate against the dwelling windows' speed\n(`robustness_check_hinge3.json`: onset passes 9 of 10 populations, the dwelling 90th percentile 6).\nHere the small lawn's 10-s windows are classified as the grader classifies them (`window_inputs`,\nthe bands' classifier), for the answer's worms (200 animals, 872,000,000 + i, measured tracks with\nprimitive labels) and for the band cohorts' wild type (PD1074 od2; on the lawn where the midbody\nis inside the boundary; reversals by the kinematics check's bout rule). Each on-lawn dwelling\nwindow is split by whether a reversal falls inside it; reported per split: the share of windows,\nand the window speed's median and 90th percentile (mm/s).\n",
+ "sim": {
+  "windows": 38209,
+  "share_with_reversal": 0.505430657698448,
+  "all": {
+   "median": 0.014738093560819062,
+   "p90": 0.031680725145687885
+  },
+  "without_reversal": {
+   "median": 0.011885684270999772,
+   "p90": 0.030364245317430948
+  },
+  "with_reversal": {
+   "median": 0.017218737600813064,
+   "p90": 0.032573155253063146
+  }
+ },
+ "real": {
+  "windows": 193188,
+  "share_with_reversal": 0.6612884858272771,
+  "all": {
+   "median": 0.012840494886538071,
+   "p90": 0.028225147060043566
+  },
+  "without_reversal": {
+   "median": 0.010620169731575603,
+   "p90": 0.027652309579218663
+  },
+  "with_reversal": {
+   "median": 0.013800682652908082,
+   "p90": 0.02845524658126632
+  }
+ },
+ "band": {
+  "dwelling_speed_median": {
+   "centre": 0.012838345155748037,
+   "scale": 0.000726916195981823
+  },
+  "dwelling_speed_p90": {
+   "centre": 0.028228348042629806,
+   "scale": 0.0011552565033903397
+  }
+ }
+}

@@ -1,0 +1,51 @@
+{
+ "description": "How does a real on-lawn reversal's speed follow the speed just before it? (description; band cohorts)\n\nFor the band cohorts' wild type (PD1074 od2, small lawn): each reversal bout (the kinematics check's\nrule) starting on the lawn, with its 3 preceding seconds on the lawn and free of reversal and omega\nframes. The speed before is those seconds' mean 1-s displacement; the reversal's speed its path over\nthe bout's whole seconds, as the kinematics check reads it. Reported: the mean reversal speed by\ndecile of the speed before, and a least-squares line, the coupling a probe gives the primitives.\n",
+ "bouts": 126306,
+ "mean_reversal_mm_s": 0.06113405445905314,
+ "line": {
+  "intercept": 0.04735089890886634,
+  "slope": 0.5756970695081866
+ },
+ "deciles": [
+  {
+   "before_mm_s": 0.004554456695652993,
+   "reversal_mm_s": 0.04929208449390044
+  },
+  {
+   "before_mm_s": 0.008290425737813554,
+   "reversal_mm_s": 0.05118715329393559
+  },
+  {
+   "before_mm_s": 0.01136256934240608,
+   "reversal_mm_s": 0.052286345024400785
+  },
+  {
+   "before_mm_s": 0.014356168978137376,
+   "reversal_mm_s": 0.05399427185828598
+  },
+  {
+   "before_mm_s": 0.01750507550531295,
+   "reversal_mm_s": 0.057011418192764375
+  },
+  {
+   "before_mm_s": 0.021095079653036402,
+   "reversal_mm_s": 0.05961369430329646
+  },
+  {
+   "before_mm_s": 0.025465398182977515,
+   "reversal_mm_s": 0.06264613777634478
+  },
+  {
+   "before_mm_s": 0.031251222578561284,
+   "reversal_mm_s": 0.06756343208009023
+  },
+  {
+   "before_mm_s": 0.04021620258265309,
+   "reversal_mm_s": 0.07335521062195563
+  },
+  {
+   "before_mm_s": 0.06531945325425224,
+   "reversal_mm_s": 0.08439073670414338
+  }
+ ]
+}

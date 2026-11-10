@@ -1,0 +1,173 @@
+"""A refit under a reversal that follows the worm's own speed (description; discarded seeds).
+
+The primitives give every reversal that starts on food one speed (0.069 mm/s, both states
+pooled), while real on-lawn reversals follow the speed just before them
+(`reversal_coupling_fit.json`: v_rev = 0.0474 + 0.576 x v_before over the last 3 run seconds,
+0.049 to 0.084 mm/s). With that coupling patched into the evaluator, the third continuation's
+answer loses its dwelling-speed bias (-1.11 z, the 90th percentile passing 10 of 10 populations)
+but its pre-exit enrichment overshoots (+3.33 z), since the network had been tuned to the old
+body (`reversal_coupling_probe.json`: the wild type in 3 of 10, against 5 unpatched).
+
+Here the network is refitted under the coupled body, the patch applied in every worker
+(`reversal_coupling_probe.patch`; no package change, no draw changed). From the third
+continuation's answer, with its search state carried over (sigma and per-parameter steps), sep-CMA
+on stage 3's objective (the six families plus tph-1's, pdfr-1's and tax-4's lawn differences, the
+mutants half of it, both guards) plus each statistic's estimated chance of failing a population:
+10 x the sum over statistics of Phi((|z| - bar) / SD), bar 3.0781 for a wild-type statistic and
+2.24 for a mutant's, SD the largest of the four measurements (`noise_measure.json`,
+`robustness_check.json`, `robustness_check_hinge3.json`, and the coupled body's 10 populations in
+`reversal_coupling_probe.json`), floored at 0.05. 50 generations, population 48 at 200 animals on
+16 workers, readouts every 10 generations with every statistic recorded. The verdict as stage 3's:
+the last answer graded with presence on 5 fresh populations passes the wild type in at least 3 and
+tph-1 and tax-4 each in at least 3; then the same answer on 10 more populations for its pass rate.
+
+Seeds: candidates 875,000,000 + 200·k + i, CMA 9503, readouts 876,000,000 + i, the verdict
+877,000,000 + 200·g + i, the 10-population check 878,000,000 + 200·g + i. Run from the repository
+root.
+"""
+
+import json
+import math
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-change-b")
+import c2_encoder_probe as p
+import curriculum as C
+import npe_recovery as nr
+import probes as P
+import reversal_coupling_probe as R
+
+OUT = Path("build/c2-change-b/hinge4")
+BASE, CMA_SEED, READ, GRADE, CHECK = 875_000_000, 9503, 876_000_000, 877_000_000, 878_000_000
+POPSIZE, WORKERS, CAP = 48, 16, 50
+FAIL_WEIGHT, SD_FLOOR, WILD_BAR, MUTANT_BAR = 10.0, 0.05, 3.0781, 2.24
+MUTANTS = ("tph-1", "pdfr-1", "tax-4")
+START = Path("build/c2-change-b/hinge3.json")
+SEARCH_STATE = Path("build/c2-change-b/hinge3/state.pkl")
+NOISE = [json.loads(Path(f"build/c2-change-b/{n}.json").read_text())["summary"] for n in ("noise_measure", "robustness_check", "robustness_check_hinge3")]
+
+
+def _coupled_noise():
+    """Each statistic's SD between the coupled body's 10 probe populations, in the summaries' keys."""
+    pops = json.loads(Path("build/c2-change-b/reversal_coupling_probe.json").read_text())["populations"].values()
+    out = {k: {"sd_z": float(np.nanstd([q["statistics"][k]["z"] for q in pops], ddof=1))} for k in next(iter(pops))["statistics"]}
+    for m in MUTANTS:
+        for st in next(iter(pops))["mutants"][m]["statistics"]:
+            out[f"{m}/{st}"] = {"sd_z": float(np.nanstd([q["mutants"][m]["statistics"][st]["z"] for q in pops], ddof=1))}
+    return out
+
+
+NOISE.append(_coupled_noise())
+C.STAGES.append({"name": "hinge4", "base": BASE, "cma": CMA_SEED, "sigma0": None, "cap": CAP, "families": None, "mutants": MUTANTS})
+C.GRADE = GRADE
+STAGE = len(C.STAGES) - 1
+SD = {k: max(SD_FLOOR, *(n[k]["sd_z"] for n in NOISE)) for k, v in NOISE[0].items() if isinstance(v, dict)}
+BARS = {k: MUTANT_BAR if k.split("/")[0] in MUTANTS else WILD_BAR for k in SD}
+
+
+def simulate(k, z):
+    return C.simulate(STAGE, k, z)
+
+
+def _wild(item):
+    return C._wild(item)
+
+
+def _mutant(item):
+    return C._mutant(item)
+
+
+def _failure(z, key):
+    """Return a statistic's chance of failing a population, its reading taken as its mean."""
+    return 0.5 * math.erfc(-(abs(z) - BARS[key]) / (SD[key] * math.sqrt(2.0)))
+
+
+class NoiseHingeObjective(P.Objective):
+    """Stage 3's objective plus each statistic's estimated chance of failing a population."""
+
+    def __init__(self):
+        super().__init__(None, MUTANTS, graded=True)
+
+    def hinge(self, record):
+        excess = 0.0
+        for key, centre in self.truth["statistics"].items():
+            value = record["statistics"].get(key)
+            if value is None or not math.isfinite(value):
+                continue
+            z = (float(value) - centre) / self.scales[key]
+            excess += _failure(z, key)
+        for m, zs in record["mutant_z"].items():
+            for s, z in zs.items():
+                if z is not None and math.isfinite(z):
+                    excess += _failure(z, f"{m}/{s}")
+        return FAIL_WEIGHT * excess
+
+    def __call__(self, record):
+        return super().__call__(record) + self.hinge(record)
+
+
+def main():
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path, record_path = OUT / "state.pkl", OUT.parent / "hinge4.json"
+    if state_path.exists():
+        saved = pickle.loads(state_path.read_bytes())
+    else:
+        z0 = json.loads(START.read_text())["z"]
+        prior = pickle.loads(SEARCH_STATE.read_bytes())["es"]
+        sigma0, stds = float(prior.sigma), np.asarray(prior.stds, dtype=float)
+        options = {"CMA_diagonal": True, "CMA_stds": (stds / sigma0).tolist(), "bounds": [0.0, 1.0], "popsize": POPSIZE, "seed": CMA_SEED, "verbose": -9}
+        saved = {"z0": z0, "sigma0": sigma0, "stds0": stds.tolist(), "sd": SD, "es": cma.CMAEvolutionStrategy(z0, sigma0, options),
+                 "medians": [], "best": [], "hinge_best": [], "readouts": {}, "verdict": None}
+    objective = NoiseHingeObjective()
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=R.init) as pool:
+        if not saved["readouts"]:
+            saved["readouts"][0] = P.readout(pool, saved["z0"], READ)
+            P._print("hinge4", 0, saved["readouts"][0])
+        es = saved["es"]
+        while len(saved["medians"]) < CAP:
+            g = len(saved["medians"]) + 1
+            points = es.ask()
+            records = list(pool.map(simulate, [POPSIZE * (g - 1) + m for m in range(POPSIZE)], [list(map(float, x)) for x in points]))
+            scores = [objective(r) for r in records]
+            hinges = [objective.hinge(r) for r in records]
+            es.tell(points, scores)
+            saved["medians"].append(float(np.median(scores))); saved["best"].append(float(np.min(scores)))
+            saved["hinge_best"].append(float(hinges[int(np.argmin(scores))]))
+            print(f"hinge4 gen {g}: median {saved['medians'][-1]:.2f} best {saved['best'][-1]:.2f} (hinge {saved['hinge_best'][-1]:.2f}) sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+            if g % 10 == 0:
+                saved["readouts"][g] = P.readout(pool, np.clip(es.result.xfavorite, 0, 1).tolist(), READ)
+                P._print("hinge4", g, saved["readouts"][g])
+            state_path.write_bytes(pickle.dumps(saved))
+        z = np.clip(es.result.xfavorite, 0, 1).tolist()
+        wilds = dict(pool.map(_wild, [(g, z) for g in range(5)]))
+        for g, m, ok in pool.map(_mutant, [(g, m, z, wilds[g]["small_lawn"]) for g in wilds for m in p.MUTANTS]):
+            wilds[g].setdefault("mutants", {})[m] = ok
+        wt = sum(bool(w["wild_type_passes"]) for w in wilds.values())
+        mut = {m: sum(w["mutants"][m] for w in wilds.values()) for m in p.MUTANTS}
+        saved["grade"] = {str(g): {k: v for k, v in w.items() if k != "small_lawn"} for g, w in wilds.items()}
+        saved["verdict"] = f"wild type {wt}/5, mutants {mut}: {'passes' if wt >= 3 and mut['tph-1'] >= 3 and mut['tax-4'] >= 3 else 'fails'}"
+        bases = [(CHECK, g) for g in range(10)]
+        check = dict(pool.map(R.wild, [(i, b, z) for i, b in enumerate(bases)]))
+        for i, m, r in pool.map(R.mutant, [(i, bases[i], m, z, check[i]["small_lawn"]) for i in check for m in p.MUTANTS]):
+            check[i].setdefault("mutants", {})[m] = r
+        for r in check.values():
+            r.pop("small_lawn")
+        saved["check"] = {"wild_type_pass_share": float(np.mean([bool(r["wild_type_passes"]) for r in check.values()])), "populations": {str(i): r for i, r in check.items()}}
+    saved["z"] = z
+    state_path.write_bytes(pickle.dumps(saved))
+    record_path.write_text(json.dumps(nr._finite({"description": __doc__, **{k: v for k, v in saved.items() if k != "es"}}), indent=1) + "\n")
+    print(f"hinge4 done: {saved['verdict']}; check: wild type in {saved['check']['wild_type_pass_share']:.1f} of 10", flush=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,28 @@
+"""Which statistics carry the hinge on the continuation's start? (description; one candidate's seeds)"""
+import json, math, sys
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import hinge as H
+
+if __name__ == "__main__":
+    z = json.loads(open("build/c2-change-b/curriculum.json").read())["z"]
+    record = H.simulate(int(sys.argv[1]), z)
+    o = H.HingeObjective()
+    rows = []
+    for key, centre in o.truth["statistics"].items():
+        v = record["statistics"].get(key)
+        if v is None or not math.isfinite(v):
+            rows.append((key, None, None)); continue
+        zz = H._compressed((v - centre) / o.scales[key])
+        rows.append((key, zz, H.HINGE_WEIGHT * max(0.0, abs(zz) - (H.WILD_BAR - H.MARGIN)) ** 2))
+    for m, zs in record["mutant_z"].items():
+        for s, zz in zs.items():
+            c = None if zz is None or not math.isfinite(zz) else H._compressed(zz)
+            rows.append((f"{m}/{s}", c, None if c is None else H.HINGE_WEIGHT * max(0.0, abs(c) - (H.MUTANT_BAR - H.MARGIN)) ** 2))
+    base = super(H.HingeObjective, o).__call__(record)
+    print("base score", round(base, 3), "hinge", round(o.hinge(record), 3), "saturated", record["saturated"], "spread", {k: round(v, 2) for k, v in record["spread"].items()})
+    for key, zz, h in rows:
+        if zz is None or h:
+            print(" ", key, "z", None if zz is None else round(zz, 2), "hinge", None if h is None else round(h, 2))
+    json.dump({"description": __doc__, "candidate": int(sys.argv[1]), "base_score": base, "hinge": o.hinge(record),
+               "terms": [{"statistic": k, "z": zz, "hinge": h} for k, zz, h in rows if zz is None or h]},
+              open("build/c2-change-b/hinge_breakdown.json", "w"), indent=1)

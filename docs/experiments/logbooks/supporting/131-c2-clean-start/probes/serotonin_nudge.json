@@ -1,0 +1,34 @@
+{
+ "description": "Is tph-1 reachable from the stage-3 search by the ser-5 route alone? (description; discarded seeds)\n\n`serotonin_route.json` found serotonin's pool about 8x lower than in Logbook 129's answer and its\nser-5 couple about 30x weaker. Here the stage-3 search mean is graded as is and with ser-5's\nstrength raised to Logbook 129's (1.44), each on 200 animals of Scheer's small lawn as wild type\nand as tph-1 (854,000,000 + i, the same animals for both), read by the probe's mutant reading.\n",
+ "entry": "modulator.fixed.serotonin.ser-5",
+ "ser5_unit_before": 0.48402970568678494,
+ "ser5_unit_after": 0.9083268200118859,
+ "as_is": {
+  "passes": false,
+  "statistics": {
+   "roaming_fraction": {
+    "delta": 0.027658271915434074,
+    "z": -4.741349477428539
+   },
+   "exits_per_on_lawn_hour": {
+    "delta": 0.05398094028813136,
+    "z": -0.06459034586019012
+   }
+  },
+  "wild_roaming_fraction": 0.18809690456300376
+ },
+ "ser5_at_1.44": {
+  "passes": false,
+  "statistics": {
+   "roaming_fraction": {
+    "delta": 0.02700514822921188,
+    "z": -4.7541017211198815
+   },
+   "exits_per_on_lawn_hour": {
+    "delta": -0.02750798457715481,
+    "z": -0.3559005535669839
+   }
+  },
+  "wild_roaming_fraction": 0.18875002824922596
+ }
+}

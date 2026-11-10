@@ -1,0 +1,78 @@
+"""Does serotonin reach C.2's outputs in the stage-3 search? (description; discarded seeds)
+
+tph-1 fails at z about -4.8 through stage 3's first 25 generations (the fit's roaming difference
++0.02 against real worms' larger one). For three answers (the stage-3 search mean now, the stage-2b
+answer, and Logbook 129's answer, which passed tph-1 in 5 of 5) 64 wild-type animals run Scheer's
+small lawn (853,000,000 + i); every 10th second of the analysis window is re-scored open loop with
+serotonin's pool held at zero, the tph-1 knockout's effect on the same states. Reported: the pool's
+level and spread, its couples' strengths, and the outputs' shift (speed in mm/s, the reversal
+hazard in log rate) when it is removed.
+"""
+import json, math, pickle, sys
+import numpy as np
+import torch
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg, c2_encoder_probe as p, probes as P
+from quantumnematode.connectome import encoder as enc
+from quantumnematode.env.primitives import load_kinematics
+from quantumnematode.evaluation.batched import BatchedEvaluator
+from quantumnematode.evaluation.controllers import BatchedConnectome
+from quantumnematode.utils.config_loader import load_simulation_config
+
+s = pickle.load(open(sys.argv[1], "rb"))
+answers = {
+    "stage3_mean_now": np.clip(s["es"].result.xfavorite, 0, 1).tolist(),
+    "stage2b_answer": s["z"],
+    "logbook129_answer": p.package_vector(json.loads(p.PROBE_ANSWER_PATH.read_text())["answer"], P.entries()).tolist(),
+}
+k = load_kinematics(); log_low = math.log(k.hazard_min_per_s); log_span = math.log(k.hazard_max_per_s) - log_low
+path = p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+config = load_simulation_config(str(path))
+serotonin = P._brain("tph-1").topology.modulator_knocked_ligands
+out = {"serotonin_ligands": [P._brain().topology.modulator_spec.ligands[i] for i in serotonin]}
+
+
+class Recorder:
+    def __init__(self, inner):
+        self.inner, self.states = inner, []
+
+    def reset(self, n):
+        self.inner.reset(n)
+
+    def act(self, senses, noise):
+        self.states.append(self.inner.state(senses))
+        return self.inner.act(senses, noise)
+
+
+for name, z in answers.items():
+    brain = P._brain()
+    brain.topology.forward_observer = None
+    enc.write_encoder(brain, z)
+    rec = Recorder(BatchedConnectome(brain))
+    tr = BatchedEvaluator(config, rec, [853_000_000 + i for i in range(64)]).run()
+    a0 = int(tr.assay["analysis_steps"][0])
+    st = torch.from_numpy(np.concatenate(rec.states[a0::10]))
+    topo = brain.topology; nf = topo.n_food_features
+    cols = [nf + i for i in serotonin]
+    knocked = st.clone(); knocked[:, cols] = 0.0
+    with torch.no_grad():
+        m0, _ = topo.forward_with_hidden_batched(st[:, :nf], modulators=brain._unpack_modulators(st))
+        m1, _ = topo.forward_with_hidden_batched(knocked[:, :nf], modulators=brain._unpack_modulators(knocked))
+    a0_, a1_ = torch.tanh(m0).numpy(), torch.tanh(m1).numpy()
+    speed = lambda a: k.v_max_mm_per_s * (a[:, 0] + 1) / 2
+    hazard = lambda a: log_low + (a[:, 2] + 1) / 2 * log_span
+    spec = topo.modulator_spec
+    strengths = topo.modulator_layer_strengths().detach().numpy()
+    couples = [{"receptor": r.receptor, "cells": len(r.cells), "fixed_sign": r.sign, "strength": float(strengths[j])}
+               for j, r in enumerate(spec.rows) if r.ligand in serotonin]
+    conc = st[:, cols].numpy()
+    out[name] = {
+        "pool_mean": float(conc.mean()), "pool_sd": float(conc.std()),
+        "couples": couples,
+        "speed_mean_mm_s": float(speed(a0_).mean()), "speed_shift_mm_s": float((speed(a1_) - speed(a0_)).mean()),
+        "speed_shift_abs_mm_s": float(np.abs(speed(a1_) - speed(a0_)).mean()),
+        "reversal_log_hazard_shift": float((hazard(a1_) - hazard(a0_)).mean()),
+        "max_abs_output_shift": float(np.abs(a1_ - a0_).max()),
+    }
+    print(name, json.dumps(out[name]), flush=True)
+open("build/c2-change-b/serotonin_route.json", "w").write(json.dumps({"description": __doc__, **out}, indent=1) + "\n")

@@ -1,0 +1,31 @@
+{
+ "description": "Is the fit's on-lawn onset gap behaviour or detection? (description; discarded seeds)\n\nOn the curriculum's stage-2b answer, 200 animals on Scheer's small lawn (852,000,000 + i): the true\nreversal-bout starts per on-lawn minute from the primitive labels, the detector's onsets on the\nunmeasured positions, and the graded statistic through the measured tracks. On the band cohorts'\nwild type: reversal-bout starts from the flags (the kinematics check's bout rule) and the detector\non the real positions, both per on-lawn minute (midbody-in-lawn seconds).\n",
+ "sim": {
+  "true_reversal_starts_per_on_lawn_min": 3.0183127130157827,
+  "omega_starts_per_min": 0.15895256299313884,
+  "delta_starts_per_min": 2.985399581994731,
+  "reversal_share_on_lawn": 0.14213242219807837,
+  "detector_unmeasured_per_min": 1.3355272120427764,
+  "graded": {
+   "pause_share": {
+    "value": 0.49910699323519814,
+    "z": 0.535083222607881
+   },
+   "flip_fraction": {
+    "value": 0.12417304690403627,
+    "z": -0.6373556942706254
+   },
+   "onset_rate_per_min": {
+    "value": 1.5357070408622255,
+    "z": -3.3194697335163053
+   }
+  },
+  "recall": 0.4424747662108107
+ },
+ "real": {
+  "flag_reversal_starts_per_on_lawn_min": 4.329738852545656,
+  "detector_per_min": 2.2916940549381692,
+  "band_centre": 2.2840783215998797,
+  "recall": 0.5292915191849908
+ }
+}

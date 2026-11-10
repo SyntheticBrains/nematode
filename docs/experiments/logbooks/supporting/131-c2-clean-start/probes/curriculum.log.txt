@@ -1,0 +1,665 @@
+2a readout gen 0: D 5.04 passes 0/6 on-lawn 0.81 spread speed 1.85 rev 3.39 | tph-1 +0.010(F) pdfr-1 +0.021(F) tax-4 +0.010(F) | fails {'small_lawn/exits_per_on_lawn_hour': 5.15, 'small_lawn/pre_exit_enrichment': -4.33, 'small_lawn/time_on_lawn': -10.0, 'kinematics/dwelling_speed_median': 8.39, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_speed_median': -5.06, 'kinematics/roaming_speed_p90': -5.12, 'activity/flip_fraction': 3.93, 'uniform_lawn/roaming_bout_s': -5.99, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -4.36, 'chemotaxis/weathervane_deg_s': 3.8}
+2a gen 1: median 286.48 best 9.47 sigma 0.095 96 s
+2a gen 2: median 208.96 best 9.32 sigma 0.091 165 s
+2a gen 3: median 235.06 best 9.66 sigma 0.089 234 s
+2a gen 4: median 215.99 best 8.16 sigma 0.087 306 s
+2a gen 5: median 22.20 best 7.12 sigma 0.085 380 s
+2a gen 6: median 38.86 best 7.86 sigma 0.085 454 s
+2a gen 7: median 15.78 best 7.55 sigma 0.084 529 s
+2a gen 8: median 12.86 best 8.41 sigma 0.085 608 s
+2a gen 9: median 11.41 best 8.08 sigma 0.085 683 s
+2a gen 10: median 11.91 best 6.78 sigma 0.086 762 s
+2a readout gen 10: D 5.35 passes 1/6 on-lawn 0.75 spread speed 2.69 rev 3.19 | tph-1 -0.002(F) pdfr-1 +0.007(P) tax-4 -0.022(F) | fails {'small_lawn/roaming_fraction': -3.21, 'small_lawn/roaming_bout_s': -4.8, 'small_lawn/dwelling_bout_s': 3.31, 'small_lawn/exits_per_on_lawn_hour': 6.9, 'small_lawn/pre_exit_enrichment': -4.28, 'small_lawn/time_on_lawn': -10.0, 'kinematics/dwelling_speed_median': 6.27, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_survival_5min': -4.41, 'activity/pause_share': 5.66, 'activity/flip_fraction': 4.01, 'activity/onset_rate_per_min': -3.13, 'uniform_lawn/roaming_bout_s': -7.71, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -5.06}
+2a gen 11: median 15.40 best 7.47 sigma 0.087 864 s
+2a gen 12: median 10.04 best 8.19 sigma 0.087 939 s
+2a gen 13: median 9.81 best 6.43 sigma 0.087 1014 s
+2a gen 14: median 10.10 best 6.28 sigma 0.087 1090 s
+2a gen 15: median 9.48 best 6.77 sigma 0.086 1166 s
+2a gen 16: median 9.38 best 6.31 sigma 0.087 1242 s
+2a gen 17: median 9.62 best 7.29 sigma 0.088 1318 s
+2a gen 18: median 9.44 best 6.11 sigma 0.089 1394 s
+2a gen 19: median 9.24 best 6.47 sigma 0.091 1470 s
+2a gen 20: median 9.75 best 6.47 sigma 0.093 1546 s
+2a readout gen 20: D 6.56 passes 1/6 on-lawn 0.74 spread speed 2.11 rev 1.69 | tph-1 -0.002(F) pdfr-1 -0.002(P) tax-4 -0.011(F) | fails {'small_lawn/roaming_fraction': -3.6, 'small_lawn/roaming_bout_s': -4.82, 'small_lawn/dwelling_bout_s': 6.03, 'small_lawn/exits_per_on_lawn_hour': 6.65, 'small_lawn/pre_exit_enrichment': -4.13, 'small_lawn/time_on_lawn': -10.0, 'kinematics/dwelling_speed_median': 6.36, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_speed_median': 3.76, 'kinematics/roaming_survival_5min': -4.41, 'activity/pause_share': 9.51, 'activity/flip_fraction': -9.72, 'activity/onset_rate_per_min': -9.93, 'uniform_lawn/roaming_bout_s': -7.99, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': 5.61}
+2a gen 21: median 9.41 best 6.09 sigma 0.095 1650 s
+2a gen 22: median 9.29 best 5.95 sigma 0.096 1727 s
+2a gen 23: median 9.80 best 6.54 sigma 0.097 1805 s
+2a gen 24: median 9.46 best 5.20 sigma 0.098 1886 s
+2a gen 25: median 11.12 best 5.79 sigma 0.098 1961 s
+2a gen 26: median 9.09 best 6.17 sigma 0.099 2037 s
+2a gen 27: median 8.92 best 6.13 sigma 0.099 2113 s
+2a gen 28: median 9.77 best 5.16 sigma 0.099 2190 s
+2a gen 29: median 7.62 best 5.08 sigma 0.099 2265 s
+2a gen 30: median 9.64 best 5.26 sigma 0.099 2341 s
+2a readout gen 30: D 5.78 passes 0/6 on-lawn 0.98 spread speed 1.99 rev 1.89 | tph-1 +0.001(F) pdfr-1 +0.000(P) tax-4 -0.031(F) | fails {'small_lawn/roaming_fraction': -3.18, 'small_lawn/roaming_bout_s': -5.05, 'small_lawn/pre_exit_enrichment': -4.06, 'kinematics/dwelling_speed_median': 7.3, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_survival_5min': -4.19, 'activity/pause_share': 8.75, 'activity/flip_fraction': -5.08, 'activity/onset_rate_per_min': -8.45, 'uniform_lawn/roaming_bout_s': -8.06, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -6.11, 'chemotaxis/onset_per_min': 3.89}
+2a gen 31: median 8.81 best 5.84 sigma 0.100 2441 s
+2a gen 32: median 9.80 best 4.69 sigma 0.100 2513 s
+2a gen 33: median 8.35 best 5.24 sigma 0.101 2586 s
+--- resumed at gen 33 with 2a cap 300 ---
+2a gen 34: median 9.12 best 5.45 sigma 0.101 82 s
+2a gen 35: median 8.71 best 4.86 sigma 0.102 156 s
+2a gen 36: median 8.57 best 5.38 sigma 0.102 230 s
+2a gen 37: median 7.79 best 5.19 sigma 0.102 303 s
+2a gen 38: median 7.90 best 4.83 sigma 0.103 377 s
+2a gen 39: median 8.94 best 4.97 sigma 0.105 451 s
+2a gen 40: median 8.80 best 5.14 sigma 0.105 525 s
+2a readout gen 40: D 5.62 passes 0/6 on-lawn 0.99 spread speed 2.43 rev 2.50 | tph-1 -0.005(F) pdfr-1 -0.003(P) tax-4 +0.009(F) | fails {'small_lawn/roaming_fraction': -3.66, 'small_lawn/roaming_bout_s': -5.73, 'small_lawn/dwelling_bout_s': 5.31, 'small_lawn/pre_exit_enrichment': -4.15, 'kinematics/dwelling_speed_median': 4.98, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_survival_5min': -4.41, 'activity/pause_share': 7.74, 'activity/onset_rate_per_min': -5.35, 'uniform_lawn/roaming_bout_s': -8.34, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -7.96, 'chemotaxis/onset_per_min': 3.14}
+2a gen 41: median 8.31 best 4.78 sigma 0.106 621 s
+2a gen 42: median 9.01 best 4.72 sigma 0.106 693 s
+2a gen 43: median 7.93 best 4.74 sigma 0.106 766 s
+2a gen 44: median 8.04 best 5.04 sigma 0.107 841 s
+2a gen 45: median 8.96 best 5.03 sigma 0.107 915 s
+2a gen 46: median 8.80 best 5.10 sigma 0.108 990 s
+2a gen 47: median 7.29 best 4.88 sigma 0.108 1066 s
+2a gen 48: median 8.57 best 5.10 sigma 0.109 1142 s
+2a gen 49: median 7.39 best 4.92 sigma 0.109 1219 s
+2a gen 50: median 7.63 best 4.97 sigma 0.109 1295 s
+2a readout gen 50: D 5.84 passes 1/6 on-lawn 1.00 spread speed 1.88 rev 2.34 | tph-1 -0.011(F) pdfr-1 -0.003(P) tax-4 +0.014(F) | fails {'small_lawn/roaming_bout_s': -4.98, 'small_lawn/exits_per_on_lawn_hour': -3.32, 'small_lawn/pre_exit_enrichment': -4.52, 'small_lawn/time_on_lawn': 3.18, 'kinematics/dwelling_speed_median': 7.79, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_survival_5min': -4.21, 'activity/pause_share': 7.85, 'activity/onset_rate_per_min': -6.45, 'uniform_lawn/roaming_bout_s': -7.67, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -9.91}
+2a gen 51: median 8.43 best 4.95 sigma 0.110 1393 s
+2a gen 52: median 7.30 best 4.33 sigma 0.111 1467 s
+2a gen 53: median 6.63 best 4.74 sigma 0.111 1542 s
+2a gen 54: median 6.98 best 4.85 sigma 0.112 1618 s
+2a gen 55: median 8.20 best 5.00 sigma 0.113 1694 s
+2a gen 56: median 6.90 best 4.75 sigma 0.114 1771 s
+2a gen 57: median 8.13 best 4.77 sigma 0.114 1847 s
+2a gen 58: median 6.86 best 5.02 sigma 0.114 1923 s
+2a gen 59: median 7.02 best 4.90 sigma 0.114 1999 s
+2a gen 60: median 7.08 best 4.85 sigma 0.114 2075 s
+2a readout gen 60: D 5.20 passes 0/6 on-lawn 0.99 spread speed 1.69 rev 2.05 | tph-1 -0.006(F) pdfr-1 +0.003(P) tax-4 -0.001(F) | fails {'small_lawn/roaming_bout_s': -5.26, 'small_lawn/exits_per_on_lawn_hour': -3.09, 'small_lawn/pre_exit_enrichment': -4.43, 'kinematics/dwelling_speed_median': 6.71, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_survival_5min': -4.33, 'activity/pause_share': 6.68, 'activity/flip_fraction': 4.98, 'activity/onset_rate_per_min': -4.04, 'uniform_lawn/roaming_bout_s': -7.82, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.48, 'chemotaxis/onset_per_min': 4.69, 'chemotaxis/flip_fraction': 4.76}
+2a gen 61: median 6.94 best 4.39 sigma 0.114 2173 s
+2a gen 62: median 6.65 best 4.72 sigma 0.114 2247 s
+2a gen 63: median 7.06 best 4.64 sigma 0.113 2322 s
+2a gen 64: median 6.92 best 4.93 sigma 0.113 2399 s
+2a gen 65: median 6.32 best 4.81 sigma 0.113 2476 s
+2a gen 66: median 6.91 best 4.93 sigma 0.112 2553 s
+2a gen 67: median 7.18 best 4.89 sigma 0.111 2629 s
+2a gen 68: median 6.78 best 4.70 sigma 0.111 2706 s
+2a gen 69: median 6.23 best 4.90 sigma 0.110 2783 s
+2a gen 70: median 6.48 best 4.74 sigma 0.110 2860 s
+2a readout gen 70: D 4.70 passes 0/6 on-lawn 1.00 spread speed 1.75 rev 1.86 | tph-1 -0.003(F) pdfr-1 -0.006(P) tax-4 -0.021(P) | fails {'small_lawn/roaming_bout_s': -5.01, 'small_lawn/pre_exit_enrichment': -5.08, 'kinematics/dwelling_speed_median': 6.5, 'kinematics/dwelling_speed_p90': 10.0, 'kinematics/roaming_survival_5min': -4.32, 'activity/pause_share': 6.03, 'activity/flip_fraction': 5.08, 'activity/onset_rate_per_min': -3.66, 'uniform_lawn/roaming_bout_s': -7.62, 'local_search/log_early_late_ratio': -3.17, 'chemotaxis/weathervane_deg_s': 10.0, 'chemotaxis/onset_per_min': 5.06, 'chemotaxis/flip_fraction': 7.3}
+2a gen 71: median 6.59 best 4.52 sigma 0.109 2959 s
+2a gen 72: median 6.24 best 4.39 sigma 0.109 3033 s
+2a gen 73: median 5.91 best 4.61 sigma 0.108 3109 s
+2a gen 74: median 5.95 best 4.57 sigma 0.106 3186 s
+2a gen 75: median 5.65 best 4.20 sigma 0.105 3263 s
+2a gen 76: median 6.06 best 4.58 sigma 0.103 3340 s
+2a gen 77: median 5.79 best 4.13 sigma 0.103 3416 s
+2a gen 78: median 5.62 best 4.18 sigma 0.102 3492 s
+2a gen 79: median 6.15 best 3.94 sigma 0.102 3568 s
+2a gen 80: median 5.28 best 2.84 sigma 0.102 3643 s
+2a readout gen 80: D 3.40 passes 0/6 on-lawn 0.99 spread speed 1.78 rev 2.14 | tph-1 -0.003(F) pdfr-1 +0.006(P) tax-4 -0.040(P) | fails {'small_lawn/pre_exit_enrichment': -4.1, 'kinematics/dwelling_speed_p90': 9.19, 'activity/pause_share': 5.15, 'activity/onset_rate_per_min': -4.42, 'uniform_lawn/roaming_bout_s': -6.17, 'local_search/log_early_late_ratio': -3.11, 'chemotaxis/onset_per_min': 3.71, 'chemotaxis/flip_fraction': 4.02}
+2a gen 81: median 6.52 best 3.40 sigma 0.102 3741 s
+2a gen 82: median 5.74 best 3.82 sigma 0.103 3814 s
+2a gen 83: median 6.49 best 2.85 sigma 0.103 3889 s
+2a gen 84: median 5.63 best 3.32 sigma 0.104 3964 s
+2a gen 85: median 5.38 best 3.03 sigma 0.104 4040 s
+2a gen 86: median 7.08 best 2.81 sigma 0.103 4117 s
+2a gen 87: median 7.30 best 3.16 sigma 0.103 4194 s
+2a gen 88: median 5.13 best 2.72 sigma 0.103 4272 s
+2a gen 89: median 5.31 best 2.74 sigma 0.102 4349 s
+2a gen 90: median 6.55 best 2.44 sigma 0.102 4427 s
+2a readout gen 90: D 3.77 passes 1/6 on-lawn 0.99 spread speed 1.94 rev 2.41 | tph-1 -0.008(F) pdfr-1 +0.010(P) tax-4 -0.052(F) | fails {'small_lawn/pre_exit_enrichment': -4.23, 'kinematics/dwelling_speed_median': 3.94, 'kinematics/dwelling_speed_p90': 5.85, 'activity/onset_rate_per_min': -4.03, 'local_search/gamma_per_min': 10.0, 'chemotaxis/flip_fraction': 3.71}
+2a gen 91: median 5.24 best 2.62 sigma 0.102 4526 s
+2a gen 92: median 7.75 best 2.83 sigma 0.102 4602 s
+2a gen 93: median 6.18 best 2.87 sigma 0.102 4679 s
+2a gen 94: median 5.58 best 3.08 sigma 0.102 4757 s
+2a gen 95: median 5.71 best 2.64 sigma 0.102 4835 s
+2a gen 96: median 5.45 best 2.76 sigma 0.102 4913 s
+2a gen 97: median 6.16 best 2.53 sigma 0.102 4991 s
+2a gen 98: median 5.77 best 2.81 sigma 0.101 5069 s
+2a gen 99: median 5.02 best 2.41 sigma 0.101 5146 s
+2a gen 100: median 4.41 best 2.51 sigma 0.100 5225 s
+2a readout gen 100: D 3.94 passes 1/6 on-lawn 0.98 spread speed 1.74 rev 2.18 | tph-1 +0.002(F) pdfr-1 +0.014(P) tax-4 -0.037(F) | fails {'small_lawn/dwelling_bout_s': 4.17, 'small_lawn/pre_exit_enrichment': -3.45, 'kinematics/dwelling_speed_p90': 5.07, 'activity/onset_rate_per_min': -4.7, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.95, 'chemotaxis/flip_fraction': 4.57}
+2a gen 101: median 4.91 best 2.47 sigma 0.099 5324 s
+2a gen 102: median 6.03 best 2.64 sigma 0.098 5398 s
+2a gen 103: median 4.68 best 2.56 sigma 0.097 5473 s
+2a gen 104: median 4.97 best 2.70 sigma 0.097 5549 s
+2a gen 105: median 4.34 best 2.56 sigma 0.096 5624 s
+2a gen 106: median 3.64 best 2.31 sigma 0.095 5700 s
+2a gen 107: median 3.74 best 2.29 sigma 0.094 5776 s
+2a gen 108: median 4.03 best 2.41 sigma 0.093 5851 s
+2a gen 109: median 3.91 best 2.35 sigma 0.093 5926 s
+2a gen 110: median 3.96 best 2.41 sigma 0.093 6002 s
+2a readout gen 110: D 2.35 passes 2/6 on-lawn 0.99 spread speed 1.73 rev 1.49 | tph-1 +0.001(F) pdfr-1 -0.002(P) tax-4 -0.019(F) | fails {'small_lawn/roaming_bout_s': 3.08, 'kinematics/dwelling_speed_median': 3.85, 'kinematics/dwelling_speed_p90': 5.21, 'activity/onset_rate_per_min': -4.03, 'chemotaxis/onset_per_min': 3.1, 'chemotaxis/flip_fraction': 4.74}
+2a gen 111: median 3.52 best 2.35 sigma 0.093 6099 s
+2a gen 112: median 4.22 best 2.19 sigma 0.093 6172 s
+2a gen 113: median 4.10 best 2.34 sigma 0.093 6246 s
+2a gen 114: median 3.81 best 2.17 sigma 0.093 6320 s
+2a gen 115: median 3.88 best 2.56 sigma 0.093 6394 s
+2a gen 116: median 4.71 best 2.26 sigma 0.093 6473 s
+2a gen 117: median 4.19 best 2.46 sigma 0.092 6559 s
+2a gen 118: median 3.40 best 2.28 sigma 0.093 6644 s
+2a gen 119: median 3.91 best 2.17 sigma 0.092 6721 s
+2a gen 120: median 3.87 best 2.20 sigma 0.092 6801 s
+2a readout gen 120: D 4.00 passes 1/6 on-lawn 0.99 spread speed 1.30 rev 1.23 | tph-1 -0.001(F) pdfr-1 -0.001(P) tax-4 -0.051(F) | fails {'small_lawn/dwelling_bout_s': 3.83, 'kinematics/dwelling_speed_median': 3.56, 'kinematics/dwelling_speed_p90': 4.63, 'activity/onset_rate_per_min': -4.31, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -5.19, 'chemotaxis/onset_per_min': 3.09, 'chemotaxis/flip_fraction': 4.64}
+2a gen 121: median 3.87 best 2.29 sigma 0.092 6906 s
+2a gen 122: median 3.50 best 2.36 sigma 0.091 6986 s
+2a gen 123: median 3.96 best 2.34 sigma 0.090 7067 s
+2a gen 124: median 3.99 best 2.41 sigma 0.089 7143 s
+2a gen 125: median 4.14 best 2.45 sigma 0.088 7219 s
+2a gen 126: median 3.73 best 2.14 sigma 0.086 7294 s
+2a gen 127: median 4.12 best 2.42 sigma 0.085 7370 s
+2a gen 128: median 3.50 best 2.51 sigma 0.084 7446 s
+2a gen 129: median 3.72 best 2.40 sigma 0.082 7522 s
+2a gen 130: median 3.57 best 2.22 sigma 0.081 7597 s
+2a readout gen 130: D 3.94 passes 1/6 on-lawn 0.98 spread speed 1.42 rev 1.34 | tph-1 +0.014(F) pdfr-1 +0.014(P) tax-4 -0.034(F) | fails {'small_lawn/dwelling_bout_s': 4.67, 'kinematics/dwelling_speed_p90': 4.41, 'activity/onset_rate_per_min': -4.56, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.92, 'chemotaxis/weathervane_deg_s': 3.1, 'chemotaxis/onset_per_min': 3.36, 'chemotaxis/flip_fraction': 4.63}
+2a gen 131: median 3.80 best 2.22 sigma 0.080 7694 s
+2a gen 132: median 3.70 best 2.21 sigma 0.078 7767 s
+2a gen 133: median 3.27 best 2.19 sigma 0.077 7841 s
+2a gen 134: median 3.13 best 2.13 sigma 0.076 7916 s
+2a gen 135: median 3.29 best 2.16 sigma 0.075 7991 s
+2a gen 136: median 3.02 best 2.15 sigma 0.074 8067 s
+2a gen 137: median 3.36 best 2.13 sigma 0.073 8143 s
+2a gen 138: median 3.08 best 2.20 sigma 0.073 8219 s
+2a gen 139: median 3.36 best 2.27 sigma 0.072 8295 s
+2a gen 140: median 3.38 best 2.23 sigma 0.072 8370 s
+2a readout gen 140: D 3.83 passes 1/6 on-lawn 0.99 spread speed 1.51 rev 1.45 | tph-1 +0.008(F) pdfr-1 -0.002(P) tax-4 -0.001(F) | fails {'small_lawn/dwelling_bout_s': 3.78, 'kinematics/dwelling_speed_median': 3.34, 'kinematics/dwelling_speed_p90': 4.24, 'activity/onset_rate_per_min': -4.4, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.87, 'chemotaxis/flip_fraction': 4.6}
+2a gen 141: median 3.07 best 2.20 sigma 0.072 8468 s
+2a gen 142: median 3.16 best 2.27 sigma 0.071 8541 s
+2a gen 143: median 3.33 best 2.20 sigma 0.071 8615 s
+2a gen 144: median 3.29 best 2.16 sigma 0.070 8691 s
+2a gen 145: median 3.56 best 2.21 sigma 0.070 8767 s
+2a gen 146: median 2.85 best 2.11 sigma 0.069 8843 s
+2a gen 147: median 2.94 best 2.15 sigma 0.068 8918 s
+2a gen 148: median 3.05 best 2.13 sigma 0.068 8994 s
+2a gen 149: median 2.89 best 2.15 sigma 0.068 9070 s
+2a gen 150: median 2.79 best 2.18 sigma 0.068 9146 s
+2a readout gen 150: D 3.87 passes 1/6 on-lawn 0.98 spread speed 1.48 rev 1.38 | tph-1 +0.011(F) pdfr-1 +0.005(P) tax-4 +0.033(F) | fails {'small_lawn/dwelling_bout_s': 5.76, 'kinematics/dwelling_speed_p90': 4.56, 'activity/onset_rate_per_min': -4.02, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.67, 'chemotaxis/onset_per_min': 3.11, 'chemotaxis/flip_fraction': 4.92}
+2a gen 151: median 2.75 best 2.18 sigma 0.068 9244 s
+2a gen 152: median 2.95 best 2.08 sigma 0.069 9317 s
+2a gen 153: median 2.87 best 2.09 sigma 0.069 9392 s
+2a gen 154: median 2.82 best 2.22 sigma 0.069 9468 s
+2a gen 155: median 2.85 best 2.14 sigma 0.070 9544 s
+2a gen 156: median 3.04 best 2.23 sigma 0.070 9620 s
+2a gen 157: median 2.80 best 2.07 sigma 0.071 9696 s
+2a gen 158: median 2.89 best 2.08 sigma 0.071 9772 s
+2a gen 159: median 2.75 best 2.14 sigma 0.071 9848 s
+2a gen 160: median 2.93 best 2.13 sigma 0.071 9924 s
+2a readout gen 160: D 3.82 passes 2/6 on-lawn 0.98 spread speed 1.19 rev 1.25 | tph-1 -0.005(F) pdfr-1 +0.005(P) tax-4 +0.075(F) | fails {'kinematics/dwelling_speed_median': 3.98, 'kinematics/dwelling_speed_p90': 5.03, 'activity/onset_rate_per_min': -3.69, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.87, 'chemotaxis/onset_per_min': 3.2, 'chemotaxis/flip_fraction': 4.82}
+2a gen 161: median 2.83 best 2.23 sigma 0.071 10022 s
+2a gen 162: median 3.12 best 2.24 sigma 0.072 10095 s
+2a gen 163: median 2.81 best 2.06 sigma 0.072 10170 s
+2a gen 164: median 2.87 best 2.17 sigma 0.071 10246 s
+2a gen 165: median 2.64 best 2.13 sigma 0.071 10323 s
+2a gen 166: median 3.19 best 2.27 sigma 0.070 10399 s
+2a gen 167: median 2.78 best 2.23 sigma 0.069 10475 s
+2a gen 168: median 2.75 best 2.24 sigma 0.068 10551 s
+2a gen 169: median 2.77 best 2.14 sigma 0.068 10627 s
+2a gen 170: median 2.76 best 2.19 sigma 0.067 10703 s
+2a readout gen 170: D 3.85 passes 1/6 on-lawn 0.98 spread speed 1.14 rev 1.09 | tph-1 -0.007(F) pdfr-1 -0.000(P) tax-4 -0.022(F) | fails {'small_lawn/roaming_bout_s': 4.23, 'kinematics/dwelling_speed_p90': 4.44, 'kinematics/roaming_survival_5min': 3.97, 'activity/onset_rate_per_min': -4.13, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.78, 'chemotaxis/flip_fraction': 4.54}
+2a gen 171: median 2.77 best 2.22 sigma 0.066 10801 s
+2a gen 172: median 2.52 best 2.26 sigma 0.065 10875 s
+2a gen 173: median 2.56 best 2.18 sigma 0.064 10950 s
+2a gen 174: median 2.50 best 2.08 sigma 0.064 11026 s
+2a gen 175: median 2.53 best 2.17 sigma 0.063 11102 s
+2a gen 176: median 2.67 best 2.18 sigma 0.063 11179 s
+2a gen 177: median 2.63 best 2.19 sigma 0.063 11255 s
+2a gen 178: median 2.61 best 2.07 sigma 0.062 11331 s
+2a gen 179: median 2.65 best 2.17 sigma 0.062 11407 s
+2a gen 180: median 2.65 best 2.15 sigma 0.062 11482 s
+2a readout gen 180: D 3.78 passes 2/6 on-lawn 0.98 spread speed 1.18 rev 1.09 | tph-1 -0.007(F) pdfr-1 -0.003(P) tax-4 -0.038(F) | fails {'kinematics/dwelling_speed_p90': 4.88, 'activity/onset_rate_per_min': -3.94, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.66, 'chemotaxis/onset_per_min': 3.08, 'chemotaxis/flip_fraction': 4.78}
+2a gen 181: median 2.65 best 2.18 sigma 0.062 11580 s
+2a gen 182: median 2.61 best 2.14 sigma 0.061 11653 s
+2a gen 183: median 2.50 best 2.03 sigma 0.061 11728 s
+2a gen 184: median 2.49 best 2.06 sigma 0.060 11804 s
+2a gen 185: median 2.61 best 2.23 sigma 0.060 11880 s
+2a gen 186: median 2.48 best 2.13 sigma 0.060 11956 s
+2a gen 187: median 2.55 best 2.04 sigma 0.060 12031 s
+2a gen 188: median 2.54 best 2.09 sigma 0.060 12107 s
+2a gen 189: median 2.52 best 2.13 sigma 0.060 12183 s
+2a gen 190: median 2.54 best 2.04 sigma 0.060 12258 s
+2a readout gen 190: D 3.75 passes 1/6 on-lawn 0.98 spread speed 1.15 rev 0.96 | tph-1 +0.002(F) pdfr-1 +0.004(P) tax-4 -0.055(F) | fails {'small_lawn/dwelling_bout_s': 3.68, 'kinematics/dwelling_speed_p90': 4.79, 'activity/onset_rate_per_min': -3.68, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.66, 'chemotaxis/flip_fraction': 4.78}
+2a gen 191: median 2.51 best 2.05 sigma 0.060 12356 s
+2a gen 192: median 2.37 best 2.05 sigma 0.060 12429 s
+2a gen 193: median 2.68 best 2.06 sigma 0.060 12504 s
+2a gen 194: median 2.48 best 1.99 sigma 0.060 12579 s
+2a gen 195: median 2.46 best 2.10 sigma 0.060 12655 s
+2a gen 196: median 2.48 best 2.07 sigma 0.060 12731 s
+2a gen 197: median 2.64 best 1.98 sigma 0.060 12806 s
+2a gen 198: median 2.54 best 2.06 sigma 0.061 12882 s
+2a gen 199: median 2.60 best 2.03 sigma 0.061 12958 s
+2a gen 200: median 2.39 best 2.06 sigma 0.061 13033 s
+2a readout gen 200: D 3.78 passes 1/6 on-lawn 0.98 spread speed 1.11 rev 0.75 | tph-1 +0.006(F) pdfr-1 +0.005(P) tax-4 -0.026(F) | fails {'small_lawn/dwelling_bout_s': 3.52, 'kinematics/dwelling_speed_median': 3.16, 'kinematics/dwelling_speed_p90': 4.81, 'activity/onset_rate_per_min': -3.73, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.59, 'chemotaxis/flip_fraction': 4.82}
+2a gen 201: median 2.69 best 2.07 sigma 0.061 13131 s
+2a gen 202: median 2.43 best 2.03 sigma 0.061 13204 s
+2a gen 203: median 2.41 best 2.01 sigma 0.061 13278 s
+2a gen 204: median 2.39 best 2.11 sigma 0.061 13354 s
+2a gen 205: median 2.59 best 2.00 sigma 0.061 13429 s
+2a gen 206: median 2.48 best 2.04 sigma 0.061 13505 s
+2a gen 207: median 2.53 best 2.07 sigma 0.062 13580 s
+2a gen 208: median 2.45 best 2.14 sigma 0.062 13656 s
+2a gen 209: median 2.47 best 2.08 sigma 0.062 13731 s
+2a gen 210: median 2.46 best 1.91 sigma 0.063 13806 s
+2a readout gen 210: D 3.81 passes 1/6 on-lawn 0.98 spread speed 0.97 rev 0.77 | tph-1 +0.007(F) pdfr-1 +0.008(P) tax-4 -0.033(F) | fails {'small_lawn/dwelling_bout_s': 3.61, 'kinematics/dwelling_speed_median': 3.33, 'kinematics/dwelling_speed_p90': 4.83, 'activity/onset_rate_per_min': -3.62, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.73, 'chemotaxis/onset_per_min': 3.12, 'chemotaxis/flip_fraction': 4.99}
+2a gen 211: median 2.50 best 2.08 sigma 0.063 13904 s
+2a gen 212: median 2.46 best 1.93 sigma 0.063 13977 s
+2a gen 213: median 2.45 best 2.03 sigma 0.063 14051 s
+2a gen 214: median 2.57 best 2.01 sigma 0.064 14126 s
+2a gen 215: median 2.70 best 2.07 sigma 0.064 14202 s
+2a gen 216: median 2.47 best 1.99 sigma 0.064 14277 s
+2a gen 217: median 2.82 best 2.00 sigma 0.064 14353 s
+2a gen 218: median 2.42 best 1.90 sigma 0.064 14429 s
+2a gen 219: median 2.44 best 1.95 sigma 0.064 14505 s
+2a gen 220: median 2.65 best 2.02 sigma 0.064 14581 s
+2a readout gen 220: D 3.79 passes 1/6 on-lawn 0.97 spread speed 0.96 rev 0.80 | tph-1 -0.006(F) pdfr-1 +0.004(P) tax-4 -0.029(F) | fails {'small_lawn/dwelling_bout_s': 3.5, 'kinematics/dwelling_speed_p90': 3.67, 'activity/onset_rate_per_min': -4.1, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.98, 'chemotaxis/onset_per_min': 3.24, 'chemotaxis/flip_fraction': 4.67}
+2a gen 221: median 2.56 best 2.01 sigma 0.064 14680 s
+2a gen 222: median 2.51 best 1.94 sigma 0.063 14752 s
+2a gen 223: median 2.67 best 2.07 sigma 0.063 14827 s
+2a gen 224: median 2.36 best 1.96 sigma 0.062 14902 s
+2a gen 225: median 2.32 best 1.98 sigma 0.062 14977 s
+2a gen 226: median 2.62 best 1.96 sigma 0.061 15053 s
+2a gen 227: median 2.41 best 1.85 sigma 0.061 15128 s
+2a gen 228: median 2.41 best 1.96 sigma 0.061 15203 s
+2a gen 229: median 2.59 best 2.00 sigma 0.061 15278 s
+2a gen 230: median 2.53 best 1.95 sigma 0.060 15353 s
+2a readout gen 230: D 3.77 passes 2/6 on-lawn 0.98 spread speed 1.08 rev 0.74 | tph-1 -0.010(F) pdfr-1 -0.010(P) tax-4 -0.021(F) | fails {'kinematics/dwelling_speed_p90': 3.94, 'activity/onset_rate_per_min': -3.72, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.97, 'chemotaxis/onset_per_min': 3.27, 'chemotaxis/flip_fraction': 4.96}
+2a gen 231: median 2.40 best 1.95 sigma 0.060 15450 s
+2a gen 232: median 2.52 best 1.88 sigma 0.060 15523 s
+2a gen 233: median 2.57 best 1.87 sigma 0.060 15597 s
+2a gen 234: median 2.45 best 1.97 sigma 0.059 15672 s
+2a gen 235: median 2.40 best 1.87 sigma 0.059 15747 s
+2a gen 236: median 2.35 best 1.93 sigma 0.058 15822 s
+2a gen 237: median 2.46 best 1.86 sigma 0.058 15897 s
+2a gen 238: median 2.45 best 2.06 sigma 0.057 15972 s
+2a gen 239: median 2.45 best 1.95 sigma 0.056 16047 s
+2a gen 240: median 2.30 best 1.94 sigma 0.056 16122 s
+2a readout gen 240: D 3.71 passes 2/6 on-lawn 0.98 spread speed 0.99 rev 0.68 | tph-1 -0.006(F) pdfr-1 -0.005(P) tax-4 -0.023(F) | fails {'kinematics/dwelling_speed_p90': 4.96, 'activity/onset_rate_per_min': -3.46, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.88, 'chemotaxis/onset_per_min': 3.12, 'chemotaxis/flip_fraction': 4.9}
+2a gen 241: median 2.59 best 1.97 sigma 0.055 16219 s
+2a gen 242: median 2.59 best 2.03 sigma 0.054 16291 s
+2a gen 243: median 2.37 best 2.03 sigma 0.053 16365 s
+2a gen 244: median 2.33 best 1.94 sigma 0.053 16440 s
+2a gen 245: median 2.51 best 1.92 sigma 0.052 16515 s
+2a gen 246: median 2.20 best 1.90 sigma 0.051 16590 s
+2a gen 247: median 2.34 best 1.90 sigma 0.051 16665 s
+2a gen 248: median 2.27 best 1.88 sigma 0.051 16740 s
+2a gen 249: median 2.22 best 1.80 sigma 0.051 16815 s
+2a gen 250: median 2.29 best 1.83 sigma 0.051 16890 s
+2a readout gen 250: D 3.68 passes 2/6 on-lawn 0.98 spread speed 0.92 rev 0.68 | tph-1 -0.001(F) pdfr-1 +0.003(P) tax-4 -0.006(F) | fails {'kinematics/dwelling_speed_p90': 4.41, 'activity/onset_rate_per_min': -3.25, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.84, 'chemotaxis/onset_per_min': 3.29, 'chemotaxis/flip_fraction': 4.88}
+2a gen 251: median 2.28 best 1.83 sigma 0.051 16987 s
+2a gen 252: median 2.31 best 1.87 sigma 0.052 17059 s
+2a gen 253: median 2.38 best 1.89 sigma 0.052 17133 s
+2a gen 254: median 2.25 best 1.81 sigma 0.052 17207 s
+2a gen 255: median 2.27 best 1.78 sigma 0.052 17282 s
+2a gen 256: median 2.35 best 1.81 sigma 0.052 17357 s
+2a gen 257: median 2.18 best 1.75 sigma 0.052 17432 s
+2a gen 258: median 2.24 best 1.78 sigma 0.052 17507 s
+2a gen 259: median 2.16 best 1.84 sigma 0.052 17582 s
+2a gen 260: median 2.19 best 1.80 sigma 0.051 17657 s
+2a readout gen 260: D 3.68 passes 2/6 on-lawn 0.97 spread speed 0.98 rev 0.71 | tph-1 -0.003(F) pdfr-1 +0.001(P) tax-4 -0.024(F) | fails {'small_lawn/pre_exit_enrichment': -3.31, 'kinematics/dwelling_speed_p90': 4.01, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.83, 'chemotaxis/weathervane_deg_s': 3.3, 'chemotaxis/onset_per_min': 3.3, 'chemotaxis/flip_fraction': 4.91}
+2a gen 261: median 2.14 best 1.67 sigma 0.051 17753 s
+2a gen 262: median 2.17 best 1.78 sigma 0.051 17826 s
+2a gen 263: median 2.21 best 1.88 sigma 0.051 17899 s
+2a gen 264: median 2.21 best 1.84 sigma 0.051 17974 s
+2a gen 265: median 2.28 best 1.86 sigma 0.050 18049 s
+2a gen 266: median 2.23 best 1.76 sigma 0.050 18124 s
+2a gen 267: median 2.14 best 1.83 sigma 0.050 18199 s
+2a gen 268: median 2.17 best 1.72 sigma 0.049 18273 s
+2a gen 269: median 2.42 best 1.75 sigma 0.049 18348 s
+2a gen 270: median 2.27 best 1.71 sigma 0.049 18423 s
+2a readout gen 270: D 3.60 passes 2/6 on-lawn 0.98 spread speed 1.01 rev 0.71 | tph-1 -0.000(F) pdfr-1 +0.008(P) tax-4 -0.013(F) | fails {'kinematics/dwelling_speed_p90': 4.13, 'activity/onset_rate_per_min': -3.36, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.77, 'chemotaxis/weathervane_deg_s': 3.13, 'chemotaxis/flip_fraction': 4.46}
+2a gen 271: median 2.18 best 1.83 sigma 0.048 18520 s
+2a gen 272: median 2.08 best 1.71 sigma 0.048 18592 s
+2a gen 273: median 2.10 best 1.59 sigma 0.048 18666 s
+2a gen 274: median 2.00 best 1.79 sigma 0.047 18740 s
+2a gen 275: median 2.17 best 1.79 sigma 0.047 18815 s
+2a gen 276: median 2.19 best 1.69 sigma 0.046 18890 s
+2a gen 277: median 2.17 best 1.73 sigma 0.046 18965 s
+2a gen 278: median 2.09 best 1.72 sigma 0.046 19040 s
+2a gen 279: median 2.09 best 1.74 sigma 0.046 19114 s
+2a gen 280: median 2.07 best 1.66 sigma 0.046 19189 s
+2a readout gen 280: D 3.66 passes 2/6 on-lawn 0.97 spread speed 0.88 rev 0.72 | tph-1 +0.011(F) pdfr-1 +0.010(P) tax-4 -0.003(F) | fails {'kinematics/dwelling_speed_p90': 3.48, 'activity/onset_rate_per_min': -3.61, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.78, 'chemotaxis/weathervane_deg_s': 4.22, 'chemotaxis/onset_per_min': 3.27, 'chemotaxis/flip_fraction': 4.42}
+2a gen 281: median 2.04 best 1.70 sigma 0.046 19285 s
+2a gen 282: median 2.05 best 1.75 sigma 0.046 19357 s
+2a gen 283: median 2.01 best 1.58 sigma 0.046 19431 s
+2a gen 284: median 2.08 best 1.58 sigma 0.045 19505 s
+2a gen 285: median 2.04 best 1.64 sigma 0.045 19580 s
+2a gen 286: median 2.13 best 1.61 sigma 0.044 19655 s
+2a gen 287: median 1.90 best 1.68 sigma 0.044 19730 s
+2a gen 288: median 1.99 best 1.68 sigma 0.043 19804 s
+2a gen 289: median 1.97 best 1.59 sigma 0.042 19879 s
+2a gen 290: median 1.95 best 1.66 sigma 0.042 19953 s
+2a readout gen 290: D 3.60 passes 2/6 on-lawn 0.97 spread speed 0.98 rev 0.79 | tph-1 -0.004(F) pdfr-1 -0.005(P) tax-4 -0.041(F) | fails {'kinematics/dwelling_speed_p90': 3.27, 'activity/onset_rate_per_min': -3.38, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.81, 'chemotaxis/weathervane_deg_s': 3.65, 'chemotaxis/onset_per_min': 3.19, 'chemotaxis/flip_fraction': 4.53}
+2a gen 291: median 1.92 best 1.64 sigma 0.041 20050 s
+2a gen 292: median 1.84 best 1.55 sigma 0.041 20122 s
+2a gen 293: median 1.84 best 1.47 sigma 0.041 20195 s
+2a gen 294: median 1.90 best 1.54 sigma 0.041 20270 s
+2a gen 295: median 1.84 best 1.51 sigma 0.041 20344 s
+2a gen 296: median 1.86 best 1.57 sigma 0.041 20419 s
+2a gen 297: median 1.92 best 1.58 sigma 0.040 20493 s
+2a gen 298: median 1.87 best 1.56 sigma 0.040 20568 s
+2a gen 299: median 1.92 best 1.55 sigma 0.040 20642 s
+2a gen 300: median 1.76 best 1.54 sigma 0.040 20717 s
+2a readout gen 300: D 3.70 passes 2/6 on-lawn 0.98 spread speed 0.94 rev 0.70 | tph-1 +0.008(F) pdfr-1 +0.009(P) tax-4 -0.028(F) | fails {'activity/onset_rate_per_min': -3.42, 'uniform_lawn/roaming_bout_s': -3.23, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.7, 'chemotaxis/weathervane_deg_s': 5.35, 'chemotaxis/onset_per_min': 3.18, 'chemotaxis/flip_fraction': 4.53}
+2b readout gen 0: D 3.70 passes 2/6 on-lawn 0.98 spread speed 0.94 rev 0.70 | tph-1 +0.008(F) pdfr-1 +0.009(P) tax-4 -0.028(F) | fails {'activity/onset_rate_per_min': -3.42, 'uniform_lawn/roaming_bout_s': -3.23, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.7, 'chemotaxis/weathervane_deg_s': 5.35, 'chemotaxis/onset_per_min': 3.18, 'chemotaxis/flip_fraction': 4.53}
+2b gen 1: median 1003.22 best 2.45 sigma 0.047 20938 s
+2b gen 2: median 1003.66 best 2.25 sigma 0.045 21121 s
+2b gen 3: median 1003.51 best 2.38 sigma 0.044 21304 s
+2b gen 4: median 1002.97 best 2.46 sigma 0.043 21486 s
+2b gen 5: median 1003.19 best 2.55 sigma 0.042 21668 s
+2b gen 6: median 1003.06 best 2.67 sigma 0.041 21850 s
+2b gen 7: median 1003.19 best 2.49 sigma 0.041 22033 s
+2b gen 8: median 1003.14 best 2.65 sigma 0.041 22215 s
+2b gen 9: median 1002.86 best 3.01 sigma 0.041 22397 s
+2b gen 10: median 1002.82 best 2.43 sigma 0.041 22579 s
+2b readout gen 10: D 3.69 passes 1/6 on-lawn 0.96 spread speed 0.85 rev 0.93 | tph-1 +0.000(F) pdfr-1 +0.003(P) tax-4 +0.006(F) | fails {'small_lawn/pre_exit_enrichment': -3.48, 'small_lawn/time_on_lawn': -3.1, 'kinematics/dwelling_speed_p90': 3.28, 'activity/onset_rate_per_min': -3.28, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.87, 'chemotaxis/onset_per_min': 3.4, 'chemotaxis/flip_fraction': 4.65}
+2b gen 11: median 1003.08 best 2.11 sigma 0.040 22779 s
+2b gen 12: median 1002.78 best 2.37 sigma 0.040 22961 s
+2b gen 13: median 1002.60 best 2.21 sigma 0.039 23143 s
+2b gen 14: median 1002.75 best 2.34 sigma 0.039 23324 s
+2b gen 15: median 1002.85 best 2.72 sigma 0.039 23506 s
+2b gen 16: median 1002.69 best 2.17 sigma 0.039 23688 s
+2b gen 17: median 1002.47 best 2.30 sigma 0.039 23870 s
+2b gen 18: median 1002.47 best 2.68 sigma 0.039 24051 s
+2b gen 19: median 10.32 best 2.22 sigma 0.039 24232 s
+2b gen 20: median 1002.65 best 2.51 sigma 0.040 24414 s
+2b readout gen 20: D 3.73 passes 1/6 on-lawn 0.99 spread speed 1.16 rev 0.96 | tph-1 -0.002(F) pdfr-1 +0.002(P) tax-4 -0.009(F) | fails {'small_lawn/pre_exit_enrichment': 3.61, 'kinematics/dwelling_speed_p90': 3.11, 'activity/onset_rate_per_min': -4.45, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.84, 'chemotaxis/flip_fraction': 3.49}
+2b gen 21: median 1002.58 best 2.46 sigma 0.040 24613 s
+2b gen 22: median 1002.68 best 2.47 sigma 0.040 24793 s
+2b gen 23: median 1002.57 best 2.25 sigma 0.039 24975 s
+2b gen 24: median 1002.57 best 2.32 sigma 0.039 25156 s
+2b gen 25: median 5.75 best 2.51 sigma 0.039 25338 s
+2b gen 26: median 1002.48 best 2.29 sigma 0.040 25519 s
+2b gen 27: median 6.42 best 2.26 sigma 0.039 25701 s
+2b gen 28: median 6.11 best 2.41 sigma 0.039 25882 s
+2b gen 29: median 504.47 best 2.22 sigma 0.039 26063 s
+2b gen 30: median 504.31 best 2.03 sigma 0.039 26244 s
+2b readout gen 30: D 3.62 passes 2/6 on-lawn 0.97 spread speed 1.20 rev 1.35 | tph-1 +0.004(F) pdfr-1 +0.005(P) tax-4 -0.009(F) | fails {'kinematics/dwelling_speed_p90': 4.15, 'activity/onset_rate_per_min': -3.16, 'local_search/gamma_per_min': 10.0, 'local_search/log_early_late_ratio': -3.53, 'chemotaxis/flip_fraction': 4.39}
+2b gen 31: median 505.45 best 2.16 sigma 0.039 26444 s
+2b gen 32: median 5.75 best 2.13 sigma 0.039 26624 s
+2b gen 33: median 4.81 best 2.23 sigma 0.039 26806 s
+2b gen 34: median 6.47 best 2.03 sigma 0.039 26987 s
+2b gen 35: median 5.89 best 2.21 sigma 0.039 27168 s
+2b gen 36: median 1002.66 best 2.27 sigma 0.039 27349 s
+2b gen 37: median 4.63 best 2.26 sigma 0.038 27530 s
+2b gen 38: median 5.36 best 2.19 sigma 0.038 27710 s
+2b gen 39: median 4.47 best 2.31 sigma 0.038 27891 s
+2b gen 40: median 4.93 best 2.07 sigma 0.037 28072 s
+2b readout gen 40: D 2.24 passes 1/6 on-lawn 0.96 spread speed 1.13 rev 1.29 | tph-1 +0.016(F) pdfr-1 +0.010(P) tax-4 -0.006(F) | fails {'small_lawn/pre_exit_enrichment': -3.75, 'small_lawn/time_on_lawn': -3.46, 'kinematics/dwelling_speed_p90': 3.93, 'uniform_lawn/roaming_bout_s': -3.18, 'local_search/log_early_late_ratio': -3.47, 'chemotaxis/flip_fraction': 4.07}
+2b gen 41: median 504.81 best 2.04 sigma 0.037 28271 s
+2b gen 42: median 3.66 best 1.96 sigma 0.037 28451 s
+2b gen 43: median 3.94 best 1.99 sigma 0.037 28632 s
+2b gen 44: median 4.16 best 2.14 sigma 0.037 28813 s
+2b gen 45: median 3.82 best 2.18 sigma 0.036 28993 s
+2b gen 46: median 3.32 best 2.21 sigma 0.036 29173 s
+2b gen 47: median 4.27 best 2.39 sigma 0.036 29354 s
+2b gen 48: median 3.54 best 2.04 sigma 0.036 29534 s
+2b gen 49: median 3.69 best 2.17 sigma 0.035 29714 s
+2b gen 50: median 3.29 best 1.99 sigma 0.035 29894 s
+2b readout gen 50: D 1.95 passes 2/6 on-lawn 0.98 spread speed 1.25 rev 1.15 | tph-1 +0.011(F) pdfr-1 +0.008(P) tax-4 -0.027(F) | fails {'kinematics/dwelling_speed_p90': 3.37, 'activity/onset_rate_per_min': -3.6, 'local_search/log_early_late_ratio': -3.12, 'chemotaxis/flip_fraction': 3.59}
+2b gen 51: median 3.58 best 2.11 sigma 0.035 30092 s
+2b gen 52: median 3.07 best 2.01 sigma 0.035 30273 s
+2b gen 53: median 3.15 best 1.96 sigma 0.035 30453 s
+2b gen 54: median 3.35 best 2.09 sigma 0.036 30633 s
+2b gen 55: median 3.48 best 2.08 sigma 0.036 30814 s
+2b gen 56: median 3.13 best 1.98 sigma 0.036 30994 s
+2b gen 57: median 3.77 best 2.13 sigma 0.036 31175 s
+2b gen 58: median 2.87 best 2.09 sigma 0.037 31355 s
+2b gen 59: median 3.12 best 1.98 sigma 0.037 31535 s
+2b gen 60: median 2.82 best 2.11 sigma 0.037 31715 s
+2b readout gen 60: D 2.01 passes 3/6 on-lawn 0.98 spread speed 1.17 rev 0.83 | tph-1 +0.018(F) pdfr-1 +0.003(P) tax-4 -0.102(F) | fails {'kinematics/dwelling_speed_p90': 4.54, 'local_search/log_early_late_ratio': -3.24, 'chemotaxis/flip_fraction': 4.13}
+2b gen 61: median 3.00 best 2.03 sigma 0.038 31913 s
+2b gen 62: median 3.13 best 2.00 sigma 0.038 32093 s
+2b gen 63: median 4.09 best 2.03 sigma 0.038 32274 s
+2b gen 64: median 3.12 best 2.03 sigma 0.038 32454 s
+2b gen 65: median 2.86 best 1.93 sigma 0.038 32634 s
+2b gen 66: median 3.81 best 2.05 sigma 0.038 32814 s
+2b gen 67: median 2.63 best 2.06 sigma 0.038 32994 s
+2b gen 68: median 2.81 best 2.00 sigma 0.038 33174 s
+2b gen 69: median 3.65 best 1.91 sigma 0.038 33354 s
+2b gen 70: median 3.48 best 2.02 sigma 0.038 33534 s
+2b readout gen 70: D 1.93 passes 3/6 on-lawn 0.96 spread speed 1.45 rev 0.94 | tph-1 +0.014(F) pdfr-1 +0.010(P) tax-4 -0.039(F) | fails {'kinematics/dwelling_speed_p90': 3.85, 'activity/onset_rate_per_min': -3.31, 'chemotaxis/flip_fraction': 3.74}
+2b gen 71: median 4.00 best 2.11 sigma 0.038 33732 s
+2b gen 72: median 3.23 best 2.00 sigma 0.038 33912 s
+2b gen 73: median 2.96 best 2.04 sigma 0.038 34092 s
+2b gen 74: median 2.84 best 2.13 sigma 0.038 34271 s
+2b gen 75: median 3.67 best 2.10 sigma 0.038 34451 s
+2b gen 76: median 2.91 best 2.18 sigma 0.038 34631 s
+2b gen 77: median 2.98 best 2.07 sigma 0.038 34810 s
+2b gen 78: median 3.38 best 2.13 sigma 0.038 34990 s
+2b gen 79: median 3.32 best 2.15 sigma 0.038 35170 s
+2b gen 80: median 3.21 best 2.16 sigma 0.037 35349 s
+2b readout gen 80: D 2.13 passes 1/6 on-lawn 0.98 spread speed 1.29 rev 0.92 | tph-1 +0.014(F) pdfr-1 -0.014(P) tax-4 -0.077(F) | fails {'small_lawn/pre_exit_enrichment': -3.83, 'kinematics/dwelling_speed_p90': 4.43, 'activity/onset_rate_per_min': -3.18, 'local_search/log_early_late_ratio': -3.16, 'chemotaxis/flip_fraction': 4.01}
+2b gen 81: median 3.41 best 2.03 sigma 0.037 35547 s
+2b gen 82: median 2.81 best 2.01 sigma 0.037 35727 s
+2b gen 83: median 2.92 best 2.24 sigma 0.037 35907 s
+2b gen 84: median 2.71 best 1.94 sigma 0.036 36087 s
+2b gen 85: median 3.34 best 2.09 sigma 0.036 36267 s
+2b gen 86: median 2.67 best 1.99 sigma 0.036 36446 s
+2b gen 87: median 3.06 best 2.02 sigma 0.035 36626 s
+2b gen 88: median 2.86 best 1.93 sigma 0.035 36806 s
+2b gen 89: median 2.79 best 1.99 sigma 0.035 36986 s
+2b gen 90: median 2.53 best 1.89 sigma 0.034 37165 s
+2b readout gen 90: D 1.94 passes 2/6 on-lawn 0.98 spread speed 1.41 rev 1.04 | tph-1 +0.021(F) pdfr-1 +0.006(P) tax-4 -0.115(F) | fails {'kinematics/dwelling_speed_p90': 3.98, 'activity/onset_rate_per_min': -3.35, 'uniform_lawn/roaming_bout_s': -3.11, 'chemotaxis/flip_fraction': 3.74}
+2b gen 91: median 3.03 best 2.05 sigma 0.034 37363 s
+2b gen 92: median 2.52 best 1.85 sigma 0.034 37544 s
+2b gen 93: median 2.95 best 1.96 sigma 0.034 37724 s
+2b gen 94: median 2.59 best 1.88 sigma 0.034 37904 s
+2b gen 95: median 2.69 best 1.91 sigma 0.034 38083 s
+2b gen 96: median 3.00 best 1.91 sigma 0.034 38263 s
+2b gen 97: median 2.75 best 1.86 sigma 0.034 38444 s
+2b gen 98: median 2.54 best 1.96 sigma 0.034 38623 s
+2b gen 99: median 2.64 best 1.91 sigma 0.034 38803 s
+2b gen 100: median 2.61 best 1.76 sigma 0.034 38983 s
+2b readout gen 100: D 1.97 passes 4/6 on-lawn 0.98 spread speed 1.47 rev 0.73 | tph-1 +0.006(F) pdfr-1 +0.009(P) tax-4 -0.101(F) | fails {'activity/onset_rate_per_min': -3.87, 'chemotaxis/flip_fraction': 3.69}
+2b gen 101: median 2.84 best 2.04 sigma 0.034 39180 s
+2b gen 102: median 2.49 best 1.84 sigma 0.034 39359 s
+2b gen 103: median 2.51 best 1.86 sigma 0.034 39538 s
+2b gen 104: median 2.35 best 1.92 sigma 0.034 39717 s
+2b gen 105: median 2.52 best 1.86 sigma 0.034 39895 s
+2b gen 106: median 2.69 best 1.84 sigma 0.034 40072 s
+2b gen 107: median 2.59 best 1.93 sigma 0.033 40249 s
+2b gen 108: median 2.77 best 1.85 sigma 0.033 40424 s
+2b gen 109: median 2.44 best 1.86 sigma 0.033 40601 s
+2b gen 110: median 2.41 best 1.88 sigma 0.033 40776 s
+2b readout gen 110: D 1.91 passes 3/6 on-lawn 0.97 spread speed 1.39 rev 0.86 | tph-1 +0.029(F) pdfr-1 -0.012(P) tax-4 -0.103(F) | fails {'kinematics/dwelling_speed_p90': 3.5, 'activity/onset_rate_per_min': -3.79, 'chemotaxis/flip_fraction': 3.5}
+2b gen 111: median 2.53 best 1.88 sigma 0.033 40971 s
+2b gen 112: median 2.37 best 1.85 sigma 0.033 41147 s
+2b gen 113: median 2.54 best 1.88 sigma 0.033 41322 s
+2b gen 114: median 2.40 best 1.81 sigma 0.033 41495 s
+2b gen 115: median 2.33 best 1.82 sigma 0.033 41668 s
+2b gen 116: median 2.41 best 1.81 sigma 0.033 41842 s
+2b gen 117: median 2.31 best 1.78 sigma 0.033 42015 s
+2b gen 118: median 2.37 best 1.88 sigma 0.033 42189 s
+2b gen 119: median 2.65 best 1.81 sigma 0.033 42364 s
+2b gen 120: median 2.33 best 1.98 sigma 0.032 42540 s
+2b readout gen 120: D 1.91 passes 4/6 on-lawn 0.97 spread speed 1.47 rev 1.14 | tph-1 +0.021(F) pdfr-1 +0.004(P) tax-4 -0.112(F) | fails {'activity/onset_rate_per_min': -3.97, 'chemotaxis/flip_fraction': 3.32}
+2b gen 121: median 2.50 best 1.78 sigma 0.032 42733 s
+2b gen 122: median 2.36 best 1.75 sigma 0.032 42907 s
+2b gen 123: median 2.25 best 1.81 sigma 0.032 43082 s
+2b gen 124: median 2.34 best 1.85 sigma 0.032 43257 s
+2b gen 125: median 2.35 best 1.82 sigma 0.032 43433 s
+2b gen 126: median 2.23 best 1.83 sigma 0.032 43609 s
+2b gen 127: median 2.45 best 1.88 sigma 0.031 43785 s
+2b gen 128: median 2.51 best 1.79 sigma 0.031 43961 s
+2b gen 129: median 2.40 best 1.80 sigma 0.031 44137 s
+2b gen 130: median 2.47 best 1.87 sigma 0.031 44313 s
+2b readout gen 130: D 1.92 passes 4/6 on-lawn 0.98 spread speed 1.46 rev 1.05 | tph-1 +0.009(F) pdfr-1 +0.010(P) tax-4 -0.096(F) | fails {'activity/onset_rate_per_min': -3.89, 'chemotaxis/flip_fraction': 3.18}
+2b gen 131: median 2.53 best 1.75 sigma 0.031 44506 s
+2b gen 132: median 2.34 best 1.83 sigma 0.031 44679 s
+2b gen 133: median 2.35 best 1.83 sigma 0.030 44852 s
+2b gen 134: median 2.30 best 1.76 sigma 0.030 45025 s
+2b gen 135: median 2.30 best 1.84 sigma 0.030 45198 s
+2b gen 136: median 2.48 best 1.67 sigma 0.030 45371 s
+2b gen 137: median 2.16 best 1.72 sigma 0.030 45546 s
+2b gen 138: median 2.19 best 1.72 sigma 0.030 45722 s
+2b gen 139: median 2.17 best 1.80 sigma 0.030 45898 s
+2b gen 140: median 2.29 best 1.76 sigma 0.030 46075 s
+2b readout gen 140: D 1.85 passes 2/6 on-lawn 0.96 spread speed 1.70 rev 1.06 | tph-1 +0.031(F) pdfr-1 +0.012(P) tax-4 -0.138(F) | fails {'kinematics/dwelling_speed_p90': 3.85, 'activity/onset_rate_per_min': -3.23, 'uniform_lawn/roaming_bout_s': -3.23, 'chemotaxis/flip_fraction': 3.52}
+2b gen 141: median 2.10 best 1.69 sigma 0.030 46270 s
+2b gen 142: median 2.11 best 1.68 sigma 0.030 46447 s
+2b gen 143: median 2.27 best 1.76 sigma 0.030 46626 s
+2b gen 144: median 2.19 best 1.72 sigma 0.030 46803 s
+2b gen 145: median 2.15 best 1.81 sigma 0.030 46983 s
+2b gen 146: median 2.26 best 1.84 sigma 0.030 47162 s
+2b gen 147: median 2.19 best 1.71 sigma 0.030 47341 s
+2b gen 148: median 2.28 best 1.74 sigma 0.030 47521 s
+2b gen 149: median 2.13 best 1.73 sigma 0.029 47703 s
+2b gen 150: median 2.20 best 1.70 sigma 0.029 47885 s
+2b readout gen 150: D 1.69 passes 5/6 on-lawn 0.97 spread speed 1.64 rev 1.14 | tph-1 +0.026(F) pdfr-1 +0.018(P) tax-4 -0.144(F) | fails {'activity/onset_rate_per_min': -3.6}
+3 readout gen 0: D 1.69 passes 5/6 on-lawn 0.97 spread speed 1.64 rev 1.14 | tph-1 +0.026(F) pdfr-1 +0.018(P) tax-4 -0.144(F) | fails {'activity/onset_rate_per_min': -3.6}
+3 gen 1: median 7.38 best 2.61 sigma 0.047 48224 s
+3 gen 2: median 6.03 best 2.70 sigma 0.046 48530 s
+3 gen 3: median 4.49 best 2.27 sigma 0.044 48821 s
+3 gen 4: median 4.60 best 2.55 sigma 0.043 49110 s
+3 gen 5: median 4.30 best 2.43 sigma 0.042 49407 s
+3 gen 6: median 3.87 best 2.30 sigma 0.041 49722 s
+3 gen 7: median 3.84 best 2.37 sigma 0.041 50011 s
+3 gen 8: median 3.85 best 2.32 sigma 0.040 50305 s
+3 gen 9: median 3.67 best 2.25 sigma 0.039 50605 s
+3 gen 10: median 3.38 best 2.35 sigma 0.039 50906 s
+3 readout gen 10: D 2.03 passes 3/6 on-lawn 0.98 spread speed 1.33 rev 0.86 | tph-1 +0.011(F) pdfr-1 +0.019(P) tax-4 -0.154(P) | fails {'kinematics/dwelling_speed_p90': 3.37, 'activity/onset_rate_per_min': -4.16, 'local_search/log_early_late_ratio': -3.31}
+3 gen 11: median 4.09 best 2.20 sigma 0.038 51226 s
+3 gen 12: median 3.75 best 2.38 sigma 0.037 51524 s
+3 gen 13: median 3.26 best 2.09 sigma 0.037 51822 s
+3 gen 14: median 3.29 best 2.22 sigma 0.036 52120 s
+3 gen 15: median 3.44 best 2.13 sigma 0.036 52419 s
+3 gen 16: median 2.94 best 2.13 sigma 0.035 52717 s
+3 gen 17: median 3.62 best 2.16 sigma 0.035 53014 s
+3 gen 18: median 3.17 best 2.13 sigma 0.035 53310 s
+3 gen 19: median 3.09 best 2.10 sigma 0.035 53607 s
+3 gen 20: median 3.00 best 2.08 sigma 0.035 53902 s
+3 readout gen 20: D 1.90 passes 4/6 on-lawn 0.98 spread speed 1.65 rev 1.03 | tph-1 +0.022(F) pdfr-1 +0.014(P) tax-4 -0.084(F) | fails {'activity/onset_rate_per_min': -4.03, 'uniform_lawn/roaming_bout_s': -3.4}
+3 gen 21: median 3.16 best 1.95 sigma 0.035 54216 s
+3 gen 22: median 3.17 best 1.89 sigma 0.035 54513 s
+3 gen 23: median 3.08 best 2.15 sigma 0.035 54810 s
+3 gen 24: median 3.12 best 1.93 sigma 0.035 55106 s
+3 gen 25: median 2.68 best 2.03 sigma 0.035 55403 s
+3 gen 26: median 3.41 best 1.98 sigma 0.035 55705 s
+3 gen 27: median 3.03 best 1.78 sigma 0.035 55988 s
+3 gen 28: median 2.65 best 1.78 sigma 0.035 56275 s
+3 gen 29: median 3.03 best 1.88 sigma 0.034 56561 s
+3 gen 30: median 2.73 best 1.95 sigma 0.034 56845 s
+3 readout gen 30: D 1.80 passes 5/6 on-lawn 0.97 spread speed 1.66 rev 0.93 | tph-1 +0.038(F) pdfr-1 -0.004(P) tax-4 -0.099(P) | fails {'activity/onset_rate_per_min': -4.34}
+3 gen 31: median 2.66 best 1.86 sigma 0.034 57147 s
+3 gen 32: median 2.83 best 2.03 sigma 0.034 57429 s
+3 gen 33: median 2.63 best 1.92 sigma 0.033 57709 s
+3 gen 34: median 2.86 best 2.04 sigma 0.033 57990 s
+3 gen 35: median 2.68 best 1.65 sigma 0.033 58271 s
+3 gen 36: median 2.49 best 1.74 sigma 0.033 58551 s
+3 gen 37: median 2.61 best 1.94 sigma 0.032 58835 s
+3 gen 38: median 2.72 best 1.86 sigma 0.032 59121 s
+3 gen 39: median 2.78 best 1.80 sigma 0.032 59408 s
+3 gen 40: median 2.55 best 1.71 sigma 0.032 59696 s
+3 readout gen 40: D 1.93 passes 4/6 on-lawn 0.99 spread speed 1.57 rev 0.82 | tph-1 +0.066(F) pdfr-1 -0.002(P) tax-4 -0.114(P) | fails {'small_lawn/exits_per_on_lawn_hour': -3.15, 'activity/onset_rate_per_min': -3.75}
+3 gen 41: median 2.46 best 1.72 sigma 0.031 60001 s
+3 gen 42: median 2.36 best 1.82 sigma 0.031 60291 s
+3 gen 43: median 2.42 best 1.91 sigma 0.031 60581 s
+3 gen 44: median 2.46 best 1.78 sigma 0.030 60872 s
+3 gen 45: median 2.46 best 1.71 sigma 0.030 61163 s
+3 gen 46: median 2.28 best 1.70 sigma 0.030 61455 s
+3 gen 47: median 2.47 best 1.65 sigma 0.030 61746 s
+3 gen 48: median 2.24 best 1.77 sigma 0.030 62039 s
+3 gen 49: median 2.29 best 1.64 sigma 0.030 62332 s
+3 gen 50: median 2.47 best 1.47 sigma 0.030 62626 s
+3 readout gen 50: D 1.94 passes 4/6 on-lawn 0.99 spread speed 1.59 rev 0.87 | tph-1 +0.076(F) pdfr-1 +0.002(P) tax-4 -0.121(P) | fails {'activity/onset_rate_per_min': -4.07, 'uniform_lawn/roaming_bout_s': -3.69}
+3 gen 51: median 2.58 best 1.61 sigma 0.030 62936 s
+3 gen 52: median 2.23 best 1.66 sigma 0.030 63227 s
+3 gen 53: median 2.30 best 1.59 sigma 0.029 63522 s
+3 gen 54: median 2.35 best 1.69 sigma 0.029 63817 s
+3 gen 55: median 2.29 best 1.45 sigma 0.029 64111 s
+3 gen 56: median 2.15 best 1.39 sigma 0.029 64402 s
+3 gen 57: median 2.29 best 1.58 sigma 0.029 64694 s
+3 gen 58: median 2.38 best 1.63 sigma 0.029 64986 s
+3 gen 59: median 2.24 best 1.58 sigma 0.029 65278 s
+3 gen 60: median 2.12 best 1.45 sigma 0.029 65572 s
+3 readout gen 60: D 1.90 passes 4/6 on-lawn 0.98 spread speed 1.51 rev 0.78 | tph-1 +0.235(P) pdfr-1 +0.003(P) tax-4 -0.126(P) | fails {'kinematics/dwelling_speed_p90': 3.66, 'activity/onset_rate_per_min': -3.73}
+3 gen 61: median 2.07 best 1.40 sigma 0.029 65887 s
+3 gen 62: median 2.17 best 1.37 sigma 0.029 66183 s
+3 gen 63: median 2.02 best 1.39 sigma 0.029 66480 s
+3 gen 64: median 2.22 best 1.52 sigma 0.029 66778 s
+3 gen 65: median 1.97 best 1.34 sigma 0.029 67076 s
+3 gen 66: median 2.09 best 1.38 sigma 0.029 67373 s
+3 gen 67: median 2.06 best 1.46 sigma 0.029 67671 s
+3 gen 68: median 1.96 best 1.37 sigma 0.029 67969 s
+3 gen 69: median 1.91 best 1.37 sigma 0.029 68267 s
+3 gen 70: median 1.90 best 1.37 sigma 0.029 68566 s
+3 readout gen 70: D 1.82 passes 3/6 on-lawn 0.97 spread speed 1.77 rev 0.76 | tph-1 +0.252(P) pdfr-1 -0.012(P) tax-4 -0.122(P) | fails {'small_lawn/pre_exit_enrichment': -4.08, 'kinematics/dwelling_speed_p90': 3.16, 'activity/onset_rate_per_min': -3.76}
+3 gen 71: median 1.87 best 1.36 sigma 0.028 68885 s
+3 gen 72: median 1.97 best 1.35 sigma 0.028 69181 s
+3 gen 73: median 1.84 best 1.29 sigma 0.028 69474 s
+3 gen 74: median 1.89 best 1.30 sigma 0.028 69771 s
+3 gen 75: median 1.82 best 1.42 sigma 0.028 70066 s
+3 gen 76: median 2.03 best 1.33 sigma 0.029 70362 s
+3 gen 77: median 2.00 best 1.44 sigma 0.029 70658 s
+3 gen 78: median 1.94 best 1.38 sigma 0.029 70955 s
+3 gen 79: median 2.00 best 1.41 sigma 0.029 71253 s
+3 gen 80: median 2.02 best 1.46 sigma 0.029 71550 s
+3 readout gen 80: D 1.73 passes 5/6 on-lawn 0.98 spread speed 1.74 rev 0.71 | tph-1 +0.227(P) pdfr-1 -0.002(P) tax-4 -0.088(P) | fails {'activity/onset_rate_per_min': -3.77}
+3 gen 81: median 1.97 best 1.32 sigma 0.029 71864 s
+3 gen 82: median 1.94 best 1.35 sigma 0.029 72162 s
+3 gen 83: median 1.92 best 1.48 sigma 0.029 72461 s
+3 gen 84: median 1.97 best 1.41 sigma 0.028 72759 s
+3 gen 85: median 1.83 best 1.36 sigma 0.028 73058 s
+3 gen 86: median 2.03 best 1.31 sigma 0.027 73359 s
+3 gen 87: median 1.83 best 1.27 sigma 0.027 73656 s
+3 gen 88: median 2.18 best 1.33 sigma 0.027 73958 s
+3 gen 89: median 1.84 best 1.31 sigma 0.026 74261 s
+3 gen 90: median 1.87 best 1.40 sigma 0.026 74563 s
+3 readout gen 90: D 1.68 passes 5/6 on-lawn 0.97 spread speed 1.68 rev 0.77 | tph-1 +0.223(P) pdfr-1 -0.002(P) tax-4 -0.095(P) | fails {'activity/onset_rate_per_min': -3.77}
+3 gen 91: median 1.79 best 1.30 sigma 0.025 74879 s
+3 gen 92: median 1.80 best 1.33 sigma 0.025 75177 s
+3 gen 93: median 1.84 best 1.37 sigma 0.025 75474 s
+3 gen 94: median 1.75 best 1.38 sigma 0.024 75770 s
+3 gen 95: median 1.91 best 1.38 sigma 0.024 76066 s
+3 gen 96: median 1.81 best 1.25 sigma 0.024 76362 s
+3 gen 97: median 1.73 best 1.27 sigma 0.024 76658 s
+3 gen 98: median 1.71 best 1.29 sigma 0.024 76954 s
+3 gen 99: median 1.62 best 1.27 sigma 0.023 77250 s
+3 gen 100: median 1.68 best 1.27 sigma 0.023 77545 s
+3 readout gen 100: D 1.73 passes 4/6 on-lawn 0.98 spread speed 1.70 rev 0.80 | tph-1 +0.262(P) pdfr-1 -0.010(P) tax-4 -0.118(P) | fails {'small_lawn/pre_exit_enrichment': -3.11, 'activity/onset_rate_per_min': -3.73}
+3 gen 101: median 1.65 best 1.29 sigma 0.023 77858 s
+3 gen 102: median 1.65 best 1.16 sigma 0.023 78153 s
+3 gen 103: median 1.64 best 1.25 sigma 0.023 78447 s
+3 gen 104: median 1.61 best 1.29 sigma 0.022 78741 s
+3 gen 105: median 1.68 best 1.22 sigma 0.022 79035 s
+3 gen 106: median 1.51 best 1.16 sigma 0.022 79328 s
+3 gen 107: median 1.59 best 1.20 sigma 0.022 79621 s
+3 gen 108: median 1.59 best 1.26 sigma 0.021 79914 s
+3 gen 109: median 1.55 best 1.25 sigma 0.021 80207 s
+3 gen 110: median 1.60 best 1.22 sigma 0.021 80501 s
+3 readout gen 110: D 1.67 passes 5/6 on-lawn 0.98 spread speed 1.75 rev 0.86 | tph-1 +0.284(P) pdfr-1 -0.002(P) tax-4 -0.111(P) | fails {'activity/onset_rate_per_min': -3.68}
+3 gen 111: median 1.53 best 1.25 sigma 0.021 80812 s
+3 gen 112: median 1.62 best 1.18 sigma 0.021 81106 s
+3 gen 113: median 1.54 best 1.23 sigma 0.022 81398 s
+3 gen 114: median 1.64 best 1.20 sigma 0.022 81691 s
+3 gen 115: median 1.55 best 1.18 sigma 0.022 81985 s
+3 gen 116: median 1.63 best 1.23 sigma 0.022 82277 s
+3 gen 117: median 1.53 best 1.27 sigma 0.022 82569 s
+3 gen 118: median 1.55 best 1.23 sigma 0.022 82862 s
+3 gen 119: median 1.55 best 1.27 sigma 0.022 83154 s
+3 gen 120: median 1.67 best 1.23 sigma 0.022 83447 s
+3 readout gen 120: D 1.67 passes 5/6 on-lawn 0.98 spread speed 1.76 rev 0.96 | tph-1 +0.280(P) pdfr-1 -0.001(P) tax-4 -0.112(P) | fails {'activity/onset_rate_per_min': -3.74}
+3 gen 121: median 1.58 best 1.27 sigma 0.022 83758 s
+3 gen 122: median 1.53 best 1.23 sigma 0.022 84052 s
+3 gen 123: median 1.62 best 1.24 sigma 0.022 84346 s
+3 gen 124: median 1.58 best 1.24 sigma 0.022 84640 s
+3 gen 125: median 1.61 best 1.20 sigma 0.022 84934 s
+3 gen 126: median 1.64 best 1.21 sigma 0.022 85229 s
+3 gen 127: median 1.54 best 1.13 sigma 0.022 85523 s
+3 gen 128: median 1.52 best 1.21 sigma 0.022 85818 s
+3 gen 129: median 1.58 best 1.25 sigma 0.022 86112 s
+3 gen 130: median 1.59 best 1.21 sigma 0.022 86407 s
+3 readout gen 130: D 1.56 passes 5/6 on-lawn 0.98 spread speed 1.81 rev 0.98 | tph-1 +0.270(P) pdfr-1 -0.005(P) tax-4 -0.115(P) | fails {'activity/onset_rate_per_min': -3.46}
+3 gen 131: median 1.53 best 1.27 sigma 0.022 86719 s
+3 gen 132: median 1.55 best 1.20 sigma 0.022 87014 s
+3 gen 133: median 1.60 best 1.21 sigma 0.022 87308 s
+3 gen 134: median 1.48 best 1.17 sigma 0.022 87601 s
+3 gen 135: median 1.50 best 1.25 sigma 0.022 87893 s
+3 gen 136: median 1.55 best 1.17 sigma 0.022 88184 s
+3 gen 137: median 1.52 best 1.21 sigma 0.022 88474 s
+3 gen 138: median 1.55 best 1.25 sigma 0.022 88763 s
+3 gen 139: median 1.57 best 1.30 sigma 0.022 89055 s
+3 gen 140: median 1.49 best 1.15 sigma 0.022 89346 s
+3 readout gen 140: D 1.59 passes 5/6 on-lawn 0.97 spread speed 1.88 rev 0.87 | tph-1 +0.276(P) pdfr-1 -0.007(P) tax-4 -0.105(P) | fails {'activity/onset_rate_per_min': -3.9}
+3 gen 141: median 1.55 best 1.16 sigma 0.022 89657 s
+3 gen 142: median 1.55 best 1.17 sigma 0.021 89951 s
+3 gen 143: median 1.46 best 1.20 sigma 0.021 90247 s
+3 gen 144: median 1.56 best 1.17 sigma 0.021 90544 s
+3 gen 145: median 1.57 best 1.25 sigma 0.021 90841 s
+3 gen 146: median 1.60 best 1.29 sigma 0.020 91139 s
+3 gen 147: median 1.55 best 1.22 sigma 0.020 91435 s
+3 gen 148: median 1.45 best 1.15 sigma 0.020 91730 s
+3 gen 149: median 1.45 best 1.17 sigma 0.020 92025 s
+3 gen 150: median 1.54 best 1.13 sigma 0.020 92323 s
+3 readout gen 150: D 1.55 passes 5/6 on-lawn 0.98 spread speed 1.80 rev 0.93 | tph-1 +0.255(P) pdfr-1 -0.002(P) tax-4 -0.109(P) | fails {'activity/onset_rate_per_min': -3.73}
+curriculum done: wild type 0/5, mutants {'tph-1': 5, 'pdfr-1': 5, 'tax-4': 5}: fails

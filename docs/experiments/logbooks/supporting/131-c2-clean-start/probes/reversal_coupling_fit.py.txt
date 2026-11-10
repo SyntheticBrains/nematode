@@ -1,0 +1,46 @@
+"""How does a real on-lawn reversal's speed follow the speed just before it? (description; band cohorts)
+
+For the band cohorts' wild type (PD1074 od2, small lawn): each reversal bout (the kinematics check's
+rule) starting on the lawn, with its 3 preceding seconds on the lawn and free of reversal and omega
+frames. The speed before is those seconds' mean 1-s displacement; the reversal's speed its path over
+the bout's whole seconds, as the kinematics check reads it. Reported: the mean reversal speed by
+decile of the speed before, and a least-squares line, the coupling a probe gives the primitives.
+"""
+import json, sys
+import numpy as np
+sys.path.insert(0, "scripts/analysis")
+import primitive_kinematics_check as pk
+from quantumnematode.benchmark import grading as g
+from quantumnematode.benchmark.references import load_scheer_tracks
+
+t = load_scheer_tracks()
+gen = np.array([t.genotypes[k] for k in t.genotype])
+rows = np.flatnonzero((gen == "PD1074_od2_Data") & (t.side == "bands"))
+revf, omf = t.flag("reversal")[rows], t.flag("omega")[rows]
+before, rev = [], []
+for j, i in enumerate(rows):
+    x, y = t.x[i].astype(float), t.y[i].astype(float)
+    on = g.real_on_lawn(x, y, t.boundary_radius[i])
+    busy = np.zeros(len(x), bool)
+    for flags in (revf[j], omf[j]):
+        for a, b in pk.bouts(flags, filtered=True):
+            busy[a // 3 : (b - 1) // 3 + 1] = True
+    step = np.hypot(np.diff(x), np.diff(y))
+    for a, b in pk.bouts(revf[j], filtered=True):
+        s0 = a // 3
+        first, last = -(-a // 3), b // 3
+        if s0 < 4 or last <= first or last > len(step) or not on[s0 - 3 : s0 + 1].all() or busy[s0 - 3 : s0].any():
+            continue
+        pre, path = step[s0 - 3 : s0], step[first:last]
+        if np.isfinite(pre).all() and np.isfinite(path).all():
+            before.append(float(pre.mean())); rev.append(float(path.sum() / (last - first)))
+before, rev = np.array(before), np.array(rev)
+edges = np.quantile(before, np.linspace(0, 1, 11))
+deciles = [{"before_mm_s": float(before[(before >= lo) & (before <= hi)].mean()), "reversal_mm_s": float(rev[(before >= lo) & (before <= hi)].mean())}
+           for lo, hi in zip(edges[:-1], edges[1:])]
+slope, intercept = np.polyfit(before, rev, 1)
+out = {"description": __doc__, "bouts": int(len(rev)), "mean_reversal_mm_s": float(rev.mean()), "line": {"intercept": float(intercept), "slope": float(slope)}, "deciles": deciles}
+json.dump(out, open("build/c2-change-b/reversal_coupling_fit.json", "w"), indent=1)
+print("bouts", len(rev), "mean reversal speed", round(rev.mean(), 4), "line: v_rev =", round(intercept, 4), "+", round(slope, 3), "x v_before")
+for d in deciles:
+    print(f"  before {d['before_mm_s']:.4f}  reversal {d['reversal_mm_s']:.4f}")

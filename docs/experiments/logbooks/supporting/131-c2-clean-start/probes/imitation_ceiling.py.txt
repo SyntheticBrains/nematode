@@ -1,0 +1,63 @@
+"""Do the simulator's senses along real paths predict the real worm's actions? (description)
+
+The real-worm imitation (`realworm_imitation.py`) learned only the marginals: held-out speed R^2
+about 0 and reversal-onset AUC about 0.51. Here gradient boosting is fitted on the senses C.2 reads
+along the same replayed paths (concentration, lateral and dC/dt cues, food contact, the intake
+drive), alone and with exponential histories at 10, 30 and 60 s, which slow modulators could carry;
+and, as the earlier probe's reference, on geometric senses (in the lawn, distance to the edge,
+radial velocity and their histories). Small lawn, 400 band-cohort animals, 30% held out by animal.
+"""
+import json, sys
+import numpy as np
+sys.path.insert(0, "build/c2-change-b")
+import realworm_imitation as R
+import c2_encoder_probe as p
+from quantumnematode.connectome import encoder as enc
+from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+from sklearn.metrics import r2_score, roc_auc_score
+
+d = R.tracks("scheer_lawn")
+n = 400
+d = {k: (v[:n] if isinstance(v, np.ndarray) and len(v) == len(d["rows"]) else v) for k, v in d.items()}
+brain = p.encoded_brain((), **p.PROCEDURE_SETTINGS)
+brain.topology.forward_observer = None
+enc.write_encoder(brain, np.full(len(brain.topology.encoder.entries), 0.5))
+states, on = R.replay(brain, "scheer_lawn", d)
+nf = brain.topology.n_food_features
+senses = np.concatenate([states[..., :nf], states[..., -1:]], axis=-1)  # food features, contact, drive
+
+def ema(x, tau):
+    a = 1.0 - np.exp(-1.0 / tau); out = np.zeros_like(x); acc = x[:, 0].copy()
+    for t in range(x.shape[1]):
+        acc = (1 - a) * acc + a * x[:, t]; out[:, t] = acc
+    return out
+
+hist = np.concatenate([ema(senses, tau) for tau in (10, 30, 60)] + [ema(np.abs(senses[..., 1:3]), tau) for tau in (10, 30)], axis=-1)
+# The earlier probe's geometric senses, recomputed on the same seconds.
+from quantumnematode.benchmark.references import load_scheer_tracks
+t = load_scheer_tracks()
+rows = d["rows"]; x, y = t.x[rows][:, :-1], t.y[rows][:, :-1]
+r = np.hypot(x, y); th = np.mod(np.arctan2(y, x), 2 * np.pi)
+angles = np.linspace(0, 2 * np.pi, t.boundary_radius.shape[1], endpoint=False)
+edge = np.stack([np.interp(th[i], angles, t.boundary_radius[rows[i]], period=2 * np.pi) for i in range(len(rows))])
+dist = edge - r; vr = np.diff(np.hypot(t.x[rows], t.y[rows]), axis=1, prepend=np.nan)[:, :-1]
+geo = np.stack([dist, np.nan_to_num(vr)], -1)
+geo = np.concatenate([geo, ema(np.nan_to_num(geo), 10), ema(np.nan_to_num(geo), 30), ema(np.abs(np.nan_to_num(geo[..., 1:])), 10)], -1)
+rng = np.random.default_rng(0); test = np.zeros(n, bool); test[rng.choice(n, int(0.3 * n), replace=False)] = True
+animal = np.repeat(np.arange(n)[:, None], senses.shape[1], 1)
+out = {"animals": n}
+for name, F in (("senses", senses), ("senses_histories", np.concatenate([senses, hist], -1)), ("geometric", geo)):
+    F = F.reshape(-1, F.shape[-1]); te = test[animal.reshape(-1)]
+    sp = d["speed_mm"].reshape(-1); ev = d["event"].reshape(-1)
+    m = np.isfinite(sp)
+    reg = HistGradientBoostingRegressor(max_iter=200).fit(F[m & ~te], sp[m & ~te])
+    e = ev >= 0
+    clf = HistGradientBoostingClassifier(max_iter=200).fit(F[e & ~te], ev[e & ~te] == 1)
+    out[name] = {"speed_r2": float(r2_score(sp[m & te], reg.predict(F[m & te]))),
+                 "onset_auc": float(roc_auc_score(ev[e & te] == 1, clf.predict_proba(F[e & te])[:, 1]))}
+    print(name, json.dumps(out[name]), flush=True)
+# How much do the senses vary on the lawn?
+inside = on.reshape(-1)
+out["sense_sd_on_lawn"] = dict(zip(["concentration", "lateral", "derivative", "contact", "drive"], map(float, senses.reshape(-1, senses.shape[-1])[inside].std(0))))
+print(json.dumps(out["sense_sd_on_lawn"]))
+open("build/c2-change-b/imitation_ceiling.json", "w").write(json.dumps({"description": __doc__, **out}, indent=1) + "\n")

@@ -1,0 +1,44 @@
+"""What do the continuation's candidates pay for? (description; candidate seeds of generation 1)
+
+Six draws around the start at the continuation's sigma (0.028, isotropic, as a reset sep-CMA draws),
+each scored with its terms: undefined statistics, the saturation and responsiveness guards, the base
+score and the hinge, with the statistics that carry the hinge.
+"""
+import json, math, sys
+from concurrent.futures import ProcessPoolExecutor
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import hinge as H, npe_recovery as nr, probes as P
+
+
+def job(item):
+    k, z = item
+    return k, H.simulate(k, z)
+
+
+if __name__ == "__main__":
+    z0 = np.asarray(json.loads(open("build/c2-change-b/curriculum.json").read())["z"])
+    rng = np.random.default_rng(1)
+    draws = [np.clip(z0 + 0.028 * rng.standard_normal(len(z0)), 0, 1).tolist() for _ in range(6)]
+    with ProcessPoolExecutor(max_workers=6, initializer=nr._worker_setup) as pool:
+        records = dict(pool.map(job, [(i, d) for i, d in enumerate(draws)]))
+    o = H.HingeObjective()
+    rows = {}
+    for i, r in sorted(records.items()):
+        undefined = [k for k, c in o.truth["statistics"].items() if r["statistics"].get(k) is None or not math.isfinite(r["statistics"][k])]
+        big = []
+        for key, centre in o.truth["statistics"].items():
+            v = r["statistics"].get(key)
+            if v is not None and math.isfinite(v):
+                zz = H._compressed((v - centre) / o.scales[key])
+                if abs(zz) > H.WILD_BAR - H.MARGIN:
+                    big.append(f"{key} {zz:.1f}")
+        for m, zs in r["mutant_z"].items():
+            for s, zz in zs.items():
+                if zz is not None and math.isfinite(zz) and abs(H._compressed(zz)) > H.MUTANT_BAR - H.MARGIN:
+                    big.append(f"{m}/{s} {H._compressed(zz):.1f}")
+        rows[i] = {"score": o(r), "hinge": o.hinge(r), "undefined": undefined, "saturated": r["saturated"],
+                   "spread": {k: r["spread"][k] for k in ("speed", "reversal")}, "past_targets": big}
+        print(i, "score", round(o(r), 2), "hinge", round(o.hinge(r), 2), "undefined", undefined, "saturated", r["saturated"],
+              "spread", {k: round(r["spread"][k], 2) for k in ("speed", "reversal")}, "past bars", big, flush=True)
+    json.dump({"description": __doc__, "draws": rows}, open("build/c2-change-b/hinge_candidates.json", "w"), indent=1)

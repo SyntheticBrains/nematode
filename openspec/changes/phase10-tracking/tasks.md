@@ -806,6 +806,22 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - a clean, staged start, with a readiness pilot first;
   - held-out cohorts in every fit, plus one tax-4 leave-one-out.
 
+  *(Added 2026-11-10; [Logbook 131](../../../docs/experiments/logbooks/131-c2-clean-start.md), probes
+  on discarded seeds.)* **C.2 from a clean start passes the wild type and every mutant in 15 of 15
+  populations, once a reversal follows the worm's own speed.**
+
+  - **The route:** from the graded box's centre, with no imitation of C.1, a staged curriculum (the
+    fitted families, then all six, then the mutants at half the objective), then continuations
+    that score each statistic by its chance of failing a population, from its measured noise.
+  - **The body:** on the primitives' pooled on-food reversal speed, the fit passes the wild type in
+    8 or 9 of 15 populations. It trades the on-lawn onset rate against the dwelling windows' speed.
+    Real on-lawn reversals follow the speed just before them (held-out cohorts: v_rev = 0.0463 +
+    0.603 × v_before). Patched into the evaluator in scripts, with the network refitted, every
+    statistic passes in 15 of 15.
+  - **Next, in the maintainer's order:** the speed-following reversal as an option of the
+    primitives; then the registered fit (Change B), its procedure fixed in advance; then W's compute
+    at about 31 h a fit.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 

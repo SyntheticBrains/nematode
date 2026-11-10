@@ -1,0 +1,45 @@
+"""The curriculum's stage-3 kill rule, set at generation 25 (maintainer's choice, 2026-11-09).
+
+`serotonin_route.json` and `serotonin_nudge.json` found serotonin's producers nearly silent in the
+stage-3 search (pool 0.003 against Logbook 129's 0.024) and tph-1 unmoved by raising ser-5 alone.
+The rule: stop stage 3 at its generation-60 readout if tph-1's roaming-fraction z is below -4 at
+both generation 50's and generation 60's readouts; otherwise let it run to its verdict.
+"""
+import os, pickle, shutil, signal, subprocess, sys, time
+from pathlib import Path
+
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+LOG, STATE = Path("build/c2-change-b/curriculum.log"), Path("build/c2-change-b/curriculum/state.pkl")
+PID = int(Path("build/c2-change-b/curriculum.pid").read_text())
+COPY = Path(sys.argv[1])
+
+
+def alive(pid):
+    try:
+        os.kill(pid, 0); return True
+    except OSError:
+        return False
+
+
+while "3 readout gen 60:" not in LOG.read_text():
+    if not alive(PID):
+        print("curriculum exited before generation 60", flush=True); sys.exit(0)
+    time.sleep(30)
+time.sleep(20)  # the state is written right after the readout's line
+shutil.copy(STATE, COPY)
+s = pickle.loads(COPY.read_bytes())
+zs = {g: s["readouts"]["3"][g]["mutants"]["tph-1"]["z"] for g in (50, 60)}
+print("tph-1 roaming z at the readouts:", zs, flush=True)
+if all(z < -4 for z in zs.values()):
+    workers = subprocess.run(["pgrep", "-P", str(PID)], capture_output=True, text=True).stdout.split()
+    os.kill(PID, signal.SIGTERM)
+    for w in workers:
+        try:
+            os.kill(int(w), signal.SIGTERM)
+        except OSError:
+            pass
+    time.sleep(5)
+    left = [w for w in [str(PID), *workers] if alive(int(w))]
+    print(f"kill rule fired: stage 3 stopped at generation 60; processes still alive: {left}", flush=True)
+else:
+    print("kill rule did not fire: stage 3 continues to its verdict", flush=True)

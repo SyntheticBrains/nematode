@@ -1,0 +1,128 @@
+{
+ "description": "What do the continuation's candidates pay for? (description; candidate seeds of generation 1)\n\nSix draws around the start at the continuation's sigma (0.028, isotropic, as a reset sep-CMA draws),\neach scored with its terms: undefined statistics, the saturation and responsiveness guards, the base\nscore and the hinge, with the statistics that carry the hinge.\n",
+ "draws": {
+  "0": {
+   "score": 657.1998567007331,
+   "hinge": 653.8602229704682,
+   "undefined": [],
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.841795563697815,
+    "reversal": 0.6701556444168091
+   },
+   "past_targets": [
+    "small_lawn/roaming_bout_s 3.7",
+    "small_lawn/pre_exit_enrichment -4.7",
+    "local_search/gamma_per_min 13.2",
+    "local_search/log_early_late_ratio -3.5",
+    "kinematics/dwelling_speed_median 5.6",
+    "kinematics/dwelling_speed_p90 5.7",
+    "chemotaxis/flip_fraction 3.4",
+    "tph-1/roaming_fraction -2.8"
+   ]
+  },
+  "1": {
+   "score": 1866.346630757381,
+   "hinge": 862.7294197123343,
+   "undefined": [
+    "local_search/gamma_per_min"
+   ],
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.497528314590454,
+    "reversal": 0.7131985425949097
+   },
+   "past_targets": [
+    "small_lawn/roaming_fraction -3.2",
+    "small_lawn/dwelling_bout_s 9.9",
+    "small_lawn/exits_per_on_lawn_hour 8.4",
+    "small_lawn/pre_exit_enrichment -4.7",
+    "small_lawn/time_on_lawn -9.8",
+    "uniform_lawn/roaming_bout_s -4.4",
+    "uniform_lawn/dwelling_bout_s 4.7",
+    "chemotaxis/flip_fraction 4.1",
+    "activity/onset_rate_per_min -4.6",
+    "tph-1/roaming_fraction -4.9",
+    "tph-1/exits_per_on_lawn_hour -6.1",
+    "tax-4/roaming_fraction 2.0",
+    "tax-4/exits_per_on_lawn_hour 2.6"
+   ]
+  },
+  "2": {
+   "score": 123.21258001382765,
+   "hinge": 120.8654734692807,
+   "undefined": [],
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.564284324645996,
+    "reversal": 1.0605367422103882
+   },
+   "past_targets": [
+    "small_lawn/time_on_lawn -3.6",
+    "uniform_lawn/roaming_bout_s -3.1",
+    "kinematics/dwelling_speed_median 5.3",
+    "kinematics/dwelling_speed_p90 5.9",
+    "chemotaxis/weathervane_deg_s 2.9",
+    "chemotaxis/flip_fraction 4.4",
+    "tph-1/roaming_fraction 2.7",
+    "tax-4/exits_per_on_lawn_hour 3.9"
+   ]
+  },
+  "3": {
+   "score": 44.94133321005452,
+   "hinge": 43.0497779409651,
+   "undefined": [],
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.8386976718902588,
+    "reversal": 1.0345818996429443
+   },
+   "past_targets": [
+    "small_lawn/pre_exit_enrichment -3.4",
+    "small_lawn/time_on_lawn -5.1",
+    "uniform_lawn/roaming_bout_s -3.9",
+    "kinematics/dwelling_speed_p90 3.8",
+    "chemotaxis/flip_fraction 3.0",
+    "activity/onset_rate_per_min -3.1",
+    "tph-1/roaming_fraction -2.6",
+    "tph-1/exits_per_on_lawn_hour -2.3"
+   ]
+  },
+  "4": {
+   "score": 40.45894057898673,
+   "hinge": 38.75229360427248,
+   "undefined": [],
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.8678486347198486,
+    "reversal": 0.6611604690551758
+   },
+   "past_targets": [
+    "kinematics/dwelling_speed_median 3.6",
+    "kinematics/dwelling_speed_p90 5.2",
+    "chemotaxis/flip_fraction 3.3",
+    "tph-1/roaming_fraction -2.7",
+    "tax-4/roaming_fraction -2.4"
+   ]
+  },
+  "5": {
+   "score": 117.27034863985057,
+   "hinge": 114.90811820637362,
+   "undefined": [],
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.3522089719772339,
+    "reversal": 0.8288034796714783
+   },
+   "past_targets": [
+    "small_lawn/dwelling_bout_s 6.4",
+    "small_lawn/pre_exit_enrichment -3.9",
+    "uniform_lawn/dwelling_bout_s 3.4",
+    "chemotaxis/weathervane_deg_s 3.2",
+    "activity/onset_rate_per_min -4.5",
+    "tph-1/roaming_fraction -3.5",
+    "tax-4/exits_per_on_lawn_hour 3.6"
+   ]
+  }
+ }
+}
