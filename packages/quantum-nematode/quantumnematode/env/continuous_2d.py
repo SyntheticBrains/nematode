@@ -103,6 +103,9 @@ class Continuous2DParams:
     # Under primitives, "food_dependent" gives a reversal that starts on a lawn the on-food speed
     # and duration; "off_food" gives every reversal the off-food ones.
     reversal_kinematics: str = "food_dependent"
+    # An on-food reversal's speed under primitives: "pooled", one measured speed, or
+    # "follows_run_speed", a line on the worm's mean speed over its last 3 s of run steps.
+    on_food_reversal_speed: str = "pooled"
     # The arena: "square", or "circle" of diameter world_size_mm centred in the square.
     arena_shape: str = "square"
     # An assay protocol, or None: the episode as phases of food and placement.
@@ -542,8 +545,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
 
         ``action`` is the controller's five numbers in ``[-1, 1]``: run speed, run curvature, and a
         start hazard for each of reversal, omega and delta. The agent's episode state (its running
-        bout and which side is ventral) is created on its first primitive step, from the
-        environment's RNG.
+        bout, which side is ventral and, when an on-food reversal's speed follows the run speed, its
+        latest run speeds) is created on its first primitive step, from the environment's RNG.
         """
         state = self.primitive_states.get(agent_id)
         if state is None:
@@ -556,6 +559,7 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
             load_kinematics(),
             self.rng,
             on_food=self._on_food_for_reversal(agent_id),
+            follows_run_speed=self.continuous.on_food_reversal_speed == "follows_run_speed",
         )
         self._turn_then_move(self.agents[agent_id], step.displacement_mm, step.heading_change_rad)
         self.last_primitive[agent_id] = step.kind

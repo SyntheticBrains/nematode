@@ -1,0 +1,790 @@
+{
+  "description": "How a real on-lawn reversal's speed follows the worm's speed just before it.",
+  "rule": {
+    "window_run_seconds": 3,
+    "run_second": "no reversal or omega frame, and a finite 1-s displacement",
+    "start": "the midbody inside the lawn's boundary",
+    "bout_rule": "primitive_kinematics_check.bouts, filtered",
+    "bins": "by quantile of the speed before, each half-open but the last"
+  },
+  "bootstrap": {
+    "unit": "recording date",
+    "resamples": 2000,
+    "seed": 20261111
+  },
+  "held_out_on_lawn": {
+    "excluded": {
+      "on_lawn_starts": 95435,
+      "fewer_than_window_run_seconds": 116,
+      "no_whole_second": 11615,
+      "path_not_finite": 7
+    },
+    "bouts": 83697,
+    "dates": 24,
+    "line": {
+      "intercept_mm_per_s": 0.046392118982306635,
+      "slope": 0.6062829309253214,
+      "intercept_interval": [
+        0.04508234199143372,
+        0.0477962184548538
+      ],
+      "slope_interval": [
+        0.5611298185895389,
+        0.6549708469673695
+      ]
+    },
+    "mean_reversal_mm_per_s": 0.06087298935219184,
+    "mean_duration_s": 2.120621607305718,
+    "deciles": [
+      {
+        "quantiles": [
+          0.0,
+          0.1
+        ],
+        "before_mm_per_s": 0.0045561245637481184,
+        "reversal_mm_per_s": 0.04836324384889016,
+        "duration_s": 1.9981282357626446,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.1,
+          0.2
+        ],
+        "before_mm_per_s": 0.00829997686179058,
+        "reversal_mm_per_s": 0.05005943306875956,
+        "duration_s": 2.0086419753086417,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.2,
+          0.30000000000000004
+        ],
+        "before_mm_per_s": 0.011375282653560633,
+        "reversal_mm_per_s": 0.05199818683206452,
+        "duration_s": 2.0058549408531485,
+        "bouts": 8369
+      },
+      {
+        "quantiles": [
+          0.30000000000000004,
+          0.4
+        ],
+        "before_mm_per_s": 0.014361560896647965,
+        "reversal_mm_per_s": 0.05395757772267823,
+        "duration_s": 2.041457586618877,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.4,
+          0.5
+        ],
+        "before_mm_per_s": 0.01763368845604742,
+        "reversal_mm_per_s": 0.05718628005881322,
+        "duration_s": 2.0881825785637473,
+        "bouts": 8369
+      },
+      {
+        "quantiles": [
+          0.5,
+          0.6000000000000001
+        ],
+        "before_mm_per_s": 0.02129260160156764,
+        "reversal_mm_per_s": 0.058976771376688726,
+        "duration_s": 2.1437275985663082,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "before_mm_per_s": 0.025724724155456957,
+        "reversal_mm_per_s": 0.0629415279789576,
+        "duration_s": 2.1865392273994426,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.7000000000000001,
+          0.8
+        ],
+        "before_mm_per_s": 0.03153555492226054,
+        "reversal_mm_per_s": 0.06684879778292863,
+        "duration_s": 2.236109451547377,
+        "bouts": 8369
+      },
+      {
+        "quantiles": [
+          0.8,
+          0.9
+        ],
+        "before_mm_per_s": 0.04026057643476659,
+        "reversal_mm_per_s": 0.07454046362844984,
+        "duration_s": 2.2524492234169653,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.9,
+          1.0
+        ],
+        "before_mm_per_s": 0.06380532566733381,
+        "reversal_mm_per_s": 0.08385682440130049,
+        "duration_s": 2.245121465551573,
+        "bouts": 8370
+      }
+    ],
+    "knots": [
+      {
+        "quantiles": [
+          0.0,
+          0.1
+        ],
+        "before_mm_per_s": 0.0045561245637481184,
+        "reversal_mm_per_s": 0.04836324384889016,
+        "duration_s": 1.9981282357626446,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.1,
+          0.2
+        ],
+        "before_mm_per_s": 0.00829997686179058,
+        "reversal_mm_per_s": 0.05005943306875956,
+        "duration_s": 2.0086419753086417,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.2,
+          0.3
+        ],
+        "before_mm_per_s": 0.011375282653560633,
+        "reversal_mm_per_s": 0.05199818683206452,
+        "duration_s": 2.0058549408531485,
+        "bouts": 8369
+      },
+      {
+        "quantiles": [
+          0.3,
+          0.4
+        ],
+        "before_mm_per_s": 0.014361560896647965,
+        "reversal_mm_per_s": 0.05395757772267823,
+        "duration_s": 2.041457586618877,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.4,
+          0.5
+        ],
+        "before_mm_per_s": 0.01763368845604742,
+        "reversal_mm_per_s": 0.05718628005881322,
+        "duration_s": 2.0881825785637473,
+        "bouts": 8369
+      },
+      {
+        "quantiles": [
+          0.5,
+          0.6
+        ],
+        "before_mm_per_s": 0.02129260160156764,
+        "reversal_mm_per_s": 0.058976771376688726,
+        "duration_s": 2.1437275985663082,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.6,
+          0.7
+        ],
+        "before_mm_per_s": 0.025724724155456957,
+        "reversal_mm_per_s": 0.0629415279789576,
+        "duration_s": 2.1865392273994426,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.7,
+          0.8
+        ],
+        "before_mm_per_s": 0.03153555492226054,
+        "reversal_mm_per_s": 0.06684879778292863,
+        "duration_s": 2.236109451547377,
+        "bouts": 8369
+      },
+      {
+        "quantiles": [
+          0.8,
+          0.9
+        ],
+        "before_mm_per_s": 0.04026057643476659,
+        "reversal_mm_per_s": 0.07454046362844984,
+        "duration_s": 2.2524492234169653,
+        "bouts": 8370
+      },
+      {
+        "quantiles": [
+          0.9,
+          0.95
+        ],
+        "before_mm_per_s": 0.05194916303953734,
+        "reversal_mm_per_s": 0.07983725611758773,
+        "duration_s": 2.2783751493428914,
+        "bouts": 4185
+      },
+      {
+        "quantiles": [
+          0.95,
+          0.99
+        ],
+        "before_mm_per_s": 0.06852588944518738,
+        "reversal_mm_per_s": 0.08581806983486363,
+        "duration_s": 2.2185384309040224,
+        "bouts": 3348
+      },
+      {
+        "quantiles": [
+          0.99,
+          1.0
+        ],
+        "before_mm_per_s": 0.10420388369490191,
+        "reversal_mm_per_s": 0.09610968408561173,
+        "duration_s": 2.185185185185185,
+        "bouts": 837
+      }
+    ]
+  },
+  "held_out_inside_lawn": {
+    "depth_mm": 0.5,
+    "bouts": 21940,
+    "dates": 24,
+    "line": {
+      "intercept_mm_per_s": 0.045828176125947404,
+      "slope": 0.5742464941857361,
+      "intercept_interval": [
+        0.04442170020429768,
+        0.04787051230675333
+      ],
+      "slope_interval": [
+        0.5268135534307448,
+        0.6227530102739613
+      ]
+    },
+    "mean_reversal_mm_per_s": 0.05761302090004501,
+    "mean_duration_s": 2.1564570039501674,
+    "deciles": [
+      {
+        "quantiles": [
+          0.0,
+          0.1
+        ],
+        "before_mm_per_s": 0.003921268370554356,
+        "reversal_mm_per_s": 0.04661166379558692,
+        "duration_s": 2.0279550288666064,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.1,
+          0.2
+        ],
+        "before_mm_per_s": 0.006986982385770689,
+        "reversal_mm_per_s": 0.04870985974240949,
+        "duration_s": 2.0250683682771196,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.2,
+          0.30000000000000004
+        ],
+        "before_mm_per_s": 0.00955913554107538,
+        "reversal_mm_per_s": 0.04959864903533914,
+        "duration_s": 2.0224855666970525,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.30000000000000004,
+          0.4
+        ],
+        "before_mm_per_s": 0.012166582828093221,
+        "reversal_mm_per_s": 0.05160991015591304,
+        "duration_s": 2.0600121543603764,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.4,
+          0.5
+        ],
+        "before_mm_per_s": 0.014889937483413973,
+        "reversal_mm_per_s": 0.053574389778294235,
+        "duration_s": 2.0882710422364026,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.5,
+          0.6000000000000001
+        ],
+        "before_mm_per_s": 0.018086582310828738,
+        "reversal_mm_per_s": 0.05592336188896606,
+        "duration_s": 2.1798845335764203,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "before_mm_per_s": 0.021827454131655183,
+        "reversal_mm_per_s": 0.05933047865301294,
+        "duration_s": 2.2210574293527805,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.7000000000000001,
+          0.8
+        ],
+        "before_mm_per_s": 0.02683802720911204,
+        "reversal_mm_per_s": 0.06393766049107998,
+        "duration_s": 2.2766636280765726,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.8,
+          0.9
+        ],
+        "before_mm_per_s": 0.0346126537272995,
+        "reversal_mm_per_s": 0.06981213931181925,
+        "duration_s": 2.3608325736858093,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.9,
+          1.0
+        ],
+        "before_mm_per_s": 0.05633413128226865,
+        "reversal_mm_per_s": 0.07702209614802905,
+        "duration_s": 2.3023397143725313,
+        "bouts": 2194
+      }
+    ],
+    "knots": [
+      {
+        "quantiles": [
+          0.0,
+          0.1
+        ],
+        "before_mm_per_s": 0.003921268370554356,
+        "reversal_mm_per_s": 0.04661166379558692,
+        "duration_s": 2.0279550288666064,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.1,
+          0.2
+        ],
+        "before_mm_per_s": 0.006986982385770689,
+        "reversal_mm_per_s": 0.04870985974240949,
+        "duration_s": 2.0250683682771196,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.2,
+          0.3
+        ],
+        "before_mm_per_s": 0.00955913554107538,
+        "reversal_mm_per_s": 0.04959864903533914,
+        "duration_s": 2.0224855666970525,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.3,
+          0.4
+        ],
+        "before_mm_per_s": 0.012166582828093221,
+        "reversal_mm_per_s": 0.05160991015591304,
+        "duration_s": 2.0600121543603764,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.4,
+          0.5
+        ],
+        "before_mm_per_s": 0.014889937483413973,
+        "reversal_mm_per_s": 0.053574389778294235,
+        "duration_s": 2.0882710422364026,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.5,
+          0.6
+        ],
+        "before_mm_per_s": 0.018086582310828738,
+        "reversal_mm_per_s": 0.05592336188896606,
+        "duration_s": 2.1798845335764203,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.6,
+          0.7
+        ],
+        "before_mm_per_s": 0.021827454131655183,
+        "reversal_mm_per_s": 0.05933047865301294,
+        "duration_s": 2.2210574293527805,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.7,
+          0.8
+        ],
+        "before_mm_per_s": 0.02683802720911204,
+        "reversal_mm_per_s": 0.06393766049107998,
+        "duration_s": 2.2766636280765726,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.8,
+          0.9
+        ],
+        "before_mm_per_s": 0.0346126537272995,
+        "reversal_mm_per_s": 0.06981213931181925,
+        "duration_s": 2.3608325736858093,
+        "bouts": 2194
+      },
+      {
+        "quantiles": [
+          0.9,
+          0.95
+        ],
+        "before_mm_per_s": 0.04524616091684638,
+        "reversal_mm_per_s": 0.07546223063277875,
+        "duration_s": 2.339410513521726,
+        "bouts": 1097
+      },
+      {
+        "quantiles": [
+          0.95,
+          0.99
+        ],
+        "before_mm_per_s": 0.060713575463095,
+        "reversal_mm_per_s": 0.07811650903082604,
+        "duration_s": 2.2462941847206386,
+        "bouts": 877
+      },
+      {
+        "quantiles": [
+          0.99,
+          1.0
+        ],
+        "before_mm_per_s": 0.09416472648355742,
+        "reversal_mm_per_s": 0.08043742511174087,
+        "duration_s": 2.340909090909091,
+        "bouts": 220
+      }
+    ]
+  },
+  "band_on_lawn": {
+    "excluded": {
+      "on_lawn_starts": 169673,
+      "fewer_than_window_run_seconds": 183,
+      "no_whole_second": 20925,
+      "path_not_finite": 8
+    },
+    "bouts": 148557,
+    "dates": 41,
+    "line": {
+      "intercept_mm_per_s": 0.04734961175001215,
+      "slope": 0.5779970306183068,
+      "intercept_interval": [
+        0.04618395204465511,
+        0.04849787036668966
+      ],
+      "slope_interval": [
+        0.5414043529911228,
+        0.6163287576660589
+      ]
+    },
+    "mean_reversal_mm_per_s": 0.061539448555814655,
+    "mean_duration_s": 2.1244505476012576,
+    "deciles": [
+      {
+        "quantiles": [
+          0.0,
+          0.1
+        ],
+        "before_mm_per_s": 0.004705659268867366,
+        "reversal_mm_per_s": 0.04928643885123879,
+        "duration_s": 1.983620534912942,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.1,
+          0.2
+        ],
+        "before_mm_per_s": 0.008572696354439288,
+        "reversal_mm_per_s": 0.05112168589550426,
+        "duration_s": 1.9912262986648717,
+        "bouts": 14855
+      },
+      {
+        "quantiles": [
+          0.2,
+          0.30000000000000004
+        ],
+        "before_mm_per_s": 0.011746288436321086,
+        "reversal_mm_per_s": 0.05241515253340829,
+        "duration_s": 2.009760366182014,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.30000000000000004,
+          0.4
+        ],
+        "before_mm_per_s": 0.014849549796964408,
+        "reversal_mm_per_s": 0.054503981070699876,
+        "duration_s": 2.0536483575659665,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.4,
+          0.5
+        ],
+        "before_mm_per_s": 0.018135650057772595,
+        "reversal_mm_per_s": 0.057575836708325466,
+        "duration_s": 2.1121732301133176,
+        "bouts": 14855
+      },
+      {
+        "quantiles": [
+          0.5,
+          0.6000000000000001
+        ],
+        "before_mm_per_s": 0.0218632497535847,
+        "reversal_mm_per_s": 0.060375786349092575,
+        "duration_s": 2.156165858912224,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "before_mm_per_s": 0.026385989641761403,
+        "reversal_mm_per_s": 0.06350060292524994,
+        "duration_s": 2.189745315830809,
+        "bouts": 14855
+      },
+      {
+        "quantiles": [
+          0.7000000000000001,
+          0.8
+        ],
+        "before_mm_per_s": 0.03230704572768099,
+        "reversal_mm_per_s": 0.06829164206269808,
+        "duration_s": 2.232364028002154,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.8,
+          0.9
+        ],
+        "before_mm_per_s": 0.041263577457214255,
+        "reversal_mm_per_s": 0.07411117395494736,
+        "duration_s": 2.258414108777598,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.9,
+          1.0
+        ],
+        "before_mm_per_s": 0.06566907773352838,
+        "reversal_mm_per_s": 0.08421134916631559,
+        "duration_s": 2.2573819781008795,
+        "bouts": 14856
+      }
+    ],
+    "knots": [
+      {
+        "quantiles": [
+          0.0,
+          0.1
+        ],
+        "before_mm_per_s": 0.004705659268867366,
+        "reversal_mm_per_s": 0.04928643885123879,
+        "duration_s": 1.983620534912942,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.1,
+          0.2
+        ],
+        "before_mm_per_s": 0.008572696354439288,
+        "reversal_mm_per_s": 0.05112168589550426,
+        "duration_s": 1.9912262986648717,
+        "bouts": 14855
+      },
+      {
+        "quantiles": [
+          0.2,
+          0.3
+        ],
+        "before_mm_per_s": 0.011746288436321086,
+        "reversal_mm_per_s": 0.05241515253340829,
+        "duration_s": 2.009760366182014,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.3,
+          0.4
+        ],
+        "before_mm_per_s": 0.014849549796964408,
+        "reversal_mm_per_s": 0.054503981070699876,
+        "duration_s": 2.0536483575659665,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.4,
+          0.5
+        ],
+        "before_mm_per_s": 0.018135650057772595,
+        "reversal_mm_per_s": 0.057575836708325466,
+        "duration_s": 2.1121732301133176,
+        "bouts": 14855
+      },
+      {
+        "quantiles": [
+          0.5,
+          0.6
+        ],
+        "before_mm_per_s": 0.0218632497535847,
+        "reversal_mm_per_s": 0.060375786349092575,
+        "duration_s": 2.156165858912224,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.6,
+          0.7
+        ],
+        "before_mm_per_s": 0.026385989641761403,
+        "reversal_mm_per_s": 0.06350060292524994,
+        "duration_s": 2.189745315830809,
+        "bouts": 14855
+      },
+      {
+        "quantiles": [
+          0.7,
+          0.8
+        ],
+        "before_mm_per_s": 0.03230704572768099,
+        "reversal_mm_per_s": 0.06829164206269808,
+        "duration_s": 2.232364028002154,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.8,
+          0.9
+        ],
+        "before_mm_per_s": 0.041263577457214255,
+        "reversal_mm_per_s": 0.07411117395494736,
+        "duration_s": 2.258414108777598,
+        "bouts": 14856
+      },
+      {
+        "quantiles": [
+          0.9,
+          0.95
+        ],
+        "before_mm_per_s": 0.05329065930805507,
+        "reversal_mm_per_s": 0.07979346872104516,
+        "duration_s": 2.2687129779213784,
+        "bouts": 7428
+      },
+      {
+        "quantiles": [
+          0.95,
+          0.99
+        ],
+        "before_mm_per_s": 0.07058974246144656,
+        "reversal_mm_per_s": 0.08704717906083496,
+        "duration_s": 2.2655671491080445,
+        "bouts": 5942
+      },
+      {
+        "quantiles": [
+          0.99,
+          1.0
+        ],
+        "before_mm_per_s": 0.10786847359565885,
+        "reversal_mm_per_s": 0.09495530254063234,
+        "duration_s": 2.1680125616868553,
+        "bouts": 1486
+      }
+    ]
+  },
+  "tracker_floor": {
+    "mean_mm": 0.007497089492427207,
+    "rms_mm": 0.009556944438142253,
+    "seconds": 87035
+  },
+  "primitives_entry": {
+    "knots_before_mm_per_s": [
+      0.0045561245637481184,
+      0.00829997686179058,
+      0.011375282653560633,
+      0.014361560896647965,
+      0.01763368845604742,
+      0.02129260160156764,
+      0.025724724155456957,
+      0.03153555492226054,
+      0.04026057643476659,
+      0.05194916303953734,
+      0.06852588944518738,
+      0.10420388369490191
+    ],
+    "knots_speed_mm_per_s": [
+      0.04836324384889016,
+      0.05005943306875956,
+      0.05199818683206452,
+      0.05395757772267823,
+      0.05718628005881322,
+      0.058976771376688726,
+      0.0629415279789576,
+      0.06684879778292863,
+      0.07454046362844984,
+      0.07983725611758773,
+      0.08581806983486363,
+      0.09610968408561173
+    ],
+    "window_s": 3.0
+  }
+}

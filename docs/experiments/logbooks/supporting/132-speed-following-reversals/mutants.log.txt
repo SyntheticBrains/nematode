@@ -1,0 +1,5 @@
+bout steps pushed            caught by 3 of 4 (trajectory and exact, on both lawns): [False, True, True, True]
+window length 2              caught by 4 of 4 (trajectory and exact, on both lawns): [True, True, True, True]
+window length 5              caught by 4 of 4 (trajectory and exact, on both lawns): [True, True, True, True]
+newest only                  caught by 4 of 4 (trajectory and exact, on both lawns): [True, True, True, True]
+cleared at each bout start   caught by 3 of 4 (trajectory and exact, on both lawns): [False, True, True, True]

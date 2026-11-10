@@ -1,0 +1,81 @@
+"""Does the package's speed-following reversal carry Logbook 131's result? (description; discarded seeds)
+
+Logbook 131's refit (`hinge4.json`) passed all 24 statistics and every mutant in 15 of 15 populations
+on a body patched in scripts (`reversal_coupling_probe.patch`: the band cohorts' line on the realized
+displacement of the last 3 run steps, clipped to [0.049, 0.084]). The package's option differs: the
+held-out knots on the commanded run speed, interpolated and flat beyond the outermost (0.0484 to
+0.0961 mm/s). Here the same answer is graded
+with presence on the same 10 populations of 200 animals (880,000,000 + 200·g + i), every statistic
+and mutant reading recorded, under each body, paired.
+
+The rule, fixed before the grade (the change's task 5.1): the option carries the probe's result if
+the wild type passes in at least 8 of 10 under it. Otherwise the difference is diagnosed before C.2's
+registered fit relies on the option. Run from the repository root.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, probes as P
+import reversal_coupling_probe as R
+
+BASES = [(880_000_000, g) for g in range(10)]
+ZSTAR = 3.0781
+
+
+def _package_option():
+    """Turn the package's option on in every assay config the grading loads."""
+    load = bg.load_simulation_config
+
+    def following(path):
+        config = load(path)
+        env = config.environment
+        cont = env.continuous.model_copy(update={"on_food_reversal_speed": "follows_run_speed"})
+        return config.model_copy(update={"environment": env.model_copy(update={"continuous": cont})})
+
+    bg.load_simulation_config = following
+
+
+def init_option():
+    nr._worker_setup()
+    _package_option()
+
+
+def init_patch():
+    nr._worker_setup()
+    R.patch()
+
+
+def grade(initializer, z):
+    with ProcessPoolExecutor(max_workers=16, initializer=initializer) as pool:
+        pops = dict(pool.map(R.wild, [(i, b, z) for i, b in enumerate(BASES)]))
+        for i, m, r in pool.map(R.mutant, [(i, BASES[i], m, z, pops[i]["small_lawn"]) for i in pops for m in p.MUTANTS]):
+            pops[i].setdefault("mutants", {})[m] = r
+    for r in pops.values():
+        r.pop("small_lawn")
+    return pops
+
+
+if __name__ == "__main__":
+    z = json.loads(open("build/c2-change-b/hinge4.json").read())["z"]
+    out = {"description": __doc__}
+    for name, initializer in (("package_option", init_option), ("logbook131_patch", init_patch)):
+        pops = grade(initializer, z)
+        wt = [bool(pops[i]["wild_type_passes"]) for i in sorted(pops)]
+        mutants = {m: sum(pops[i]["mutants"][m]["passes"] for i in pops) for m in p.MUTANTS}
+        out[name] = {"wild_type_passes": sum(wt), "per_population": wt, "mutants": mutants, "populations": {str(i): r for i, r in pops.items()}}
+        print(name, "wild type", sum(wt), "of 10", wt, "mutants", mutants, flush=True)
+    a, b = out["package_option"]["populations"], out["logbook131_patch"]["populations"]
+    rows = []
+    for k in a["0"]["statistics"]:
+        za = np.array([a[str(i)]["statistics"][k]["z"] for i in range(10)], dtype=float)
+        zb = np.array([b[str(i)]["statistics"][k]["z"] for i in range(10)], dtype=float)
+        rows.append((k, float(np.nanmean(zb)), float(np.nanmean(za)), float(np.nanmean(za - zb)), float(np.mean(np.abs(za) <= ZSTAR))))
+    out["paired"] = {k: {"patch_mean_z": zb, "option_mean_z": za, "shift": d, "option_pass_share": ps} for k, zb, za, d, ps in rows}
+    verdict = out["package_option"]["wild_type_passes"] >= 8
+    out["rule"] = {"bar": "the wild type in at least 8 of 10 under the option", "met": verdict}
+    print("rule met:", verdict)
+    for k, zb, za, d, ps in sorted(rows, key=lambda r: -abs(r[3]))[:6]:
+        print(f"  {k:40s} patch {zb:+.2f} option {za:+.2f} shift {d:+.2f} option pass {ps:.1f}")
+    out_dir = "docs/experiments/logbooks/supporting/132-speed-following-reversals"
+    json.dump(nr._finite(out), open(f"{out_dir}/confirmation.json", "w"), indent=1)

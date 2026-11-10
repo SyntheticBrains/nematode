@@ -1,0 +1,88 @@
+## ADDED Requirements
+
+### Requirement: On-food reversal speed that follows the run speed
+
+Under `continuous.on_food_reversal_speed: follows_run_speed`, a reversal bout that starts on a lawn
+SHALL back at a speed interpolated linearly between the `on_food_reversal_speed_coupling` entry's
+knots at the worm's recent run speed v̄, and flat beyond the outermost knot. Each knot pairs a mean
+speed before with real worms' mean reversal speed at it.
+
+- **v̄:** the mean of the commanded run speeds of the worm's last N run steps, oldest first, with
+  N = round(window ÷ step).
+- **Fallback:** until the worm has taken N run steps, the reversal SHALL take the pooled on-food speed.
+
+The window SHALL take each run step's speed. Bout steps SHALL neither enter it nor clear it, and it
+SHALL persist across bouts and assay phases.
+
+The reversal's duration SHALL still be drawn from the on-food gamma. Reversals that start off every
+lawn, and omega and delta bouts, SHALL be unaffected.
+
+`on_food_reversal_speed` SHALL be `pooled` when unset, and runs SHALL then be byte-identical to before
+the option. Under either setting, the per-step runner and the batched evaluator SHALL make the same RNG
+calls in the same order, and SHALL give each reversal the same speed. Setting `on_food_reversal_speed`
+without `locomotion: primitives` SHALL be refused, and so SHALL `follows_run_speed` with
+`reversal_kinematics: off_food`.
+
+#### Scenario: A reversal after steady runs follows their speed
+
+- **WHEN** the option is on, and a worm on a lawn has run at 0.02 mm/s for its last 3 s of run steps
+  before a reversal starts
+- **THEN** the reversal SHALL back at the entry's knots interpolated at 0.02 mm/s
+- **AND** its duration SHALL be drawn from gamma(2.047 s, SD 0.899 s)
+
+#### Scenario: Between the knots the speed is interpolated, beyond them flat
+
+- **WHEN** the option is on and a worm's recent run speed lies between two knots
+- **THEN** the reversal SHALL back at the speed on the line joining them
+- **AND** a worm slower than the first knot or faster than the last SHALL back at that knot's speed:
+  a still worm at 0.048 mm/s, and one running at 0.15 mm/s at 0.096 mm/s
+
+#### Scenario: Before the window fills, the pooled speed
+
+- **WHEN** the option is on and a reversal starts on a lawn before the worm has taken N run steps
+- **THEN** it SHALL back at the pooled on-food speed, 0.069 mm/s
+
+#### Scenario: Bouts do not enter the window
+
+- **WHEN** a worm runs for 3 s, makes an omega turn, then starts a reversal on a lawn
+- **THEN** the reversal's speed SHALL follow the 3 s of runs before the omega
+
+#### Scenario: A shorter step keeps a 3-s window
+
+- **WHEN** `step_seconds` is 0.5 and the option is on
+- **THEN** the window SHALL hold the last 6 run steps
+
+#### Scenario: Off the lawn nothing changes
+
+- **WHEN** the option is on and a reversal starts off every lawn, or in an assay phase without food
+- **THEN** it SHALL draw the off-food entries, 2.69 ± 1.75 s at 0.14 mm/s
+
+#### Scenario: Unset, nothing changes
+
+- **WHEN** a primitives config leaves `on_food_reversal_speed` unset, or sets it to `pooled`
+- **THEN** its runs SHALL be byte-identical to before the option, RNG state included
+
+#### Scenario: Both runners give each reversal the same speed
+
+- **WHEN** the batched evaluator and the per-step runner run the same seeds on a lawn assay with the
+  option on, under a controller whose run speed changes every step inside the knots
+- **THEN** their bouts' kinds and start steps SHALL match exactly over 300 steps
+- **AND** every bout's kind, food, window mean, speed and duration SHALL match exactly, animal by
+  animal
+- **AND** a batched evaluator whose window is kept wrongly SHALL fail that comparison
+
+#### Scenario: The option is refused where it cannot act
+
+- **WHEN** a config sets `on_food_reversal_speed` with `locomotion: free`, or `follows_run_speed`
+  with `reversal_kinematics: off_food`
+- **THEN** loading SHALL raise, naming both settings
+- **AND** a primitives config without lawns, where no reversal could start on one, SHALL not load
+
+#### Scenario: The coupling entry is measured and checked
+
+- **WHEN** the kinematics are loaded
+- **THEN** `on_food_reversal_speed_coupling` SHALL have status `measured` with an existing script and
+  record
+- **AND** loading SHALL raise if the entry is missing, its knots are fewer than two, unequal in
+  length or not finite, its speeds before are negative or not strictly increasing, a reversal speed
+  is not positive, or its window is not positive

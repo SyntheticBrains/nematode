@@ -120,6 +120,19 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **Note for C.3:** the untrained policies' sampled hazards average about 0.1/s per kind, so untrained
     worms spend most of their time in bouts.
 
+  *(Amended 2026-11-10: change `add-speed-following-reversals`;
+  [Logbook 132](../../../docs/experiments/logbooks/132-speed-following-reversals.md).)* **An option
+  for on-food reversals.** Under `continuous.on_food_reversal_speed: follows_run_speed`, a reversal
+  that starts on a lawn backs at a speed interpolated between measured knots at v, the worm's mean
+  run speed over its last 3 s of runs (0.0484 mm/s for a still worm to 0.0961 for the fastest).
+
+  - **Source:** the knots were measured on the held-out cohorts (83,697 bouts) by
+    `reversal_speed_coupling.py`.
+  - **Default:** unset means `pooled`, byte-identical to before.
+  - **Confirmation:** under it, Logbook 131's refit answer passes the wild type and every mutant in 10
+    of 10 fresh populations, as under the probe's patch.
+  - **Next:** C.2's registered fit and C.1's refit set it on.
+
 - [x] **E.3 Assay protocols**: Scheer's small lawn (40 min); food removal onto a bare plate; an off-food
   start; multi-hour episodes with satiety re-calibrated.
 
