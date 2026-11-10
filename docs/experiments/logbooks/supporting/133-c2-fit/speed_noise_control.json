@@ -1,0 +1,104 @@
+{
+  "description": "Slow speed noise's positive control, under its registered rule (c2_encoder_probe.read_speed_noise_control), on Logbook 131's answer under the procedure settings and the speed-following arm: the answer at each timescale and without the OU noise, on the same 200 animals. The responsiveness bound reads the speed output before the soft cap.",
+  "head": "52212e431f4d58719e2f55a2ea2be9bbedfefec2",
+  "seeds": "888,000,000 + i, i < 200; reference 888,000,200",
+  "answer": "docs/experiments/logbooks/supporting/131-c2-clean-start/probes/hinge4.json",
+  "speed_median": {
+    "capped": -0.8561371266841888,
+    "before_cap": -0.9150590377753562
+  },
+  "speed_pre_squash_median": -0.9150590377753562,
+  "speed_responsive": true,
+  "roaming_p90_rise_scales": {
+    "0.25": 0.0,
+    "2.0": 1.5025259188337938,
+    "8.660254037844387": 3.454532649470928,
+    "30.0": 4.899307833932433,
+    "100.0": 4.654084579409834,
+    "300.0": 4.708616500102641
+  },
+  "best_tau_s": 30.0,
+  "dwelling_p90_at_best": 0.03507168080085531,
+  "nested_scales": {
+    "dwelling_speed_median": 0.17239371229118783,
+    "dwelling_speed_p90": 0.04268589459520742,
+    "roaming_speed_median": 0.6154651289181902,
+    "roaming_speed_p90": 0.14273736141244478,
+    "roaming_survival_5min": 0.16266749107261716
+  },
+  "passes_rise": true,
+  "passes_nested": true,
+  "passes": true,
+  "points": [
+    {
+      "tau_s": null,
+      "kinematics": {
+        "dwelling_speed_median": 0.018564367497081343,
+        "dwelling_speed_p90": 0.03616894177822834,
+        "roaming_speed_median": 0.03248768383370232,
+        "roaming_speed_p90": 0.04921628668253226,
+        "roaming_survival_5min": 0.030260466765268144
+      }
+    },
+    {
+      "tau_s": 0.25,
+      "kinematics": {
+        "dwelling_speed_median": 0.018689683278631238,
+        "dwelling_speed_p90": 0.03611962862089419,
+        "roaming_speed_median": 0.031892699081140695,
+        "roaming_speed_p90": 0.0497952021746948,
+        "roaming_survival_5min": 0.037417414696444544
+      }
+    },
+    {
+      "tau_s": 2.0,
+      "kinematics": {
+        "dwelling_speed_median": 0.01779036618732289,
+        "dwelling_speed_p90": 0.03764680534325269,
+        "roaming_speed_median": 0.033207528889484986,
+        "roaming_speed_p90": 0.05588916049913948,
+        "roaming_survival_5min": 0.018840700385930578
+      }
+    },
+    {
+      "tau_s": 8.660254037844387,
+      "kinematics": {
+        "dwelling_speed_median": 0.016448919814450028,
+        "dwelling_speed_p90": 0.037691718040033934,
+        "roaming_speed_median": 0.03469136610753732,
+        "roaming_speed_p90": 0.06380612719930198,
+        "roaming_survival_5min": 0.03784869780974987
+      }
+    },
+    {
+      "tau_s": 30.0,
+      "kinematics": {
+        "dwelling_speed_median": 0.015230195546560228,
+        "dwelling_speed_p90": 0.03507168080085531,
+        "roaming_speed_median": 0.03720750347367806,
+        "roaming_speed_p90": 0.06966585956860044,
+        "roaming_survival_5min": 0.03252058299573426
+      }
+    },
+    {
+      "tau_s": 100.0,
+      "kinematics": {
+        "dwelling_speed_median": 0.01438870825219533,
+        "dwelling_speed_p90": 0.031835471789289485,
+        "roaming_speed_median": 0.037296164175226285,
+        "roaming_speed_p90": 0.06867128085650388,
+        "roaming_survival_5min": 0.10748098617050736
+      }
+    },
+    {
+      "tau_s": 300.0,
+      "kinematics": {
+        "dwelling_speed_median": 0.014009830791038775,
+        "dwelling_speed_p90": 0.03087862459978273,
+        "roaming_speed_median": 0.0368266294393175,
+        "roaming_speed_p90": 0.06889245191777371,
+        "roaming_survival_5min": 0.27512288904408844
+      }
+    }
+  ]
+}

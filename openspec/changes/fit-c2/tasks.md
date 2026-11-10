@@ -88,7 +88,7 @@
 
 - [x] 2.9 `speed-noise-control`: the registered control's rule on Logbook 131's answer under the procedure settings and the speed-following arm (888,000,000 + i). The answer runs at each of the control's timescales, and without the OU noise with the timescale entry dropped.
 
-- [ ] 2.10 The smoke, discarded (CMA 9508–9511): run once end to end on its own layout. It covers:
+- [x] 2.10 The smoke, discarded (CMA 9508–9511): run once end to end on its own layout. It covers:
 
   - two generations of each stage;
   - the noise step;
@@ -98,7 +98,7 @@
 
 ## 3. The control and the registration
 
-- [ ] 3.1 Run `speed-noise-control` (about 30 min). Return to the maintainer if it fails.
+- [x] 3.1 Run `speed-noise-control` (about 30 min). Return to the maintainer if it fails.
 
 - [ ] 3.2 Launch record 133, Part A:
 

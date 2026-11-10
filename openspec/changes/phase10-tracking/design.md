@@ -81,7 +81,8 @@ here are cited by each registration.
 | B the benchmark's simulated negatives and controller grading | 5101–5356 | 256 simulated animals per graded assay |
 | F.0 parameter recovery | 5401–5464 | known-parameter synthetic data and refit restarts |
 | C.1 posterior-predictive checks | 5501–5756 | |
-| C.2 fit restarts and grading | 5801–5864 | fit seeds; grading animals drawn from 5101–5356 |
+| C.2 fit restarts and grading | 5801–5864 | fit seeds; grading animals drawn from 5101–5356. *(2026-11-10: C.2's registered runs draw CMA seeds 5801–5824 and their animals from the blocks in the next row, not from 5101–5356.)* |
+| C.2's registered fit (Logbook 133) | the readiness pilot 900 M (CMA 9504–9507, discarded); F.0b-ii's fit 920 M (5801–5804), its truth 940 M, prior draws 941 M (`default_rng(5805)`), box centre 942 M; the registered fit 960 M (5811–5814); the tax-4 leave-one-out 980 M (5821–5824); each run's block 20,000,000 animals (stages at + 4,000,000·(s − 1), readouts + 16 M, noise + 17 M, grade + 18 M); slow noise's control 888,000,000 + i; the stand-in preflight 885,000,000–887,100,999 (`default_rng(9512)`, discarded); the smoke 99,880,000–99,889,999 (CMA 9508–9511, discarded) | every block in `docs/experiments/logbooks/supporting/133-c2-fit/launch.md` |
 | C.3 reward-trained comparator | 5901–5916 | 16 training seeds |
 | N.3 receptor-placement null audit | 7501–7564 | 64 null draws for the matched-statistics table (Logbook 106) |
 | B.2 detector's simulated validation | 7601–7632 | constant hazards on López-Cruz's assay (Logbook 107) |

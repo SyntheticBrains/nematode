@@ -1,0 +1,153 @@
+"""A stand-in preflight for F.0b-ii (description; discarded seeds), before Part A sets its bars.
+
+F.0b-ii's truth will be the readiness pilot's answer. Until it exists, Logbook 131's last answer
+(`hinge4.json`), which passes 10 of 10 under the package's speed-following reversal, stands in. The
+recovery distance D_rec is the capped D on v4's six families, with each mutant entering as the
+RMS of its capped z over the encoding table's graded set (tph-1: roaming fraction; pdfr-1 and
+tax-4: roaming fraction and exits), against the truth's own difference, the three together half.
+
+Measured, all against the truth's observation (q = 0):
+- the floor: the median D_rec to re-simulations 1-4; the oracle: re-simulations 5-8;
+- the prior D: the median over 20 uniform draws of the box (default_rng(9512));
+- the box centre (0.5 everywhere): 2 re-simulations;
+- the wild-type reference: a record at the bands' centres and the mutant bands' centres;
+- definedness flips across the 8 re-simulations.
+Every gain is (prior D - D) / (prior D - floor). The design's bars: separation >= 1.0, the oracle
+>= 0.85, the box centre <= 0.25, the gate 0.75.
+
+Seeds (discarded): the truth 885,000,000 + 200 q + i (q < 9), the prior draws 886,000,000 + 200 j + i
+(j < 20), the box centre 887,000,000 + 200 q + i (q < 2). Run from the repository root.
+"""
+
+import json
+import math
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery_v2 as v2
+import npe_recovery as nr
+import probes as P
+
+OUT = Path("build/c2-fit/standin_preflight.json")
+ANIMALS, Z_CAP = 200, 10.0
+GRADED = {"tph-1": ("roaming_fraction",), "pdfr-1": ("roaming_fraction", "exits_per_on_lawn_hour"),
+          "tax-4": ("roaming_fraction", "exits_per_on_lawn_hour")}
+
+
+def _package_option():
+    load = bg.load_simulation_config
+
+    def following(path):
+        config = load(path)
+        env = config.environment
+        cont = env.continuous.model_copy(update={"on_food_reversal_speed": "follows_run_speed"})
+        return config.model_copy(update={"environment": env.model_copy(update={"continuous": cont})})
+
+    bg.load_simulation_config = following
+
+
+def init():
+    nr._worker_setup()
+    _package_option()
+
+
+def job(item):
+    name, kind, z, base = item
+    bands = bg.load_bands_v4()
+    clf = bg.classifier(bands)
+    seeds = [base + i for i in range(ANIMALS)]
+    if kind == "wild":
+        pops, chem = bg.simulate_v2(p.ARM, P._controller(z), seeds, bands)
+        graded = bg.grade_populations_v4(pops, chem, bands, presence=False)
+        stats = {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()}
+        return name, kind, nr._finite({"statistics": stats, "small_lawn": bg.family_values("small_lawn", pops["small_lawn"], clf),
+                                        "D": graded["D"]})
+    pops, _ = bg.simulate_v2(p.ARM, P._controller(z, kind), seeds, bands, assays=("small_lawn",))
+    return name, kind, nr._finite(bg.family_values("small_lawn", pops["small_lawn"], clf))
+
+
+def capped(a, b, scale):
+    if a is None and b is None:
+        return 0.0
+    if a is None or b is None or not (math.isfinite(a) and math.isfinite(b)):
+        return Z_CAP
+    return min(abs((b - a) / scale), Z_CAP)
+
+
+def d_rec(truth, draw, scales, family_map, mscales):
+    dw = v2.predictive_distance_v2(truth, draw, scales, family_map, capped=True)
+    terms = []
+    for m, stats in GRADED.items():
+        zs = [capped(truth["delta"][m].get(s), draw["delta"][m].get(s), mscales[m][s]) for s in stats]
+        terms.append(math.sqrt(np.mean(np.square(zs))))
+    nf, nm = len(family_map), len(GRADED)
+    w = nf / nm
+    return math.sqrt((nf * dw**2 + w * sum(t**2 for t in terms)) / (nf + w * nm)), dw, terms
+
+
+def gain(prior, d, floor):
+    return (prior - d) / (prior - floor)
+
+
+def main():
+    truth_z = json.loads(Path("build/c2-change-b/hinge4.json").read_text())["z"]
+    n = len(truth_z)
+    rng = np.random.default_rng(9512)
+    records = {f"truth{q}": (truth_z, 885_000_000 + 200 * q) for q in range(9)}
+    records.update({f"prior{j}": (rng.uniform(0, 1, n).tolist(), 886_000_000 + 200 * j) for j in range(20)})
+    records.update({f"centre{q}": ([0.5] * n, 887_000_000 + 200 * q) for q in range(2)})
+    jobs = [(name, kind, z, base) for name, (z, base) in records.items() for kind in ("wild", *p.MUTANTS)]
+    out = {}
+    with ProcessPoolExecutor(max_workers=16, initializer=init) as pool:
+        for name, kind, r in pool.map(job, jobs):
+            out.setdefault(name, {})[kind] = r
+            print("done", name, kind, flush=True)
+    bands = bg.load_bands_v4()
+    scales = v2.band_scales_v2(bands)
+    family_map = {f: tuple(s) for f, s in bands["families"].items()}
+    mscales = {m: {s: bg.mutant_bands(bands, m, ANIMALS)[s].scale for s in GRADED[m]} for m in GRADED}
+    recs = {}
+    for name, parts in out.items():
+        wild = parts["wild"]
+        delta = {m: {s: (None if parts[m].get(s) is None or wild["small_lawn"].get(s) is None else parts[m][s] - wild["small_lawn"][s])
+                     for s in GRADED[m]} for m in GRADED}
+        recs[name] = {"statistics": wild["statistics"], "delta": delta, "D_bands": wild["D"]}
+    reference = {"statistics": {f"{f}/{s}": float(bg.family_bands_v2(bands, f, ANIMALS)[s].centre) for f, st in family_map.items() for s in st},
+                 "delta": {m: {s: float(bg.mutant_bands(bands, m, ANIMALS)[s].centre) for s in GRADED[m]} for m in GRADED}}
+    obs = recs["truth0"]
+    dist = lambda r: d_rec(obs, r, scales, family_map, mscales)
+    floor_d = [dist(recs[f"truth{q}"])[0] for q in range(1, 5)]
+    oracle_d = [dist(recs[f"truth{q}"])[0] for q in range(5, 9)]
+    prior_d = [dist(recs[f"prior{j}"]) for j in range(20)]
+    centre_d = [dist(recs[f"centre{q}"]) for q in range(2)]
+    ref_d = dist(reference)
+    floor, prior = float(np.median(floor_d)), float(np.median([d[0] for d in prior_d]))
+    defined = lambda r: {k for k, v in r["statistics"].items() if v is not None}
+    flips = sorted(set().union(*(defined(obs) ^ defined(recs[f"truth{q}"]) for q in range(1, 9))))
+    undefined_prior = [sum(v is None for v in recs[f"prior{j}"]["statistics"].values()) for j in range(20)]
+    summary = {
+        "floor": floor, "floor_d": floor_d, "oracle_d": oracle_d,
+        "prior": prior, "prior_d": [d[0] for d in prior_d], "prior_wild_d": [d[1] for d in prior_d], "prior_undefined": undefined_prior,
+        "centre_d": [d[0] for d in centre_d], "centre_wild_d": [d[1] for d in centre_d], "centre_mutant_terms": [d[2] for d in centre_d],
+        "reference_d": ref_d[0], "reference_wild_d": ref_d[1], "reference_mutant_terms": ref_d[2],
+        "separation": prior - floor,
+        "oracle_gain": gain(prior, float(np.median(oracle_d)), floor),
+        "centre_gain": gain(prior, float(np.median([d[0] for d in centre_d])), floor),
+        "reference_gain": gain(prior, ref_d[0], floor),
+        "gate_d_at_0.75": prior - 0.75 * (prior - floor),
+        "definedness_flips": flips,
+        "truth_D_bands": [recs[f"truth{q}"]["D_bands"] for q in range(9)],
+    }
+    OUT.write_text(json.dumps(nr._finite({"description": __doc__, "summary": summary, "records": recs}), indent=1) + "\n")
+    print(json.dumps(nr._finite(summary), indent=1))
+
+
+if __name__ == "__main__":
+    main()

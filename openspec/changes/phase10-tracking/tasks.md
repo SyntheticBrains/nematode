@@ -529,7 +529,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - **For C.1:** keep at least two restarts. The registered plateau rule carries over.
     - **Still open:** F.0b-ii, C.2's encoder and its recovery. *(2026-11-04: the encoder is built,
       [Logbook 122](../../../docs/experiments/logbooks/122-c2-encoder.md); F.0b-ii waits for its
-      staged procedure and the readiness restarts that give it truths.)*
+      staged procedure and the readiness restarts that give it truths.)* *(2026-11-10: F.0b-ii is
+      registered in change `fit-c2`: one truth, the readiness pilot's answer, recovered by the
+      registered procedure from the box centre, gate 0.75. The truth sits beside the wild type, so
+      the gate tests reaching the region and the spread between runs, not identifying the truth; D38's
+      amendment states it.)*
 
   *(2026-10-29: change `rerun-cma-recovery-v2`; [Logbook 116](../../../docs/experiments/logbooks/116-cma-recovery-v2.md).)*
   **F.0b-i on v2 fails its gate**, with a median gain of 0.690 against 0.75. sep-CMA recovers the two
@@ -835,6 +839,23 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     primitives; then the registered fit (Change B), its procedure fixed in advance; then W's compute
     at about 31 h a fit.
 
+  *(Added 2026-11-10: change `fit-c2`; launch record 133, Part A.)* **C.2's fit is registered,**
+  its procedure fixed in advance on the speed-following arm.
+
+  - **The procedure:** stage 1 (the 77 sense-to-output parameters, 150 generations), 2a (all 137 on
+    the fitted families, 300), 2b (all six families with the mutants at half the objective, 200), a
+    noise step (30 populations), then the final stage, which adds each statistic's chance of failing
+    a population (50). The search state is carried from 2a, and every stage runs its full count.
+  - **The mutants** are graded on the encoding table's statistics, so tph-1 is graded on its roaming
+    fraction alone.
+  - **The order:** the readiness pilot on discarded seeds (go: the wild type, tph-1 and tax-4 each in
+    3 of 5), F.0b-ii at one truth (the pilot's answer, its limit stated), the registered fit (the
+    same verdict), then a full tax-4 leave-one-out as description. About 124 h.
+  - **Held out:** Scheer's held-out dates, read beside W's minimum and band-cohort populations.
+  - **Slow noise's positive control** (owed since Logbook 123) passes on Logbook 131's answer: the
+    speed output responds, and the roaming 90th percentile rises 4.90 band scales at a 30-s
+    timescale, against a bar of 3.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 
@@ -1008,6 +1029,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     readiness restarts' convergence (checkpoints at 250, 500 and 750 of a 1,000 cap).
   - **Stage 1 is fixed.** Its 18-parameter lawn subset was chosen on the wild type. It is registered
     identical for every arm, and each arm's stage-1 result is reported as description.
+    *(Both superseded 2026-11-10 by change `fit-c2`: every arm runs C.2's registered procedure. Its
+    per-stage counts are fixed (150, 300, 200 and 50), with the plateau read on the final stage and
+    reported, and its stage 1 is the 77 sense-to-output parameters. Choices tuned on the real wiring
+    can favour it even when every arm gets them, so W states that limit and reports each arm's stage
+    1.)*
   - **F.0b-ii is sized under the staged procedure.** Each truth needs several staged fits of about
     4.8 h, so its cost is piloted before it registers.
   - **A pilot gate.** The wild type and the degree-preserving null, three fits each, before the full
