@@ -7,8 +7,8 @@ Under ``continuous.locomotion: primitives`` the worm moves only by:
 - **reversal bouts**: backing at a fixed speed along an unchanged heading for a drawn duration; a
   reversal the caller marks as starting on a lawn draws the on-food speed and duration, shorter and
   slower than off food. Optionally its speed instead follows the worm's recent run speed, as a real
-  worm's does on a lawn: a line on the mean run speed of its last few seconds of runs, clipped to
-  the measured range;
+  worm's does on a lawn: interpolated between measured knots on the mean run speed of its last few
+  seconds of runs;
 - **omega and delta bouts**: a drawn heading change toward the worm's ventral side (omega) or dorsal
   side (delta), at a constant rate over a drawn duration, without translation; a worm crawls on one
   side, so which way is ventral is drawn once per episode.
@@ -27,6 +27,8 @@ a published one, or for a value measured from deposited tracks, the script and t
 
 from __future__ import annotations
 
+import bisect
+import itertools
 import json
 import math
 from dataclasses import dataclass, field
@@ -89,16 +91,15 @@ class TruncatedNormalAngle:
 
 @dataclass(frozen=True)
 class SpeedCoupling:
-    """An on-food reversal's speed as a line on the worm's recent run speed, clipped.
+    """An on-food reversal's speed as a function of the worm's recent run speed.
 
-    The speed is ``clip(intercept + slope * v, low, high)``, ``v`` the mean commanded run speed over
-    the worm's last ``window_s`` of run steps.
+    Each knot pairs a mean recent run speed with real worms' mean reversal speed at it. The speed is
+    interpolated linearly between knots and is flat beyond the outermost. The recent run speed is
+    the mean commanded run speed over the worm's last ``window_s`` of run steps.
     """
 
-    intercept_mm_per_s: float
-    slope: float
-    low_mm_per_s: float
-    high_mm_per_s: float
+    knots_before_mm_per_s: tuple[float, ...]
+    knots_speed_mm_per_s: tuple[float, ...]
     window_s: float
 
     def window_steps(self, step_seconds: float) -> int:
@@ -107,8 +108,14 @@ class SpeedCoupling:
 
     def speed(self, mean_run_speed_mm_per_s: float) -> float:
         """Return a reversal's speed for a worm's mean recent run speed."""
-        line = self.intercept_mm_per_s + self.slope * mean_run_speed_mm_per_s
-        return min(self.high_mm_per_s, max(self.low_mm_per_s, line))
+        xs, ys = self.knots_before_mm_per_s, self.knots_speed_mm_per_s
+        v = mean_run_speed_mm_per_s
+        if v <= xs[0]:
+            return ys[0]
+        if v >= xs[-1]:
+            return ys[-1]
+        k = bisect.bisect_right(xs, v)
+        return ys[k - 1] + (ys[k] - ys[k - 1]) * (v - xs[k - 1]) / (xs[k] - xs[k - 1])
 
 
 @dataclass(frozen=True)
@@ -163,26 +170,29 @@ def _angle(entry: dict[str, object], side: str) -> TruncatedNormalAngle:
     )
 
 
-def _coupling(entry: dict[str, object]) -> SpeedCoupling:
-    coupling = SpeedCoupling(
-        intercept_mm_per_s=float(entry["intercept_mm_per_s"]),  # type: ignore[arg-type]
-        slope=float(entry["slope"]),  # type: ignore[arg-type]
-        low_mm_per_s=float(entry["low_mm_per_s"]),  # type: ignore[arg-type]
-        high_mm_per_s=float(entry["high_mm_per_s"]),  # type: ignore[arg-type]
-        window_s=float(entry["window_s"]),  # type: ignore[arg-type]
-    )
+def _coupling(entry: dict[str, object] | None) -> SpeedCoupling:
+    if entry is None:
+        msg = "the kinematics lack 'on_food_reversal_speed_coupling'"
+        raise ValueError(msg)
+    before = tuple(float(v) for v in entry["knots_before_mm_per_s"])  # type: ignore[attr-defined]
+    speed = tuple(float(v) for v in entry["knots_speed_mm_per_s"])  # type: ignore[attr-defined]
+    window = float(entry["window_s"])  # type: ignore[arg-type]
+    finite = all(math.isfinite(v) for v in (*before, *speed, window))
     if not (
-        coupling.intercept_mm_per_s > 0.0
-        and coupling.slope >= 0.0
-        and 0.0 < coupling.low_mm_per_s < coupling.high_mm_per_s
-        and coupling.window_s > 0.0
+        finite
+        and len(before) == len(speed) >= 2  # noqa: PLR2004 - a line needs two knots
+        and before[0] >= 0.0
+        and all(a < b for a, b in itertools.pairwise(before))
+        and min(speed) > 0.0
+        and window > 0.0
     ):
         msg = (
-            "a reversal speed coupling needs intercept > 0, slope >= 0, 0 < low < high and "
-            f"window > 0, got {entry}"
+            "a reversal speed coupling needs at least two finite knots of equal length, the speeds "
+            "before non-negative and strictly increasing, the reversal speeds positive and a "
+            f"positive window, got {entry}"
         )
         raise ValueError(msg)
-    return coupling
+    return SpeedCoupling(knots_before_mm_per_s=before, knots_speed_mm_per_s=speed, window_s=window)
 
 
 _STATUSES = ("verified", "figure", "measured")
@@ -241,7 +251,7 @@ def load_kinematics(path: Path = KINEMATICS_PATH) -> PrimitiveKinematics:
         reversal_duration=_gamma(data["reversal_duration_s"]),
         on_food_reversal_speed_mm_per_s=speeds[3],
         on_food_reversal_duration=_gamma(data["on_food_reversal_duration_s"]),
-        on_food_reversal_speed_coupling=_coupling(data["on_food_reversal_speed_coupling"]),
+        on_food_reversal_speed_coupling=_coupling(data.get("on_food_reversal_speed_coupling")),
         omega_angle=_angle(data["omega_angle_deg"], "ventral"),
         omega_duration=_gamma(data["omega_duration_s"]),
         delta_angle=_angle(data["delta_angle_deg"], "dorsal"),

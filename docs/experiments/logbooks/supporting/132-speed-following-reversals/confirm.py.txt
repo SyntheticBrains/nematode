@@ -3,7 +3,8 @@
 Logbook 131's refit (`hinge4.json`) passed all 24 statistics and every mutant in 15 of 15 populations
 on a body patched in scripts (`reversal_coupling_probe.patch`: the band cohorts' line on the realized
 displacement of the last 3 run steps, clipped to [0.049, 0.084]). The package's option differs: the
-held-out line on the commanded run speed, clipped to [0.0484, 0.0839]. Here the same answer is graded
+held-out knots on the commanded run speed, interpolated and flat beyond the outermost (0.0484 to
+0.0961 mm/s). Here the same answer is graded
 with presence on the same 10 populations of 200 animals (880,000,000 + 200·g + i), every statistic
 and mutant reading recorded, under each body, paired.
 

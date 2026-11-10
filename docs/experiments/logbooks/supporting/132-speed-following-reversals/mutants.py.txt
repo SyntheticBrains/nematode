@@ -1,0 +1,69 @@
+"""Apply five deliberate bugs to the batched runner and count which new parity tests catch them."""
+import sys
+import quantumnematode.brain  # noqa: F401 - import order
+sys.path.insert(0, "packages/quantum-nematode/tests")
+import numpy as np
+import pytest
+from quantumnematode.evaluation import batched as B
+from quantumnematode_tests.evaluation import test_batched_parity as T
+
+original_recent = B.recent_run_speed
+
+
+def bout_steps_pushed(mp):
+    move = B.BatchedEvaluator._move
+
+    def mutated(self, raw, t):
+        move(self, raw, t)
+        if self.follows_run_speed:
+            k = self.kinematics
+            speed = k.v_max_mm_per_s * (np.clip(raw[:, 0], -1, 1) + 1.0) / 2.0
+            for i in np.flatnonzero(self.last_kind != B.RUN):
+                B.push_run_speed(self.run_windows[i], float(speed[i]), self.run_window_steps)
+
+    mp.setattr(B.BatchedEvaluator, "_move", mutated)
+
+
+def window_length(n):
+    def apply(mp):
+        build = B.BatchedEvaluator._build_animals
+
+        def mutated(self):
+            build(self)
+            self.run_window_steps = n
+
+        mp.setattr(B.BatchedEvaluator, "_build_animals", mutated)
+    return apply
+
+
+def newest_only(mp):
+    mp.setattr(B, "recent_run_speed", lambda w, s: (w[-1] if len(w) >= s else None))
+
+
+def cleared_at_bout_start(mp):
+    def mutated(w, s):
+        r = original_recent(w, s)
+        w.clear()
+        return r
+    mp.setattr(B, "recent_run_speed", mutated)
+
+
+MUTANTS = {"bout steps pushed": bout_steps_pushed, "window length 2": window_length(2), "window length 5": window_length(5),
+           "newest only": newest_only, "cleared at each bout start": cleared_at_bout_start}
+for name, apply in MUTANTS.items():
+    caught = []
+    for protocol in ("scheer_lawn", "uniform_lawn_flavell"):
+        for test in ("trajectory", "exact"):
+            mp = pytest.MonkeyPatch()
+            apply(mp)
+            try:
+                if test == "trajectory":
+                    T.test_a_speed_following_reversal_matches_the_per_step_runner("cycling", protocol)
+                else:
+                    T.test_both_runners_give_each_reversal_the_same_speed(protocol, mp)
+                caught.append(False)
+            except AssertionError:
+                caught.append(True)
+            finally:
+                mp.undo()
+    print(f"{name:28s} caught by {sum(caught)} of 4 (trajectory and exact, on both lawns): {caught}", flush=True)

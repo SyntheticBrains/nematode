@@ -19,14 +19,17 @@ run second is one with no reversal or omega frame and a finite 1-s displacement.
   starting more than 0.5 mm inside the lawn;
 - for the band cohorts, every on-lawn start, beside as replication;
 - per set: the least-squares line of reversal speed on the speed before, with a 95% bootstrap over
-  recording dates; and the mean speed before, reversal speed and duration by decile of the speed
-  before;
+  recording dates; the mean speed before, reversal speed and duration by decile of the speed before;
+  and the knots, the same means in deciles 1 to 9 and in the top decile split at its 95th and 99th
+  percentiles;
+- how many on-lawn starts each exclusion removed;
 - a paused worm's 1-s displacement in the vendored still-worm library
   (`data/benchmark/scheer_tracker_noise.npz`), its mean and RMS, beside the slowest decile's speed
   before, as a check on how far tracking noise lifts the slowest speeds.
 
-The primitives take the held-out on-lawn line, clipped to its lowest and highest decile's mean
-reversal speed. The clip sets the slow end: a still worm reverses at the slowest decile's mean.
+Every bin is half-open but the last, so each bout falls in exactly one. The relation is concave at
+the fast end, where a line overshoots, so the primitives take the held-out on-lawn knots: a
+reversal's speed is interpolated linearly between them and is flat beyond the outermost.
 
 Usage::
 
@@ -41,33 +44,41 @@ import itertools
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from primitive_kinematics_check import BOUNDARY_BAND_MM, WILD_TYPE, bouts, finite_or_null
 from quantumnematode.benchmark import references as refs
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 DESCRIPTION = "How a real on-lawn reversal's speed follows the worm's speed just before it."
 
 FPS = int(refs.SCHEER_FRAMES_PER_SECOND)
 WINDOW_S = 3
 DECILES = 10
+# The knots' bins by quantile of the speed before: deciles 1 to 9, then the top decile split.
+KNOT_QUANTILES = (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0)
 RESAMPLES = 2000
 BOOTSTRAP_SEED = 20261111
 NOISE_PATH = Path(__file__).resolve().parents[2] / "data" / "benchmark" / "scheer_tracker_noise.npz"
+EXCLUSIONS = ("fewer_than_window_run_seconds", "no_whole_second", "path_not_finite")
 
 
-def bout_samples(
+def bout_samples(  # noqa: PLR0913 - one animal's track, its flags and the exclusion tally
     x: np.ndarray,
     y: np.ndarray,
     radii: np.ndarray,
     reversal: np.ndarray,
     omega: np.ndarray,
+    excluded: dict[str, int],
 ) -> list[tuple[float, float, float, float]]:
     """Return one animal's on-lawn reversals: speed before, reversal speed, duration, depth.
 
     Depth is the start's signed distance inside the lawn's boundary, in mm. A bout counts when it
-    starts on the lawn and the worm has ``WINDOW_S`` run seconds before it.
+    starts on the lawn and the worm has ``WINDOW_S`` run seconds before it. ``excluded`` tallies,
+    in place, the on-lawn starts and why each one that does not count was left out.
     """
     x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
     with np.errstate(invalid="ignore"):
@@ -84,11 +95,17 @@ def bout_samples(
         whole_first, whole_last = -(-start // FPS), stop // FPS
         if first_second >= len(depth) or not depth[first_second] > 0:
             continue
+        excluded["on_lawn_starts"] += 1
         before = runs[runs < first_second][-WINDOW_S:]
-        if len(before) < WINDOW_S or whole_last <= whole_first or whole_last > len(step):
+        if len(before) < WINDOW_S:
+            excluded["fewer_than_window_run_seconds"] += 1
+            continue
+        if whole_last <= whole_first or whole_last > len(step):
+            excluded["no_whole_second"] += 1
             continue
         path = step[whole_first:whole_last]
         if not np.isfinite(path).all():
+            excluded["path_not_finite"] += 1
             continue
         out.append(
             (
@@ -101,8 +118,11 @@ def bout_samples(
     return out
 
 
-def collect(tracks: refs.ScheerTracks, side: str) -> dict[str, np.ndarray]:
-    """Return every counted bout of the wild type's ``side`` cohorts, tagged by recording date."""
+def collect(
+    tracks: refs.ScheerTracks,
+    side: str,
+) -> tuple[dict[str, np.ndarray], dict[str, int]]:
+    """Return every counted bout of the wild type's ``side`` cohorts by date, and the exclusions."""
     rows = [i for i in tracks.arm(WILD_TYPE) if tracks.side[i] == side]
     names = ("reversal", "omega")
     flags = {
@@ -115,6 +135,7 @@ def collect(tracks: refs.ScheerTracks, side: str) -> dict[str, np.ndarray]:
         "depth": [],
         "date": [],
     }
+    excluded: dict[str, int] = dict.fromkeys(("on_lawn_starts", *EXCLUSIONS), 0)
     for j, i in enumerate(rows):
         for sample in bout_samples(
             tracks.x[i],
@@ -122,6 +143,7 @@ def collect(tracks: refs.ScheerTracks, side: str) -> dict[str, np.ndarray]:
             tracks.boundary_radius[i],
             flags["reversal"][j],
             flags["omega"][j],
+            excluded,
         ):
             for name, value in zip(
                 ("before", "reversal", "duration", "depth"),
@@ -130,11 +152,35 @@ def collect(tracks: refs.ScheerTracks, side: str) -> dict[str, np.ndarray]:
             ):
                 columns[name].append(value)
             columns["date"].append(float(tracks.date[i]))
-    return {name: np.asarray(values) for name, values in columns.items()}
+    return {name: np.asarray(values) for name, values in columns.items()}, excluded
+
+
+def binned(samples: dict[str, np.ndarray], quantiles: Sequence[float]) -> list[dict[str, Any]]:
+    """Return the mean speed before, reversal speed and duration in each bin of the speed before.
+
+    The bins' edges are the speed before's ``quantiles``. Each is half-open but the last, so every
+    bout falls in exactly one.
+    """
+    before = samples["before"]
+    edges = np.quantile(before, np.asarray(quantiles, dtype=float))
+    last = len(edges) - 2
+    out = []
+    for k, (low, high) in enumerate(itertools.pairwise(edges)):
+        keep = (before >= low) & ((before <= high) if k == last else (before < high))
+        out.append(
+            {
+                "quantiles": [float(quantiles[k]), float(quantiles[k + 1])],
+                "before_mm_per_s": float(before[keep].mean()),
+                "reversal_mm_per_s": float(samples["reversal"][keep].mean()),
+                "duration_s": float(samples["duration"][keep].mean()),
+                "bouts": int(keep.sum()),
+            },
+        )
+    return out
 
 
 def fit(samples: dict[str, np.ndarray]) -> dict[str, Any]:
-    """Return the line, its bootstrap over recording dates, and the deciles of the speed before."""
+    """Return the line and its bootstrap over recording dates, the deciles and the knots."""
     before, speed = samples["before"], samples["reversal"]
     slope, intercept = np.polyfit(before, speed, 1)
     dates = np.unique(samples["date"])
@@ -145,18 +191,6 @@ def fit(samples: dict[str, np.ndarray]) -> dict[str, Any]:
         pick = np.concatenate([by_date[k] for k in rng.integers(0, len(dates), len(dates))])
         lines.append(np.polyfit(before[pick], speed[pick], 1))
     lines_array = np.asarray(lines)
-    edges = np.quantile(before, np.linspace(0.0, 1.0, DECILES + 1))
-    deciles = []
-    for low, high in itertools.pairwise(edges):
-        keep = (before >= low) & (before <= high)
-        deciles.append(
-            {
-                "before_mm_per_s": float(before[keep].mean()),
-                "reversal_mm_per_s": float(speed[keep].mean()),
-                "duration_s": float(samples["duration"][keep].mean()),
-                "bouts": int(keep.sum()),
-            },
-        )
     return {
         "bouts": len(speed),
         "dates": len(dates),
@@ -168,7 +202,8 @@ def fit(samples: dict[str, np.ndarray]) -> dict[str, Any]:
         },
         "mean_reversal_mm_per_s": float(speed.mean()),
         "mean_duration_s": float(samples["duration"].mean()),
-        "deciles": deciles,
+        "deciles": binned(samples, np.linspace(0.0, 1.0, DECILES + 1).tolist()),
+        "knots": binned(samples, KNOT_QUANTILES),
     }
 
 
@@ -196,9 +231,9 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     tracks = refs.load_scheer_tracks()
-    held_out = collect(tracks, refs.HELD_OUT)
+    held_out, held_out_excluded = collect(tracks, refs.HELD_OUT)
     inside = {k: v[held_out["depth"] > BOUNDARY_BAND_MM] for k, v in held_out.items()}
-    band = collect(tracks, refs.BANDS)
+    band, band_excluded = collect(tracks, refs.BANDS)
     chosen = fit(held_out)
     floor = tracker_floor()
     record = {
@@ -208,17 +243,16 @@ def main() -> int:
             "run_second": "no reversal or omega frame, and a finite 1-s displacement",
             "start": "the midbody inside the lawn's boundary",
             "bout_rule": "primitive_kinematics_check.bouts, filtered",
+            "bins": "by quantile of the speed before, each half-open but the last",
         },
         "bootstrap": {"unit": "recording date", "resamples": RESAMPLES, "seed": BOOTSTRAP_SEED},
-        "held_out_on_lawn": chosen,
+        "held_out_on_lawn": {"excluded": held_out_excluded, **chosen},
         "held_out_inside_lawn": {"depth_mm": BOUNDARY_BAND_MM, **fit(inside)},
-        "band_on_lawn": fit(band),
+        "band_on_lawn": {"excluded": band_excluded, **fit(band)},
         "tracker_floor": floor,
         "primitives_entry": {
-            "intercept_mm_per_s": chosen["line"]["intercept_mm_per_s"],
-            "slope": chosen["line"]["slope"],
-            "low_mm_per_s": chosen["deciles"][0]["reversal_mm_per_s"],
-            "high_mm_per_s": chosen["deciles"][-1]["reversal_mm_per_s"],
+            "knots_before_mm_per_s": [k["before_mm_per_s"] for k in chosen["knots"]],
+            "knots_speed_mm_per_s": [k["reversal_mm_per_s"] for k in chosen["knots"]],
             "window_s": float(WINDOW_S),
         },
     }

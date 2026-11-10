@@ -31,7 +31,7 @@ Phase 10, amending E.2's primitives before C.2's registered fit. The maintainer'
 - [x] 3.1 `PrimitiveState` gains the run-speed window.
   - `step_primitives` takes the option and pushes each run step's commanded speed.
   - `_start_bout` takes the window's mean as an argument (None until the window fills; design
-    Decision 10). For a reversal on food it gives the line on v̄, clipped, or the pooled speed while
+    Decision 10). For a reversal on food it gives the knots' interpolated speed at v̄, or the pooled speed while
     the mean is None.
   - The window's length is N = round(window ÷ step).
 - [x] 3.2 `continuous.on_food_reversal_speed: pooled | follows_run_speed` in `config_loader.py`,
@@ -40,7 +40,7 @@ Phase 10, amending E.2's primitives before C.2's registered fit. The maintainer'
     `reversal_kinematics: off_food`.
   - Classify it as not step-coupled in `test_step_duration.py`'s `Continuous2DConfig` set.
 - [x] 3.3 `Continuous2DEnvironment.move_agent_primitives` passes the option.
-- [x] 3.4 `BatchedEvaluator`: the same window as an `(animals, N)` float64 array, pushed for each
+- [x] 3.4 `BatchedEvaluator`: the same window as one Python list per animal, pushed for each
   idle animal that ran, read in `_start_bouts` for a reversal on food. The arithmetic follows design
   Decision 9.
 
@@ -50,7 +50,7 @@ Phase 10, amending E.2's primitives before C.2's registered fit. The maintainer'
   record is refused.
 - [x] 4.2 Unit tests of the reading, each spec scenario:
   - after steady runs;
-  - clipped at both ends;
+  - interpolated between the knots, flat beyond them;
   - before the window fills;
   - an omega between the runs and the reversal;
   - 6 run steps at a 0.5-s step.
@@ -88,6 +88,17 @@ Phase 10, amending E.2's primitives before C.2's registered fit. The maintainer'
 - [x] 6.2 The roadmap's D36 row amended and dated. The tracker gets E.2's amendment note and the
   seed rows (9601–9632, 880 M).
 - [x] 6.3 AGENTS.md's primitives entry, `docs/usage.md`, `configs/README.md` and the CHANGELOG.
+
+## 7. Review of the PR (2026-11-10)
+
+- [x] 7.0.1 The parity test sees the window: a cycling controller inside the knots, and an exact
+  comparison of every bout in both runners; five deliberately broken windows each caught on both
+  lawns.
+- [x] 7.0.2 Knots in place of the line and clip (design Decision 5); the record's bins half-open and
+  its exclusions counted; the loader's checks widened; a primitives config without lawns shown not
+  to load (Decision 11).
+- [x] 7.0.3 The identity check and the confirmation re-run on the knots: 59 of 59 jobs identical,
+  and the wild type with every mutant in 10 of 10.
 
 ## 7. Close-out
 

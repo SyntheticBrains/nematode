@@ -32,9 +32,10 @@ Every value but three is transcribed from published numbers. No dataset is vendo
   added 2026-11-10).
   - Measured on the same held-out dates, from every reversal bout starting with the midbody inside
     the lawn: its speed against the mean 1-s displacement of the worm's last 3 run seconds before
-    it, wherever they fell. The least-squares line is 0.0464 + 0.606 × v (n = 83,697 bouts, 24
-    dates), clipped to the lowest and highest decile's mean reversal speed, 0.0484 and
-    0.0839 mm/s.
+    it, wherever they fell (n = 83,697 bouts, 24 dates). The knots are the mean speed before and
+    the mean reversal speed in deciles 1 to 9 of the speed before, and in the top decile split at
+    its 95th and 99th percentiles: 0.0484 mm/s at 0.0046 up to 0.0961 at 0.1042. A reversal's
+    speed is interpolated linearly between them and is flat beyond the outermost.
   - Script: `scripts/analysis/reversal_speed_coupling.py`. Record:
     `docs/experiments/logbooks/supporting/132-speed-following-reversals/coupling.json`.
   - A reversal on a lawn backs at it only under `continuous.on_food_reversal_speed: follows_run_speed`; otherwise it takes the pooled 0.069 mm/s (Logbook 132).

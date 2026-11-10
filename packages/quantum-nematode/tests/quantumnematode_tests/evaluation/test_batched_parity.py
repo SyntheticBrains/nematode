@@ -102,8 +102,71 @@ def _following(config: Any) -> Any:
     )
 
 
+# Run speeds inside the coupling's knots, one a step, so the window's mean keeps changing.
+_CYCLE = (0.004, 0.03, 0.012, 0.06, 0.02, 0.045, 0.008)
+_CYCLE_HAZARDS = (0.1, 0.01, 0.02)
+
+
+class _CyclingHazards(ConstantHazards):
+    """Straight runs whose speed steps through ``_CYCLE``, one value a step, and fixed hazards."""
+
+    def __init__(self) -> None:
+        super().__init__(_CYCLE[0], _CYCLE_HAZARDS)
+        self.calls = 0
+
+    def run_brain(
+        self,
+        params: Any,
+        reward: float | None,
+        input_data: list[float] | None,
+        *,
+        top_only: bool,
+        top_randomize: bool,
+    ) -> Any:
+        self.speed_mm_per_s = _CYCLE[self.calls % len(_CYCLE)]
+        self.calls += 1
+        return super().run_brain(
+            params,
+            reward,
+            input_data,
+            top_only=top_only,
+            top_randomize=top_randomize,
+        )
+
+
+class _BatchedCyclingHazards(BatchedConstantHazards):
+    """The batched form of ``_CyclingHazards``: every animal at this step's speed.
+
+    The step advances when the senses do: the parity harness's observer also calls ``act`` on each
+    step's senses, and a second call in a step gives the same speed.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(_CYCLE[0], _CYCLE_HAZARDS)
+        self.steps = 0
+        self.senses: Any = None
+
+    def reset(self, n: int) -> None:
+        del n
+        self.steps = 0
+        self.senses = None
+
+    def act(self, senses: Any, noise: Any) -> np.ndarray:
+        if senses is not self.senses:
+            self.senses = senses
+            self.steps += 1
+        self.speed = _CYCLE[(self.steps - 1) % len(_CYCLE)]
+        return super().act(senses, noise)
+
+
 def _following_build(controller: str, protocol: str) -> tuple[Any, Any, Any]:
-    """Return a following config and its controllers; ``slow`` runs at 0.02 mm/s, on the line."""
+    """Return a following config and its controllers.
+
+    ``slow`` runs at 0.02 mm/s, and ``cycling`` at speeds inside the knots that change every step.
+    """
+    if controller == "cycling":
+        config = load_simulation_config(str(p.config_path("constant", protocol)))
+        return _following(config), _CyclingHazards(), _BatchedCyclingHazards()
     if controller == "slow":
         config = load_simulation_config(str(p.config_path("constant", protocol)))
         return (
@@ -116,17 +179,91 @@ def _following_build(controller: str, protocol: str) -> tuple[Any, Any, Any]:
 
 
 @pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
-@pytest.mark.parametrize("controller", ["mlp", "slow"])
+@pytest.mark.parametrize("controller", ["mlp", "slow", "cycling"])
 def test_a_speed_following_reversal_matches_the_per_step_runner(
     controller: str,
     protocol: str,
 ) -> None:
     """With the option on, bouts match exactly over 300 steps and paths within 1e-3 over 150."""
     config, single, batched = _following_build(controller, protocol)
-    refs = p.references(config, single, _STEPS)
+    if controller == "cycling":
+        # The cycling controller counts its steps, so each episode gets its own.
+        refs = [p.references(config, _CyclingHazards(), _STEPS, (s,))[0] for s in p.PARITY_SEEDS]
+    else:
+        refs = p.references(config, single, _STEPS)
     trajectories, log = p.run_batched(config, batched, list(p.PARITY_SEEDS), _STEPS)
     assert p.state_mismatches(refs, log, _STATE_STEPS) == []
     assert p.trajectory_mismatches(refs, trajectories, log) == []
+
+
+def _logged_bouts(
+    monkeypatch: pytest.MonkeyPatch,
+    module: Any,
+) -> list[tuple[int, str, bool, float | None, float, float]]:
+    """Log every bout a runner starts: its generator, kind, food, window mean, speed and length."""
+    calls: list[tuple[int, str, bool, float | None, float, float]] = []
+    original = module._start_bout
+
+    def logged(  # noqa: PLR0913 - the logged function's own arguments
+        kind: str,
+        state: Any,
+        kinematics: Any,
+        rng: Any,
+        *,
+        on_food: bool = False,
+        run_speed_mean: float | None = None,
+    ) -> Any:
+        bout = original(
+            kind,
+            state,
+            kinematics,
+            rng,
+            on_food=on_food,
+            run_speed_mean=run_speed_mean,
+        )
+        calls.append(
+            (id(rng), kind, on_food, run_speed_mean, bout.speed_mm_per_s, bout.remaining_s),
+        )
+        return bout
+
+    monkeypatch.setattr(module, "_start_bout", logged)
+    return calls
+
+
+@pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
+def test_both_runners_give_each_reversal_the_same_speed(
+    protocol: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every bout's kind, food, window mean, speed and length match exactly, animal by animal."""
+    from quantumnematode.env import primitives
+    from quantumnematode.evaluation import batched as batched_module
+
+    config, _, batched = _following_build("cycling", protocol)
+    single_calls = _logged_bouts(monkeypatch, primitives)
+    singles = []
+    for seed in p.PARITY_SEEDS:
+        start = len(single_calls)
+        p.run_reference(config, _CyclingHazards(), seed, _STEPS)
+        singles.append([call[1:] for call in single_calls[start:]])
+    batched_calls = _logged_bouts(monkeypatch, batched_module)
+    generators: list[list[int]] = []
+    p.run_batched(
+        config,
+        batched,
+        list(p.PARITY_SEEDS),
+        _STEPS,
+        tamper=lambda evaluator: generators.append([id(env.rng) for env in evaluator.envs]),
+    )
+    animal = {generator: i for i, generator in enumerate(generators[0])}
+    per_animal: list[list[tuple[str, bool, float | None, float, float]]] = [
+        [] for _ in p.PARITY_SEEDS
+    ]
+    for call in batched_calls:
+        per_animal[animal[call[0]]].append(call[1:])
+    assert per_animal == singles
+    following = [c for c in batched_calls if c[1] == "reversal" and c[2] and c[3] is not None]
+    assert len({c[4] for c in following}) > 5  # the window's mean moved the speed
 
 
 def _run_speed_ignored(evaluator: BatchedEvaluator) -> None:

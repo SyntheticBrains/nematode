@@ -545,8 +545,8 @@ class Continuous2DEnvironment(DynamicForagingEnvironment):
 
         ``action`` is the controller's five numbers in ``[-1, 1]``: run speed, run curvature, and a
         start hazard for each of reversal, omega and delta. The agent's episode state (its running
-        bout and which side is ventral) is created on its first primitive step, from the
-        environment's RNG.
+        bout, which side is ventral and, when an on-food reversal's speed follows the run speed, its
+        latest run speeds) is created on its first primitive step, from the environment's RNG.
         """
         state = self.primitive_states.get(agent_id)
         if state is None:

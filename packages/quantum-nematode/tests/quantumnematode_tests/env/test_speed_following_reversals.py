@@ -1,11 +1,11 @@
-"""An on-food reversal speed that follows the run speed: a line on the worm's recent runs, clipped.
+"""An on-food reversal speed that follows the run speed: knots on the worm's recent runs.
 
-Covers the locomotor-primitives spec's scenarios "A reversal after steady runs follows their speed",
-"The speed is clipped to the measured range", "Before the window fills, the pooled speed", "Bouts do
-not enter the window", "A shorter step keeps a 3-s window", "Off the lawn nothing changes", "Unset,
-nothing changes", "The option is refused where it cannot act" and "The coupling entry is measured
-and checked". "Both runners give each reversal the same speed" is in
-``evaluation/test_batched_parity.py``.
+Covers the locomotor-primitives spec's scenarios "A reversal after steady runs follows their
+speed", "Between the knots the speed is interpolated, beyond them flat", "Before the window fills,
+the pooled speed", "Bouts do not enter the window", "A shorter step keeps a 3-s window", "Off the
+lawn nothing changes", "Unset, nothing changes", "The option is refused where it cannot act" and
+"The coupling entry is measured and checked". "Both runners give each reversal the same speed" is
+in ``evaluation/test_batched_parity.py``.
 """
 
 from __future__ import annotations
@@ -91,46 +91,69 @@ def _place(env: Continuous2DEnvironment, position: tuple[float, float]) -> None:
 # ----- the entry -----
 
 
+_KNOTS_BEFORE = (0.0046, 0.0083, 0.0114, 0.0144, 0.0176, 0.0213, 0.0257, 0.0315, 0.0403, 0.0519)
+_KNOTS_BEFORE_TOP = (0.0685, 0.1042)
+_KNOTS_SPEED = (0.0484, 0.0501, 0.052, 0.054, 0.0572, 0.059, 0.0629, 0.0668, 0.0745, 0.0798)
+_KNOTS_SPEED_TOP = (0.0858, 0.0961)
+
+
 def test_the_coupling_entry_is_pinned() -> None:
-    """The measured entry is the record's held-out line, clipped to its deciles' range."""
+    """The measured entry is the record's held-out knots: deciles 1 to 9 and a split top decile."""
     data = json.loads(KINEMATICS_PATH.read_text())
     entry = data[_ENTRY]
     assert entry["status"] == "measured"
     assert entry["condition"] == "on food"
     assert (
         SpeedCoupling(
-            intercept_mm_per_s=0.0464,
-            slope=0.606,
-            low_mm_per_s=0.0484,
-            high_mm_per_s=0.0839,
+            knots_before_mm_per_s=_KNOTS_BEFORE + _KNOTS_BEFORE_TOP,
+            knots_speed_mm_per_s=_KNOTS_SPEED + _KNOTS_SPEED_TOP,
             window_s=3.0,
         )
         == _C
     )
     vendored = json.loads((_REPO / entry["record"]).read_text())["primitives_entry"]
-    assert round(vendored["intercept_mm_per_s"], 4) == _C.intercept_mm_per_s
-    assert round(vendored["slope"], 3) == _C.slope
-    assert round(vendored["low_mm_per_s"], 4) == _C.low_mm_per_s
-    assert round(vendored["high_mm_per_s"], 4) == _C.high_mm_per_s
+    assert tuple(round(v, 4) for v in vendored["knots_before_mm_per_s"]) == _C.knots_before_mm_per_s
+    assert tuple(round(v, 4) for v in vendored["knots_speed_mm_per_s"]) == _C.knots_speed_mm_per_s
     assert vendored["window_s"] == _C.window_s
 
 
-@pytest.mark.parametrize(
-    ("field", "value"),
-    [
-        ("intercept_mm_per_s", 0.0),
-        ("slope", -0.1),
-        ("low_mm_per_s", 0.09),
-        ("window_s", 0.0),
-    ],
-)
-def test_a_bad_coupling_is_refused(tmp_path: Path, field: str, value: float) -> None:
-    """A non-positive intercept, a negative slope, an inverted range or no window is refused."""
+def _with_knots(before: list[float], speed: list[float]) -> dict[str, Any]:
     data = json.loads(KINEMATICS_PATH.read_text())
-    data[_ENTRY][field] = value
+    data[_ENTRY]["knots_before_mm_per_s"] = before
+    data[_ENTRY]["knots_speed_mm_per_s"] = speed
+    return data
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        _with_knots([0.01, 0.02], [0.05]),  # unequal lengths
+        _with_knots([0.01], [0.05]),  # one knot
+        _with_knots([0.02, 0.01], [0.05, 0.06]),  # speeds before not increasing
+        _with_knots([0.01, 0.01], [0.05, 0.06]),  # a repeated speed before
+        _with_knots([-0.01, 0.02], [0.05, 0.06]),  # a negative speed before
+        _with_knots([0.01, 0.02], [0.0, 0.06]),  # a reversal speed that is not positive
+        _with_knots([0.01, float("inf")], [0.05, 0.06]),  # not finite
+        {**json.loads(KINEMATICS_PATH.read_text())}
+        | {_ENTRY: {**json.loads(KINEMATICS_PATH.read_text())[_ENTRY], "window_s": 0.0}},
+    ],
+    ids=["lengths", "one", "decreasing", "repeated", "negative", "speed", "infinite", "window"],
+)
+def test_a_bad_coupling_is_refused(tmp_path: Path, data: dict[str, Any]) -> None:
+    """Knots of unequal length, too few, out of order, non-positive or infinite, or no window."""
     path = tmp_path / "primitives.json"
     path.write_text(json.dumps(data))
     with pytest.raises(ValueError, match="speed coupling"):
+        load_kinematics(path)
+
+
+def test_a_missing_coupling_is_refused(tmp_path: Path) -> None:
+    """Kinematics without the coupling entry are refused by name, not with a bare key error."""
+    data = json.loads(KINEMATICS_PATH.read_text())
+    del data[_ENTRY]
+    path = tmp_path / "primitives.json"
+    path.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match=f"lack '{_ENTRY}'"):
         load_kinematics(path)
 
 
@@ -147,12 +170,17 @@ def test_a_coupling_without_its_record_is_refused(tmp_path: Path) -> None:
 # ----- the reading -----
 
 
-def test_the_speed_is_the_line_clipped_to_the_measured_range() -> None:
-    """Inside the range the line; a still worm the low; a fast one the high."""
-    assert _C.speed(0.02) == _C.intercept_mm_per_s + _C.slope * 0.02
-    assert _C.intercept_mm_per_s < _C.low_mm_per_s
-    assert _C.speed(0.0) == _C.low_mm_per_s
-    assert _C.speed(0.2) == _C.high_mm_per_s
+def test_the_speed_is_interpolated_between_the_knots() -> None:
+    """At a knot its speed; between two, on the line joining them; beyond the outermost, flat."""
+    xs, ys = _C.knots_before_mm_per_s, _C.knots_speed_mm_per_s
+    for x, y in zip(xs, ys, strict=True):
+        assert _C.speed(x) == y
+    middle = (xs[4] + xs[5]) / 2.0
+    assert _C.speed(middle) == pytest.approx((ys[4] + ys[5]) / 2.0, abs=1e-15)
+    assert _C.speed(0.0) == ys[0] == 0.0484
+    assert _C.speed(0.2) == ys[-1] == 0.0961
+    speeds = [_C.speed(v / 1000.0) for v in range(150)]
+    assert speeds == sorted(speeds)  # never slower for a faster worm, with these knots
 
 
 def test_a_reversal_after_steady_runs_follows_their_speed() -> None:
@@ -321,7 +349,12 @@ def _run(
 
 
 def test_unset_and_pooled_change_nothing_and_the_option_changes_no_draw() -> None:
-    """Unset and ``pooled`` run alike; on, the worm moves differently but draws exactly the same."""
+    """Unset and ``pooled`` run alike; on, the worm moves differently but draws exactly the same.
+
+    A test cannot run the code from before the option, so byte-identity against it is checked
+    outside the suite: ``scripts/analysis/speedup_identity_check.py`` against a baseline taken
+    before the change, on the batched path.
+    """
     unset, pooled = _lawn_env(), _lawn_env(on_food_reversal_speed="pooled")
     assert _run(unset) == _run(pooled)
     assert unset.rng.bit_generator.state == pooled.rng.bit_generator.state
@@ -354,6 +387,22 @@ def test_following_with_off_food_reversals_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "config.yml"
     path.write_text(yaml.safe_dump(data, sort_keys=False))
     with pytest.raises(ValueError, match=r"follows_run_speed.*reversal_kinematics: off_food"):
+        load_simulation_config(str(path))
+
+
+def test_the_option_without_lawns_cannot_load(tmp_path: Path) -> None:
+    """Without lawns no reversal can start on one; a primitives config without lawns cannot load.
+
+    Primitives need a step of at most one second, and a configured step is accepted only on lawns,
+    so the option is never inert: the configuration is refused before it could act.
+    """
+    data = yaml.safe_load(_FLAVELL.read_text())
+    data["environment"]["foraging"]["food_model"] = "points"
+    data["environment"]["foraging"].pop("lawns")
+    data["environment"]["continuous"]["on_food_reversal_speed"] = "follows_run_speed"
+    path = tmp_path / "config.yml"
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    with pytest.raises(ValueError, match="food_model: lawns"):
         load_simulation_config(str(path))
 
 
