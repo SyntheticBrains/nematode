@@ -892,6 +892,18 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   counterpart for the fitted C.2, all sensory gains at zero; whether W carries it is the
   registration's decision.
 
+  *(Added 2026-11-10, from digest #528: Moutuou & Benali 2026; Sale & Richardson 2026.)* **What a
+  null keeps.** Two structural readings per null arm, reported beside W's grades, not graded:
+
+  - **sensory recurrence** (the feedback coefficient), about three times a strength-matched null's
+    in the real wiring and largest in sensory neurons;
+  - **two-step path agreement** with the real wiring, which carries most of what the wiring
+    predicts about evoked activity and survives coarse-graining to cell classes.
+
+  They would say what a null that passes or fails preserved. Since cell classes keep most of that
+  prediction, W.2's outcome "the nulls pass too" has a structural reading for the class-preserving
+  null. Whether W carries the two readings is the registration's decision.
+
 - [ ] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
   both directions. Draws per arm are sized from F.0 and the cost pilot. Every outcome is named,
   including "the nulls pass too" and "a null beats the wild type".
