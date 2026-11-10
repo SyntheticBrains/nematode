@@ -1,0 +1,18 @@
+{
+ "description": "Which statistics carry the hinge on the continuation's start? (description; one candidate's seeds)",
+ "candidate": 5,
+ "base_score": 1.2314025121207153,
+ "hinge": 4.265343015255044,
+ "terms": [
+  {
+   "statistic": "uniform_lawn/roaming_bout_s",
+   "z": -3.1961830244955447,
+   "hinge": 0.87396707685671
+  },
+  {
+   "statistic": "activity/onset_rate_per_min",
+   "z": -3.6016746400173254,
+   "hinge": 3.3913759383983337
+  }
+ ]
+}

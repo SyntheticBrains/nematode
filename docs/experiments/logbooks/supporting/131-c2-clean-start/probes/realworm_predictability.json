@@ -1,0 +1,18 @@
+{
+ "description": "How predictable are real worms' actions from their senses? (description; band cohorts only)\n\nA cheap feasibility probe for imitating real worms instead of C.1. On Scheer & Bargmann 2023's\nwild-type small-lawn animals (PD1074, od2, band cohorts), per second:\n- senses, approximated from geometry: in the lawn (midbody flag), signed distance to the lawn edge\n  (boundary radius at the worm's angle minus its radius), radial velocity (a dC/dt stand-in), and\n  their 10-, 30- and 60-s histories;\n- targets: a reversal onset within the next second (the reversal flag's rising edge at 3 frames/s),\n  and the 1-s speed when not reversing.\nModels: gradient boosting, trained on 70% of animals and scored on the other 30%, with the senses\nalone, and with the roaming/dwelling label added as an upper bound for what a hidden state adds.\n",
+ "animals": 1013,
+ "seconds": 2304095,
+ "reversal_onset_rate": 0.07022410100277983,
+ "senses": {
+  "reversal_onset_auc": 0.61073281173155,
+  "speed_r2": 0.7464521698956591
+ },
+ "senses_and_state": {
+  "reversal_onset_auc": 0.6096539634382004,
+  "speed_r2": 0.7496701482515148
+ },
+ "senses_no_own_history": {
+  "speed_r2": 0.636119386013333,
+  "reversal_onset_auc": 0.594094336635732
+ }
+}

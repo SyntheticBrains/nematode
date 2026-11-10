@@ -1,0 +1,85 @@
+{
+ "description": "How much signal does each penalty give the search against each statistic's own noise? (description)\n\nEach candidate is scored on one population of 200 animals, so a penalty on a noisy statistic adds\nchance to its ranking. On the measured noise between populations (each statistic's mean and SD at\nthe second continuation's answer, `robustness_check.json`, and a moved onset rate at -2.70), the\nper-candidate mean and SD of three penalties, by simulation (100,000 draws, seed 0):\n\n- the quadratic hinge, 5 x max(0, |z| - target)^2, the second continuation's targets;\n- the planned steeper hinge, 5 x (e + e^2), targets 0.5 or more inside the bars;\n- the failure probability, 10 x Phi((|z| - 3.0781) / SD).\n",
+ "cases": {
+  "pre_exit_enrichment": {
+   "mean_z": 0.36,
+   "sd": 1.39,
+   "quadratic": {
+    "mean": 2.3796596284213942,
+    "sd": 6.583314579577748
+   },
+   "steeper": {
+    "mean": 6.632206657433738,
+    "sd": 12.148587262279975
+   },
+   "failure_probability": {
+    "mean": 1.200786738986124,
+    "sd": 1.3998478783343458
+   }
+  },
+  "roaming_bout_s": {
+   "mean_z": 2.23,
+   "sd": 0.46,
+   "quadratic": {
+    "mean": 0.21441957830028605,
+    "sd": 0.6851734189157755
+   },
+   "steeper": {
+    "mean": 1.0985887553436597,
+    "sd": 2.121312237562713
+   },
+   "failure_probability": {
+    "mean": 0.9658590269163797,
+    "sd": 1.4679883275026164
+   }
+  },
+  "onset_rate_per_min": {
+   "mean_z": -3.08,
+   "sd": 0.15,
+   "quadratic": {
+    "mean": 0.2507813268765459,
+    "sd": 0.30499936011514767
+   },
+   "steeper": {
+    "mean": 3.861691310014692,
+    "sd": 1.5105124122076325
+   },
+   "failure_probability": {
+    "mean": 5.031821515932445,
+    "sd": 2.8874052637894376
+   }
+  },
+  "onset_rate_per_min at -2.70": {
+   "mean_z": -2.7,
+   "sd": 0.15,
+   "quadratic": {
+    "mean": 0.003319775374202031,
+    "sd": 0.022914241132304346
+   },
+   "steeper": {
+    "mean": 0.8626679027696678,
+    "sd": 0.8510448743331781
+   },
+   "failure_probability": {
+    "mean": 0.3754719144220949,
+    "sd": 0.820655089374666
+   }
+  },
+  "dwelling_speed_p90": {
+   "mean_z": 2.77,
+   "sd": 0.21,
+   "quadratic": {
+    "mean": 0.0961141209319333,
+    "sd": 0.2285214745147282
+   },
+   "steeper": {
+    "mean": 1.4453390133533144,
+    "sd": 1.388295320753134
+   },
+   "failure_probability": {
+    "mean": 1.5107242450986924,
+    "sd": 1.8877210389814054
+   }
+  }
+ }
+}

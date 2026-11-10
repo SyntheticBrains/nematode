@@ -1,0 +1,63 @@
+"""How predictable are real worms' actions from their senses? (description; band cohorts only)
+
+A cheap feasibility probe for imitating real worms instead of C.1. On Scheer & Bargmann 2023's
+wild-type small-lawn animals (PD1074, od2, band cohorts), per second:
+- senses, approximated from geometry: in the lawn (midbody flag), signed distance to the lawn edge
+  (boundary radius at the worm's angle minus its radius), radial velocity (a dC/dt stand-in), and
+  their 10-, 30- and 60-s histories;
+- targets: a reversal onset within the next second (the reversal flag's rising edge at 3 frames/s),
+  and the 1-s speed when not reversing.
+Models: gradient boosting, trained on 70% of animals and scored on the other 30%, with the senses
+alone, and with the roaming/dwelling label added as an upper bound for what a hidden state adds.
+"""
+import json
+import sys
+import numpy as np
+from quantumnematode.benchmark.references import load_scheer_tracks
+from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+from sklearn.metrics import roc_auc_score, r2_score
+
+t = load_scheer_tracks()
+rows = np.where((np.array([t.genotypes[g] for g in t.genotype]) == "PD1074_od2_Data") & (t.side == "bands"))[0]
+rev = t.flag("reversal"); inlawn = t.flag("midbody_in_lawn"); missing = t.flag("missing")
+angles = np.linspace(0, 2 * np.pi, t.boundary_radius.shape[1], endpoint=False)
+X, Xs, yrev, yspd, worm = [], [], [], [], []
+for i in rows:
+    x, y = t.x[i], t.y[i]
+    r = np.hypot(x, y); th = np.mod(np.arctan2(y, x), 2 * np.pi)
+    edge = t.boundary_radius[i][np.clip(np.searchsorted(angles, th) % len(angles), 0, len(angles) - 1)]
+    d = edge - r                                  # inside the lawn when positive
+    vr = np.diff(r, prepend=np.nan)               # radial velocity, mm/s
+    speed = np.hypot(np.diff(x, prepend=np.nan), np.diff(y, prepend=np.nan))
+    fr = rev[i].reshape(-1, 3).any(axis=1)        # per-second reversal state
+    onset = np.r_[False, fr[1:] & ~fr[:-1]]
+    il = inlawn[i].reshape(-1, 3).mean(axis=1)
+    miss = missing[i].reshape(-1, 3).any(axis=1)
+    lab = np.repeat(t.labels[i], 10)[: len(x)]
+    def hist(v, w):
+        c = np.convolve(np.nan_to_num(v), np.ones(w) / w, mode="full")[: len(v)]
+        return c
+    feats = np.column_stack([il, d, vr, hist(il, 10), hist(d, 10), hist(vr, 10), hist(il, 30), hist(d, 30), hist(vr, 60), hist(speed, 10), hist(fr.astype(float), 30)])
+    nxt_onset = np.r_[onset[1:], False]
+    ok = ~miss & np.isfinite(d) & np.isfinite(vr) & np.isfinite(speed) & (np.arange(len(x)) > 60) & (lab >= 0)
+    X.append(feats[ok]); Xs.append(lab[ok]); yrev.append(nxt_onset[ok]); yspd.append(np.where(fr[ok], np.nan, speed[ok])); worm.append(np.full(ok.sum(), i))
+X, Xs, yrev, yspd, worm = map(np.concatenate, (X, Xs, yrev, yspd, worm))
+rng = np.random.default_rng(0); test_w = set(rng.choice(rows, size=int(0.3 * len(rows)), replace=False))
+te = np.array([w in test_w for w in worm]); tr = ~te
+out = {"animals": int(len(rows)), "seconds": int(len(X)), "reversal_onset_rate": float(yrev.mean())}
+for name, F in (("senses", X), ("senses_and_state", np.column_stack([X, Xs]))):
+    clf = HistGradientBoostingClassifier(max_iter=200).fit(F[tr], yrev[tr])
+    auc = roc_auc_score(yrev[te], clf.predict_proba(F[te])[:, 1])
+    m = np.isfinite(yspd)
+    reg = HistGradientBoostingRegressor(max_iter=200).fit(F[tr & m], yspd[tr & m])
+    r2 = r2_score(yspd[te & m], reg.predict(F[te & m]))
+    out[name] = {"reversal_onset_auc": float(auc), "speed_r2": float(r2)}
+    print(name, json.dumps(out[name]), flush=True)
+# speed from senses excluding the speed history (the history term predicts speed from speed)
+F = X[:, :9]
+m = np.isfinite(yspd)
+reg = HistGradientBoostingRegressor(max_iter=200).fit(F[tr & m], yspd[tr & m])
+out["senses_no_own_history"] = {"speed_r2": float(r2_score(yspd[te & m], reg.predict(F[te & m]))),
+    "reversal_onset_auc": float(roc_auc_score(yrev[te], HistGradientBoostingClassifier(max_iter=200).fit(F[tr], yrev[tr]).predict_proba(F[te])[:, 1]))}
+print("senses_no_own_history", json.dumps(out["senses_no_own_history"]))
+json.dump({"description": __doc__, **out}, open("build/c2-change-b/realworm_predictability.json", "w"), indent=1)

@@ -1,0 +1,4 @@
+tph-1 roaming z at the readouts: {50: -3.7935111666792753, 60: -0.6883032360887672}
+kill rule did not fire: stage 3 continues to its verdict
+
+[exited with code 0]

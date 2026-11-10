@@ -1,0 +1,17 @@
+{
+ "description": "Do real worms' on-lawn reversals differ between dwelling and roaming? (description; band cohorts)\n\nThe primitives give every reversal that starts on food one set of kinematics (Scheer's held-out\ncohorts pooled: 2.05 s at 0.069 mm/s). Here the band cohorts' wild type (PD1074 od2, small lawn) is\nread by state: each reversal bout (the kinematics check's rule) that starts on the lawn (midbody\ninside the boundary) takes the roaming/dwelling label of its 10-s bin; reported per state: bouts\nper on-lawn minute in that state, mean duration, and mean speed (path over the bout's whole\nseconds, as the kinematics check reads it).\n",
+ "dwelling": {
+  "bouts_per_min": 4.365123540559644,
+  "duration_s": 1.990850843264339,
+  "speed_mm_s": 0.05882552949404276,
+  "bouts": 153056,
+  "speed_samples": 133835
+ },
+ "roaming": {
+  "bouts_per_min": 3.9386894485527493,
+  "duration_s": 2.217972406996797,
+  "speed_mm_s": 0.08651130170205623,
+  "bouts": 16236,
+  "speed_samples": 14545
+ }
+}

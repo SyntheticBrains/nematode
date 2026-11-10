@@ -1,0 +1,169 @@
+"""C.2's clean-start curriculum, the readiness pilot for its registered fit (description, discarded).
+
+The clean start reached a responsive worm holding the lawn from the graded box's silent centre
+(B04's stage 1), then stalled at D about 5 when every family was fitted at once, its speed
+distributions far off with the speed noise's timescale at its centre (8.7 s). This pilot starts
+from B04's stage-1 answer with that timescale at 1 s and fits in three stages, on the package's
+procedure options with both guards (the responsiveness guard graded, as in B03 and B04):
+
+- **2a:** all 137 parameters on D_fit's four families (small lawn, uniform well, kinematics,
+  activity), sigma0 0.1, 300 generations. Stop unless the readout D_fit is at most 2.5. The cap
+  was 150 at launch and was raised to 300 at generation 33, a budget change mid-run on this
+  description pilot: its median (9.6 at generation 30) was tracking Logbook 126's no-imitation
+  guarded run (9.8), which reached D_fit 2.15 only at generation 250. The rule is unchanged; the
+  run resumed from its saved state.
+- **2b:** all six families, sigma0 0.05, 150 generations. Stop unless the readout D is at most 2.5
+  with at least four families passing.
+- **3:** the six families plus tph-1's, pdfr-1's and tax-4's lawn differences, the mutants
+  together half the objective, sigma0 0.05, 150 generations. Verdict: the last answer graded with
+  presence on 5 fresh populations passes the wild type in at least 3 and tph-1 and tax-4 each in at
+  least 3.
+
+Every stage at 200 animals a candidate and population 48 on 16 workers, saved every generation and
+resumable; readouts every 10 generations on 200 animals. Seeds: stages on 840, 842 and 844 M
+(200·k + i), CMA 9497-9499, readouts 841 M, the final grade 846,000,000 + 200·g + i. Run from the
+repository root.
+"""
+
+import json
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery_v2 as v2
+import npe_recovery as nr
+import probes as P
+from quantumnematode.connectome import encoder as enc
+
+OUT = Path("build/c2-change-b/curriculum")
+ANIMALS, POPSIZE, WORKERS, EVERY = 200, 48, 16, 10
+READ, GRADE = 841_000_000, 846_000_000
+STAGES = [
+    {"name": "2a", "base": 840_000_000, "cma": 9497, "sigma0": 0.1, "cap": 300, "families": P.FIT_FAMILIES, "mutants": ()},
+    {"name": "2b", "base": 842_000_000, "cma": 9498, "sigma0": 0.05, "cap": 150, "families": None, "mutants": ()},
+    {"name": "3", "base": 844_000_000, "cma": 9499, "sigma0": 0.05, "cap": 150, "families": None, "mutants": ("tph-1", "pdfr-1", "tax-4")},
+]
+P.ANIMALS = ANIMALS
+
+
+def simulate(stage, k, z):
+    st = STAGES[stage]
+    P._OBS["steps"], P._OBS["count"], P._OBS["outputs"] = None, 0, []
+    bands = bg.load_bands_v4()
+    seeds = [st["base"] + ANIMALS * k + i for i in range(ANIMALS)]
+    assays = ("small_lawn", "uniform_lawn") if st["families"] == P.FIT_FAMILIES else None
+    populations, chemotaxis = bg.simulate_v2(p.ARM, P._controller(z), seeds, bands, assays=assays)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=False)
+    share = P._OBS["steps"] / max(P._OBS["count"], 1)
+    out = np.concatenate(P._OBS["outputs"]) if P._OBS["outputs"] else np.zeros((1, 5))
+    spread = np.percentile(out, 95, axis=0) - np.percentile(out, 5, axis=0)
+    record = {
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "D": graded["D"] if assays is None else graded["D_fit"],
+        "saturated": float(np.mean(share > P.SATURATED_SHARE)),
+        "spread": dict(zip(enc.OUTPUTS, map(float, spread))),
+        "mutant_z": {},
+    }
+    if st["mutants"]:
+        clf = bg.classifier(bands)
+        wild = bg.family_values("small_lawn", populations["small_lawn"], clf)
+        for m in st["mutants"]:
+            mutated, _ = bg.simulate_v2(p.ARM, P._controller(z, m), seeds, bands, assays=("small_lawn",))
+            reading = p.mutant_reading(m, wild, bg.family_values("small_lawn", mutated["small_lawn"], clf), bands, ANIMALS)
+            record["mutant_z"][m] = {s: r["z"] for s, r in reading["statistics"].items()}
+    return nr._finite(record)
+
+
+def start():
+    z = list(json.loads(Path("build/c2-change-b/B04.json").read_text())["stages"][0]["answer"])
+    names = [e.name for e in P.entries()]
+    tau = P.entries()[names.index(enc.SPEED_NOISE_ENTRY)]
+    z[names.index(enc.SPEED_NOISE_ENTRY)] = tau.unit(1.0)
+    return z
+
+
+def _wild(item):
+    g, z = item
+    bands = bg.load_bands_v4()
+    populations, chemotaxis = bg.simulate_v2(p.ARM, P._controller(z), p.population_seeds(GRADE, g), bands)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=True)
+    clf = bg.classifier(bands)
+    return g, nr._finite({
+        "wild_type_passes": graded["wild_type_passes"], "D": graded["D"],
+        "fails": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items() if not r["passes"]},
+        "small_lawn": bg.family_values("small_lawn", populations["small_lawn"], clf),
+    })
+
+
+def _mutant(item):
+    g, m, z, wild = item
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    populations, _ = bg.simulate_v2(p.ARM, P._controller(z, m), p.population_seeds(GRADE, g), bands, assays=("small_lawn",))
+    return g, m, bool(p.mutant_reading(m, wild, bg.family_values("small_lawn", populations["small_lawn"], clf), bands, 200)["passes"])
+
+
+def main():
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path, record_path = OUT / "state.pkl", OUT.parent / "curriculum.json"
+    if state_path.exists():
+        saved = pickle.loads(state_path.read_bytes())
+    else:
+        saved = {"stage": 0, "z": start(), "es": None, "history": {}, "readouts": {}, "verdict": None}
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        while saved["stage"] < len(STAGES) and saved["verdict"] is None:
+            si = saved["stage"]; st = STAGES[si]; name = st["name"]
+            if saved["es"] is None:
+                saved["es"] = cma.CMAEvolutionStrategy(saved["z"], st["sigma0"], {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": POPSIZE, "seed": st["cma"], "verbose": -9})
+                saved["history"][name] = {"medians": [], "best": []}
+                saved["readouts"][name] = {0: P.readout(pool, saved["z"], READ)}
+                P._print(name, 0, saved["readouts"][name][0])
+            es, history, readouts = saved["es"], saved["history"][name], saved["readouts"][name]
+            objective = P.Objective(st["families"], st["mutants"], graded=True)
+            while len(history["medians"]) < st["cap"]:
+                g = len(history["medians"]) + 1
+                points = es.ask()
+                records = list(pool.map(simulate, [si] * POPSIZE, [POPSIZE * (g - 1) + m for m in range(POPSIZE)], [list(map(float, x)) for x in points]))
+                scores = [objective(r) for r in records]
+                es.tell(points, scores)
+                history["medians"].append(float(np.median(scores))); history["best"].append(float(np.min(scores)))
+                print(f"{name} gen {g}: median {history['medians'][-1]:.2f} best {history['best'][-1]:.2f} sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+                if g % EVERY == 0:
+                    readouts[g] = P.readout(pool, np.clip(es.result.xfavorite, 0, 1).tolist(), READ)
+                    P._print(name, g, readouts[g])
+                state_path.write_bytes(pickle.dumps(saved))
+            last = readouts[max(readouts)]
+            z = np.clip(es.result.xfavorite, 0, 1).tolist()
+            passing = sum(last["family_passes"].values())
+            if name == "2a":
+                d_fit = last["D_fit"]
+                if d_fit > 2.5:
+                    saved["verdict"] = f"stopped after 2a: D_fit {d_fit:.2f} above 2.5"
+            elif name == "2b" and not (last["D"] <= 2.5 and passing >= 4):
+                saved["verdict"] = f"stopped after 2b: D {last['D']:.2f}, {passing} families"
+            elif name == "3":
+                wilds = dict(pool.map(_wild, [(g, z) for g in range(5)]))
+                for g, m, ok in pool.map(_mutant, [(g, m, z, wilds[g]["small_lawn"]) for g in wilds for m in p.MUTANTS]):
+                    wilds[g].setdefault("mutants", {})[m] = ok
+                wt = sum(bool(w["wild_type_passes"]) for w in wilds.values())
+                mut = {m: sum(w["mutants"][m] for w in wilds.values()) for m in p.MUTANTS}
+                saved["grade"] = {str(g): {k: v for k, v in w.items() if k != "small_lawn"} for g, w in wilds.items()}
+                saved["verdict"] = f"wild type {wt}/5, mutants {mut}: {'passes' if wt >= 3 and mut['tph-1'] >= 3 and mut['tax-4'] >= 3 else 'fails'}"
+            saved["z"], saved["es"], saved["stage"] = z, None, si + 1
+            state_path.write_bytes(pickle.dumps(saved))
+            record_path.write_text(json.dumps(nr._finite({"description": __doc__, **{k: v for k, v in saved.items() if k != "es"}}), indent=1) + "\n")
+    print(f"curriculum done: {saved['verdict']}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

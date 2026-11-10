@@ -1,0 +1,69 @@
+"""The passing answer's per-population pass rate (description; discarded seeds).
+
+The noise-target retry (`hinge2.py`) passed its verdict at the threshold: the wild type in 3 of 5
+populations, every mutant in 5 of 5. Here its answer is graded with presence on 10 fresh
+populations of 200 animals (867,000,000 + 200·g + i; `robustness_check.py [answer.json base out.json]`
+for another answer), every statistic's value and z recorded, and
+every mutant reading's statistics, to estimate its per-population pass rate. Reported per
+statistic: the mean z, its SD between populations, and the share of populations passing.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, probes as P
+
+ANSWER, BASE, OUT = (sys.argv[1:4] + ["build/c2-change-b/hinge2.json", "867000000", "build/c2-change-b/robustness_check.json"][len(sys.argv[1:4]):])
+BASES = [(int(BASE), g) for g in range(10)]
+ZSTAR, MUTANT_BAR = 3.0781, 2.24
+
+
+def wild(item):
+    i, (base, g), z = item
+    bands = bg.load_bands_v4()
+    pops, chem = bg.simulate_v2(p.ARM, P._controller(z), p.population_seeds(base, g), bands)
+    graded = bg.grade_populations_v4(pops, chem, bands, presence=True)
+    return i, nr._finite({
+        "base": base, "g": g, "wild_type_passes": graded["wild_type_passes"], "D": graded["D"],
+        "family_passes": graded["family_passes"],
+        "statistics": {f"{f}/{n}": {"value": r["value"], "z": r["z"]} for f, rs in graded["families"].items() for n, r in rs.items()},
+        "small_lawn": bg.family_values("small_lawn", pops["small_lawn"], bg.classifier(bands)),
+    })
+
+
+def mutant(item):
+    i, (base, g), m, z, wild_values = item
+    bands = bg.load_bands_v4()
+    pops, _ = bg.simulate_v2(p.ARM, P._controller(z, m), p.population_seeds(base, g), bands, assays=("small_lawn",))
+    r = p.mutant_reading(m, wild_values, bg.family_values("small_lawn", pops["small_lawn"], bg.classifier(bands)), bands, 200)
+    return i, m, nr._finite({"passes": bool(r["passes"]), "statistics": {s: {"delta": v["delta"], "z": v["z"]} for s, v in r["statistics"].items()}})
+
+
+if __name__ == "__main__":
+    z = json.loads(open(ANSWER).read())["z"]
+    with ProcessPoolExecutor(max_workers=16, initializer=nr._worker_setup) as pool:
+        pops = dict(pool.map(wild, [(i, b, z) for i, b in enumerate(BASES)]))
+        for i, m, r in pool.map(mutant, [(i, BASES[i], m, z, pops[i]["small_lawn"]) for i in pops for m in p.MUTANTS]):
+            pops[i].setdefault("mutants", {})[m] = r
+    for r in pops.values():
+        r.pop("small_lawn")
+    keys = list(pops[0]["statistics"])
+    summary = {}
+    for k in keys:
+        zs = np.array([pops[i]["statistics"][k]["z"] for i in pops], dtype=float)
+        summary[k] = {"mean_z": float(np.nanmean(zs)), "sd_z": float(np.nanstd(zs, ddof=1)), "pass_share": float(np.mean(np.abs(zs) <= ZSTAR))}
+    for m in p.MUTANTS:
+        for s in pops[0]["mutants"][m]["statistics"]:
+            zs = np.array([pops[i]["mutants"][m]["statistics"][s]["z"] for i in pops], dtype=float)
+            summary[f"{m}/{s}"] = {"mean_z": float(np.nanmean(zs)), "sd_z": float(np.nanstd(zs, ddof=1)), "pass_share": float(np.mean(np.abs(zs) <= MUTANT_BAR))}
+        summary[f"{m}/passes"] = float(np.mean([pops[i]["mutants"][m]["passes"] for i in pops]))
+    out = {"description": __doc__, "wild_type_pass_share": float(np.mean([bool(pops[i]["wild_type_passes"]) for i in pops])),
+           "summary": summary, "populations": pops}
+    out["answer"], out["base"] = ANSWER, int(BASE)
+    json.dump(out, open(OUT, "w"), indent=1)
+    print("wild type passes in", out["wild_type_pass_share"], "of 10", [bool(pops[i]["wild_type_passes"]) for i in sorted(pops)])
+    for k, v in sorted(summary.items(), key=lambda kv: -abs(kv[1]["mean_z"]) if isinstance(kv[1], dict) else 0):
+        if isinstance(v, dict):
+            print(f"{k:45s} mean z {v['mean_z']:+.2f} sd {v['sd_z']:.2f} pass {v['pass_share']:.2f}")
+        else:
+            print(f"{k:45s} passes {v:.2f}")

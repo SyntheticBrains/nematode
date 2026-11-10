@@ -1,0 +1,67 @@
+"""Do on-lawn reversals speed up the fit's dwelling windows? (description; discarded seeds)
+
+The third continuation's answer trades the on-lawn onset rate against the dwelling windows' speed
+(`robustness_check_hinge3.json`: onset passes 9 of 10 populations, the dwelling 90th percentile 6).
+Here the small lawn's 10-s windows are classified as the grader classifies them (`window_inputs`,
+the bands' classifier), for the answer's worms (200 animals, 872,000,000 + i, measured tracks with
+primitive labels) and for the band cohorts' wild type (PD1074 od2; on the lawn where the midbody
+is inside the boundary; reversals by the kinematics check's bout rule). Each on-lawn dwelling
+window is split by whether a reversal falls inside it; reported per split: the share of windows,
+and the window speed's median and 90th percentile (mm/s).
+"""
+import json, sys
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg, c2_encoder_probe as p, primitive_kinematics_check as pk, probes as P
+from quantumnematode.benchmark import grading as g
+from quantumnematode.validation import roaming_dwelling as rd
+from quantumnematode.benchmark.references import load_scheer_tracks
+
+SPAN = g.SAMPLES_PER_WINDOW
+
+
+def summary(speed, reversal):
+    speed, reversal = np.asarray(speed), np.asarray(reversal, dtype=bool)
+    out = {"windows": int(len(speed)), "share_with_reversal": float(reversal.mean())}
+    for name, keep in (("all", np.ones_like(reversal)), ("without_reversal", ~reversal), ("with_reversal", reversal)):
+        s = speed[keep]
+        out[name] = {"median": float(np.median(s)), "p90": float(np.percentile(s, 90))} if len(s) else None
+    return out
+
+
+if __name__ == "__main__":
+    bands = bg.load_bands_v4(); clf = bg.classifier(bands)
+    z = json.loads(open("build/c2-change-b/hinge3.json").read())["z"]
+    pops, _ = bg.simulate_v2(p.ARM, P._controller(z), [872_000_000 + i for i in range(200)], bands, assays=("small_lawn",))
+    sp, rv = [], []
+    for steps in pops["small_lawn"]:
+        w = g.simulated_windows(steps, clf)
+        kinds = [s.primitive for s in steps]
+        for k in np.flatnonzero((w.states == rd.DWELLING) & w.on & np.isfinite(w.speed)):
+            sp.append(w.speed[k]); rv.append(any(kd == "reversal" for kd in kinds[SPAN * k + 1 : SPAN * (k + 1) + 1]))
+    sim = summary(sp, rv)
+    t = load_scheer_tracks()
+    gen = np.array([t.genotypes[k] for k in t.genotype])
+    rows = np.flatnonzero((gen == "PD1074_od2_Data") & (t.side == "bands"))
+    revf = t.flag("reversal")[rows]
+    sp, rv = [], []
+    for j, i in enumerate(rows):
+        x, y = t.x[i].astype(float), t.y[i].astype(float)
+        on = g.real_on_lawn(x, y, t.boundary_radius[i])
+        w = g.animal_windows(x, y, on, clf)
+        frames = np.zeros(revf.shape[1], bool)
+        for a, b in pk.bouts(revf[j], filtered=True):
+            frames[a:b] = True
+        for k in np.flatnonzero((w.states == rd.DWELLING) & w.on & np.isfinite(w.speed)):
+            sp.append(w.speed[k]); rv.append(bool(frames[3 * SPAN * k : 3 * SPAN * (k + 1)].any()))
+    real = summary(sp, rv)
+    band = bg.family_bands_v2(bands, "kinematics", 200)
+    out = {"description": __doc__, "sim": sim, "real": real,
+           "band": {s: {"centre": band[s].centre, "scale": band[s].scale} for s in ("dwelling_speed_median", "dwelling_speed_p90")}}
+    json.dump(out, open("build/c2-change-b/dwelling_windows.json", "w"), indent=1)
+    for name in ("sim", "real"):
+        o = out[name]
+        print(name, "dwelling windows", o["windows"], "with a reversal", round(o["share_with_reversal"], 3))
+        for split in ("all", "without_reversal", "with_reversal"):
+            print(f"   {split:17s} median {o[split]['median']:.4f}  p90 {o[split]['p90']:.4f}")
+    print("band centres: median", round(band["dwelling_speed_median"].centre, 4), "p90", round(band["dwelling_speed_p90"].centre, 4))

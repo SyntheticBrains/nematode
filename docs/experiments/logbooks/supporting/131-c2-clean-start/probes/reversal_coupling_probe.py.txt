@@ -1,0 +1,100 @@
+"""Does a reversal that follows the worm's own speed ease the dwelling windows? (description)
+
+The primitives give every reversal that starts on food one speed (0.069 mm/s, both states pooled),
+while real on-lawn reversals follow the speed just before them (`reversal_coupling_fit.json`:
+v_rev = 0.0474 + 0.576 x v_before, 0.049 to 0.084 mm/s across deciles). Here the evaluator is
+patched in each worker, with no package change: a reversal that starts on food moves at that line
+applied to the mean of the worm's last 3 run seconds, clipped to [0.049, 0.084] (the pooled value
+until 3 run seconds are seen). No draw changes, so each animal's random streams are the unpatched
+run's. The third continuation's answer is graded with presence on the 10 populations of its own
+check (871,000,000 + 200·g + i), every statistic and mutant reading recorded, and set beside that
+unpatched check (`robustness_check_hinge3.json`) animal for animal.
+"""
+import json, sys
+from concurrent.futures import ProcessPoolExecutor
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg, c2_encoder_probe as p, npe_recovery as nr, probes as P
+
+INTERCEPT, SLOPE, LO, HI, POOLED, HISTORY = 0.0474, 0.576, 0.049, 0.084, 0.069, 3
+BASES = [(871_000_000, g) for g in range(10)]
+ZSTAR, MUTANT_BAR = 3.0781, 2.24
+
+
+def patch():
+    from quantumnematode.evaluation import batched as B
+
+    start, move = B.BatchedEvaluator._start_bouts, B.BatchedEvaluator._move
+
+    def _start_bouts(self, idle, on_food, start_p, hazards, total, speed, curvature, displacement, turn):
+        start(self, idle, on_food, start_p, hazards, total, speed, curvature, displacement, turn)
+        new = idle[(self.bout_kind[idle] == B.REVERSAL) & on_food[idle]]
+        if len(new):
+            seen = np.isfinite(self._run_history[new]).all(axis=1)
+            before = np.where(seen, np.nanmean(np.where(np.isfinite(self._run_history[new]), self._run_history[new], 0.0), axis=1), np.nan)
+            v = np.where(seen, np.clip(INTERCEPT + SLOPE * before, LO, HI), POOLED)
+            self.bout_speed[new] = -v
+
+    def _move(self, raw, t):
+        if t == 0:
+            self._run_history = np.full((len(self.seeds), HISTORY), np.nan)
+        before = self.pos.copy()
+        move(self, raw, t)
+        ran = self.last_kind == B.RUN
+        speed = np.hypot(*(self.pos - before).T) / self.step_seconds
+        self._run_history[ran] = np.column_stack([self._run_history[ran, 1:], speed[ran]])
+
+    B.BatchedEvaluator._start_bouts, B.BatchedEvaluator._move = _start_bouts, _move
+
+
+def init():
+    nr._worker_setup()
+    patch()
+
+
+def wild(item):
+    i, (base, g), z = item
+    bands = bg.load_bands_v4()
+    pops, chem = bg.simulate_v2(p.ARM, P._controller(z), p.population_seeds(base, g), bands)
+    graded = bg.grade_populations_v4(pops, chem, bands, presence=True)
+    return i, nr._finite({
+        "wild_type_passes": graded["wild_type_passes"], "D": graded["D"], "family_passes": graded["family_passes"],
+        "statistics": {f"{f}/{n}": {"value": r["value"], "z": r["z"]} for f, rs in graded["families"].items() for n, r in rs.items()},
+        "small_lawn": bg.family_values("small_lawn", pops["small_lawn"], bg.classifier(bands)),
+    })
+
+
+def mutant(item):
+    i, (base, g), m, z, wild_values = item
+    bands = bg.load_bands_v4()
+    pops, _ = bg.simulate_v2(p.ARM, P._controller(z, m), p.population_seeds(base, g), bands, assays=("small_lawn",))
+    r = p.mutant_reading(m, wild_values, bg.family_values("small_lawn", pops["small_lawn"], bg.classifier(bands)), bands, 200)
+    return i, m, nr._finite({"passes": bool(r["passes"]), "statistics": {s: {"delta": v["delta"], "z": v["z"]} for s, v in r["statistics"].items()}})
+
+
+if __name__ == "__main__":
+    z = json.loads(open("build/c2-change-b/hinge3.json").read())["z"]
+    with ProcessPoolExecutor(max_workers=16, initializer=init) as pool:
+        pops = dict(pool.map(wild, [(i, b, z) for i, b in enumerate(BASES)]))
+        for i, m, r in pool.map(mutant, [(i, BASES[i], m, z, pops[i]["small_lawn"]) for i in pops for m in p.MUTANTS]):
+            pops[i].setdefault("mutants", {})[m] = r
+    for r in pops.values():
+        r.pop("small_lawn")
+    base = json.load(open("build/c2-change-b/robustness_check_hinge3.json"))["populations"]
+    keys = list(pops[0]["statistics"])
+    summary = {}
+    for k in keys:
+        zs = np.array([pops[i]["statistics"][k]["z"] for i in pops], dtype=float)
+        z0 = np.array([base[str(i)]["statistics"][k]["z"] for i in pops], dtype=float)
+        summary[k] = {"mean_z": float(np.nanmean(zs)), "unpatched_mean_z": float(np.nanmean(z0)), "paired_shift": float(np.nanmean(zs - z0)),
+                      "pass_share": float(np.mean(np.abs(zs) <= ZSTAR)), "unpatched_pass_share": float(np.mean(np.abs(z0) <= ZSTAR))}
+    for m in p.MUTANTS:
+        summary[f"{m}/passes"] = float(np.mean([pops[i]["mutants"][m]["passes"] for i in pops]))
+    out = {"description": __doc__, "wild_type_pass_share": float(np.mean([bool(pops[i]["wild_type_passes"]) for i in pops])),
+           "unpatched_wild_type_pass_share": float(np.mean([bool(base[str(i)]["wild_type_passes"]) for i in pops])), "summary": summary, "populations": pops}
+    json.dump(out, open("build/c2-change-b/reversal_coupling_probe.json", "w"), indent=1)
+    print("wild type passes:", out["wild_type_pass_share"], "patched vs", out["unpatched_wild_type_pass_share"], "unpatched, of 10;", [bool(pops[i]["wild_type_passes"]) for i in sorted(pops)])
+    for k, v in sorted(summary.items(), key=lambda kv: -abs(kv[1]["mean_z"]) if isinstance(kv[1], dict) else 0)[:9]:
+        print(f"  {k:40s} z {v['unpatched_mean_z']:+.2f} -> {v['mean_z']:+.2f} (paired shift {v['paired_shift']:+.2f}); pass {v['unpatched_pass_share']:.1f} -> {v['pass_share']:.1f}")
+    for m in p.MUTANTS:
+        print(f"  {m} passes {summary[m + '/passes']:.1f}")

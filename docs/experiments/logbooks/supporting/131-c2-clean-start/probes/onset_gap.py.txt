@@ -1,0 +1,56 @@
+"""Is the fit's on-lawn onset gap behaviour or detection? (description; discarded seeds)
+
+On the curriculum's stage-2b answer, 200 animals on Scheer's small lawn (852,000,000 + i): the true
+reversal-bout starts per on-lawn minute from the primitive labels, the detector's onsets on the
+unmeasured positions, and the graded statistic through the measured tracks. On the band cohorts'
+wild type: reversal-bout starts from the flags (the kinematics check's bout rule) and the detector
+on the real positions, both per on-lawn minute (midbody-in-lawn seconds).
+"""
+import json, pickle, sys
+import numpy as np
+sys.path.insert(0, "scripts/analysis"); sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg, c2_encoder_probe as p, probes as P, primitive_kinematics_check as pk
+from quantumnematode.benchmark import grading as g
+from quantumnematode.benchmark.references import load_scheer_tracks
+from quantumnematode.evaluation.batched import BatchedEvaluator, KIND_CODE
+from quantumnematode.utils.config_loader import load_simulation_config
+
+s = pickle.load(open(sys.argv[1], "rb"))
+z = s["z"]
+seeds = [852_000_000 + i for i in range(200)]
+path = p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_scheer_lawn.yml"
+tr = BatchedEvaluator(load_simulation_config(str(path)), P._controller(z)(path), seeds).run()
+a0 = int(tr.assay["analysis_steps"][0])
+prim, on = tr.primitive[:, a0:], tr.on_lawn[:, a0:]
+rev = prim == KIND_CODE["reversal"]
+start = rev[:, 1:] & ~rev[:, :-1]
+on_min = on.sum() / 60.0
+out = {"sim": {
+    "true_reversal_starts_per_on_lawn_min": float((start & on[:, :-1]).sum() / on_min),
+    "omega_starts_per_min": float(((prim[:, 1:] == KIND_CODE["omega"]) & (prim[:, :-1] != KIND_CODE["omega"]) & on[:, :-1]).sum() / on_min),
+    "delta_starts_per_min": float(((prim[:, 1:] == KIND_CODE["delta"]) & (prim[:, :-1] != KIND_CODE["delta"]) & on[:, :-1]).sum() / on_min),
+    "reversal_share_on_lawn": float(rev[on].mean()),
+}}
+det = [g.on_lawn_reversals(tr.x[i, a0:], tr.y[i, a0:], on[i]) for i in range(len(seeds))]
+out["sim"]["detector_unmeasured_per_min"] = 60.0 * sum(d[0] for d in det) / sum(d[1] for d in det)
+bands = bg.load_bands_v4()
+pops, _ = bg.simulate_v2(p.ARM, P._controller(z), seeds, bands, assays=("small_lawn",))
+graded = bg.grade_populations_v4(pops, None, bands, presence=False)
+act = graded["families"]["activity"]
+out["sim"]["graded"] = {k: {"value": r["value"], "z": r["z"]} for k, r in act.items()}
+out["sim"]["recall"] = out["sim"]["detector_unmeasured_per_min"] / out["sim"]["true_reversal_starts_per_on_lawn_min"]
+t = load_scheer_tracks()
+gen = np.array([t.genotypes[k] for k in t.genotype])
+rows = np.flatnonzero((gen == "PD1074_od2_Data") & (t.side == "bands"))
+revf = t.flag("reversal")[rows]; inl = t.flag("midbody_in_lawn")[rows].reshape(len(rows), -1, 3).mean(axis=2) >= 0.5
+starts = secs = dets = dsecs = 0
+for j, i in enumerate(rows):
+    for a, b in pk.bouts(revf[j], filtered=True):
+        if inl[j, a // 3]: starts += 1
+    secs += int(inl[j].sum())
+    k, v = g.on_lawn_reversals(t.x[i], t.y[i], inl[j]); dets += k; dsecs += v
+out["real"] = {"flag_reversal_starts_per_on_lawn_min": 60.0 * starts / secs, "detector_per_min": 60.0 * dets / dsecs,
+               "band_centre": bands["bands"]["200"]["activity"]["onset_rate_per_min"]["centre"]}
+out["real"]["recall"] = out["real"]["detector_per_min"] / out["real"]["flag_reversal_starts_per_on_lawn_min"]
+print(json.dumps(out, indent=1))
+open("build/c2-change-b/onset_gap.json", "w").write(json.dumps({"description": __doc__, **out}, indent=1) + "\n")

@@ -1,0 +1,306 @@
+"""Two probes before C.2's fit is registered (description, discarded seeds).
+
+Both run on the package's procedure options (`c2_encoder_probe.PROCEDURE_SETTINGS`: per-ligand
+tying, the soft-capped readout with pool centres, the graded box with the inhibition floor at 0.09,
+PDFR-1's and SER-5's cited signs, slow speed noise). The guards read the network through
+`ConnectomeTopology.forward_observer`: a candidate with over half its motor neurons at |h| > 0.99
+in over half its steps scores 500 more; one whose speed or reversal output spans less than 0.5
+between its 5th and 95th percentiles over 8 recorded animals scores 300 more. Readouts every 10
+generations on the search's mean, on 200 animals, grade every family and the three Scheer mutants.
+
+**B01, a clean start.** From the graded box's centre, where every sensory gain is 0 and the network
+gets no input.
+- Stage 1 fits the 77 parameters that carry the senses to the outputs (the wiring, sensory, readout
+  and noise blocks and the pool centres), every other at the centre, on D_fit's families (small
+  lawn, uniform well, kinematics, activity), at sigma0 0.2, for 60 generations.
+- Stage 2 fits all 137 from stage 1's answer on all six families, at sigma0 0.1, for 100
+  generations.
+- Both at 64 animals a candidate (the stored 64-animal bands) and population 24.
+- The rules, fixed before the run: stop after stage 1 unless its last readout's outputs are
+  responsive (speed and reversal spread at least 0.5) and the worm is on the small lawn at least
+  0.75 of the time. Stop stage 2 at its generation 100 unless its readout D is below 3. The region is
+  reached if the last readout has D at most 2.5 with at least 3 families passing.
+
+**B03, the clean start again,** as B01 in every rule and budget but the responsiveness guard,
+which is graded: 300 x (1 - spread / 0.5) below the floor, rather than a flat 300. B01 stopped
+after stage 1 with its reversal output pinned at the soft cap, every candidate paying the same 300.
+Seeds: stage 1 on 820 M and stage 2 on 822 M, CMA 9493 and 9494, readouts on 821 M, 16 workers.
+
+**B04, the clean start with a longer stage 1,** as B03 in every rule but stage 1's cap, 150
+generations rather than 60: B03's time on the lawn was still climbing when it stopped. Seeds:
+stage 1 on 830 M and stage 2 on 832 M, CMA 9495 and 9496, readouts on 831 M, 16 workers.
+
+**B02, tax-4 left out.** From Logbook 129's passing answer in the package's encoding, at sigma0
+0.02, the objective's six families plus tph-1's and pdfr-1's lawn differences, the two mutants
+weighted to half the objective, at 64 animals and population 24, for 40 generations. tax-4 is read
+at every readout, never fitted. The answer's own fit included tax-4, so this asks whether tax-4
+stays right once nothing holds it there: a proxy for prediction, not the held-out test itself. The
+rule, fixed before the run: stop at generation 40 if the readout D is more than 0.5 above its start
+or a fitted mutant fails.
+
+Seeds: B01's stage 1 on 810 M and stage 2 on 812 M (64·k + i), CMA 9490 and 9491; B02 on 815 M,
+CMA 9492; readouts on 811 M and 816 M (+ i, 200 animals). Run from the repository root:
+`probes.py B01` and `probes.py B02`, in parallel.
+"""
+
+import json
+import math
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import cma_recovery_v2 as v2
+import npe_recovery as nr
+from quantumnematode.connectome import encoder as enc
+
+OUT = Path("build/c2-change-b")
+ANIMALS, POPSIZE, EVERY = 64, 24, 10
+WORKERS = 16 if sys.argv[1:] in (["B03"], ["B04"]) else 8
+SATURATED, SATURATED_SHARE, SATURATION_PENALTY = 0.99, 0.5, 500.0
+SPREAD_FLOOR, RESPONSIVE_PENALTY, RECORD = 0.5, 300.0, 8
+FIT_FAMILIES = ("small_lawn", "uniform_lawn", "kinematics", "activity")
+STAGE1_BLOCKS = ("wiring", "sensory", "readout", "noise")
+RUNS = {
+    "B01": {"stages": [
+        {"base": 810_000_000, "cma": 9490, "sigma0": 0.2, "cap": 60, "families": FIT_FAMILIES, "subset": True},
+        {"base": 812_000_000, "cma": 9491, "sigma0": 0.1, "cap": 100, "families": None, "subset": False},
+    ], "read": 811_000_000, "fitted_mutants": ()},
+    "B02": {"stages": [
+        {"base": 815_000_000, "cma": 9492, "sigma0": 0.02, "cap": 40, "families": None, "subset": False},
+    ], "read": 816_000_000, "fitted_mutants": ("tph-1", "pdfr-1")},
+    # B01 again with a graded responsiveness guard (after B01 stalled with its reversal output
+    # pinned): 300 x (1 - spread / 0.5) below the floor, so the search has a direction to follow.
+    "B03": {"stages": [
+        {"base": 820_000_000, "cma": 9493, "sigma0": 0.2, "cap": 60, "families": FIT_FAMILIES, "subset": True},
+        {"base": 822_000_000, "cma": 9494, "sigma0": 0.1, "cap": 100, "families": None, "subset": False},
+    ], "read": 821_000_000, "fitted_mutants": (), "graded": True},
+    # B03 again with stage 1 extended to 150 generations: B03's lawn-holding was still climbing
+    # (0.75 of the time at generation 50) when its 60-generation cap stopped it.
+    "B04": {"stages": [
+        {"base": 830_000_000, "cma": 9495, "sigma0": 0.2, "cap": 150, "families": FIT_FAMILIES, "subset": True},
+        {"base": 832_000_000, "cma": 9496, "sigma0": 0.1, "cap": 100, "families": None, "subset": False},
+    ], "read": 831_000_000, "fitted_mutants": (), "graded": True},
+}
+_OBS = {"steps": None, "count": 0, "outputs": []}
+
+
+def _observer(mean, h, topology):
+    motor = h.index_select(-1, topology._motor_flat_indices).abs() > SATURATED
+    motor = motor.reshape(-1, motor.shape[-1])
+    _OBS["steps"] = motor.sum(dim=0).numpy() + (0 if _OBS["steps"] is None else _OBS["steps"])
+    _OBS["count"] += motor.shape[0]
+    _OBS["outputs"].append(mean.reshape(-1, mean.shape[-1])[:RECORD].numpy())
+
+
+def _brain(mutant=None):
+    brain = p.encoded_brain(p.KNOCKOUT_GENES.get(mutant or "", ()), **p.PROCEDURE_SETTINGS)
+    topology = brain.topology
+    topology.forward_observer = lambda mean, h: _observer(mean, h, topology)
+    return brain
+
+
+def _controller(z, mutant=None):
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+
+    brain = _brain(mutant)
+    spec = brain.topology.modulator_spec
+    tax4 = mutant == "tax-4"
+    enc.write_encoder(brain, enc.tax4_vector(spec, z, "per_ligand", **p.PROCEDURE_OPTIONS) if tax4 else z)
+    return lambda _path: BatchedConnectome(brain)
+
+
+def entries():
+    return list(_brain().topology.encoder.entries)
+
+
+def simulate(run, stage, k, z):
+    cfg = RUNS[run]
+    st = cfg["stages"][stage]
+    _OBS["steps"], _OBS["count"], _OBS["outputs"] = None, 0, []
+    bands = bg.load_bands_v4()
+    seeds = [st["base"] + ANIMALS * k + i for i in range(ANIMALS)]
+    assays = ("small_lawn", "uniform_lawn") if st["families"] == FIT_FAMILIES else None
+    populations, chemotaxis = bg.simulate_v2(p.ARM, _controller(z), seeds, bands, assays=assays)
+    graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=False)
+    share = _OBS["steps"] / max(_OBS["count"], 1)
+    out = np.concatenate(_OBS["outputs"]) if _OBS["outputs"] else np.zeros((1, 5))
+    spread = np.percentile(out, 95, axis=0) - np.percentile(out, 5, axis=0)
+    record = {
+        "statistics": {f"{f}/{n}": r["value"] for f, rs in graded["families"].items() for n, r in rs.items()},
+        "D": graded["D"] if assays is None else graded["D_fit"],
+        "saturated": float(np.mean(share > SATURATED_SHARE)),
+        "spread": dict(zip(enc.OUTPUTS, map(float, spread))),
+        "mutant_z": {},
+    }
+    if cfg["fitted_mutants"]:
+        clf = bg.classifier(bands)
+        wild = bg.family_values("small_lawn", populations["small_lawn"], clf)
+        for m in cfg["fitted_mutants"]:
+            mutated, _ = bg.simulate_v2(p.ARM, _controller(z, m), seeds, bands, assays=("small_lawn",))
+            reading = p.mutant_reading(m, wild, bg.family_values("small_lawn", mutated["small_lawn"], clf), bands, ANIMALS)
+            record["mutant_z"][m] = {s: r["z"] for s, r in reading["statistics"].items()}
+    return nr._finite(record)
+
+
+class Objective:
+    def __init__(self, families, mutants, graded=False):
+        bands = bg.load_bands_v4()
+        self.scales = v2.band_scales_v2(bands)
+        names = families or tuple(bands["families"])
+        self.family_map = {f: tuple(bands["families"][f]) for f in names}
+        self.truth = {"statistics": {f"{f}/{s}": float(bg.family_bands_v2(bands, f, p.ANIMALS)[s].centre) for f, st in self.family_map.items() for s in st}}
+        self.mutants = mutants
+        self.graded = graded
+
+    def __call__(self, record):
+        score = v2.ranking_score(self.truth, record, self.scales, self.family_map)
+        if self.mutants:
+            undefined = math.floor(score / 1000.0)
+            dc = score - 1000.0 * undefined
+            terms = []
+            for m in self.mutants:
+                zs = [z for z in record["mutant_z"].get(m, {}).values() if z is not None]
+                terms.append(math.sqrt(np.mean([(10 * math.asinh(z / 10)) ** 2 for z in zs])) if zs else 10.0)
+            nf, w = len(self.family_map), nf_weight(len(self.family_map), len(self.mutants))
+            score = 1000.0 * undefined + math.sqrt((nf * dc**2 + w * sum(t**2 for t in terms)) / (nf + w * len(terms)))
+        if record["saturated"] > SATURATED_SHARE:
+            score += SATURATION_PENALTY
+        least = min(record["spread"]["speed"], record["spread"]["reversal"])
+        if least < SPREAD_FLOOR:
+            score += RESPONSIVE_PENALTY * (1.0 - least / SPREAD_FLOOR if self.graded else 1.0)
+        return score
+
+
+def nf_weight(n_families, n_mutants):
+    """Each mutant's weight, so the mutants together are half the objective."""
+    return n_families / n_mutants
+
+
+def _read_job(item):
+    kind, z, base = item
+    bands = bg.load_bands_v4()
+    seeds = [base + i for i in range(200)]
+    clf = bg.classifier(bands)
+    if kind == "wild":
+        _OBS["outputs"] = []
+        populations, chemotaxis = bg.simulate_v2(p.ARM, _controller(z), seeds, bands)
+        graded = bg.grade_populations_v4(populations, chemotaxis, bands, presence=False)
+        out = np.concatenate(_OBS["outputs"]) if _OBS["outputs"] else np.zeros((1, 5))
+        spread = np.percentile(out, 95, axis=0) - np.percentile(out, 5, axis=0)
+        return kind, nr._finite({
+            "D": graded["D"],
+            "D_fit": graded["D_fit"],
+            "family_passes": {f: all(r["passes"] for r in rs.values()) for f, rs in graded["families"].items()},
+            "fails": {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items() if not r["passes"]},
+            # Every statistic's value and z, passing or not, so a fit's trend can be read per readout.
+            "statistics": {f"{f}/{n}": {"value": r["value"], "z": r["z"]} for f, rs in graded["families"].items() for n, r in rs.items()},
+            "time_on_lawn": graded["families"]["small_lawn"]["time_on_lawn"]["value"],
+            "spread": dict(zip(enc.OUTPUTS, map(float, spread))),
+            "small_lawn": bg.family_values("small_lawn", populations["small_lawn"], clf),
+        })
+    populations, _ = bg.simulate_v2(p.ARM, _controller(z, kind), seeds, bands, assays=("small_lawn",))
+    return kind, bg.family_values("small_lawn", populations["small_lawn"], clf)
+
+
+def readout(pool, z, base):
+    results = dict(pool.map(_read_job, [(k, z, base) for k in ("wild", *p.MUTANTS)]))
+    w, bands = results["wild"], bg.load_bands_v4()
+    mutants = {}
+    for m in p.MUTANTS:
+        r = p.mutant_reading(m, w["small_lawn"], results[m], bands, 200)
+        mutants[m] = {"passes": r["passes"], "delta": r["statistics"]["roaming_fraction"]["delta"], "z": r["statistics"]["roaming_fraction"]["z"],
+                      "statistics": {s: {"delta": v["delta"], "z": v["z"]} for s, v in r["statistics"].items()}}
+    w.pop("small_lawn")
+    return {**w, "mutants": mutants}
+
+
+def _print(tag, g, r):
+    mut = " ".join(f"{m} {v['delta']:+.3f}({'P' if v['passes'] else 'F'})" for m, v in r["mutants"].items())
+    print(f"{tag} readout gen {g}: D {r['D']:.2f} passes {sum(r['family_passes'].values())}/6 on-lawn {r['time_on_lawn']:.2f} "
+          f"spread speed {r['spread']['speed']:.2f} rev {r['spread']['reversal']:.2f} | {mut} | fails {({k: round(v, 2) for k, v in r['fails'].items()})}", flush=True)
+
+
+def start(run):
+    if run in ("B01", "B03", "B04"):
+        return [0.5] * len(entries())
+    probe_z = json.loads(p.PROBE_ANSWER_PATH.read_text())["answer"]
+    return p.package_vector(probe_z, entries()).tolist()
+
+
+def main(run):
+    import cma
+
+    OUT.mkdir(parents=True, exist_ok=True)
+    cfg = RUNS[run]
+    names = entries()
+    z = start(run)
+    record = {"description": __doc__, "run": run, "stages": [], "verdict": None}
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        for si, st in enumerate(cfg["stages"]):
+            idx = [i for i, e in enumerate(names) if e.block in STAGE1_BLOCKS or e.name.startswith("readout.centre.")] if st["subset"] else list(range(len(names)))
+            x0 = [z[i] for i in idx]
+            es = cma.CMAEvolutionStrategy(x0, st["sigma0"], {"CMA_diagonal": True, "bounds": [0.0, 1.0], "popsize": POPSIZE, "seed": st["cma"], "verbose": -9})
+            objective = Objective(st["families"], cfg["fitted_mutants"], cfg.get("graded", False))
+
+            def full(x):
+                out = list(z)
+                for j, i in enumerate(idx):
+                    out[i] = float(x[j])
+                return out
+
+            history = {"medians": [], "best": []}
+            readouts = {0: readout(pool, z, cfg["read"])}
+            _print(f"{run}.{si + 1}", 0, readouts[0])
+            reason = None
+            for g in range(1, st["cap"] + 1):
+                points = es.ask()
+                candidates = [full(x) for x in points]
+                records = list(pool.map(simulate, [run] * POPSIZE, [si] * POPSIZE, [POPSIZE * (g - 1) + m for m in range(POPSIZE)], candidates))
+                scores = [objective(r) for r in records]
+                es.tell(points, scores)
+                history["medians"].append(float(np.median(scores))); history["best"].append(float(np.min(scores)))
+                print(f"{run}.{si + 1} gen {g}: median {history['medians'][-1]:.2f} best {history['best'][-1]:.2f} sigma {es.sigma:.3f} {time.time() - t0:.0f} s", flush=True)
+                if g % EVERY == 0:
+                    mean = full(np.clip(es.result.xfavorite, 0, 1))
+                    readouts[g] = readout(pool, mean, cfg["read"])
+                    _print(f"{run}.{si + 1}", g, readouts[g])
+                    if run == "B02":
+                        r = readouts[g]
+                        broke = r["D"] > readouts[0]["D"] + 0.5 or not all(r["mutants"][m]["passes"] for m in cfg["fitted_mutants"])
+                        if g == st["cap"] and broke:
+                            reason = "the readout D more than 0.5 above its start, or a fitted mutant failing, at generation 40"
+            z = full(np.clip(es.result.xfavorite, 0, 1))
+            last = readouts[max(readouts)]
+            record["stages"].append({**history, "readouts": readouts, "answer": z, "stopped": reason})
+            (OUT / f"{run}.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+            if run in ("B01", "B03", "B04") and si == 0:
+                responsive = min(last["spread"]["speed"], last["spread"]["reversal"]) >= SPREAD_FLOOR
+                if not (responsive and last["time_on_lawn"] >= 0.75):
+                    record["verdict"] = f"stopped after stage 1: responsive {responsive}, on the lawn {last['time_on_lawn']:.2f}"
+                    break
+            if run in ("B01", "B03", "B04") and si == 1:
+                if last["D"] >= 3.0:
+                    record["verdict"] = f"stage 2 not below D 3 at generation 100 (D {last['D']:.2f})"
+                else:
+                    passing = sum(last["family_passes"].values())
+                    reached = last["D"] <= 2.5 and passing >= 3
+                    record["verdict"] = f"region {'reached' if reached else 'not reached'}: D {last['D']:.2f}, {passing} families"
+            if run == "B02":
+                tax4 = last["mutants"]["tax-4"]
+                record["verdict"] = (f"{reason or 'held'}; tax-4 at the end {tax4['delta']:+.3f} ({'passes' if tax4['passes'] else 'fails'}), "
+                                     f"against {readouts[0]['mutants']['tax-4']['delta']:+.3f} at the start")
+    record["wall_hours"] = (time.time() - t0) / 3600
+    (OUT / f"{run}.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"{run} done in {record['wall_hours']:.2f} h: {record['verdict']}", flush=True)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])

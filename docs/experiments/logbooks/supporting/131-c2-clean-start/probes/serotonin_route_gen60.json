@@ -1,0 +1,129 @@
+{
+ "description": "Does serotonin reach C.2's outputs in the stage-3 search? (description; discarded seeds)\n\ntph-1 fails at z about -4.8 through stage 3's first 25 generations (the fit's roaming difference\n+0.02 against real worms' larger one). For three answers (the stage-3 search mean now, the stage-2b\nanswer, and Logbook 129's answer, which passed tph-1 in 5 of 5) 64 wild-type animals run Scheer's\nsmall lawn (853,000,000 + i); every 10th second of the analysis window is re-scored open loop with\nserotonin's pool held at zero, the tph-1 knockout's effect on the same states. Reported: the pool's\nlevel and spread, its couples' strengths, and the outputs' shift (speed in mm/s, the reversal\nhazard in log rate) when it is removed.\n",
+ "serotonin_ligands": [
+  "serotonin"
+ ],
+ "stage3_mean_now": {
+  "pool_mean": 0.013003270141780376,
+  "pool_sd": 0.0020326091907918453,
+  "couples": [
+   {
+    "receptor": "mod-1",
+    "cells": 36,
+    "fixed_sign": -1,
+    "strength": 2.811228036880493
+   },
+   {
+    "receptor": "ser-1",
+    "cells": 22,
+    "fixed_sign": 1,
+    "strength": 2.811228036880493
+   },
+   {
+    "receptor": "ser-4",
+    "cells": 13,
+    "fixed_sign": -1,
+    "strength": 2.811228036880493
+   },
+   {
+    "receptor": "ser-5",
+    "cells": 6,
+    "fixed_sign": 1,
+    "strength": 0.06494037061929703
+   },
+   {
+    "receptor": "ser-7",
+    "cells": 13,
+    "fixed_sign": 1,
+    "strength": 2.811228036880493
+   }
+  ],
+  "speed_mean_mm_s": 0.04112069308757782,
+  "speed_shift_mm_s": -0.0034800968132913113,
+  "speed_shift_abs_mm_s": 0.0034800968132913113,
+  "reversal_log_hazard_shift": 0.06525345891714096,
+  "max_abs_output_shift": 0.21238598227500916
+ },
+ "stage2b_answer": {
+  "pool_mean": 0.004950343631207943,
+  "pool_sd": 0.001637120614759624,
+  "couples": [
+   {
+    "receptor": "mod-1",
+    "cells": 36,
+    "fixed_sign": -1,
+    "strength": 1.9676578044891357
+   },
+   {
+    "receptor": "ser-1",
+    "cells": 22,
+    "fixed_sign": 1,
+    "strength": 1.9676578044891357
+   },
+   {
+    "receptor": "ser-4",
+    "cells": 13,
+    "fixed_sign": -1,
+    "strength": 1.9676578044891357
+   },
+   {
+    "receptor": "ser-5",
+    "cells": 6,
+    "fixed_sign": 1,
+    "strength": 0.03556809201836586
+   },
+   {
+    "receptor": "ser-7",
+    "cells": 13,
+    "fixed_sign": 1,
+    "strength": 1.9676578044891357
+   }
+  ],
+  "speed_mean_mm_s": 0.03732873499393463,
+  "speed_shift_mm_s": -0.0008230601670220494,
+  "speed_shift_abs_mm_s": 0.0008230601670220494,
+  "reversal_log_hazard_shift": 0.02036890760064125,
+  "max_abs_output_shift": 0.06400899589061737
+ },
+ "logbook129_answer": {
+  "pool_mean": 0.02404921129345894,
+  "pool_sd": 0.00943455658853054,
+  "couples": [
+   {
+    "receptor": "mod-1",
+    "cells": 36,
+    "fixed_sign": -1,
+    "strength": 2.9679388999938965
+   },
+   {
+    "receptor": "ser-1",
+    "cells": 22,
+    "fixed_sign": 1,
+    "strength": 2.9679388999938965
+   },
+   {
+    "receptor": "ser-4",
+    "cells": 13,
+    "fixed_sign": -1,
+    "strength": 2.9679388999938965
+   },
+   {
+    "receptor": "ser-5",
+    "cells": 6,
+    "fixed_sign": 1,
+    "strength": 1.4403879642486572
+   },
+   {
+    "receptor": "ser-7",
+    "cells": 13,
+    "fixed_sign": 1,
+    "strength": 2.9679388999938965
+   }
+  ],
+  "speed_mean_mm_s": 0.03257289156317711,
+  "speed_shift_mm_s": 0.001437290688045323,
+  "speed_shift_abs_mm_s": 0.0014372925506904721,
+  "reversal_log_hazard_shift": -0.02420356124639511,
+  "max_abs_output_shift": 0.173456072807312
+ }
+}

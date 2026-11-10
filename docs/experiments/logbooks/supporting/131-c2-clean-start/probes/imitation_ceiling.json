@@ -1,0 +1,23 @@
+{
+ "description": "Do the simulator's senses along real paths predict the real worm's actions? (description)\n\nThe real-worm imitation (`realworm_imitation.py`) learned only the marginals: held-out speed R^2\nabout 0 and reversal-onset AUC about 0.51. Here gradient boosting is fitted on the senses C.2 reads\nalong the same replayed paths (concentration, lateral and dC/dt cues, food contact, the intake\ndrive), alone and with exponential histories at 10, 30 and 60 s, which slow modulators could carry;\nand, as the earlier probe's reference, on geometric senses (in the lawn, distance to the edge,\nradial velocity and their histories). Small lawn, 400 band-cohort animals, 30% held out by animal.\n",
+ "animals": 400,
+ "senses": {
+  "speed_r2": 0.2439322097378842,
+  "onset_auc": 0.5473452499360116
+ },
+ "senses_histories": {
+  "speed_r2": 0.34123254865383046,
+  "onset_auc": 0.5871319909962966
+ },
+ "geometric": {
+  "speed_r2": 0.4000563401435432,
+  "onset_auc": 0.6210345499712044
+ },
+ "sense_sd_on_lawn": {
+  "concentration": 0.006562010385096073,
+  "lateral": 0.5771002769470215,
+  "derivative": 0.014881021343171597,
+  "contact": 0.030572129413485527,
+  "drive": 0.04905029758810997
+ }
+}

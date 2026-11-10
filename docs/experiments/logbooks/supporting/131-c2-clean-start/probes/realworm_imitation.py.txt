@@ -1,0 +1,355 @@
+"""Real-worm imitation as a start for C.2's fit (description; band cohorts; discarded seeds).
+
+C.2 learns its first actions from real worms rather than from C.1, so its start owes nothing to the
+mechanistic model. Scheer & Bargmann 2023's wild-type band-cohort animals (PD1074, od2) on the small
+lawn and in the uniform well are replayed through the simulator:
+
+- **The frame.** Each second's position is placed in the assay's arena. On the small lawn the radius
+  is normalised by the lawn edge at the worm's angle, so the real edge lands on the simulated lawn's
+  rim; in the uniform well the position is scaled into the well (4.9 mm over the farthest real
+  point). The heading is the motion's direction, turned by pi in a reversal and held below 0.02 mm.
+- **The senses.** The evaluator's own sensing, eating and satiety along the path, satiety started
+  where the assay's analysis window opens (1,200 s). A shadow C.2 advances its modulators on those
+  senses and its own settled activity; each second's state is stored with the real action.
+- **The targets.** On a run second (no reversal or omega flag in it or the second before): the run
+  speed's and the curvature's raw values (2v/v_max - 1, and the heading change over omega_max, the
+  curvature only where this and the previous displacement are at least 0.03 mm), scored by the
+  Gaussian density of their atanh under the network's mean and log-SD. On every second after a run
+  second: a reversal onset, an omega onset or neither (a delta turn is not flagged, so it falls in
+  neither); a bout is a run of its per-frame flag after one-frame gaps are merged, kept if it lasts
+  at least two frames, the kinematics check's rule (`primitive_kinematics_check.bouts`), scored by the primitives' start probabilities with the hazard outputs' noise integrated
+  over 16 draws. Seconds with a missing frame, and the first 120 s, are left out.
+- **Training.** Adam (lr 0.01, batches of 4,096, the two assays weighted equally) on the encoder's
+  learnable tensors from the box centre jittered by 0.01 (the speed noise's timescale at 1 s, as
+  the curriculum pilot sets it, and held), three rounds of 10 epochs, the shadow
+  re-rolled before each round with the trained network, the vector projected onto the box every 20
+  steps. 20% of animals are held out to score the fit (speed R^2, reversal-onset AUC), beside the
+  boosting probe's ceiling from geometric senses (`realworm_predictability.json`: speed R^2 0.64,
+  AUC 0.59).
+- **Closed loop.** The answer is graded on 200 animals (every family and the three mutants) on
+  851,000,000 + i, on 4 workers beside the curriculum pilot.
+
+Run from the repository root: `realworm_imitation.py [smoke]`.
+"""
+
+import json
+import math
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-change-b")
+import benchmark_grade as bg
+import c2_encoder_probe as p
+import npe_recovery as nr
+import primitive_kinematics_check as pk
+import probes as P
+from quantumnematode.benchmark.references import load_scheer_tracks
+from quantumnematode.brain.arch._policy import clamp_continuous_log_std
+from quantumnematode.connectome import encoder as enc
+from quantumnematode.env.primitives import load_kinematics
+
+OUT = Path("build/c2-change-b/imitation")
+ASSAYS = {"scheer_lawn": "PD1074_od2_Data", "uniform_lawn_scheer": "PD1074_od2_uniformlawn_Data"}
+REPLAY_BASE, READ_BASE = 850_000_000, 851_000_000
+ANALYSIS_FROM_S, SKIP_S = 1200, 120
+HEADING_FLOOR, CURVATURE_FLOOR, RAW_CLIP = 0.02, 0.03, 0.98
+LR, BATCH, EPOCHS, ROUNDS, PROJECT_EVERY, DRAWS, JITTER = 0.01, 4096, 10, 3, 20, 16, 0.01
+HELD_OUT, THREADS, READ_WORKERS = 0.2, 4, 4
+SMOKE = sys.argv[1:] == ["smoke"]
+if SMOKE:
+    OUT = Path("build/c2-change-b/imitation_smoke")
+    EPOCHS, ROUNDS = 1, 1
+
+
+def _per_second(flags):
+    return flags.reshape(flags.shape[0], -1, 3).any(axis=2)
+
+
+def _bout_seconds(flags):
+    """Return each second's in-bout and bout-start flags, bouts by the kinematics check's rule."""
+    n, seconds = flags.shape[0], flags.shape[1] // 3
+    inside, onset = np.zeros((n, seconds), bool), np.zeros((n, seconds), bool)
+    for i in range(n):
+        for a, b in pk.bouts(flags[i], filtered=True):
+            inside[i, a // 3 : (b - 1) // 3 + 1] = True
+            onset[i, a // 3] = True
+    return inside, onset
+
+
+def tracks(assay):
+    """Return one assay's animals: arena-frame offsets, real motion, heading and the targets."""
+    t = load_scheer_tracks()
+    genotypes = np.array([t.genotypes[k] for k in t.genotype])
+    rows = np.flatnonzero((genotypes == ASSAYS[assay]) & (t.side == "bands"))
+    (rev, rev_on), (om, om_on) = _bout_seconds(t.flag("reversal")[rows]), _bout_seconds(t.flag("omega")[rows])
+    miss = _per_second(t.flag("missing")[rows])
+    x, y = t.x[rows].astype(np.float64), t.y[rows].astype(np.float64)
+    finite = np.isfinite(x) & np.isfinite(y)
+    keep = finite.mean(axis=1) >= 0.9
+    rows, x, y, finite, miss = rows[keep], x[keep], y[keep], finite[keep], miss[keep]
+    rev, rev_on, om, om_on = rev[keep], rev_on[keep], om[keep], om_on[keep]
+    steps = np.arange(x.shape[1])
+    for i in range(len(rows)):
+        x[i] = np.interp(steps, steps[finite[i]], x[i, finite[i]])
+        y[i] = np.interp(steps, steps[finite[i]], y[i, finite[i]])
+    bad = ~finite | miss
+    r, theta = np.hypot(x, y), np.arctan2(y, x)
+    if assay == "scheer_lawn":
+        angles = np.linspace(0.0, 2 * np.pi, t.boundary_radius.shape[1], endpoint=False)
+        edge = np.stack([np.interp(np.mod(theta[i], 2 * np.pi), angles, t.boundary_radius[rows[i]], period=2 * np.pi) for i in range(len(rows))])
+        unit = np.stack([r / edge * np.cos(theta), r / edge * np.sin(theta)], axis=-1)
+        frame = {"unit": unit}
+    else:
+        frame = {"scaled": np.stack([x, y], axis=-1) * (4.9 / float(r.max()))}
+    # The motion from each second to the next, in real millimetres.
+    mx, my = np.diff(x, axis=1), np.diff(y, axis=1)
+    step = np.hypot(mx, my)
+    direction = np.arctan2(my, mx)
+    n, T = x.shape
+    body = np.zeros((n, T - 1))
+    held = np.zeros(n)
+    for s in range(T - 1):
+        fresh = step[:, s] >= HEADING_FLOOR
+        body[:, s] = np.where(fresh, direction[:, s] + np.pi * rev[:, s], held)
+        held = body[:, s]
+    heading = np.concatenate([body[:, :1], body[:, :-1]], axis=1)  # before each second's move
+    k = load_kinematics()
+    good = ~bad[:, :-1] & ~bad[:, 1:]
+    good[:, :SKIP_S] = False
+    before_run = np.concatenate([np.zeros((n, 1), bool), ~rev[:, :-2] & ~om[:, :-2]], axis=1)
+    run = good & before_run & ~rev[:, :-1] & ~om[:, :-1]
+    speed_raw = np.clip(2.0 * step / k.v_max_mm_per_s - 1.0, -RAW_CLIP, RAW_CLIP)
+    turn = (direction - heading + np.pi) % (2 * np.pi) - np.pi
+    prev_step = np.concatenate([np.zeros((n, 1)), step[:, :-1]], axis=1)
+    curved = run & (step >= CURVATURE_FLOOR) & (prev_step >= CURVATURE_FLOOR)
+    curvature_raw = np.clip(turn / (k.omega_max_rad_per_s * 1.0), -RAW_CLIP, RAW_CLIP)
+    eligible = good & before_run
+    event = np.where(rev_on[:, :-1], 1, np.where(om_on[:, :-1], 2, 0))
+    event = np.where(eligible, event, -1)
+    return {
+        "rows": rows, **frame, "heading": heading,
+        "speed": np.where(run, np.arctanh(speed_raw), np.nan).astype(np.float32),
+        "curvature": np.where(curved, np.arctanh(curvature_raw), np.nan).astype(np.float32),
+        "speed_mm": np.where(run, np.minimum(step, k.v_max_mm_per_s), np.nan).astype(np.float32),
+        "event": event.astype(np.int8),
+    }
+
+
+def replay(brain, assay, data):
+    """Return each animal's per-second states along its real path, the shadow driving modulators."""
+    from quantumnematode.evaluation.batched import BatchedEvaluator
+    from quantumnematode.evaluation.controllers import BatchedConnectome
+    from quantumnematode.utils.config_loader import load_simulation_config
+
+    config = load_simulation_config(str(p.FORAGING / f"{bg.ARMS[p.ARM]}_assay_{assay}.yml"))
+    n, T = data["heading"].shape
+    shadow = BatchedConnectome(brain)
+    ev = BatchedEvaluator(config, shadow, [REPLAY_BASE + i for i in range(n)])
+    ev._build_animals()
+    shadow.reset(n)
+    grid = ev.grid
+    offsets = data["unit"] * grid.radius if "unit" in data else data["scaled"]
+    ev.satiety = np.maximum(0.0, ev.satiety - ev.decay * ANALYSIS_FROM_S)
+    states = None
+    on_lawn = np.zeros((n, T), bool)
+    for t in range(T):
+        ev.pos = grid.centre[None, :] + offsets[:, t]
+        ev.heading = data["heading"][:, t].copy()
+        senses = ev._sense(t)
+        state = shadow.state(senses)
+        if states is None:
+            states = np.zeros((n, T, state.shape[1]), dtype=np.float32)
+        states[:, t] = state
+        on_lawn[:, t] = ev._sensed_on_lawn
+        shadow.act(senses, None)
+        ev._eat()
+        ev.satiety = np.maximum(0.0, ev.satiety - ev.decay)
+    return states, on_lawn
+
+
+class Data:
+    """Flattened samples with their targets, split by animal into training and held-out sets."""
+
+    def __init__(self, per_assay):
+        parts = {"train": [], "test": []}
+        rng = np.random.default_rng(0)
+        for a, (states, d) in enumerate(per_assay):
+            n = states.shape[0]
+            test = np.zeros(n, bool)
+            test[rng.choice(n, size=int(HELD_OUT * n), replace=False)] = True
+            for split, mask in (("train", ~test), ("test", test)):
+                flat = {key: d[key][mask].reshape(-1) for key in ("speed", "curvature", "speed_mm", "event")}
+                used = (flat["event"] >= 0) | np.isfinite(flat["speed"])
+                parts[split].append({
+                    "state": states[mask].reshape(-1, states.shape[2])[used], **{key: v[used] for key, v in flat.items()},
+                    "assay": np.full(int(used.sum()), a, np.int8),
+                })
+        for split, items in parts.items():
+            joined = {key: np.concatenate([it[key] for it in items]) for key in items[0]}
+            counts = np.bincount(joined["assay"], minlength=len(per_assay)).astype(np.float64)
+            joined["weight"] = (1.0 / counts[joined["assay"]] * len(joined["assay"]) / len(per_assay)).astype(np.float32)
+            setattr(self, split, {key: torch.from_numpy(v) for key, v in joined.items()})
+
+
+def _terms(brain, batch, generator):
+    """Return each sample's negative log-likelihood terms and the predicted onset probabilities."""
+    topo = brain.topology
+    nf = topo.n_food_features
+    st = batch["state"]
+    mean, _ = topo.forward_with_hidden_batched(st[:, :nf], modulators=brain._unpack_modulators(st))
+    log_std = clamp_continuous_log_std(topo.log_std)
+    std = torch.exp(log_std)
+    half_log_2pi = 0.5 * math.log(2 * math.pi)
+
+    def gaussian(target, j):
+        ok = torch.isfinite(target)
+        z = (torch.nan_to_num(target) - mean[:, j]) / std[j]
+        return torch.where(ok, 0.5 * z**2 + log_std[j] + half_log_2pi, torch.zeros_like(z)), ok
+
+    speed, speed_ok = gaussian(batch["speed"], 0)
+    curvature, curvature_ok = gaussian(batch["curvature"], 1)
+    k = load_kinematics()
+    log_low = math.log(k.hazard_min_per_s)
+    log_span = math.log(k.hazard_max_per_s) - log_low
+    eps = torch.randn((DRAWS, *mean[:, 2:].shape), generator=generator)
+    x = torch.tanh(mean[None, :, 2:] + std[None, None, 2:] * eps)
+    h = torch.exp(log_low + (x + 1.0) / 2.0 * log_span)
+    total = h.sum(-1)
+    start = 1.0 - torch.exp(-total)
+    p_rev = (start * h[..., 0] / total).mean(0)
+    p_om = (start * h[..., 1] / total).mean(0)
+    probs = torch.stack([1.0 - p_rev - p_om, p_rev, p_om], dim=1).clamp_min(1e-9)
+    ev = batch["event"].long()
+    event_ok = ev >= 0
+    chosen = probs.gather(1, ev.clamp_min(0)[:, None])[:, 0]
+    event = torch.where(event_ok, -torch.log(chosen), torch.zeros_like(chosen))
+    mean_speed = (k.v_max_mm_per_s * (torch.tanh(mean[None, :, 0] + std[0] * eps[..., 0]) + 1.0) / 2.0).mean(0)
+    return {"speed": (speed, speed_ok), "curvature": (curvature, curvature_ok), "event": (event, event_ok)}, p_rev, mean_speed
+
+
+def project(brain):
+    u = np.clip(enc.read_encoder(brain), 0.0, 1.0)
+    enc.write_encoder(brain, u)
+
+
+def train(brain, data, log):
+    params = brain.topology.learnable_parameters
+    opt = torch.optim.Adam(params, lr=LR)
+    tr = data.train
+    n = len(tr["state"])
+    gen = torch.Generator().manual_seed(len(log))
+    steps = 0
+    for epoch in range(EPOCHS):
+        order = torch.randperm(n, generator=torch.Generator().manual_seed(1000 * len(log) + epoch))
+        sums = {"speed": 0.0, "curvature": 0.0, "event": 0.0}
+        for start in range(0, n, BATCH):
+            idx = order[start : start + BATCH]
+            batch = {key: v[idx] for key, v in tr.items()}
+            terms, _, _ = _terms(brain, batch, gen)
+            w = batch["weight"]
+            loss = sum((w * v).sum() / (w * ok).sum().clamp_min(1.0) for v, ok in terms.values())
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            steps += 1
+            if steps % PROJECT_EVERY == 0:
+                project(brain)
+            for key, (v, ok) in terms.items():
+                sums[key] += ((w * v).sum() / (w * ok).sum().clamp_min(1.0)).item()
+        project(brain)
+        batches = math.ceil(n / BATCH)
+        entry = {"epoch": len(log), **{key: s / batches for key, s in sums.items()}, **score(brain, data.test)}
+        log.append(entry)
+        print("  epoch", json.dumps({key: round(v, 4) if isinstance(v, float) else v for key, v in entry.items()}), flush=True)
+
+
+def score(brain, test):
+    """Held-out fit: each term's mean NLL, speed R^2 per assay, reversal-onset AUC per assay."""
+    from sklearn.metrics import roc_auc_score
+
+    gen = torch.Generator().manual_seed(7)
+    out, parts = {}, []
+    with torch.no_grad():
+        for start in range(0, len(test["state"]), 16_384):
+            batch = {key: v[start : start + 16_384] for key, v in test.items()}
+            terms, p_rev, mean_speed = _terms(brain, batch, gen)
+            parts.append((terms, p_rev, mean_speed))
+    for key in ("speed", "curvature", "event"):
+        v = torch.cat([t[key][0] for t, _, _ in parts]); ok = torch.cat([t[key][1] for t, _, _ in parts])
+        out[f"test_{key}"] = float(v[ok].mean())
+    p_rev = torch.cat([pr for _, pr, _ in parts]).numpy(); speed = torch.cat([ms for _, _, ms in parts]).numpy()
+    for a, name in enumerate(("lawn", "well")):
+        on = test["assay"].numpy() == a
+        real = test["speed_mm"].numpy()
+        m = on & np.isfinite(real)
+        out[f"speed_r2_{name}"] = float(1 - np.mean((speed[m] - real[m]) ** 2) / np.var(real[m])) if m.any() else None
+        e = test["event"].numpy()
+        m = on & (e >= 0)
+        out[f"onset_auc_{name}"] = float(roc_auc_score(e[m] == 1, p_rev[m])) if m.any() and (e[m] == 1).any() else None
+    return out
+
+
+def main():
+    torch.set_num_threads(THREADS)
+    OUT.mkdir(parents=True, exist_ok=True)
+    t0 = time.time()
+    record = {"description": __doc__}
+    brain = p.encoded_brain((), **p.PROCEDURE_SETTINGS)
+    brain.topology.forward_observer = None
+    low, high = np.asarray(brain._action_low), np.asarray(brain._action_high)
+    assert np.allclose(low, -1.0) and np.allclose(high, 1.0), (low, high)
+    n_entries = len(brain.topology.encoder.entries)
+    rng = np.random.default_rng(0)
+    z0 = np.clip(0.5 + JITTER * rng.standard_normal(n_entries), 0.0, 1.0)
+    names = [e.name for e in brain.topology.encoder.entries]
+    tau = brain.topology.encoder.entries[names.index(enc.SPEED_NOISE_ENTRY)]
+    z0[names.index(enc.SPEED_NOISE_ENTRY)] = tau.unit(1.0)
+    enc.write_encoder(brain, z0)
+    per = {}
+    for assay in ASSAYS:
+        d = tracks(assay)
+        if SMOKE:
+            d = {key: (v[:24] if isinstance(v, np.ndarray) and v.ndim >= 1 and len(v) == len(d["rows"]) else v) for key, v in d.items()}
+        per[assay] = d
+        print(assay, "animals", len(d["rows"]), "run seconds", int(np.isfinite(d["speed"]).sum()),
+              "eligible", int((d["event"] >= 0).sum()), "reversal onsets", int((d["event"] == 1).sum()),
+              "omega onsets", int((d["event"] == 2).sum()), f"{time.time() - t0:.0f} s", flush=True)
+    record["animals"] = {a: int(len(d["rows"])) for a, d in per.items()}
+    log = []
+    for round_ in range(ROUNDS):
+        replays = []
+        for assay, d in per.items():
+            states, on_lawn = replay(brain, assay, d)
+            replays.append((states, d))
+            if round_ == 0:
+                record.setdefault("replay_on_lawn", {})[assay] = float(on_lawn.mean())
+            print(f"round {round_} replayed {assay}: {states.shape} on-lawn {on_lawn.mean():.3f} {time.time() - t0:.0f} s", flush=True)
+        data = Data(replays)
+        del replays
+        if round_ == 0:
+            record["start_fit"] = score(brain, data.test)
+            print("  start", json.dumps(record["start_fit"]), flush=True)
+        train(brain, data, log)
+        del data
+    record["training"] = log
+    z = np.clip(enc.read_encoder(brain), 0.0, 1.0).tolist()
+    (OUT / "answer.json").write_text(json.dumps({"z": z}))
+    record["imitation_seconds"] = time.time() - t0
+    record["log_std"] = brain.topology.log_std.detach().numpy().tolist()
+    print(f"imitation done in {record['imitation_seconds']:.0f} s; grading closed loop", flush=True)
+    with ProcessPoolExecutor(max_workers=READ_WORKERS, initializer=nr._worker_setup) as pool:
+        record["closed_loop"] = P.readout(pool, z, READ_BASE)
+    P._print("imitation", 0, record["closed_loop"])
+    record["answer"] = z
+    record["wall_hours"] = (time.time() - t0) / 3600
+    (OUT.parent / ("imitation_smoke.json" if SMOKE else "imitation.json")).write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+
+
+if __name__ == "__main__":
+    main()

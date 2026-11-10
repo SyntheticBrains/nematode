@@ -1,0 +1,32 @@
+"""How much signal does each penalty give the search against each statistic's own noise? (description)
+
+Each candidate is scored on one population of 200 animals, so a penalty on a noisy statistic adds
+chance to its ranking. On the measured noise between populations (each statistic's mean and SD at
+the second continuation's answer, `robustness_check.json`, and a moved onset rate at -2.70), the
+per-candidate mean and SD of three penalties, by simulation (100,000 draws, seed 0):
+
+- the quadratic hinge, 5 x max(0, |z| - target)^2, the second continuation's targets;
+- the planned steeper hinge, 5 x (e + e^2), targets 0.5 or more inside the bars;
+- the failure probability, 10 x Phi((|z| - 3.0781) / SD).
+"""
+import json
+import numpy as np
+from scipy.stats import norm
+
+rng = np.random.default_rng(0)
+BAR = 3.0781
+CASES = {  # mean z, SD, the steeper hinge's target, the quadratic hinge's target
+    "pre_exit_enrichment": (0.36, 1.39, 0.78, 1.15),
+    "roaming_bout_s": (2.23, 0.46, 2.32, 2.47),
+    "onset_rate_per_min": (-3.08, 0.15, 2.58, 2.91),
+    "onset_rate_per_min at -2.70": (-2.70, 0.15, 2.58, 2.91),
+    "dwelling_speed_p90": (2.77, 0.21, 2.58, 2.79),
+}
+out = {"description": __doc__, "cases": {}}
+for name, (m, sd, t_steep, t_quad) in CASES.items():
+    z = rng.normal(m, sd, 100_000)
+    e_steep, e_quad = np.maximum(0, np.abs(z) - t_steep), np.maximum(0, np.abs(z) - t_quad)
+    rows = {"quadratic": 5 * e_quad**2, "steeper": 5 * (e_steep + e_steep**2), "failure_probability": 10 * norm.cdf((np.abs(z) - BAR) / sd)}
+    out["cases"][name] = {"mean_z": m, "sd": sd, **{k: {"mean": float(v.mean()), "sd": float(v.std())} for k, v in rows.items()}}
+    print(f"{name:28s}", "  ".join(f"{k} {v.mean():.2f} ± {v.std():.2f}" for k, v in rows.items()))
+json.dump(out, open("build/c2-change-b/penalty_noise.json", "w"), indent=1)

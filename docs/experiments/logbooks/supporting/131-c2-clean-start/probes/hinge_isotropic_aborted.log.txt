@@ -1,0 +1,4 @@
+hinge readout gen 0: D 1.55 passes 4/6 on-lawn 0.98 spread speed 1.79 rev 0.93 | tph-1 +0.239(P) pdfr-1 -0.004(P) tax-4 -0.119(P) | fails {'small_lawn/pre_exit_enrichment': -3.24, 'activity/onset_rate_per_min': -3.61}
+hinge gen 1: median 417.24 best 12.81 (hinge 11.18) sigma 0.028 309 s
+hinge gen 2: median 709.41 best 21.45 (hinge 19.71) sigma 0.027 612 s
+hinge gen 3: median 216.14 best 7.40 (hinge 6.01) sigma 0.026 947 s

@@ -1,0 +1,431 @@
+{
+ "description": "Two probes before C.2's fit is registered (description, discarded seeds).\n\nBoth run on the package's procedure options (`c2_encoder_probe.PROCEDURE_SETTINGS`: per-ligand\ntying, the soft-capped readout with pool centres, the graded box with the inhibition floor at 0.09,\nPDFR-1's and SER-5's cited signs, slow speed noise). The guards read the network through\n`ConnectomeTopology.forward_observer`: a candidate with over half its motor neurons at |h| > 0.99\nin over half its steps scores 500 more; one whose speed or reversal output spans less than 0.5\nbetween its 5th and 95th percentiles over 8 recorded animals scores 300 more. Readouts every 10\ngenerations on the search's mean, on 200 animals, grade every family and the three Scheer mutants.\n\n**B01, a clean start.** From the graded box's centre, where every sensory gain is 0 and the network\ngets no input.\n- Stage 1 fits the 77 parameters that carry the senses to the outputs (the wiring, sensory, readout\n  and noise blocks and the pool centres), every other at the centre, on D_fit's families (small\n  lawn, uniform well, kinematics, activity), at sigma0 0.2, for 60 generations.\n- Stage 2 fits all 137 from stage 1's answer on all six families, at sigma0 0.1, for 100\n  generations.\n- Both at 64 animals a candidate (the stored 64-animal bands) and population 24.\n- The rules, fixed before the run: stop after stage 1 unless its last readout's outputs are\n  responsive (speed and reversal spread at least 0.5) and the worm is on the small lawn at least\n  0.75 of the time. Stop stage 2 at its generation 100 unless its readout D is below 3. The region is\n  reached if the last readout has D at most 2.5 with at least 3 families passing.\n\n**B02, tax-4 left out.** From Logbook 129's passing answer in the package's encoding, at sigma0\n0.02, the objective's six families plus tph-1's and pdfr-1's lawn differences, the two mutants\nweighted to half the objective, at 64 animals and population 24, for 40 generations. tax-4 is read\nat every readout, never fitted. The answer's own fit included tax-4, so this asks whether tax-4\nstays right once nothing holds it there: a proxy for prediction, not the held-out test itself. The\nrule, fixed before the run: stop at generation 40 if the readout D is more than 0.5 above its start\nor a fitted mutant fails.\n\nSeeds: B01's stage 1 on 810 M and stage 2 on 812 M (64\u00b7k + i), CMA 9490 and 9491; B02 on 815 M,\nCMA 9492; readouts on 811 M and 816 M (+ i, 200 animals). Run from the repository root:\n`probes.py B01` and `probes.py B02`, in parallel.\n",
+ "run": "B02",
+ "stages": [
+  {
+   "medians": [
+    1.5217957151316828,
+    1.479153287719742,
+    1.415896010695195,
+    1.4455596174838703,
+    1.4853394510274311,
+    1.5024018644828567,
+    1.4527350287822673,
+    1.479477985451942,
+    1.4658373662571091,
+    1.4362078552264257,
+    1.4375473833306707,
+    1.4270744705422636,
+    1.4161685643790485,
+    1.4277168812550627,
+    1.4755256097991776,
+    1.4265887429719704,
+    1.3784481151757562,
+    1.4001902909608583,
+    1.4363318767594468,
+    1.3843911462654195,
+    1.3516873191311363,
+    1.4252597672599157,
+    1.4004923781994034,
+    1.372649909382853,
+    1.3671149783659868,
+    1.332958723082219,
+    1.3377178843856932,
+    1.314778393723249,
+    1.3381832058433125,
+    1.379237991259381,
+    1.3757005603559913,
+    1.2765595959724676,
+    1.348565112120482,
+    1.4060538254710144,
+    1.3583071471071295,
+    1.3589813138883593,
+    1.2799701547246134,
+    1.3418122789550582,
+    1.2693640762692615,
+    1.3427537885828906
+   ],
+   "best": [
+    1.3035871072618286,
+    1.2360144766130492,
+    1.186416704021875,
+    1.2508645571603751,
+    1.241992062009896,
+    1.2824088232925956,
+    1.1604634018267292,
+    1.2342950769131606,
+    1.2225736826054432,
+    1.2462777302306014,
+    1.1413646529918995,
+    1.1830162618415911,
+    1.1284713338997199,
+    1.2196682495236835,
+    1.147415776111349,
+    1.172379896545432,
+    1.181053680050476,
+    1.1983757441164742,
+    1.1602969547066395,
+    1.1750401509644464,
+    1.2278450916317296,
+    1.213839928673719,
+    1.1061983193885656,
+    1.1312592458866808,
+    1.2039142006775283,
+    1.1254574954049932,
+    1.127212062135189,
+    1.116258229917202,
+    1.1658290137991225,
+    1.15750026782785,
+    1.152100232308442,
+    1.121215176310093,
+    1.121834732655183,
+    1.1290010576280398,
+    1.1574051457700796,
+    1.0827659731679715,
+    1.1200195611066195,
+    1.1738701534232365,
+    1.1496420682285298,
+    1.107002221986802
+   ],
+   "readouts": {
+    "0": {
+     "D": 1.6757435906389766,
+     "family_passes": {
+      "small_lawn": true,
+      "kinematics": false,
+      "activity": true,
+      "uniform_lawn": true,
+      "local_search": true,
+      "chemotaxis": true
+     },
+     "fails": {
+      "kinematics/roaming_survival_5min": -3.115679136329055
+     },
+     "time_on_lawn": 0.9716245644599303,
+     "spread": {
+      "speed": 2.218351364135742,
+      "curvature": 0.198286771774292,
+      "reversal": 2.6456799507141113,
+      "omega": 0.49707627296447754,
+      "delta": 1.343177080154419
+     },
+     "mutants": {
+      "tph-1": {
+       "passes": true,
+       "delta": 0.239430315835682,
+       "z": -0.6064991143902985
+      },
+      "pdfr-1": {
+       "passes": true,
+       "delta": -0.05109404354279354,
+       "z": 0.040296588956342624
+      },
+      "tax-4": {
+       "passes": true,
+       "delta": -0.03355718318075404,
+       "z": 1.8505425695363054
+      }
+     }
+    },
+    "10": {
+     "D": 1.6683882157759562,
+     "family_passes": {
+      "small_lawn": true,
+      "kinematics": true,
+      "activity": true,
+      "uniform_lawn": true,
+      "local_search": true,
+      "chemotaxis": true
+     },
+     "fails": {},
+     "time_on_lawn": 0.9782818957179285,
+     "spread": {
+      "speed": 2.0530829429626465,
+      "curvature": 0.12932252883911133,
+      "reversal": 2.5456290245056152,
+      "omega": 0.4593724012374878,
+      "delta": 1.1946468353271484
+     },
+     "mutants": {
+      "tph-1": {
+       "passes": true,
+       "delta": 0.2203652415399453,
+       "z": -0.9787447985409661
+      },
+      "pdfr-1": {
+       "passes": true,
+       "delta": -0.05757364210771415,
+       "z": -0.10406080437241386
+      },
+      "tax-4": {
+       "passes": true,
+       "delta": -0.018222538268829053,
+       "z": 2.1945044448951574
+      }
+     }
+    },
+    "20": {
+     "D": 1.6185627310324946,
+     "family_passes": {
+      "small_lawn": true,
+      "kinematics": false,
+      "activity": true,
+      "uniform_lawn": true,
+      "local_search": true,
+      "chemotaxis": true
+     },
+     "fails": {
+      "kinematics/roaming_speed_p90": -3.219744619786843
+     },
+     "time_on_lawn": 0.9888879186132821,
+     "spread": {
+      "speed": 1.998641848564148,
+      "curvature": 0.17891550064086914,
+      "reversal": 2.422710418701172,
+      "omega": 0.4099907875061035,
+      "delta": 1.0139200687408447
+     },
+     "mutants": {
+      "tph-1": {
+       "passes": true,
+       "delta": 0.2468600723074202,
+       "z": -0.4614330769863167
+      },
+      "pdfr-1": {
+       "passes": true,
+       "delta": -0.06958619771452806,
+       "z": -0.3716855958223825
+      },
+      "tax-4": {
+       "passes": true,
+       "delta": -0.048681401827001924,
+       "z": 1.5113006347683682
+      }
+     }
+    },
+    "30": {
+     "D": 1.5110661831953907,
+     "family_passes": {
+      "small_lawn": false,
+      "kinematics": false,
+      "activity": true,
+      "uniform_lawn": true,
+      "local_search": true,
+      "chemotaxis": true
+     },
+     "fails": {
+      "small_lawn/roaming_bout_s": 3.3389533964106075,
+      "kinematics/roaming_speed_p90": -3.1399914418232986
+     },
+     "time_on_lawn": 0.9856107229680895,
+     "spread": {
+      "speed": 2.0596578121185303,
+      "curvature": 0.18335938453674316,
+      "reversal": 2.4593183994293213,
+      "omega": 0.44857072830200195,
+      "delta": 1.0076990127563477
+     },
+     "mutants": {
+      "tph-1": {
+       "passes": true,
+       "delta": 0.3080693334937652,
+       "z": 0.7336780961058869
+      },
+      "pdfr-1": {
+       "passes": true,
+       "delta": -0.06792125633473828,
+       "z": -0.3345927736014458
+      },
+      "tax-4": {
+       "passes": true,
+       "delta": -0.031743778250623356,
+       "z": 1.8912179268161915
+      }
+     }
+    },
+    "40": {
+     "D": 1.5147938453796372,
+     "family_passes": {
+      "small_lawn": false,
+      "kinematics": false,
+      "activity": true,
+      "uniform_lawn": true,
+      "local_search": true,
+      "chemotaxis": true
+     },
+     "fails": {
+      "small_lawn/roaming_bout_s": 3.156599383558699,
+      "kinematics/roaming_speed_p90": -3.4913159305497428
+     },
+     "time_on_lawn": 0.9801589033919762,
+     "spread": {
+      "speed": 1.9135403633117676,
+      "curvature": 0.20244109630584717,
+      "reversal": 2.442915916442871,
+      "omega": 0.37213122844696045,
+      "delta": 0.8176975250244141
+     },
+     "mutants": {
+      "tph-1": {
+       "passes": true,
+       "delta": 0.26848721990648927,
+       "z": -0.039162897003687136
+      },
+      "pdfr-1": {
+       "passes": true,
+       "delta": -0.0695257367715437,
+       "z": -0.3703386012454848
+      },
+      "tax-4": {
+       "passes": true,
+       "delta": -0.03706697363979583,
+       "z": 1.771816644329533
+      }
+     }
+    }
+   },
+   "answer": [
+    0.8801122637970106,
+    0.44916263873042706,
+    0.9052076102632247,
+    0.5787013976844568,
+    0.10410095673585756,
+    0.014565678789472899,
+    0.32539309035293146,
+    0.8454999127110221,
+    0.6494795758501097,
+    0.5782507218932839,
+    0.3837015709270738,
+    0.20721206208515774,
+    0.002365923431566517,
+    0.8844708192654973,
+    0.6069751682251608,
+    0.06911877804633848,
+    0.8124628893007878,
+    0.5000994254661297,
+    0.544883369440897,
+    0.10315162239538503,
+    0.08048949721385691,
+    0.9011125893689771,
+    0.0009792026718558377,
+    0.2631951950224035,
+    0.8163591100956282,
+    0.38358867778703787,
+    0.4855831663580841,
+    0.32667584020001605,
+    0.35724668274140103,
+    0.31095370796253385,
+    0.4866521603578487,
+    0.1818667942724965,
+    0.5805888289269864,
+    0.19119749953170287,
+    0.8395685996059478,
+    0.4731374483098655,
+    0.9950849816972996,
+    0.9981535695570587,
+    0.006837596360734275,
+    0.7329562165004513,
+    0.8126077564372861,
+    0.18623687861469534,
+    0.9148516418068906,
+    0.3004751392275694,
+    0.8442367864565565,
+    0.9269075031979178,
+    0.5647709624759579,
+    0.1241319757201316,
+    0.45239120363360397,
+    0.9320009105930367,
+    0.7028635946483368,
+    0.1869442285212254,
+    0.22953815003515238,
+    0.9975650505464418,
+    0.2866253344049342,
+    0.5161070956304131,
+    0.9225557820992448,
+    0.5810253771910119,
+    0.45581276652561054,
+    0.11573448966602465,
+    0.9998555723539795,
+    0.30627639407972973,
+    0.8145917016563204,
+    0.18200044984861352,
+    0.9058087783920161,
+    0.0005906771373220594,
+    0.006710297223393121,
+    0.20034148140914826,
+    0.7340681229709878,
+    0.5244173624319175,
+    0.7210243563586541,
+    0.8142283294941615,
+    0.5773678296634713,
+    0.34016099889486195,
+    0.5195911246920458,
+    0.17934361329610213,
+    0.6077203429475347,
+    0.011903433791726235,
+    0.6431360015151666,
+    0.14628647488629581,
+    0.5780041610952212,
+    0.49917707124915645,
+    0.2606109953162852,
+    0.7154509143811205,
+    0.3347610492655231,
+    0.00822634920393257,
+    0.41257990716814197,
+    0.7704017262686527,
+    0.22324820992628344,
+    0.876235681498287,
+    0.8354357109404015,
+    0.8787022551081627,
+    0.07201540955611155,
+    0.922820272146295,
+    0.2776616218761595,
+    0.8744084762239553,
+    0.1660491290659455,
+    0.2923056953677442,
+    0.27369428093758513,
+    0.5115277098135322,
+    0.7588104203261599,
+    0.1296873563932977,
+    0.7992893070022471,
+    0.9995524606433063,
+    0.002546032745836067,
+    0.17434642166855202,
+    0.5820277557360554,
+    0.0001222155434048182,
+    0.44095395313674096,
+    0.5215500651827406,
+    0.22328351490319448,
+    0.005777732413883713,
+    0.004960105632835317,
+    0.8856002912628584,
+    0.36102606649234004,
+    0.6036825485861733,
+    0.16865077180351823,
+    0.0009148492131515611,
+    0.5644297974767047,
+    0.7677469314306047,
+    0.002395032683847336,
+    0.010305798342457132,
+    0.19513596211680587,
+    0.8578842003352134,
+    0.9243685849774984,
+    0.9983050856397134,
+    0.8748895257060059,
+    0.6048176424289438,
+    0.7286817576643856,
+    0.40088177112435397,
+    0.6637423774969089,
+    0.17971948489564876,
+    0.14060896327245842,
+    0.5876162922966701,
+    0.37100507786961906,
+    0.27894545321250797,
+    0.4847999557210231
+   ],
+   "stopped": null
+  }
+ ],
+ "verdict": "held; tax-4 at the end -0.037 (passes), against -0.034 at the start",
+ "wall_hours": 1.0317316747374006
+}
