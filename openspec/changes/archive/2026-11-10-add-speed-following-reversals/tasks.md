@@ -93,5 +93,5 @@ Phase 10, amending E.2's primitives before C.2's registered fit. The maintainer'
 
 - [x] 7.1 The full suite and `pre-commit run -a`.
 - [x] 7.2 `openspec validate add-speed-following-reversals --strict`.
-- [ ] 7.3 Archive, with the spec's Purpose checked.
-- [ ] 7.4 PR.
+- [x] 7.3 Archive, with the spec's Purpose checked.
+- [x] 7.4 PR.
