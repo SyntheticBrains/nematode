@@ -75,10 +75,7 @@
     - It holds the intercept, slope, low, high and window.
     - The loader checks intercept > 0, slope ≥ 0, 0 < low < high and window > 0.
     - `PrimitiveKinematics` always carries the coupling. Only the option reads it.
-09. **The same arithmetic in both runners.**
-    - Each keeps the window as float64, oldest first, and takes `numpy.mean`, then the line and `numpy.clip`, on scalars (the per-step runner) or arrays (the batched evaluator).
-    - For a handful of elements, NumPy's mean sums in order in both, so the speeds match bit for bit.
-    - The parity test checks it.
+09. **The same arithmetic in both runners, through one function.** Each runner keeps the window as a Python list of floats, oldest first. Both take its mean through the primitives' `mean_run_speed` (summed in order, divided by N) and the line through `SpeedCoupling.speed`. Their inputs are equal, since both compute the run speed as v_max·(x + 1)/2 in float64 in the same order, so the speeds match bit for bit. The parity test checks it.
 10. **The speed reading is passed to `_start_bout`.** The batched evaluator builds a fresh `PrimitiveState` at each bout start, so the window cannot live in the state it passes. `_start_bout` takes the window's mean as an argument (None until the window fills). The per-step runner keeps the window in its `PrimitiveState`, and the batched evaluator keeps it in arrays.
 
 ## Risks / Trade-offs

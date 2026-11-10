@@ -1180,6 +1180,11 @@ class Continuous2DConfig(BaseModel):
     # lawn, and one off every lawn the published off-food values; "off_food" gives every reversal
     # the off-food values, as before the option. Refused with free locomotion.
     reversal_kinematics: Literal["food_dependent", "off_food"] | None = None
+    # Under primitives, an on-food reversal's speed: "pooled" (what unset means) is the one speed
+    # measured on real worms on a lawn; "follows_run_speed" is a line on the worm's mean speed over
+    # its last 3 s of run steps, as a real worm's reversal on a lawn follows its speed before it.
+    # Refused with free locomotion, and "follows_run_speed" with reversal_kinematics: off_food.
+    on_food_reversal_speed: Literal["pooled", "follows_run_speed"] | None = None
     # The arena's shape: "square" (default) or "circle", a circle of diameter world_size_mm
     # centred in the square, whose wall the worm slides along as it does a square one's.
     arena_shape: Literal["square", "circle"] = "square"
@@ -1190,6 +1195,26 @@ class Continuous2DConfig(BaseModel):
             msg = (
                 f"reversal_kinematics: {self.reversal_kinematics} sets the primitives' reversals; "
                 f"it needs locomotion: primitives, not locomotion: {self.locomotion}."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_on_food_reversal_speed(self) -> "Continuous2DConfig":
+        if self.on_food_reversal_speed is not None and self.locomotion != "primitives":
+            msg = (
+                f"on_food_reversal_speed: {self.on_food_reversal_speed} sets the primitives' "
+                f"on-food reversals; it needs locomotion: primitives, not locomotion: "
+                f"{self.locomotion}."
+            )
+            raise ValueError(msg)
+        if (
+            self.on_food_reversal_speed == "follows_run_speed"
+            and self.reversal_kinematics == "off_food"
+        ):
+            msg = (
+                "on_food_reversal_speed: follows_run_speed sets the on-food reversals' speed, but "
+                "reversal_kinematics: off_food gives every reversal the off-food values."
             )
             raise ValueError(msg)
         return self
@@ -3878,6 +3903,7 @@ def create_env_from_config(
                 step_seconds=continuous_config.step_seconds,
                 locomotion=continuous_config.locomotion,
                 reversal_kinematics=continuous_config.reversal_kinematics or "food_dependent",
+                on_food_reversal_speed=continuous_config.on_food_reversal_speed or "pooled",
                 arena_shape=continuous_config.arena_shape,
                 assay=env_config.assay.to_params() if env_config.assay is not None else None,
             ),

@@ -4,7 +4,7 @@
 These are run speed and curvature bounds, reversal speed and duration, and omega and delta turn angles
 and durations, plus the range of the controller's start hazards.
 
-Every value but two is transcribed from published numbers. No dataset is vendored here.
+Every value but three is transcribed from published numbers. No dataset is vendored here.
 
 - **Status.** Each entry says where it comes from, under which condition, and how it was obtained:
   - `verified`, read in the text;
@@ -28,6 +28,16 @@ Every value but two is transcribed from published numbers. No dataset is vendore
   - Scheer & Bargmann's deposit is CC0 (Zenodo 8310289).
   - A reversal that starts on a lawn draws these, unless `continuous.reversal_kinematics` is
     `off_food` (Logbook 108).
+- **An on-food reversal speed that follows the run speed** (`on_food_reversal_speed_coupling`,
+  added 2026-11-10).
+  - Measured on the same held-out dates, from every reversal bout starting with the midbody inside
+    the lawn: its speed against the mean 1-s displacement of the worm's last 3 run seconds before
+    it, wherever they fell. The least-squares line is 0.0464 + 0.606 × v (n = 83,697 bouts, 24
+    dates), clipped to the lowest and highest decile's mean reversal speed, 0.0484 and
+    0.0839 mm/s.
+  - Script: `scripts/analysis/reversal_speed_coupling.py`. Record:
+    `docs/experiments/logbooks/supporting/132-speed-following-reversals/coupling.json`.
+  - A reversal on a lawn backs at it only under `continuous.on_food_reversal_speed: follows_run_speed`; otherwise it takes the pooled 0.069 mm/s (Logbook 132).
 
 Sources:
 

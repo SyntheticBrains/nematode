@@ -60,6 +60,8 @@ from quantumnematode.env.primitives import (
     PrimitiveState,
     _start_bout,
     load_kinematics,
+    push_run_speed,
+    recent_run_speed,
 )
 from quantumnematode.env.theme import Theme
 from quantumnematode.report.dtypes import BehaviourStep
@@ -376,6 +378,8 @@ class BatchedEvaluator:
         first = self.envs[0]
         # A reversal that starts on a lawn takes the on-food kinematics unless the config says not.
         self.food_dependent_reversals = first.continuous.reversal_kinematics == "food_dependent"
+        # An on-food reversal's speed follows the worm's recent run speed when the config says so.
+        self.follows_run_speed = first.continuous.on_food_reversal_speed == "follows_run_speed"
         self.world = float(first.continuous.world_size_mm)
         self.grid_upper = float(first.grid_size - 1)
         self.circle = first.continuous.arena_shape == "circle"
@@ -414,6 +418,11 @@ class BatchedEvaluator:
         self.bout_speed = np.zeros(n)
         self.bout_turn = np.zeros(n)
         self.last_kind = np.full(n, RUN, dtype=np.int64)
+        # Each animal's latest run-step speeds, oldest first, as the per-step runner keeps them.
+        self.run_windows: list[list[float]] = [[] for _ in range(n)]
+        self.run_window_steps = self.kinematics.on_food_reversal_speed_coupling.window_steps(
+            self.step_seconds,
+        )
         # Short-term memory, newest first, and its fill.
         self.stam_c = np.zeros((n, self.stam_size))
         self.stam_dx = np.zeros((n, self.stam_size))
@@ -715,10 +724,12 @@ class BatchedEvaluator:
         """Draw each idle animal's start test; start its bout, or move it as a run.
 
         ``on_food`` marks the animals on a lawn as the step starts, whose reversals take the on-food
-        kinematics.
+        kinematics. When an on-food reversal's speed follows the run speed, each run's speed enters
+        the animal's window, and a reversal reads it, as the per-step runner does.
         """
         k = self.kinematics
         dt = self.step_seconds
+        follows, steps = self.follows_run_speed, self.run_window_steps
         for i in idle:
             rng = self.envs[i].rng
             if rng.random() < start_p[i]:
@@ -736,6 +747,9 @@ class BatchedEvaluator:
                     k,
                     rng,
                     on_food=bool(on_food[i]),
+                    run_speed_mean=(
+                        recent_run_speed(self.run_windows[i], steps) if follows else None
+                    ),
                 )
                 self.bout_kind[i] = KIND_CODE[chosen]
                 self.remaining[i] = bout.remaining_s
@@ -744,6 +758,8 @@ class BatchedEvaluator:
             else:
                 displacement[i] = speed[i] * dt
                 turn[i] = curvature[i] * dt
+                if follows:
+                    push_run_speed(self.run_windows[i], float(speed[i]), steps)
 
     def _eat(self) -> None:
         """Charge movement, eat from the cell under each worm, regrow, and restore satiety."""

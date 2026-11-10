@@ -2,18 +2,22 @@
 
 Covers the batched-evaluation spec's scenarios "One call runs many animals", "Batch size does not
 change an animal", "A deliberately broken evaluator fails", "Random lawn placement is refused" and
-"The classifier reads a batched animal", and the locomotor-primitives scenario "Both runners draw
-the same", with a lawn-blind evaluator failing. The statistic-level layer is in
+"The classifier reads a batched animal", and the locomotor-primitives scenarios "Both runners draw
+the same", with a lawn-blind evaluator failing, and "Both runners give each reversal the same
+speed", with an evaluator that ignores the run-speed window failing. The statistic-level layer is in
 ``test_batched_statistics.py``.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
+from quantumnematode.env.hazard_controllers import ConstantHazards
 from quantumnematode.evaluation.batched import BatchedEvaluator, UnsupportedConfigError
+from quantumnematode.evaluation.controllers import BatchedConstantHazards
+from quantumnematode.utils.config_loader import load_simulation_config
 from quantumnematode.validation import roaming_dwelling as rd
 
 from . import _parity as p
@@ -83,6 +87,62 @@ def test_ignoring_the_lawn_fails_trajectory_parity() -> None:
         list(p.PARITY_SEEDS),
         _STEPS,
         tamper=_lawn_ignored,
+    )
+    assert p.trajectory_mismatches(refs, trajectories, log)
+
+
+def _following(config: Any) -> Any:
+    """Return a config whose on-food reversals follow the run speed."""
+    environment = config.environment
+    continuous = environment.continuous.model_copy(
+        update={"on_food_reversal_speed": "follows_run_speed"},
+    )
+    return config.model_copy(
+        update={"environment": environment.model_copy(update={"continuous": continuous})},
+    )
+
+
+def _following_build(controller: str, protocol: str) -> tuple[Any, Any, Any]:
+    """Return a following config and its controllers; ``slow`` runs at 0.02 mm/s, on the line."""
+    if controller == "slow":
+        config = load_simulation_config(str(p.config_path("constant", protocol)))
+        return (
+            _following(config),
+            ConstantHazards(0.02, p.HAZARDS),
+            BatchedConstantHazards(0.02, p.HAZARDS),
+        )
+    config, single, batched = p.build(controller, protocol)
+    return _following(config), single, batched
+
+
+@pytest.mark.parametrize("protocol", ["scheer_lawn", "uniform_lawn_flavell"])
+@pytest.mark.parametrize("controller", ["mlp", "slow"])
+def test_a_speed_following_reversal_matches_the_per_step_runner(
+    controller: str,
+    protocol: str,
+) -> None:
+    """With the option on, bouts match exactly over 300 steps and paths within 1e-3 over 150."""
+    config, single, batched = _following_build(controller, protocol)
+    refs = p.references(config, single, _STEPS)
+    trajectories, log = p.run_batched(config, batched, list(p.PARITY_SEEDS), _STEPS)
+    assert p.state_mismatches(refs, log, _STATE_STEPS) == []
+    assert p.trajectory_mismatches(refs, trajectories, log) == []
+
+
+def _run_speed_ignored(evaluator: BatchedEvaluator) -> None:
+    evaluator.follows_run_speed = False
+
+
+def test_ignoring_the_run_speed_fails_trajectory_parity() -> None:
+    """An evaluator that gives on-lawn reversals the pooled speed drifts off the runner."""
+    config, single, batched = _following_build("slow", "uniform_lawn_flavell")
+    refs = p.references(config, single, _STEPS)
+    trajectories, log = p.run_batched(
+        config,
+        batched,
+        list(p.PARITY_SEEDS),
+        _STEPS,
+        tamper=_run_speed_ignored,
     )
     assert p.trajectory_mismatches(refs, trajectories, log)
 

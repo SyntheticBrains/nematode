@@ -1,5 +1,5 @@
 {
-  "description": "Fixed kinematics of the point worm's locomotor primitives. Values are from published off-food data, except the two on_food entries, measured on real worms on a lawn; 'verified' means read in the text, 'figure' means read from a figure by eye (about +/-10%), 'measured' means computed from deposited tracks by the named script, its output in the named record.",
+  "description": "Fixed kinematics of the point worm's locomotor primitives. Values are from published off-food data, except the three on_food entries, measured on real worms on a lawn; 'verified' means read in the text, 'figure' means read from a figure by eye (about +/-10%), 'measured' means computed from deposited tracks by the named script, its output in the named record.",
   "v_max_mm_per_s": {
     "value": 0.2,
     "source": "Zhao et al. 2003 J Neurosci 10.1523/JNEUROSCI.23-12-05319.2003, Fig 3A: 184 um/s at the start of off-food locomotion; Ben Arous et al. 2009 PLoS One 10.1371/journal.pone.0007584, Fig 2E: about 0.17 mm/s without food. Equal to the crawl speed the step duration derives from.",
@@ -41,6 +41,18 @@
     "source": "Scheer & Bargmann 2023 eLife 10.7554/eLife.88657 (Zenodo 8310289, CC0): the OD 2 wild type's recording dates held out of the benchmark's bands (data/benchmark/scheer2023_split.json), bouts starting more than 0.5 mm inside the lawn, read from the authors' per-frame reversal flag at 3 frames/s and 1-s midbody positions; mean and SD of bout durations (n = 24,890 bouts).",
     "script": "scripts/analysis/primitive_kinematics_check.py",
     "record": "docs/experiments/logbooks/supporting/105-reference-extraction/kinematics.json",
+    "condition": "on food",
+    "status": "measured"
+  },
+  "on_food_reversal_speed_coupling": {
+    "intercept_mm_per_s": 0.0464,
+    "slope": 0.606,
+    "low_mm_per_s": 0.0484,
+    "high_mm_per_s": 0.0839,
+    "window_s": 3.0,
+    "source": "Scheer & Bargmann 2023 eLife 10.7554/eLife.88657 (Zenodo 8310289, CC0): the OD 2 wild type's recording dates held out of the benchmark's bands (data/benchmark/scheer2023_split.json). Every reversal bout starting with the midbody inside the lawn's boundary, read from the authors' per-frame reversal and omega flags at 3 frames/s and 1-s midbody positions, against the mean 1-s displacement of the worm's last 3 run seconds before it (no reversal or omega frame), wherever they fell; the reversal's speed is its path over the bout's whole seconds. Least-squares line over n = 83,697 bouts on 24 dates; low and high are the lowest and highest decile's mean reversal speed. Used only under continuous.on_food_reversal_speed: follows_run_speed.",
+    "script": "scripts/analysis/reversal_speed_coupling.py",
+    "record": "docs/experiments/logbooks/supporting/132-speed-following-reversals/coupling.json",
     "condition": "on food",
     "status": "measured"
   },

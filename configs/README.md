@@ -35,7 +35,9 @@ Phase 10 grades the point worm on standard on-lawn assays (roadmap v5.0, D41). I
 primitives (`*_s1_primitives.yml`) and the assay protocols (`*_s1_primitives_assay_*.yml`). Under
 primitives a reversal that starts on a lawn takes the on-food kinematics. No config sets
 `continuous.reversal_kinematics`; set it to `off_food` only to reproduce a run from before
-2026-10-24. The benchmark grades three of
+2026-10-24. `continuous.on_food_reversal_speed: follows_run_speed` makes an on-food reversal's
+speed follow the worm's recent run speed, as a real worm's does (Logbook 132). It is unset in
+every config, which keeps the pooled speed; C.2's registered fit sets it. The benchmark grades three of
 them: `scheer_lawn`, `uniform_lawn_scheer` (Scheer's uniform well) and `food_removal_lopezcruz`.
 
 - **Frozen:** the thermal, predator, multi-agent and oxygen scenarios (`pursuit/`, `stationary/`, the

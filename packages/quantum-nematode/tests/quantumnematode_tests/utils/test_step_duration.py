@@ -442,6 +442,7 @@ def _not_step_coupled() -> dict[str, set[str]]:
             "step_seconds",
             "locomotion",
             "reversal_kinematics",
+            "on_food_reversal_speed",
             "arena_shape",
         },
         "ForagingConfig": set(ForagingConfig.model_fields) - {"food_model"},
@@ -481,6 +482,9 @@ _PINNED_FIELD_COUNTS = {
 # knockout genes) or already in worm-seconds (``modulator_timescales_s``; the per-step decay comes
 # from ``modulator_step_seconds``, which is converted). ``Continuous2DConfig.reversal_kinematics``,
 # added 2026-10-24, picks between kinematics already in seconds and mm/s, so it is not step-coupled.
+# ``Continuous2DConfig.on_food_reversal_speed``, added 2026-11-10, picks the on-food reversal's
+# speed: one in mm/s, or a line on the mean run speed over a window in seconds, its length in
+# steps taken from the configured step, so it is not step-coupled.
 # Audited 2026-11-03: the compact encoder's two fields (``encoder``, ``encoder_modulator_tying``)
 # are structure; its timescales are in worm-seconds, its decay taken at the converted
 # ``modulator_step_seconds``, which the loader refuses unless it comes to the configured step.

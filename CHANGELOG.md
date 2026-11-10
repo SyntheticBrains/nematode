@@ -31,6 +31,8 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ### Added
 
+- **An on-food reversal speed that follows the run speed** ([Logbook 132](docs/experiments/logbooks/132-speed-following-reversals.md)): `continuous.on_food_reversal_speed: follows_run_speed` makes a reversal that starts on a lawn back at clip(0.0464 + 0.606·v, 0.0484, 0.0839) mm/s, v being the worm's mean run speed over its last 3 s of runs, as real on-lawn reversals follow the speed before them. The values come from Scheer's held-out cohorts (`scripts/analysis/reversal_speed_coupling.py`, a new `measured` entry in `data/locomotion/primitives.json`). Unset means `pooled`, the one on-food speed as before, byte-identical. Both runners give each reversal the same speed. Under the option, Logbook 131's refit answer passes the wild type and every mutant in 10 of 10 fresh populations.
+
 - **C.2's fitting procedure in the encoder** ([Logbook 130](docs/experiments/logbooks/130-c2-encoder-procedure.md)), each option off by default and byte-identical:
 
   - `encoder_readout: soft_cap`, `encoder_pool_centres`, `encoder_box: graded` and `encoder_inhibition_floor` on the connectome brain;

@@ -6,7 +6,9 @@ Under ``continuous.locomotion: primitives`` the worm moves only by:
   ``[-omega_max, omega_max]``; a pause is a run at zero speed;
 - **reversal bouts**: backing at a fixed speed along an unchanged heading for a drawn duration; a
   reversal the caller marks as starting on a lawn draws the on-food speed and duration, shorter and
-  slower than off food;
+  slower than off food. Optionally its speed instead follows the worm's recent run speed, as a real
+  worm's does on a lawn: a line on the mean run speed of its last few seconds of runs, clipped to
+  the measured range;
 - **omega and delta bouts**: a drawn heading change toward the worm's ventral side (omega) or dorsal
   side (delta), at a constant rate over a drawn duration, without translation; a worm crawls on one
   side, so which way is ventral is drawn once per episode.
@@ -27,7 +29,7 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -86,11 +88,36 @@ class TruncatedNormalAngle:
 
 
 @dataclass(frozen=True)
+class SpeedCoupling:
+    """An on-food reversal's speed as a line on the worm's recent run speed, clipped.
+
+    The speed is ``clip(intercept + slope * v, low, high)``, ``v`` the mean commanded run speed over
+    the worm's last ``window_s`` of run steps.
+    """
+
+    intercept_mm_per_s: float
+    slope: float
+    low_mm_per_s: float
+    high_mm_per_s: float
+    window_s: float
+
+    def window_steps(self, step_seconds: float) -> int:
+        """Return how many run steps the window holds at a step of ``step_seconds``."""
+        return max(1, round(self.window_s / step_seconds))
+
+    def speed(self, mean_run_speed_mm_per_s: float) -> float:
+        """Return a reversal's speed for a worm's mean recent run speed."""
+        line = self.intercept_mm_per_s + self.slope * mean_run_speed_mm_per_s
+        return min(self.high_mm_per_s, max(self.low_mm_per_s, line))
+
+
+@dataclass(frozen=True)
 class PrimitiveKinematics:
     """The primitives' fixed kinematics, in mm, seconds and radians.
 
     The ``reversal_*`` values hold off food; the ``on_food_reversal_*`` values hold for a reversal
-    that starts on a lawn.
+    that starts on a lawn. ``on_food_reversal_speed_coupling`` replaces the on-food speed when a
+    reversal's speed follows the worm's run speed.
     """
 
     v_max_mm_per_s: float
@@ -99,6 +126,7 @@ class PrimitiveKinematics:
     reversal_duration: GammaDuration
     on_food_reversal_speed_mm_per_s: float
     on_food_reversal_duration: GammaDuration
+    on_food_reversal_speed_coupling: SpeedCoupling
     omega_angle: TruncatedNormalAngle
     omega_duration: GammaDuration
     delta_angle: TruncatedNormalAngle
@@ -135,15 +163,37 @@ def _angle(entry: dict[str, object], side: str) -> TruncatedNormalAngle:
     )
 
 
+def _coupling(entry: dict[str, object]) -> SpeedCoupling:
+    coupling = SpeedCoupling(
+        intercept_mm_per_s=float(entry["intercept_mm_per_s"]),  # type: ignore[arg-type]
+        slope=float(entry["slope"]),  # type: ignore[arg-type]
+        low_mm_per_s=float(entry["low_mm_per_s"]),  # type: ignore[arg-type]
+        high_mm_per_s=float(entry["high_mm_per_s"]),  # type: ignore[arg-type]
+        window_s=float(entry["window_s"]),  # type: ignore[arg-type]
+    )
+    if not (
+        coupling.intercept_mm_per_s > 0.0
+        and coupling.slope >= 0.0
+        and 0.0 < coupling.low_mm_per_s < coupling.high_mm_per_s
+        and coupling.window_s > 0.0
+    ):
+        msg = (
+            "a reversal speed coupling needs intercept > 0, slope >= 0, 0 < low < high and "
+            f"window > 0, got {entry}"
+        )
+        raise ValueError(msg)
+    return coupling
+
+
 _STATUSES = ("verified", "figure", "measured")
 
 
 def _check_measured(key: str, entry: dict[str, object]) -> None:
     """Refuse a measured value unless it names its script and record, and both exist."""
-    for field in ("script", "record"):
-        value = entry.get(field)
+    for name in ("script", "record"):
+        value = entry.get(name)
         if not isinstance(value, str) or not (_PROJECT_ROOT / value).is_file():
-            msg = f"measured kinematics entry {key!r} needs an existing {field}, got {value!r}"
+            msg = f"measured kinematics entry {key!r} needs an existing {name}, got {value!r}"
             raise ValueError(msg)
 
 
@@ -191,6 +241,7 @@ def load_kinematics(path: Path = KINEMATICS_PATH) -> PrimitiveKinematics:
         reversal_duration=_gamma(data["reversal_duration_s"]),
         on_food_reversal_speed_mm_per_s=speeds[3],
         on_food_reversal_duration=_gamma(data["on_food_reversal_duration_s"]),
+        on_food_reversal_speed_coupling=_coupling(data["on_food_reversal_speed_coupling"]),
         omega_angle=_angle(data["omega_angle_deg"], "ventral"),
         omega_duration=_gamma(data["omega_duration_s"]),
         delta_angle=_angle(data["delta_angle_deg"], "dorsal"),
@@ -256,10 +307,15 @@ class Bout:
 
 @dataclass
 class PrimitiveState:
-    """One worm's primitive state across an episode's steps."""
+    """One worm's primitive state across an episode's steps.
+
+    ``run_speeds`` holds the commanded speeds of its latest run steps, oldest first, kept only when
+    a reversal's speed follows the run speed.
+    """
 
     ventral_side: int
     bout: Bout | None = None
+    run_speeds: list[float] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -276,21 +332,46 @@ def new_state(rng: np.random.Generator) -> PrimitiveState:
     return PrimitiveState(ventral_side=1 if rng.random() < 0.5 else -1)  # noqa: PLR2004
 
 
-def _start_bout(
+def mean_run_speed(window: Sequence[float]) -> float:
+    """Return a run-speed window's mean, summed oldest first, the one way both runners take it."""
+    return sum(window) / len(window)
+
+
+def recent_run_speed(window: Sequence[float], steps: int) -> float | None:
+    """Return the mean of a window's last ``steps`` speeds, or None until it holds that many."""
+    return mean_run_speed(window[-steps:]) if len(window) >= steps else None
+
+
+def push_run_speed(window: list[float], speed_mm_per_s: float, steps: int) -> None:
+    """Add a run step's commanded speed to a window, keeping its last ``steps``, in place."""
+    window.append(speed_mm_per_s)
+    del window[:-steps]
+
+
+def _start_bout(  # noqa: PLR0913 - the bout, the worm, kinematics, RNG and two conditions
     kind: PrimitiveKind,
     state: PrimitiveState,
     kinematics: PrimitiveKinematics,
     rng: np.random.Generator,
     *,
     on_food: bool = False,
+    run_speed_mean: float | None = None,
 ) -> Bout:
-    """Draw a new bout; a reversal takes its condition's kinematics, fixed for the whole bout."""
+    """Draw a new bout; a reversal takes its condition's kinematics, fixed for the whole bout.
+
+    ``run_speed_mean``, if given, is the worm's mean recent run speed: a reversal on food then backs
+    at the coupling's speed for it rather than the pooled on-food speed. It changes no draw.
+    """
     if kind == "reversal":
-        duration, speed = (
-            (kinematics.on_food_reversal_duration, kinematics.on_food_reversal_speed_mm_per_s)
-            if on_food
-            else (kinematics.reversal_duration, kinematics.reversal_speed_mm_per_s)
-        )
+        if on_food:
+            duration = kinematics.on_food_reversal_duration
+            speed = (
+                kinematics.on_food_reversal_speed_mm_per_s
+                if run_speed_mean is None
+                else kinematics.on_food_reversal_speed_coupling.speed(run_speed_mean)
+            )
+        else:
+            duration, speed = kinematics.reversal_duration, kinematics.reversal_speed_mm_per_s
         return Bout(kind=kind, remaining_s=duration.sample(rng), speed_mm_per_s=-speed)
     if kind == "omega":
         duration = kinematics.omega_duration.sample(rng)
@@ -309,14 +390,18 @@ def step_primitives(  # noqa: PLR0913 - the worm, its action, the step, kinemati
     rng: np.random.Generator,
     *,
     on_food: bool = False,
+    follows_run_speed: bool = False,
 ) -> PrimitiveStep:
     """Advance one worm by one step under the primitives, updating its state in place.
 
     While no bout runs, one uniform draw decides whether a bout starts and, if one does, a second
     decides its kind; a new bout then draws its duration and, for a turn, its angle, and runs from
     this step. Otherwise the step is a run at the controller's speed and curvature. ``on_food`` is
-    whether the worm is on a lawn as the step starts; it sets a new reversal's kinematics.
+    whether the worm is on a lawn as the step starts; it sets a new reversal's kinematics. With
+    ``follows_run_speed``, each run step's speed enters the worm's window, and a reversal on food
+    backs at the coupling's speed for the window's mean once it is full.
     """
+    steps = kinematics.on_food_reversal_speed_coupling.window_steps(step_seconds)
     if state.bout is None:
         command = map_action(raw_action, kinematics)
         total = sum(command.hazards_per_s)
@@ -329,8 +414,19 @@ def step_primitives(  # noqa: PLR0913 - the worm, its action, the step, kinemati
                 if pick < cumulative:
                     kind = candidate
                     break
-            state.bout = _start_bout(kind, state, kinematics, rng, on_food=on_food)
+            state.bout = _start_bout(
+                kind,
+                state,
+                kinematics,
+                rng,
+                on_food=on_food,
+                run_speed_mean=(
+                    recent_run_speed(state.run_speeds, steps) if follows_run_speed else None
+                ),
+            )
         else:
+            if follows_run_speed:
+                push_run_speed(state.run_speeds, command.speed_mm_per_s, steps)
             return PrimitiveStep(
                 kind="run",
                 displacement_mm=command.speed_mm_per_s * step_seconds,
