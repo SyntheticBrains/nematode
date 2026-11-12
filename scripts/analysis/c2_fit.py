@@ -17,7 +17,8 @@ speed noise), on the grading arm whose on-food reversals follow the worm's run s
 - in the final stage, 10·Σ Φ((abs(z) - bar) / SD), each statistic's chance of failing a
   population, with SD measured by the noise step.
 
-**The procedure** (:data:`STAGES`), sep-CMA at population 48 and 200 animals a candidate:
+**The procedure** (:data:`STAGES`), sep-CMA at population 48 and 200 animals a candidate after
+stage 1, which runs at population 24 and 64 animals:
 
 1. the 77 parameters carrying senses to outputs from the graded box's centre, sigma0 0.2, on D_fit's
    families, 150 generations;
@@ -29,6 +30,12 @@ speed noise), on the grading arm whose on-food reversals follow the worm's run s
    generations.
 
 Each stage runs its full count; the final stage's plateau is read and reported.
+
+**The first half is started up to six times** (:data:`STARTS`), in sequence, each from the box's
+centre with its own CMA seeds and animals. A start is dropped at 2a's generation 60 when its mean
+time on the lawn over the readouts at generations 40, 50 and 60 is below 0.95
+(:func:`lawn_holding`). The first start that holds the lawn runs 2a to its end and the procedure
+continues from it. A run in which no start holds the lawn has no answer.
 
 **The reads.** The pilot's go rule, F.0b-ii (one truth, the pilot's answer), the registered verdict
 (the wild type, tph-1 and tax-4 each in at least 3 of 5 populations), the held-out reading on
@@ -136,6 +143,14 @@ TIMESCALE_AT_2A_S = 1.0
 READOUT_EVERY = 10
 KILL_READOUTS = 3
 HOLDS_LAWN = 0.75
+# The first half's starts: stage 1's size, how many, and the lawn-holding reading that keeps one.
+STAGE1_ANIMALS = 64
+STAGE1_POPSIZE = 24
+STARTS = 6
+HOLD_READOUTS: tuple[int, ...] = (40, 50, 60)
+HOLD_BAR = 0.95
+LAWN_STATISTIC = "small_lawn/time_on_lawn"
+FIRST_HALF: tuple[str, ...] = ("1", "2a")
 D_FIT_KILL = 2.5
 VERDICT_POPULATIONS = 5
 PASS_NEEDED = 3
@@ -198,7 +213,12 @@ NOISE_AFTER = "2b"
 
 @dataclasses.dataclass(frozen=True)
 class Layout:
-    """A run's animal seeds: four stage sub-blocks, the readout, noise and grade populations."""
+    """A run's animal seeds: the stage sub-blocks, each start's, the readout, noise and grade.
+
+    Stage 1 runs at its own size, each start in its own slice of stage 1's sub-block. 2a's
+    generations up to the lawn-holding reading (``early_generations``) are each start's own, in the
+    ``early`` block; the kept start's later generations sit in 2a's sub-block at their own positions.
+    """
 
     base: int
     animals: int = ANIMALS
@@ -209,13 +229,36 @@ class Layout:
     grade: int = 18_000_000
     noise_populations: int = 30
     grade_populations: int = 15
+    first_animals: int = STAGE1_ANIMALS
+    first_popsize: int = STAGE1_POPSIZE
+    start_stride: int = 250_000
+    early: int = 12_500_000
+    early_stride: int = 576_000
+    early_generations: int = HOLD_READOUTS[-1]
 
     def _block(self, start: int) -> list[int]:
         return list(range(start, start + self.animals))
 
-    def candidate_seeds(self, stage: int, generation: int, member: int) -> list[int]:
-        """Return a candidate's animals: stage index, generation from 1, member."""
+    def popsize_of(self, stage: int) -> int:
+        """Return a stage's population: stage 1's own, or the run's."""
+        return self.first_popsize if stage == 0 else self.popsize
+
+    def candidate_seeds(
+        self,
+        stage: int,
+        generation: int,
+        member: int,
+        start: int = 0,
+    ) -> list[int]:
+        """Return a candidate's animals: stage index, generation from 1, member, and the start."""
+        if stage == 0:
+            k = self.first_popsize * (generation - 1) + member
+            first = self.base + self.start_stride * start + self.first_animals * k
+            return list(range(first, first + self.first_animals))
         k = self.popsize * (generation - 1) + member
+        if stage == 1 and generation <= self.early_generations:
+            own = self.base + self.early + self.early_stride * start
+            return self._block(own + self.animals * k)
         return self._block(self.base + self.stage_stride * stage + self.animals * k)
 
     def readout_seeds(self) -> list[int]:
@@ -230,11 +273,20 @@ class Layout:
         """Return a grade population's animals."""
         return self._block(self.base + self.grade + self.animals * population)
 
-    def spans(self, generations: Sequence[int]) -> dict[str, tuple[int, int]]:
+    def spans(self, generations: Sequence[int], starts: int = 1) -> dict[str, tuple[int, int]]:
         """Return each use's first and last animal seed, for checks of disjointness."""
         out = {}
+        for a in range(starts):
+            last = self.candidate_seeds(0, generations[0], self.first_popsize - 1, a)[-1]
+            out[f"stage 0 start {a}"] = (self.candidate_seeds(0, 1, 0, a)[0], last)
+            n = min(generations[1], self.early_generations)
+            last = self.candidate_seeds(1, n, self.popsize - 1, a)[-1]
+            out[f"stage 1 start {a}"] = (self.candidate_seeds(1, 1, 0, a)[0], last)
         for s, n in enumerate(generations):
-            first = self.candidate_seeds(s, 1, 0)[0]
+            if s == 0 or (s == 1 and n <= self.early_generations):
+                continue
+            g = self.early_generations + 1 if s == 1 else 1
+            first = self.candidate_seeds(s, g, 0)[0]
             out[f"stage {s}"] = (first, self.candidate_seeds(s, n, self.popsize - 1)[-1])
         out["readout"] = (self.readout_seeds()[0], self.readout_seeds()[-1])
         last_noise = self.noise_seeds(self.noise_populations - 1)[-1]
@@ -245,16 +297,36 @@ class Layout:
 
 @dataclasses.dataclass(frozen=True)
 class Run:
-    """One run of the procedure: its seeds, its CMA seeds and the mutants it fits."""
+    """One run of the procedure: its seeds, its CMA seeds, its starts and the mutants it fits.
+
+    ``hold_bars`` gives one lawn-holding bar per start, so its length is the number of starts.
+    The first start takes the run's CMA seeds; each later one takes the next two from
+    ``restart_seed``, for stage 1 and 2a.
+    """
 
     name: str
     layout: Layout
     cma_seeds: tuple[int, ...]
+    restart_seed: int
     mutants: tuple[str, ...] = MUTANTS
     generations: tuple[int, ...] = tuple(s.generations for s in STAGES)
     kill_rules: bool = False
+    hold_readouts: tuple[int, ...] = HOLD_READOUTS
+    hold_bars: tuple[float, ...] = (HOLD_BAR,) * STARTS
+
+    @property
+    def starts(self) -> int:
+        """Return how many times the first half may be started."""
+        return len(self.hold_bars)
+
+    def cma_seed(self, stage: int, start: int) -> int:
+        """Return a stage's CMA seed: the first half's stages take each start's own."""
+        if start == 0 or stage >= len(FIRST_HALF):
+            return self.cma_seeds[stage]
+        return self.restart_seed + len(FIRST_HALF) * (start - 1) + stage
 
 
+# The smoke's stage 1 has its own size and its 2a runs past the reading, as the procedure's do.
 SMOKE_LAYOUT = Layout(
     99_880_000,
     animals=8,
@@ -265,13 +337,35 @@ SMOKE_LAYOUT = Layout(
     grade=9_500,
     noise_populations=3,
     grade_populations=2,
+    first_animals=6,
+    first_popsize=4,
+    start_stride=200,
+    early=6_500,
+    early_stride=500,
+    early_generations=10,
 )
+SMOKE_GENERATIONS = (2, 12, 2, 2)
 RUNS: dict[str, Run] = {
-    "pilot": Run("pilot", Layout(900_000_000), (9504, 9505, 9506, 9507), kill_rules=True),
-    "recovery": Run("recovery", Layout(920_000_000), (5801, 5802, 5803, 5804)),
-    "fit": Run("fit", Layout(960_000_000), (5811, 5812, 5813, 5814)),
-    "loo": Run("loo", Layout(980_000_000), (5821, 5822, 5823, 5824), mutants=("tph-1", "pdfr-1")),
-    "smoke": Run("smoke", SMOKE_LAYOUT, (9508, 9509, 9510, 9511), generations=(2, 2, 2, 2)),
+    "pilot": Run("pilot", Layout(1_100_000_000), (9531, 9532, 9533, 9534), 9541, kill_rules=True),
+    "recovery": Run("recovery", Layout(920_000_000), (5801, 5802, 5803, 5804), 5831),
+    "fit": Run("fit", Layout(960_000_000), (5811, 5812, 5813, 5814), 5841),
+    "loo": Run(
+        "loo",
+        Layout(980_000_000),
+        (5821, 5822, 5823, 5824),
+        5851,
+        mutants=("tph-1", "pdfr-1"),
+    ),
+    # The smoke's first start can never hold the lawn and its second always does, so both paths run.
+    "smoke": Run(
+        "smoke",
+        SMOKE_LAYOUT,
+        (9508, 9509, 9510, 9511),
+        9561,
+        generations=SMOKE_GENERATIONS,
+        hold_readouts=(10,),
+        hold_bars=(2.0, 0.0),
+    ),
 }
 
 
@@ -439,12 +533,12 @@ def vector_digest(z: Sequence[float]) -> str:
     return hashlib.sha256(np.asarray(z, dtype=np.float64).tobytes()).hexdigest()
 
 
-def _candidate_job(item: tuple[str, int, int, int, list[float]]) -> dict[str, Any]:
-    """Simulate one candidate of a run's stage: (run, stage, generation, member, vector)."""
-    name, stage, generation, member, z = item
+def _candidate_job(item: tuple[str, int, int, int, list[float], int]) -> dict[str, Any]:
+    """Simulate one candidate of a run's stage: (run, stage, generation, member, vector, start)."""
+    name, stage, generation, member, z, first_half_start = item
     run = RUNS[name]
     spec = STAGES[stage]
-    seeds = run.layout.candidate_seeds(stage, generation, member)
+    seeds = run.layout.candidate_seeds(stage, generation, member, first_half_start)
     start = time.perf_counter()
     record = simulate_point(
         z,
@@ -673,6 +767,17 @@ def verdict(grades: list[dict[str, Any]]) -> dict[str, Any]:
         "mutant_passes": mutants,
         "passes": bool(passes),
         "diagnosis": diagnosis(used),
+    }
+
+
+def no_answer(reason: str) -> dict[str, Any]:
+    """Return the verdict of a run that reached no answer: it fails, for the reason given."""
+    return {
+        "populations": 0,
+        "wild_type_passes": 0,
+        "mutant_passes": dict.fromkeys(MUTANTS, 0),
+        "passes": False,
+        "no_answer": reason,
     }
 
 
@@ -961,14 +1066,18 @@ def preflight_record(
     centre = float(np.median([distance(r) for r in centre_runs]))
     reference = distance(band_truth(bands))
     flips = definedness_flips(observation, repeats[:10])
+    # The procedure keeps only a start that holds the lawn, so the truth it recovers must.
+    lawn = observation["statistics"].get(LAWN_STATISTIC) or 0.0
     checks = {
         "separated": prior - floor >= SEPARATION,
         "oracle": gain(prior, oracle, floor) >= ORACLE_GATE,
         "centre": gain(prior, centre, floor) <= START_GATE,
         "stable": not flips,
+        "holds_lawn": lawn >= HOLD_BAR,
     }
     return {
         "floor": floor,
+        "observation_time_on_lawn": lawn,
         "oracle_D": oracle,
         "prior_D": prior,
         "centre_D": centre,
@@ -1053,8 +1162,11 @@ def settings_of(run: Run, truth: dict[str, Any]) -> dict[str, Any]:
         "run": run.name,
         "layout": dataclasses.asdict(run.layout),
         "cma_seeds": list(run.cma_seeds),
+        "restart_seed": run.restart_seed,
         "mutants": list(run.mutants),
         "generations": list(run.generations),
+        "hold_readouts": list(run.hold_readouts),
+        "hold_bars": list(run.hold_bars),
         "stages": [dataclasses.asdict(s) for s in STAGES],
         "arm": ARM,
         "settings": {k: repr(v) for k, v in SETTINGS.items()},
@@ -1101,13 +1213,14 @@ def _stored(path: Path) -> dict[tuple[int, int], dict[str, Any]]:
     return out
 
 
-def _generation(  # noqa: PLR0913 - the pool, the run, the stage, its generation and store
+def _generation(  # noqa: PLR0913 - the pool, the run, the stage, its generation, store and start
     pool: Any,  # noqa: ANN401 - the pool
     run: Run,
     stage: int,
     generation: int,
     candidates: list[list[float]],
     path: Path,
+    first_half_start: int = 0,
 ) -> list[dict[str, Any]]:
     """Simulate a generation's candidates, reusing any stored for the same vectors."""
     stored = _stored(path)
@@ -1116,7 +1229,7 @@ def _generation(  # noqa: PLR0913 - the pool, the run, the stage, its generation
     for m, z in enumerate(candidates):
         record = stored.get((generation, m))
         if record is None:
-            todo.append((run.name, stage, generation, m, z))
+            todo.append((run.name, stage, generation, m, z, first_half_start))
         elif record["vector"] != vector_digest(z):
             msg = f"{path}: generation {generation} member {m} is stored at another vector"
             raise ValueError(msg)
@@ -1152,6 +1265,69 @@ def _kill(stage: Stage, readouts: dict[int, dict[str, Any]]) -> str | None:
 def checkpoints(stage: Stage, readouts: dict[int, dict[str, Any]]) -> dict[str, Any]:
     """Return a stage's checkpoint reading, which only the pilot stops on."""
     return {"stage": stage.name, "kill": _kill(stage, readouts)}
+
+
+def lawn_holding(
+    readouts: dict[int, dict[str, Any]],
+    generations: Sequence[int],
+    bar: float,
+) -> dict[str, Any]:
+    """Return a start's lawn-holding reading: its mean time on the lawn over 2a's given readouts."""
+    lawn = float(np.mean([readouts[g]["time_on_lawn"] or 0.0 for g in generations]))
+    return {
+        "generations": list(generations),
+        "time_on_lawn": lawn,
+        "bar": bar,
+        # Readouts all at the bar hold, whatever the rounding of their mean.
+        "holds": lawn >= bar - 1e-12,
+    }
+
+
+def _start_record(state: dict[str, Any], run: Run) -> dict[str, Any]:
+    return {
+        "start": state["start"],
+        "cma_seeds": [run.cma_seed(s, state["start"]) for s in range(len(FIRST_HALF))],
+    }
+
+
+def _start_json(start: dict[str, Any]) -> dict[str, Any]:
+    """Return a start's record with its readouts keyed as JSON keys them."""
+    out = dict(start)
+    if "readouts" in out:
+        out["readouts"] = {
+            name: {str(g): r for g, r in stage.items()} for name, stage in out["readouts"].items()
+        }
+    return out
+
+
+def _drop(
+    state: dict[str, Any],
+    run: Run,
+    holding: dict[str, Any],
+    mean: list[float],
+) -> None:
+    """Set a start aside with everything it produced, and return the run to the box's centre.
+
+    ``holding`` is the lawn-holding reading that drops it, and ``mean`` the search's mean there.
+    """
+    lawn, bar = holding["time_on_lawn"], holding["bar"]
+    reason = f"2a: on the lawn {lawn:.3f} at generations {holding['generations']} (bar {bar})"
+    record: dict[str, Any] = {
+        **_start_record(state, run),
+        "kept": False,
+        "dropped": reason,
+        "holding": holding,
+        "mean_at_drop": mean,
+    }
+    for key in ("answers", "histories", "readouts", "checkpoints", "seconds"):
+        record[key] = {n: state[key].pop(n) for n in FIRST_HALF if n in state[key]}
+    state["starts"].append(record)
+    state["start"] += 1
+    state["stage"], state["es"] = 0, None
+    state["x"] = [0.5] * len(state["x"])
+    state.pop("previous", None)
+    if state["start"] >= run.starts:
+        state["killed"] = f"no start of {run.starts} held the lawn"
 
 
 def noise_step(pool: Any, run: Run, z: list[float], path: Path) -> list[dict[str, Any]]:  # noqa: ANN401
@@ -1211,9 +1387,19 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
             "noise": None,
             "seconds": {},
             "killed": None,
+            "start": 0,
+            "starts": [],
+            "kept": None,
         }
     timescale = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
     subset = subset_indices(names)
+    hold_at = run.hold_readouts[-1]
+    if any(g % READOUT_EVERY and g != run.generations[1] for g in run.hold_readouts):
+        msg = f"{run.name}: a lawn-holding generation of {run.hold_readouts} has no readout"
+        raise ValueError(msg)
+    if hold_at > run.generations[1] or hold_at != run.layout.early_generations:
+        msg = f"{run.name}: the lawn-holding reading at {hold_at} does not match 2a or its seeds"
+        raise ValueError(msg)
     while state["stage"] < len(STAGES) and state["killed"] is None:
         s = state["stage"]
         stage = STAGES[s]
@@ -1225,10 +1411,11 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
                 x[timescale] = names[timescale].unit(TIMESCALE_AT_2A_S)
                 state["x"] = x
             x0 = [x[i] for i in idx]
+            seed = run.cma_seed(s, state["start"])
             if stage.sigma0 is not None:
-                state["es"] = fresh(x0, stage.sigma0, run.cma_seeds[s], run.layout.popsize)
+                state["es"] = fresh(x0, stage.sigma0, seed, run.layout.popsize_of(s))
             else:
-                state["es"] = carried(state["previous"], x0, run.cma_seeds[s], run.layout.popsize)
+                state["es"] = carried(state["previous"], x0, seed, run.layout.popsize_of(s))
             state["histories"][stage.name] = {
                 "medians": [],
                 "best": [],
@@ -1264,9 +1451,33 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
                 truth,
             )
             _write_pickle(state_path, state)
-        while len(history["medians"]) < generations:
-            g = len(history["medians"]) + 1
-            start = time.time()
+        first_half = stage.name in FIRST_HALF
+        store = (
+            f"start_{state['start']}_stage_{stage.name}" if first_half else f"stage_{stage.name}"
+        )
+        not_holding = None
+        while True:
+            done = len(history["medians"])
+            if stage.name == FIRST_HALF[-1] and state["kept"] is None and done >= hold_at:
+                # The start's lawn-holding reading, taken once, at its last readout's generation.
+                holding = lawn_holding(readouts, run.hold_readouts, run.hold_bars[state["start"]])
+                if not holding["holds"]:
+                    not_holding = holding
+                    break
+                state["kept"] = state["start"]
+                state["starts"].append(
+                    {
+                        **_start_record(state, run),
+                        "kept": True,
+                        "dropped": None,
+                        "holding": holding,
+                    },
+                )
+                _write_pickle(state_path, state)
+            if done >= generations:
+                break
+            g = done + 1
+            began = time.time()
             points = es.ask()
             candidates = [full(p) for p in points]
             records = _generation(
@@ -1275,7 +1486,8 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
                 s,
                 g,
                 candidates,
-                state_dir / f"stage_{stage.name}.jsonl",
+                state_dir / f"{store}.jsonl",
+                state["start"] if first_half else 0,
             )
             scores = [objective(r) for r in records]
             es.tell(points, scores)
@@ -1291,14 +1503,18 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
                     run.layout.readout_seeds(),
                     truth,
                 )
-            state["seconds"][stage.name] += time.time() - start
+            state["seconds"][stage.name] += time.time() - began
             print(
-                f"{run.name} {stage.name} gen {g}: median {history['medians'][-1]:.2f} "
+                f"{run.name} start {state['start']} {stage.name} gen {g}: median {history['medians'][-1]:.2f} "
                 f"best {history['best'][-1]:.2f} sigma {es.sigma:.4f}",
                 flush=True,
             )
             _write_pickle(state_path, state)
         answer = full(es.result.xfavorite)
+        if not_holding is not None:
+            _drop(state, run, not_holding, answer)
+            _write_pickle(state_path, state)
+            continue
         state["answers"][stage.name] = answer
         state["checkpoints"][stage.name] = checkpoints(stage, readouts)
         state["x"], state["previous"], state["es"] = answer, es, None
@@ -1318,6 +1534,9 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
         "head": head(),
         "manifest": manifest_digest(),
         "killed": state["killed"],
+        "start": state["start"],
+        "kept": state["kept"],
+        "starts": [_start_json(a) for a in state["starts"]],
         "answer": state["answers"].get("final"),
         "answers": state["answers"],
         "histories": state["histories"],
@@ -1658,6 +1877,9 @@ def _recovery_preflight(workers: int) -> int:
     return 0 if record["passed"] else 1
 
 
+RECOVERY_DESCRIPTION = "F.0b-ii: the registered procedure recovering the pilot's answer."
+
+
 def _recovery(workers: int) -> int:
     preflight = _json(RECOVERY_PREFLIGHT_PATH)
     observation = preflight["observation"]
@@ -1666,13 +1888,21 @@ def _recovery(workers: int) -> int:
     truth = {"statistics": observation["statistics"], "delta": observation["delta"]}
     with _pool(workers) as pool:
         record = procedure(run, truth, pool)
+        if record["answer"] is None:
+            gate = {"D": None, "gain": None, "passes": False, "no_answer": record["killed"]}
+            _write_json(
+                RECOVERY_PATH,
+                {"description": RECOVERY_DESCRIPTION, **record, "gate": gate},
+            )
+            print(json.dumps(gate))
+            return 1
         answers = grade(pool, run, record["answer"], RECOVERY_RESIMULATIONS)
     d = float(np.median([recovery_distance(truth, a, bands) for a in answers]))
     block = {}
     for e, value, target in zip(entries(), record["answer"], preflight["truth"], strict=True):
         block.setdefault(e.block, []).append(abs(value - target))
     out = {
-        "description": "F.0b-ii: the registered procedure recovering the pilot's answer.",
+        "description": RECOVERY_DESCRIPTION,
         **record,
         "gate": recovery_gate(d, preflight),
         "wild_type_reference_gain": preflight["wild_type_reference_gain"],
@@ -1695,6 +1925,9 @@ def _run(workers: int) -> int:
 
 def _grade(workers: int) -> int:
     record = _json(BUILD / "fit_procedure.json")
+    if record.get("killed"):
+        print(f"nothing to grade, the fit has no answer: {record['killed']}", file=sys.stderr)
+        return 0
     if record.get("answer") is None:
         print("the registered fit has not reached its answer", file=sys.stderr)
         return 1
@@ -1706,6 +1939,12 @@ def _grade(workers: int) -> int:
 
 def _read() -> int:
     record = _json(BUILD / "fit_procedure.json")
+    if record.get("killed"):
+        # No start held the lawn: the fit has no answer, and that is its verdict.
+        out = {"description": DESCRIPTION, **record, "verdict": no_answer(record["killed"])}
+        _write_json(FIT_PATH, out)
+        print(json.dumps(nr._finite({"verdict": out["verdict"]})))
+        return 0
     grades = _json(BUILD / "fit_grades.json")["grades"]
     pilot = _json(PILOT_PATH)
     bands = bg.load_bands_v4()
@@ -1726,15 +1965,25 @@ def _read() -> int:
     return 0
 
 
+LOO_DESCRIPTION = "C.2's tax-4 leave-one-out, as description: tax-4 never scored."
+
+
 def _loo(workers: int) -> int:
     run = RUNS["loo"]
     bands = bg.load_bands_v4()
     with _pool(workers) as pool:
         record = procedure(run, band_truth(bands), pool)
+        if record["answer"] is None:
+            _write_json(
+                LOO_PATH,
+                {"description": LOO_DESCRIPTION, **record, "tax4_predicted": None},
+            )
+            print(json.dumps({"tax4_predicted": None, "no_answer": record["killed"]}))
+            return 0
         grades = grade(pool, run, record["answer"], run.layout.grade_populations)
     fit = _json(FIT_PATH)
     out = {
-        "description": "C.2's tax-4 leave-one-out, as description: tax-4 never scored.",
+        "description": LOO_DESCRIPTION,
         **record,
         "tax4_predicted": pass_rates(grades)["tax-4"],
         "tax4_fitted": fit.get("pass_rates", {}).get("tax-4"),
@@ -1748,7 +1997,7 @@ def _loo(workers: int) -> int:
 
 
 def _smoke(workers: int) -> int:
-    """Two generations of every stage, the noise step, a grade, the preflight and the reading."""
+    """Every stage, a dropped start and a kept one, the noise step, a grade, the preflight, the reading."""
     import shutil
 
     from quantumnematode.benchmark import references as refs
@@ -1759,6 +2008,9 @@ def _smoke(workers: int) -> int:
     truth = band_truth(bands)
     with _pool(workers) as pool:
         record = procedure(run, truth, pool)
+        if record["answer"] is None:
+            print(f"the smoke reached no answer: {record['killed']}", file=sys.stderr)
+            return 1
         grades = grade(pool, run, record["answer"], run.layout.grade_populations)
     pre = preflight_record(grades[0], [grades[1]] * 20, [truth], [grades[1]], bands)
     tracks = refs.load_scheer_tracks()
@@ -1773,6 +2025,9 @@ def _smoke(workers: int) -> int:
         reference_populations=2,
     )
     summary = {
+        "starts": [
+            {k: a[k] for k in ("start", "kept", "dropped", "holding")} for a in record["starts"]
+        ],
         "medians": {k: v["medians"] for k, v in record["histories"].items()},
         "noise_sd_keys": len(record["noise"]["sd"]),
         "verdict": verdict(grades),
@@ -1780,7 +2035,17 @@ def _smoke(workers: int) -> int:
         "held_out": reading,
     }
     print(json.dumps(nr._finite(summary), indent=2))
-    ok = all(len(v["medians"]) == 2 for v in record["histories"].values()) and len(grades) == 2
+    ran = {s.name: n for s, n in zip(STAGES, run.generations, strict=True)}
+    ok = (
+        all(len(v["medians"]) == ran[k] for k, v in record["histories"].items())
+        and len(grades) == 2
+    )
+    # The first start is dropped at its lawn-holding reading with its two stages, the second kept.
+    dropped, kept = record["starts"]
+    ok = ok and record["kept"] == 1 and kept["kept"] and not dropped["kept"]
+    reading = run.hold_readouts[-1]
+    lengths = [len(dropped["histories"][n]["medians"]) for n in FIRST_HALF]
+    ok = ok and lengths == [ran[FIRST_HALF[0]], reading]
     return 0 if ok else 1
 
 

@@ -1,0 +1,50 @@
+{
+ "description": "Do the stage-1 answers reverse when the food signal falls? (description; discarded seeds 890,000,000 + i)\n\nEach stage-1 answer on Scheer's small lawn, 200 animals: the rate at which reversals start on run\nseconds where the sensed concentration is falling (dC/dt < 0) against rising, on the lawn, and the\nmean depth inside the lawn. B04's answer is the one start whose 2a reached the passing basin.\n",
+ "rows": {
+  "B04 (works)": {
+   "reversals_per_min_falling": 27.136819142409163,
+   "rising": 27.035925364359315,
+   "ratio": 1.003731841122141,
+   "speed_falling": NaN,
+   "speed_rising": NaN,
+   "depth_mm": NaN,
+   "seconds_on_lawn": 0.9149791666666667
+  },
+  "pilot": {
+   "reversals_per_min_falling": 12.002022170609655,
+   "rising": 12.154729739287887,
+   "ratio": 0.9874363665870222,
+   "speed_falling": NaN,
+   "speed_rising": NaN,
+   "depth_mm": NaN,
+   "seconds_on_lawn": 0.95936875
+  },
+  "screen a": {
+   "reversals_per_min_falling": 0.0,
+   "rising": 0.005307229626135158,
+   "ratio": 0.0,
+   "speed_falling": NaN,
+   "speed_rising": NaN,
+   "depth_mm": NaN,
+   "seconds_on_lawn": 0.9634125
+  },
+  "screen b": {
+   "reversals_per_min_falling": 0.007484294321764177,
+   "rising": 0.008343977914211546,
+   "ratio": 0.8969695747896039,
+   "speed_falling": NaN,
+   "speed_rising": NaN,
+   "depth_mm": NaN,
+   "seconds_on_lawn": 0.9601208333333333
+  },
+  "Logbook 131 final": {
+   "reversals_per_min_falling": 5.938036297365024,
+   "rising": 6.013125356667301,
+   "ratio": 0.9875124739884196,
+   "speed_falling": NaN,
+   "speed_rising": NaN,
+   "depth_mm": NaN,
+   "seconds_on_lawn": 0.9863124999999999
+  }
+ }
+}

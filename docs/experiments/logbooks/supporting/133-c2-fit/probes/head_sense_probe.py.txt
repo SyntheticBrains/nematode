@@ -1,0 +1,76 @@
+"""Does sensing food at the head stop the edge crossings? (description; discarded seeds 890,000,000 + i)
+
+The pilot's 2a answer crosses the lawn edge 8x as often as real worms, though it hugs the edge less.
+The point worm senses food contact where it is tracked (a real worm's midbody), so it can respond to
+the edge only after crossing it; a real worm's head leads its midbody by about 0.5 mm. Here the
+evaluator is patched in this script only: food contact is the lawn density at a point ``offset`` mm
+ahead of the worm along its heading. Eating, the on-lawn flag and the reversal kinematics stay at the
+tracked point. The network is NOT refitted: it was fitted with the sense at the tracked point.
+
+Read per offset (0, 0.25, 0.5 mm), on Scheer's small lawn and uniform well, the same 200 animals:
+edge crossings per minute, the share of seconds on the lawn, D_fit and every fitted statistic's z.
+"""
+import json, sys
+import numpy as np
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+from quantumnematode.evaluation import batched as B
+
+ORIGINAL = B.BatchedEvaluator._sense
+
+
+def patched(offset):
+    def _sense(self, t):
+        senses = ORIGINAL(self, t)
+        if offset > 0:
+            ahead = np.stack([np.cos(self.heading), np.sin(self.heading)], axis=1)
+            head = self._clamp_sample(self.pos + offset * ahead)
+            cells = self._cells_under(head)
+            contact = np.zeros(len(head))
+            has = cells >= 0
+            contact[has] = self.density[np.flatnonzero(has), cells[has]]
+            senses.food_contact = contact
+        return senses
+    return _sense
+
+
+def read(z, offset, bands, seeds):
+    B.BatchedEvaluator._sense = patched(offset)
+    _, factory = fit.controller(z)
+    pops, chem = bg.simulate_v2(fit.ARM, factory, seeds, bands, assays=fit.FIT_ASSAYS)
+    graded = bg.grade_populations_v4(pops, chem, bands, presence=False)
+    rates, shares, near = [], [], []
+    for animal in pops["small_lawn"]:
+        on = np.array([bool(s.on_lawn) for s in animal])
+        x = np.array([s.x for s in animal]); y = np.array([s.y for s in animal])
+        depth = 1.5 - np.hypot(x - 5.0, y - 5.0)
+        rates.append(np.sum(on[:-1] & ~on[1:]) / (len(on) / 60))
+        shares.append(on.mean())
+        near.append(depth[on] < 0.2)
+    zs = {f"{f}/{n}": r["z"] for f, rs in graded["families"].items() for n, r in rs.items()}
+    return {"offset_mm": offset, "crossings_per_min": float(np.mean(rates)), "seconds_on_lawn": float(np.mean(shares)),
+            "share_within_0.2mm": float(np.mean(np.concatenate(near))), "D_fit": graded["D_fit"], "z": zs}
+
+
+if __name__ == "__main__":
+    fit.nr._worker_setup()
+    source = sys.argv[1] if len(sys.argv) > 1 else "pilot"
+    if source == "pilot":
+        z = json.load(open("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json"))["answers"]["2a"]
+    else:
+        z = json.load(open(source))["z"]
+    bands = bg.load_bands_v4()
+    seeds = list(range(890_000_000, 890_000_200))
+    rows = [read(z, o, bands, seeds) for o in (0.0, 0.25, 0.5)]
+    B.BatchedEvaluator._sense = ORIGINAL
+    out = {"description": __doc__, "source": source, "rows": rows}
+    name = "head_sense_probe.json" if source == "pilot" else "head_sense_probe_other.json"
+    json.dump(fit.nr._finite(out), open(f"build/c2-fit/{name}", "w"), indent=1)
+    keys = sorted(rows[0]["z"])
+    print("offset   cross/min  on-lawn s  near-edge  D_fit")
+    for r in rows:
+        print(f"{r['offset_mm']:5.2f}   {r['crossings_per_min']:8.3f}  {r['seconds_on_lawn']:8.3f}  {r['share_within_0.2mm']:8.3f}  {r['D_fit']:.2f}")
+    print("statistic".ljust(36), *[f"{r['offset_mm']:>7.2f}" for r in rows])
+    for k in keys:
+        print(k.ljust(36), *[f"{r['z'][k]:7.2f}" if r["z"][k] is not None else "   None" for r in rows])

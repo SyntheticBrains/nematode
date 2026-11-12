@@ -1,0 +1,9 @@
+{
+ "description": "The curriculum's 2a replayed with only the body changed (description; discarded seeds).\n\nLogbook 131's curriculum ran 2a on the pooled on-food reversal speed, from B04's stage-1 answer with\nthe speed noise's timescale at 1 s, sep-CMA at sigma0 0.1, population 48, CMA seed 9497, its\ncandidates on 840,000,000 + 200*(48*(g - 1) + m) + i and its readouts on 841,000,000 + i. Here the\nsame start, strategy, objective (c2_fit's: the ranking score on D_fit's families with both guards)\nand animals, on a chosen arm:\n\n- ``check``: generation 1 on the pooled arm (connectome_c2) must reproduce the curriculum's median,\n  286.48, so the replay is exact;\n- ``run``: 100 generations on the speed-following arm (connectome_c2_following), so any divergence\n  from the curriculum is the body's.\n\n**The rule, fixed before it runs** (the maintainer's choice, 2026-11-11), as the screens': it keeps\npace when the mean of its readouts at generations 80, 90 and 100 has time on the lawn at least 0.97\nand D_fit at most 3.1. Keeps pace: the body is not why the first half fails; the failures are restart\nluck, and the remedy is several first-half restarts selected at 2a's end. Fails: the body changes\n2a's landscape, to be examined before anything registers.\n",
+ "mode": "check",
+ "arm": "connectome_c2",
+ "medians": [
+  286.4827047904274
+ ],
+ "reproduces": true
+}

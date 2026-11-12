@@ -1,0 +1,42 @@
+{
+ "description": "Where does the pilot's 2a worm spend its off-lawn time? (description; discarded seeds)\n\n2a's mean at the pilot's saved state, on Scheer's small lawn, 200 animals at 890,000,000 + i, through\nthe grader's own path (simulate_v2: windowed and measured). Per animal: the share of seconds on the\nlawn, the seconds before the first entry, and each later excursion's length. Beside it, the same\nfrom PD1074's band-cohort tracks on their real lawn boundaries.\n",
+ "generation": 154,
+ "simulated": {
+  "animals": 200,
+  "time_on_lawn_mean": 0.9725416666666666,
+  "never_on_lawn": 0,
+  "off_lawn_share_before_first_entry": 0.000834597875569044,
+  "first_entry_s_median": 0.0,
+  "first_entry_s_p90": 0.0,
+  "excursions_per_animal": 21.62,
+  "excursion_s_median": 2.0,
+  "excursion_s_p90": 5.0,
+  "excursions_over_60s_share_of_excursion_time": 0.02354013212848356,
+  "share_quantiles": [
+   0.9487083333333334,
+   0.9636458333333333,
+   0.9760416666666667,
+   0.9863541666666666,
+   0.9937916666666666
+  ]
+ },
+ "real_band_cohorts": {
+  "animals": 1013,
+  "time_on_lawn_mean": 0.9842349558753042,
+  "never_on_lawn": 0,
+  "off_lawn_share_before_first_entry": 0.06060357552894866,
+  "first_entry_s_median": 0.0,
+  "first_entry_s_p90": 0.0,
+  "excursions_per_animal": 2.3415597235932872,
+  "excursion_s_median": 4.0,
+  "excursion_s_p90": 36.90000000000009,
+  "excursions_over_60s_share_of_excursion_time": 0.40826422231922016,
+  "share_quantiles": [
+   0.9575609893780166,
+   0.9847715736040609,
+   0.99875,
+   1.0,
+   1.0
+  ]
+ }
+}

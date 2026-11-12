@@ -1,0 +1,112 @@
+"""The curriculum's 2a replayed with only the body changed (description; discarded seeds).
+
+Logbook 131's curriculum ran 2a on the pooled on-food reversal speed, from B04's stage-1 answer with
+the speed noise's timescale at 1 s, sep-CMA at sigma0 0.1, population 48, CMA seed 9497, its
+candidates on 840,000,000 + 200*(48*(g - 1) + m) + i and its readouts on 841,000,000 + i. Here the
+same start, strategy, objective (c2_fit's: the ranking score on D_fit's families with both guards)
+and animals, on a chosen arm:
+
+- ``check``: generation 1 on the pooled arm (connectome_c2) must reproduce the curriculum's median,
+  286.48, so the replay is exact;
+- ``run``: 100 generations on the speed-following arm (connectome_c2_following), so any divergence
+  from the curriculum is the body's.
+
+**The rule, fixed before it runs** (the maintainer's choice, 2026-11-11), as the screens': it keeps
+pace when the mean of its readouts at generations 80, 90 and 100 has time on the lawn at least 0.97
+and D_fit at most 3.1. Keeps pace: the body is not why the first half fails; the failures are restart
+luck, and the remedy is several first-half restarts selected at 2a's end. Fails: the body changes
+2a's landscape, to be examined before anything registers.
+"""
+
+import json
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+from quantumnematode.connectome import encoder as enc
+
+BASE, READ, CMA_SEED, SIGMA0, POPSIZE = 840_000_000, 841_000_000, 9497, 0.1, 48
+GENERATIONS, WORKERS = 100, 8
+CURRICULUM_GEN1_MEDIAN = 286.48
+PACE = {"time_on_lawn": 0.97, "D_fit": 3.1}
+OUT = Path("build/c2-fit/replay")
+
+
+def _init(arm):
+    nr._worker_setup()
+    fit.ARM = arm
+
+
+def _job(item):
+    seeds, z = item
+    return fit.simulate_point(z, seeds, assays=fit.FIT_ASSAYS, mutants=())
+
+
+def start():
+    z = list(json.loads(Path("build/c2-change-b/B04.json").read_text())["stages"][0]["answer"])
+    names = fit.entries()
+    assert len(z) == len(names) == 137
+    i = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
+    z[i] = names[i].unit(1.0)
+    return z
+
+
+def main(mode):
+    arm = "connectome_c2" if mode == "check" else "connectome_c2_following"
+    fit.ARM = arm
+    generations = 1 if mode == "check" else GENERATIONS
+    out = OUT / mode
+    out.mkdir(parents=True, exist_ok=True)
+    state_path = out / "state.pkl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    objective = fit.Objective(truth, bands, families=fit.FIT_FAMILIES, mutants=())
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        state = {"es": fit.fresh(start(), SIGMA0, CMA_SEED, POPSIZE), "medians": [], "readouts": {}}
+    es = state["es"]
+    readout_seeds = list(range(READ, READ + 200))
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=_init, initargs=(arm,)) as pool:
+        if mode == "run" and 0 not in state["readouts"]:
+            state["readouts"][0] = fit.readout(pool, list(np.clip(es.result.xfavorite, 0, 1)), readout_seeds, truth)
+        while len(state["medians"]) < generations:
+            g = len(state["medians"]) + 1
+            points = es.ask()
+            jobs = [(list(range(BASE + 200 * (POPSIZE * (g - 1) + m), BASE + 200 * (POPSIZE * (g - 1) + m) + 200)),
+                     list(map(float, np.clip(p, 0, 1)))) for m, p in enumerate(points)]
+            records = list(pool.map(_job, jobs))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            state["medians"].append(float(np.median(scores)))
+            if mode == "run" and g % 10 == 0:
+                r = fit.readout(pool, list(np.clip(es.result.xfavorite, 0, 1)), readout_seeds, truth)
+                state["readouts"][g] = r
+                print(f"replay readout {g}: D_fit {r['D_fit']:.2f} on-lawn {r['time_on_lawn']:.3f} rev {r['spread']['reversal']:.2f}", flush=True)
+            print(f"replay {mode} gen {g}: median {state['medians'][-1]:.2f} sigma {es.sigma:.4f} {time.time() - t0:.0f} s", flush=True)
+            state_path.write_bytes(pickle.dumps(state))
+    record = {"description": __doc__, "mode": mode, "arm": arm, "medians": state["medians"]}
+    if mode == "check":
+        record["reproduces"] = abs(state["medians"][0] - CURRICULUM_GEN1_MEDIAN) < 0.005
+    else:
+        last = [state["readouts"][g] for g in (80, 90, 100)]
+        reading = {"time_on_lawn": float(np.mean([r["time_on_lawn"] for r in last])),
+                   "D_fit": float(np.mean([r["D_fit"] for r in last]))}
+        reading["keeps_pace"] = reading["time_on_lawn"] >= PACE["time_on_lawn"] and reading["D_fit"] <= PACE["D_fit"]
+        record |= {"pace": PACE, "reading": reading, "readouts": {str(k): v for k, v in state["readouts"].items()},
+                   "answer": list(np.clip(es.result.xfavorite, 0, 1))}
+    (OUT / f"{mode}.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"replay {mode} done: {record.get('reproduces', record.get('reading'))}", flush=True)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])

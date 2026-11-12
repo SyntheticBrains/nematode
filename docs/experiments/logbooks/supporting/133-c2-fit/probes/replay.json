@@ -1,0 +1,2028 @@
+{
+ "description": "The curriculum's 2a replayed with only the body changed (description; discarded seeds).\n\nLogbook 131's curriculum ran 2a on the pooled on-food reversal speed, from B04's stage-1 answer with\nthe speed noise's timescale at 1 s, sep-CMA at sigma0 0.1, population 48, CMA seed 9497, its\ncandidates on 840,000,000 + 200*(48*(g - 1) + m) + i and its readouts on 841,000,000 + i. Here the\nsame start, strategy, objective (c2_fit's: the ranking score on D_fit's families with both guards)\nand animals, on a chosen arm:\n\n- ``check``: generation 1 on the pooled arm (connectome_c2) must reproduce the curriculum's median,\n  286.48, so the replay is exact;\n- ``run``: 100 generations on the speed-following arm (connectome_c2_following), so any divergence\n  from the curriculum is the body's.\n\n**The rule, fixed before it runs** (the maintainer's choice, 2026-11-11), as the screens': it keeps\npace when the mean of its readouts at generations 80, 90 and 100 has time on the lawn at least 0.97\nand D_fit at most 3.1. Keeps pace: the body is not why the first half fails; the failures are restart\nluck, and the remedy is several first-half restarts selected at 2a's end. Fails: the body changes\n2a's landscape, to be examined before anything registers.\n",
+ "mode": "run",
+ "arm": "connectome_c2_following",
+ "medians": [
+  292.91901669009144,
+  160.13854556028184,
+  209.47733072948813,
+  102.77126621168372,
+  18.19622454290412,
+  38.37974109014456,
+  72.15189740062301,
+  11.853390616396588,
+  82.5581808562828,
+  12.485343365475703,
+  13.282544656041257,
+  10.762011602777536,
+  10.901547137749752,
+  11.38038793233566,
+  9.74793875781761,
+  9.761283917894382,
+  9.67767652764147,
+  10.724904041664473,
+  9.721586855664636,
+  9.893212529919136,
+  11.400823450919587,
+  10.777527645543033,
+  9.619064731816671,
+  9.27108885787939,
+  10.505658184075378,
+  9.297714878541107,
+  8.58020684710805,
+  9.698197988712053,
+  8.849185405761748,
+  8.275537501674286,
+  11.094044711225092,
+  9.773813792547404,
+  8.539526555467132,
+  8.975038213025119,
+  8.332992035209248,
+  8.247234823980403,
+  8.715103314836359,
+  8.280282037557171,
+  8.313964549738055,
+  8.932718997346898,
+  8.296244571826024,
+  7.946339491289546,
+  8.861270814073587,
+  8.036952092234312,
+  9.209683220257773,
+  9.333210643556548,
+  8.357016879144988,
+  8.119287033589888,
+  8.261381132866294,
+  7.642770569665668,
+  8.733395797702592,
+  7.182738200816043,
+  7.634801154664232,
+  7.332489793797851,
+  6.943215801892452,
+  7.017665310732511,
+  7.541554867676641,
+  6.650138377521259,
+  6.716517030434794,
+  8.4401151496854,
+  7.058183287321485,
+  6.3079909701125985,
+  7.891509292485367,
+  6.193429899368443,
+  6.885622842866762,
+  6.50876815286045,
+  6.243093904553677,
+  6.532399104429227,
+  5.720971816070122,
+  6.414251286056646,
+  6.648019593584019,
+  5.641848007883341,
+  6.532327970984166,
+  7.163674254069526,
+  6.602384724384808,
+  5.91448802594537,
+  6.138399960539143,
+  7.0879773881129,
+  6.385551133411672,
+  5.430192251555322,
+  6.638916659898044,
+  6.639913145721687,
+  6.223514852228197,
+  5.887598178584502,
+  4.920217629213662,
+  5.543439487825351,
+  5.379885172243483,
+  4.813808283820565,
+  4.872056193223004,
+  4.382606385593724,
+  4.236288067125615,
+  5.817814563768009,
+  4.462098427581987,
+  5.182402279236432,
+  5.108203031097592,
+  4.555524026355069,
+  4.425478518146652,
+  4.618315293425647,
+  4.356287927124466,
+  4.479473925578539
+ ],
+ "pace": {
+  "time_on_lawn": 0.97,
+  "D_fit": 3.1
+ },
+ "reading": {
+  "time_on_lawn": 0.9866506860224399,
+  "D_fit": 2.3544609288308913,
+  "keeps_pace": true
+ },
+ "readouts": {
+  "0": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.338631176616163,
+    "small_lawn/roaming_bout_s": 228.90334572490707,
+    "small_lawn/dwelling_bout_s": 429.5,
+    "small_lawn/exits_per_on_lawn_hour": 1.940220529601012,
+    "small_lawn/pre_exit_enrichment": -0.0469047299399315,
+    "small_lawn/time_on_lawn": 0.7691022522998837,
+    "kinematics/dwelling_speed_median": 0.01897199125084532,
+    "kinematics/dwelling_speed_p90": 0.04520049432714852,
+    "kinematics/roaming_speed_median": 0.03517388632754122,
+    "kinematics/roaming_speed_p90": 0.0616479077383449,
+    "kinematics/roaming_survival_5min": 0.18361890043350437,
+    "activity/pause_share": 0.5277448039703873,
+    "activity/flip_fraction": 0.17882071651691026,
+    "activity/onset_rate_per_min": 1.844729159832632,
+    "uniform_lawn/roaming_fraction": 0.4638545300771752,
+    "uniform_lawn/roaming_bout_s": 195.5258467023173,
+    "uniform_lawn/dwelling_bout_s": 229.68297101449275,
+    "local_search/gamma_per_min": null,
+    "local_search/log_early_late_ratio": -0.1251631429540059,
+    "chemotaxis/drift_mm_s": 0.009866456256652958,
+    "chemotaxis/log_quintile_ratio": 0.6137200469286237,
+    "chemotaxis/weathervane_deg_s": 3.8849875382283074,
+    "chemotaxis/onset_per_min": 0.98827256291698,
+    "chemotaxis/flip_fraction": 0.029859422267038378
+   },
+   "z": {
+    "small_lawn/roaming_fraction": 4.6739350419661685,
+    "small_lawn/roaming_bout_s": 0.5385877547526536,
+    "small_lawn/dwelling_bout_s": -2.836393540463585,
+    "small_lawn/exits_per_on_lawn_hour": 6.2171115945747495,
+    "small_lawn/pre_exit_enrichment": -4.90900522915102,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/dwelling_speed_median": 8.437899896855042,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "kinematics/roaming_speed_median": -2.1560544927723972,
+    "kinematics/roaming_speed_p90": -2.8634094023524743,
+    "kinematics/roaming_survival_5min": -0.23328835078083177,
+    "activity/pause_share": 1.4231801007926135,
+    "activity/flip_fraction": 3.743113304957277,
+    "activity/onset_rate_per_min": -1.9487736668550621,
+    "uniform_lawn/roaming_fraction": 2.7755559311095412,
+    "uniform_lawn/roaming_bout_s": -4.497036225584182,
+    "uniform_lawn/dwelling_bout_s": -1.8724210345464671,
+    "local_search/gamma_per_min": 10.0,
+    "local_search/log_early_late_ratio": -4.047946533418545,
+    "chemotaxis/drift_mm_s": -0.9904960472630683,
+    "chemotaxis/log_quintile_ratio": -1.021054374110459,
+    "chemotaxis/weathervane_deg_s": 3.988723273036768,
+    "chemotaxis/onset_per_min": -0.13421710233001674,
+    "chemotaxis/flip_fraction": 0.3179312844338954
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": false,
+    "small_lawn/roaming_bout_s": true,
+    "small_lawn/dwelling_bout_s": true,
+    "small_lawn/exits_per_on_lawn_hour": false,
+    "small_lawn/pre_exit_enrichment": false,
+    "small_lawn/time_on_lawn": false,
+    "kinematics/dwelling_speed_median": false,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": true,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": true,
+    "activity/pause_share": true,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": true,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": false,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": false,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 4.964336448278296,
+   "D_fit": 4.63854379612834,
+   "time_on_lawn": 0.7691022522998837,
+   "reversal_share": 0.01785222222222222,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.8759381771087646,
+    "curvature": 2.0729191303253174,
+    "reversal": 3.4512624740600586,
+    "omega": 0.03264141082763672,
+    "delta": 2.844853401184082
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": 0.01254696763399582,
+     "exits_per_on_lawn_hour": 0.31717567492372467
+    },
+    "pdfr-1": {
+     "roaming_fraction": 0.028415039056978342,
+     "exits_per_on_lawn_hour": 1.8234301299988602
+    },
+    "tax-4": {
+     "roaming_fraction": 0.03038196662286574,
+     "exits_per_on_lawn_hour": 1.7688460776611845
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.01254696763399582,
+       "z": -5.03639777954351,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.31717567492372467,
+       "z": 0.876289815962766,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.028415039056978342,
+       "z": 1.8116600144935664,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 1.8234301299988602,
+       "z": 6.8000160217570444,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.03038196662286574,
+       "z": 3.2847218414802586,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 1.7688460776611845,
+       "z": 4.085814835102753,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 4.792390094068566
+  },
+  "10": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.2552936927175042,
+    "small_lawn/roaming_bout_s": 122.25945945945946,
+    "small_lawn/dwelling_bout_s": 339.7425334706488,
+    "small_lawn/exits_per_on_lawn_hour": 0.6013815522145469,
+    "small_lawn/pre_exit_enrichment": -0.013408875963577482,
+    "small_lawn/time_on_lawn": 0.9365921728650866,
+    "kinematics/dwelling_speed_median": 0.01598442247437231,
+    "kinematics/dwelling_speed_p90": 0.04656126302098317,
+    "kinematics/roaming_speed_median": 0.03615472671350344,
+    "kinematics/roaming_speed_p90": 0.07133711883003567,
+    "kinematics/roaming_survival_5min": 0.03486065305115702,
+    "activity/pause_share": 0.6556036342128319,
+    "activity/flip_fraction": 0.026959083267786364,
+    "activity/onset_rate_per_min": 0.31712642809177144,
+    "uniform_lawn/roaming_fraction": 0.2518465217667351,
+    "uniform_lawn/roaming_bout_s": 112.26415094339623,
+    "uniform_lawn/dwelling_bout_s": 333.81491973559963,
+    "local_search/gamma_per_min": null,
+    "local_search/log_early_late_ratio": -0.28870196035252654,
+    "chemotaxis/drift_mm_s": 0.002447050255413526,
+    "chemotaxis/log_quintile_ratio": -0.028987536873252298,
+    "chemotaxis/weathervane_deg_s": 1.483270339352409,
+    "chemotaxis/onset_per_min": 0.9350261993462446,
+    "chemotaxis/flip_fraction": 0.006769621324307171
+   },
+   "z": {
+    "small_lawn/roaming_fraction": 2.3727764463961583,
+    "small_lawn/roaming_bout_s": -4.155258589376602,
+    "small_lawn/dwelling_bout_s": -3.235166596282402,
+    "small_lawn/exits_per_on_lawn_hour": -0.5515135067903796,
+    "small_lawn/pre_exit_enrichment": -4.42855472849933,
+    "small_lawn/time_on_lawn": -6.728563433512749,
+    "kinematics/dwelling_speed_median": 4.327978020045303,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "kinematics/roaming_speed_median": -1.1414519302775141,
+    "kinematics/roaming_speed_p90": -0.47443822414148806,
+    "kinematics/roaming_survival_5min": -3.6143568049240593,
+    "activity/pause_share": 5.388253724494556,
+    "activity/flip_fraction": -8.429870123840017,
+    "activity/onset_rate_per_min": -8.7245962610257,
+    "uniform_lawn/roaming_fraction": 0.429620814141645,
+    "uniform_lawn/roaming_bout_s": -7.333046164550848,
+    "uniform_lawn/dwelling_bout_s": -1.6838910254023938,
+    "local_search/gamma_per_min": 10.0,
+    "local_search/log_early_late_ratio": -4.484046317081582,
+    "chemotaxis/drift_mm_s": -1.449065356289094,
+    "chemotaxis/log_quintile_ratio": -1.8572697026345761,
+    "chemotaxis/weathervane_deg_s": 1.2682829534729125,
+    "chemotaxis/onset_per_min": -0.1907030858067146,
+    "chemotaxis/flip_fraction": -0.8154974720709732
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": true,
+    "small_lawn/roaming_bout_s": false,
+    "small_lawn/dwelling_bout_s": false,
+    "small_lawn/exits_per_on_lawn_hour": true,
+    "small_lawn/pre_exit_enrichment": false,
+    "small_lawn/time_on_lawn": false,
+    "kinematics/dwelling_speed_median": false,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": true,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": false,
+    "activity/pause_share": false,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": false,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 5.513386173575137,
+   "D_fit": 5.494528860310367,
+   "time_on_lawn": 0.9365921728650866,
+   "reversal_share": 0.00096,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 2.3075857162475586,
+    "curvature": 1.7973029613494873,
+    "reversal": 2.1215004920959473,
+    "omega": 0.006560564041137695,
+    "delta": 1.052742600440979
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.011975487977211707,
+     "exits_per_on_lawn_hour": 0.0257673956605734
+    },
+    "pdfr-1": {
+     "roaming_fraction": -0.00012854865566302998,
+     "exits_per_on_lawn_hour": -0.07010959156802543
+    },
+    "tax-4": {
+     "roaming_fraction": -0.02462292978867675,
+     "exits_per_on_lawn_hour": 1.0921668348822273
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.011975487977211707,
+       "z": -5.515198864944452,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.0257673956605734,
+       "z": -0.16544937129445508,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.00012854865566302998,
+       "z": 1.1757443976287871,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.07010959156802543,
+       "z": -0.42209955330934396,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.02462292978867675,
+       "z": 2.050941246474715,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 1.0921668348822273,
+       "z": 2.196106242882674,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    }
+   },
+   "D_truth": 4.598996133048721
+  },
+  "20": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.05097164702134438,
+    "small_lawn/roaming_bout_s": 138.66666666666666,
+    "small_lawn/dwelling_bout_s": 2420.4375,
+    "small_lawn/exits_per_on_lawn_hour": 0.6175411081432107,
+    "small_lawn/pre_exit_enrichment": 0.036528352978655615,
+    "small_lawn/time_on_lawn": 0.8629097060689364,
+    "kinematics/dwelling_speed_median": 0.020351411109608385,
+    "kinematics/dwelling_speed_p90": 0.04858511439157254,
+    "kinematics/roaming_speed_median": 0.03714094428243682,
+    "kinematics/roaming_speed_p90": 0.06091801769409174,
+    "kinematics/roaming_survival_5min": 0.017297573517863152,
+    "activity/pause_share": 0.6467832085244432,
+    "activity/flip_fraction": 0.0036547253144613477,
+    "activity/onset_rate_per_min": 0.41330341454949493,
+    "uniform_lawn/roaming_fraction": 0.04564201264778664,
+    "uniform_lawn/roaming_bout_s": 131.58536585365854,
+    "uniform_lawn/dwelling_bout_s": 2718.253012048193,
+    "local_search/gamma_per_min": null,
+    "local_search/log_early_late_ratio": 0.0801490963113302,
+    "chemotaxis/drift_mm_s": 0.0015367591250480003,
+    "chemotaxis/log_quintile_ratio": 0.21496540487031726,
+    "chemotaxis/weathervane_deg_s": -0.04769346034201952,
+    "chemotaxis/onset_per_min": 1.1322447876070307,
+    "chemotaxis/flip_fraction": 0.00786919694114079
+   },
+   "z": {
+    "small_lawn/roaming_fraction": -3.2690717319087947,
+    "small_lawn/roaming_bout_s": -3.4331083352567586,
+    "small_lawn/dwelling_bout_s": 6.0089121652144515,
+    "small_lawn/exits_per_on_lawn_hour": -0.4698173672746454,
+    "small_lawn/pre_exit_enrichment": -3.7122760313390475,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/dwelling_speed_median": 10.0,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "kinematics/roaming_speed_median": -0.12128709312549238,
+    "kinematics/roaming_speed_p90": -3.0433710382878583,
+    "kinematics/roaming_survival_5min": -4.013541221334945,
+    "activity/pause_share": 5.114720506800194,
+    "activity/flip_fraction": -10.0,
+    "activity/onset_rate_per_min": -8.297994380616105,
+    "uniform_lawn/roaming_fraction": -1.8520967637666927,
+    "uniform_lawn/roaming_bout_s": -6.674938531515475,
+    "uniform_lawn/dwelling_bout_s": 2.6331138983329034,
+    "local_search/gamma_per_min": 10.0,
+    "local_search/log_early_late_ratio": -3.5004519107272327,
+    "chemotaxis/drift_mm_s": -1.5053274849008058,
+    "chemotaxis/log_quintile_ratio": -1.5398668985198372,
+    "chemotaxis/weathervane_deg_s": -0.4658494624629626,
+    "chemotaxis/onset_per_min": 0.018514693037419205,
+    "chemotaxis/flip_fraction": -0.7615216657328445
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": false,
+    "small_lawn/roaming_bout_s": false,
+    "small_lawn/dwelling_bout_s": false,
+    "small_lawn/exits_per_on_lawn_hour": true,
+    "small_lawn/pre_exit_enrichment": false,
+    "small_lawn/time_on_lawn": false,
+    "kinematics/dwelling_speed_median": false,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": true,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": false,
+    "activity/pause_share": false,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": false,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 5.9772623143538945,
+   "D_fit": 6.268024248615758,
+   "time_on_lawn": 0.8629097060689364,
+   "reversal_share": 0.0015022222222222223,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.9401915073394775,
+    "curvature": 0.41375136375427246,
+    "reversal": 1.644931435585022,
+    "omega": 0.002811431884765625,
+    "delta": 1.7597720623016357
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": 0.0011804490495883196,
+     "exits_per_on_lawn_hour": -0.012469615195070505
+    },
+    "pdfr-1": {
+     "roaming_fraction": -0.0015498816758862388,
+     "exits_per_on_lawn_hour": -0.012618700314803055
+    },
+    "tax-4": {
+     "roaming_fraction": 0.03005689411146467,
+     "exits_per_on_lawn_hour": 1.9113976565470783
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.0011804490495883196,
+       "z": -5.258329119607064,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.012469615195070505,
+       "z": -0.3021407265044885,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0015498816758862388,
+       "z": 1.1440788665321049,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.012618700314803055,
+       "z": -0.20282458568375517,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.03005689411146467,
+       "z": 3.2774303423101556,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 1.9113976565470783,
+       "z": 4.483907352835275,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 5.015501536658585
+  },
+  "30": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.030473272046305754,
+    "small_lawn/roaming_bout_s": 115.48387096774194,
+    "small_lawn/dwelling_bout_s": 3350.0,
+    "small_lawn/exits_per_on_lawn_hour": 0.11491317671092952,
+    "small_lawn/pre_exit_enrichment": 0.032875144243287004,
+    "small_lawn/time_on_lawn": 0.9937404838436813,
+    "kinematics/dwelling_speed_median": 0.018481490362338066,
+    "kinematics/dwelling_speed_p90": 0.04841353308586715,
+    "kinematics/roaming_speed_median": 0.03902027470976278,
+    "kinematics/roaming_speed_p90": 0.06645479395346222,
+    "kinematics/roaming_survival_5min": 0.0,
+    "activity/pause_share": 0.659440244647284,
+    "activity/flip_fraction": 0.002491302391430798,
+    "activity/onset_rate_per_min": 0.13935765294153699,
+    "uniform_lawn/roaming_fraction": 0.02681384677197657,
+    "uniform_lawn/roaming_bout_s": 108.37606837606837,
+    "uniform_lawn/dwelling_bout_s": 3933.4188034188032,
+    "local_search/gamma_per_min": 0.23799700796265622,
+    "local_search/log_early_late_ratio": 1.717068576626466,
+    "chemotaxis/drift_mm_s": 0.0038516968995675823,
+    "chemotaxis/log_quintile_ratio": 0.061843505282703055,
+    "chemotaxis/weathervane_deg_s": 0.6068976779685245,
+    "chemotaxis/onset_per_min": 2.2121254162042177,
+    "chemotaxis/flip_fraction": 0.012596409686436967
+   },
+   "z": {
+    "small_lawn/roaming_fraction": -3.835083681902241,
+    "small_lawn/roaming_bout_s": -4.453480760237951,
+    "small_lawn/dwelling_bout_s": 10.0,
+    "small_lawn/exits_per_on_lawn_hour": -3.010899671272828,
+    "small_lawn/pre_exit_enrichment": -3.764676127396667,
+    "small_lawn/time_on_lawn": 2.531245204608967,
+    "kinematics/dwelling_speed_median": 7.7631303825443165,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "kinematics/roaming_speed_median": 1.8227330498348095,
+    "kinematics/roaming_speed_p90": -1.6782238886729384,
+    "kinematics/roaming_survival_5min": -4.406691054595286,
+    "activity/pause_share": 5.507232154136218,
+    "activity/flip_fraction": -10.0,
+    "activity/onset_rate_per_min": -9.513106034000716,
+    "uniform_lawn/roaming_fraction": -2.0604363254094893,
+    "uniform_lawn/roaming_bout_s": -7.465479700812129,
+    "uniform_lawn/dwelling_bout_s": 4.833161247607469,
+    "local_search/gamma_per_min": 3.1454420329813777,
+    "local_search/log_early_late_ratio": 0.8646293745291301,
+    "chemotaxis/drift_mm_s": -1.3622487242126384,
+    "chemotaxis/log_quintile_ratio": -1.7390910601680756,
+    "chemotaxis/weathervane_deg_s": 0.2756100758718088,
+    "chemotaxis/onset_per_min": 1.164097513218438,
+    "chemotaxis/flip_fraction": -0.5294729409766561
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": false,
+    "small_lawn/roaming_bout_s": false,
+    "small_lawn/dwelling_bout_s": false,
+    "small_lawn/exits_per_on_lawn_hour": true,
+    "small_lawn/pre_exit_enrichment": false,
+    "small_lawn/time_on_lawn": true,
+    "kinematics/dwelling_speed_median": false,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": true,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": false,
+    "activity/pause_share": false,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": false,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": true,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 5.362792795536334,
+   "D_fit": 6.440463253364331,
+   "time_on_lawn": 0.9937404838436813,
+   "reversal_share": 0.0007033333333333334,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 2.097599983215332,
+    "curvature": 0.7458292245864868,
+    "reversal": 1.3414359092712402,
+    "omega": 0.002995014190673828,
+    "delta": 2.0737802982330322
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": 0.005444921392126288,
+     "exits_per_on_lawn_hour": -0.0305501600939717
+    },
+    "pdfr-1": {
+     "roaming_fraction": 0.007336822051213492,
+     "exits_per_on_lawn_hour": -0.02252652145002275
+    },
+    "tax-4": {
+     "roaming_fraction": -0.015330822559492112,
+     "exits_per_on_lawn_hour": 0.6472721226861341
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.005444921392126288,
+       "z": -5.175065272843843,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.0305501600939717,
+       "z": -0.3667758569674092,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.007336822051213492,
+       "z": 1.3420635676637835,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.02252652145002275,
+       "z": -0.24061382692366465,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.015330822559492112,
+       "z": 2.2593667200962417,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.6472721226861341,
+       "z": 0.9536839737768588,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 4.41581590511691
+  },
+  "40": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.03630566478903178,
+    "small_lawn/roaming_bout_s": 117.79310344827586,
+    "small_lawn/dwelling_bout_s": 3105.27397260274,
+    "small_lawn/exits_per_on_lawn_hour": 0.08417472632585823,
+    "small_lawn/pre_exit_enrichment": -0.009519950503317495,
+    "small_lawn/time_on_lawn": 0.994545800477771,
+    "kinematics/dwelling_speed_median": 0.018594907132974573,
+    "kinematics/dwelling_speed_p90": 0.049140640181564714,
+    "kinematics/roaming_speed_median": 0.03970549134888629,
+    "kinematics/roaming_speed_p90": 0.06560527730078229,
+    "kinematics/roaming_survival_5min": 0.022111642219874442,
+    "activity/pause_share": 0.6557769210305178,
+    "activity/flip_fraction": 0.004628300011046062,
+    "activity/onset_rate_per_min": 0.3315274077014353,
+    "uniform_lawn/roaming_fraction": 0.03932025479863712,
+    "uniform_lawn/roaming_bout_s": 104.97175141242938,
+    "uniform_lawn/dwelling_bout_s": 2654.6783625730995,
+    "local_search/gamma_per_min": null,
+    "local_search/log_early_late_ratio": -0.3567260935257105,
+    "chemotaxis/drift_mm_s": 0.005367460995541833,
+    "chemotaxis/log_quintile_ratio": 0.14024835596895385,
+    "chemotaxis/weathervane_deg_s": 0.4079073989981169,
+    "chemotaxis/onset_per_min": 3.975678450159248,
+    "chemotaxis/flip_fraction": 0.01838282011097463
+   },
+   "z": {
+    "small_lawn/roaming_fraction": -3.6740365748287322,
+    "small_lawn/roaming_bout_s": -4.3518417182255575,
+    "small_lawn/dwelling_bout_s": 9.051492838173514,
+    "small_lawn/exits_per_on_lawn_hour": -3.166300769065489,
+    "small_lawn/pre_exit_enrichment": -4.37277361046311,
+    "small_lawn/time_on_lawn": 2.6617316143920964,
+    "kinematics/dwelling_speed_median": 7.919154930165406,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "kinematics/roaming_speed_median": 2.5315359986824153,
+    "kinematics/roaming_speed_p90": -1.8876806524339278,
+    "kinematics/roaming_survival_5min": -3.904124122714434,
+    "activity/pause_share": 5.393627580870676,
+    "activity/flip_fraction": -10.0,
+    "activity/onset_rate_per_min": -8.660719389775183,
+    "uniform_lawn/roaming_fraction": -1.9220489974463342,
+    "uniform_lawn/roaming_bout_s": -7.581435503252515,
+    "uniform_lawn/dwelling_bout_s": 2.5180125351674874,
+    "local_search/gamma_per_min": 10.0,
+    "local_search/log_early_late_ratio": -4.66544245429591,
+    "chemotaxis/drift_mm_s": -1.2685642845120404,
+    "chemotaxis/log_quintile_ratio": -1.6370799129109455,
+    "chemotaxis/weathervane_deg_s": 0.05021252350147728,
+    "chemotaxis/onset_per_min": 3.0349487949952483,
+    "chemotaxis/flip_fraction": -0.24543047615085267
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": false,
+    "small_lawn/roaming_bout_s": false,
+    "small_lawn/dwelling_bout_s": false,
+    "small_lawn/exits_per_on_lawn_hour": false,
+    "small_lawn/pre_exit_enrichment": false,
+    "small_lawn/time_on_lawn": true,
+    "kinematics/dwelling_speed_median": false,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": true,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": false,
+    "activity/pause_share": false,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": false,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 6.011353813013005,
+   "D_fit": 6.189153411943084,
+   "time_on_lawn": 0.994545800477771,
+   "reversal_share": 0.02003111111111111,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.681444764137268,
+    "curvature": 0.30097639560699463,
+    "reversal": 1.9636635780334473,
+    "omega": 0.011681079864501953,
+    "delta": 1.8007800579071045
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.0024297768269181605,
+     "exits_per_on_lawn_hour": 0.06173904801976968
+    },
+    "pdfr-1": {
+     "roaming_fraction": 0.0015140399181325995,
+     "exits_per_on_lawn_hour": -0.02263757968369246
+    },
+    "tax-4": {
+     "roaming_fraction": 0.05524920705224596,
+     "exits_per_on_lawn_hour": 0.5592205183407933
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0024297768269181605,
+       "z": -5.328818800396774,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.06173904801976968,
+       "z": -0.036856319690972666,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.0015140399181325995,
+       "z": 1.2123392271462299,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.02263757968369246,
+       "z": -0.24103741212232194,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.05524920705224596,
+       "z": 3.8425034335690023,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.5592205183407933,
+       "z": 0.7077892236928717,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 4.919387929950955
+  },
+  "50": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.022093835312043678,
+    "small_lawn/roaming_bout_s": 102.3529411764706,
+    "small_lawn/dwelling_bout_s": 4359.33962264151,
+    "small_lawn/exits_per_on_lawn_hour": 0.022855691702114152,
+    "small_lawn/pre_exit_enrichment": 0.08047026725205889,
+    "small_lawn/time_on_lawn": 0.9984575075011621,
+    "kinematics/dwelling_speed_median": 0.013020125628573255,
+    "kinematics/dwelling_speed_p90": 0.04466522569507688,
+    "kinematics/roaming_speed_median": 0.04355470611823663,
+    "kinematics/roaming_speed_p90": 0.07569158839583447,
+    "kinematics/roaming_survival_5min": 0.0,
+    "activity/pause_share": 0.6400595057738275,
+    "activity/flip_fraction": 0.03889380485969141,
+    "activity/onset_rate_per_min": 0.5042419957580042,
+    "uniform_lawn/roaming_fraction": 0.024384054139790633,
+    "uniform_lawn/roaming_bout_s": 99.39655172413794,
+    "uniform_lawn/dwelling_bout_s": 4011.478260869565,
+    "local_search/gamma_per_min": null,
+    "local_search/log_early_late_ratio": -0.3158529494184773,
+    "chemotaxis/drift_mm_s": 0.0059607892403646225,
+    "chemotaxis/log_quintile_ratio": 0.1225354689797381,
+    "chemotaxis/weathervane_deg_s": -0.45371907655475696,
+    "chemotaxis/onset_per_min": 3.6829259665381486,
+    "chemotaxis/flip_fraction": 0.022646834477498094
+   },
+   "z": {
+    "small_lawn/roaming_fraction": -4.06646111214156,
+    "small_lawn/roaming_bout_s": -5.031428254033911,
+    "small_lawn/dwelling_bout_s": 10.0,
+    "small_lawn/exits_per_on_lawn_hour": -3.476304857649733,
+    "small_lawn/pre_exit_enrichment": -3.081991616821539,
+    "small_lawn/time_on_lawn": 3.295550144891903,
+    "kinematics/dwelling_speed_median": 0.25007074244602906,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "kinematics/roaming_speed_median": 6.513247217419298,
+    "kinematics/roaming_speed_p90": 0.5991994735665673,
+    "kinematics/roaming_survival_5min": -4.406691054595286,
+    "activity/pause_share": 4.906209476474593,
+    "activity/flip_fraction": -7.473202102712914,
+    "activity/onset_rate_per_min": -7.89462792909619,
+    "uniform_lawn/roaming_fraction": -2.0873227430888073,
+    "uniform_lawn/roaming_bout_s": -7.771334610922614,
+    "uniform_lawn/dwelling_bout_s": 4.974487232645821,
+    "local_search/gamma_per_min": 10.0,
+    "local_search/log_early_late_ratio": -4.556448335429586,
+    "chemotaxis/drift_mm_s": -1.2318925990417267,
+    "chemotaxis/log_quintile_ratio": -1.6601258329935746,
+    "chemotaxis/weathervane_deg_s": -0.9257572557859541,
+    "chemotaxis/onset_per_min": 2.724384639179879,
+    "chemotaxis/flip_fraction": -0.036119165362397135
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": false,
+    "small_lawn/roaming_bout_s": false,
+    "small_lawn/dwelling_bout_s": false,
+    "small_lawn/exits_per_on_lawn_hour": false,
+    "small_lawn/pre_exit_enrichment": false,
+    "small_lawn/time_on_lawn": false,
+    "kinematics/dwelling_speed_median": true,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": false,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": false,
+    "activity/pause_share": false,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": false,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": false,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 5.7971288117324935,
+   "D_fit": 5.889583348171072,
+   "time_on_lawn": 0.9984575075011621,
+   "reversal_share": 0.06638666666666666,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.6200308799743652,
+    "curvature": 0.2554255723953247,
+    "reversal": 1.8299102783203125,
+    "omega": 0.03004300594329834,
+    "delta": 1.3615450859069824
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.0015241480897979429,
+     "exits_per_on_lawn_hour": -4.836773966690466e-07
+    },
+    "pdfr-1": {
+     "roaming_fraction": 0.0036959504082917163,
+     "exits_per_on_lawn_hour": 1.2098591779297757e-05
+    },
+    "tax-4": {
+     "roaming_fraction": 0.01035927697660433,
+     "exits_per_on_lawn_hour": 0.37291397035456886
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0015241480897979429,
+       "z": -5.311136394149283,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -4.836773966690466e-07,
+       "z": -0.25756552443449193,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.0036959504082917163,
+       "z": 1.2609494778709056,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 1.2098591779297757e-05,
+       "z": -0.15464968421758718,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.01035927697660433,
+       "z": 2.8356053526399703,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.37291397035456886,
+       "z": 0.1875056650150775,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 4.723578097818898
+  },
+  "60": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.12989764997563094,
+    "small_lawn/roaming_bout_s": 194.6031746031746,
+    "small_lawn/dwelling_bout_s": 1233.063063063063,
+    "small_lawn/exits_per_on_lawn_hour": 0.030514292979593568,
+    "small_lawn/pre_exit_enrichment": 0.5519205318425509,
+    "small_lawn/time_on_lawn": 0.9984132357297,
+    "kinematics/dwelling_speed_median": 0.011955019921955194,
+    "kinematics/dwelling_speed_p90": 0.032814948722823985,
+    "kinematics/roaming_speed_median": 0.04155763206145969,
+    "kinematics/roaming_speed_p90": 0.06961479122956157,
+    "kinematics/roaming_survival_5min": 0.12144923730065196,
+    "activity/pause_share": 0.5569384745048462,
+    "activity/flip_fraction": 0.07214650318370784,
+    "activity/onset_rate_per_min": 0.8333754740834387,
+    "uniform_lawn/roaming_fraction": 0.13676769387064003,
+    "uniform_lawn/roaming_bout_s": 194.63855421686748,
+    "uniform_lawn/dwelling_bout_s": 1175.3890489913545,
+    "local_search/gamma_per_min": null,
+    "local_search/log_early_late_ratio": 0.08390795936899337,
+    "chemotaxis/drift_mm_s": 0.006928571412355495,
+    "chemotaxis/log_quintile_ratio": 0.20593471363357016,
+    "chemotaxis/weathervane_deg_s": -0.8023311265894522,
+    "chemotaxis/onset_per_min": 2.033036547606702,
+    "chemotaxis/flip_fraction": 0.03215647273330018
+   },
+   "z": {
+    "small_lawn/roaming_fraction": -1.0897252767998535,
+    "small_lawn/roaming_bout_s": -0.9711071603595627,
+    "small_lawn/dwelling_bout_s": 0.7336637549481649,
+    "small_lawn/exits_per_on_lawn_hour": -3.4375860858454588,
+    "small_lawn/pre_exit_enrichment": 3.6802935249388233,
+    "small_lawn/time_on_lawn": 3.2883767372304975,
+    "kinematics/dwelling_speed_median": -1.2151679088670788,
+    "kinematics/dwelling_speed_p90": 3.970201134322852,
+    "kinematics/roaming_speed_median": 4.447430511156582,
+    "kinematics/roaming_speed_p90": -0.8990951913633578,
+    "kinematics/roaming_survival_5min": -1.64631848875315,
+    "activity/pause_share": 2.3285149360615924,
+    "activity/flip_fraction": -4.807719472238288,
+    "activity/onset_rate_per_min": -6.434726075952758,
+    "uniform_lawn/roaming_fraction": -0.8437625157259939,
+    "uniform_lawn/roaming_bout_s": -4.527258650008399,
+    "uniform_lawn/dwelling_bout_s": -0.16022820882587857,
+    "local_search/gamma_per_min": 10.0,
+    "local_search/log_early_late_ratio": -3.4904283616253013,
+    "chemotaxis/drift_mm_s": -1.1720771364799765,
+    "chemotaxis/log_quintile_ratio": -1.5516165691782504,
+    "chemotaxis/weathervane_deg_s": -1.3206323381828644,
+    "chemotaxis/onset_per_min": 0.9741125040258167,
+    "chemotaxis/flip_fraction": 0.4306885602571699
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": true,
+    "small_lawn/roaming_bout_s": true,
+    "small_lawn/dwelling_bout_s": true,
+    "small_lawn/exits_per_on_lawn_hour": false,
+    "small_lawn/pre_exit_enrichment": false,
+    "small_lawn/time_on_lawn": false,
+    "kinematics/dwelling_speed_median": true,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": false,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": true,
+    "activity/pause_share": true,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": false,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 4.131117710106751,
+   "D_fit": 3.353107098669351,
+   "time_on_lawn": 0.9984132357297,
+   "reversal_share": 0.12825666666666666,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.9311974048614502,
+    "curvature": 0.25914502143859863,
+    "reversal": 2.07585072517395,
+    "omega": 0.1777416467666626,
+    "delta": 1.7654725313186646
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.0017017551250727847,
+     "exits_per_on_lawn_hour": -0.007637299186037255
+    },
+    "pdfr-1": {
+     "roaming_fraction": 0.0006430222114124085,
+     "exits_per_on_lawn_hour": -0.01526619369752491
+    },
+    "tax-4": {
+     "roaming_fraction": 0.01985265946992798,
+     "exits_per_on_lawn_hour": 0.09241028766832142
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0017017551250727847,
+       "z": -5.314604172524037,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.007637299186037255,
+       "z": -0.28486594980785773,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.0006430222114124085,
+       "z": 1.1929340364657393,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.01526619369752491,
+       "z": -0.2129223422697214,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.01985265946992798,
+       "z": 3.0485455064327187,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.09241028766832142,
+       "z": -0.5958347802226202,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 3.7639065760531722
+  },
+  "70": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.18773913601094414,
+    "small_lawn/roaming_bout_s": 256.812865497076,
+    "small_lawn/dwelling_bout_s": 1046.831955922865,
+    "small_lawn/exits_per_on_lawn_hour": 0.07695102922001582,
+    "small_lawn/pre_exit_enrichment": 0.2652523169805089,
+    "small_lawn/time_on_lawn": 0.9960823556965529,
+    "kinematics/dwelling_speed_median": 0.012341357017603343,
+    "kinematics/dwelling_speed_p90": 0.0320569531361163,
+    "kinematics/roaming_speed_median": 0.04154527085318936,
+    "kinematics/roaming_speed_p90": 0.06988226732300909,
+    "kinematics/roaming_survival_5min": 0.23953222661040108,
+    "activity/pause_share": 0.540644254789886,
+    "activity/flip_fraction": 0.07818312987141585,
+    "activity/onset_rate_per_min": 0.9232748026632763,
+    "uniform_lawn/roaming_fraction": 0.16966995648944072,
+    "uniform_lawn/roaming_bout_s": 227.74928774928776,
+    "uniform_lawn/dwelling_bout_s": 1083.6842105263158,
+    "local_search/gamma_per_min": 0.02913092038438754,
+    "local_search/log_early_late_ratio": 0.4430030274272294,
+    "chemotaxis/drift_mm_s": 0.006449259475233037,
+    "chemotaxis/log_quintile_ratio": 0.12436483077156216,
+    "chemotaxis/weathervane_deg_s": -1.8566571030494,
+    "chemotaxis/onset_per_min": 3.0082521296534814,
+    "chemotaxis/flip_fraction": 0.051464708431763935
+   },
+   "z": {
+    "small_lawn/roaming_fraction": 0.5074243675613888,
+    "small_lawn/roaming_bout_s": 1.7670032029942757,
+    "small_lawn/dwelling_bout_s": -0.09372086890965634,
+    "small_lawn/exits_per_on_lawn_hour": -3.2028208423387587,
+    "small_lawn/pre_exit_enrichment": -0.4315552862192075,
+    "small_lawn/time_on_lawn": 2.9107014797159763,
+    "kinematics/dwelling_speed_median": -0.6836938575476744,
+    "kinematics/dwelling_speed_p90": 3.3140736124407493,
+    "kinematics/roaming_speed_median": 4.4346438092975395,
+    "kinematics/roaming_speed_p90": -0.833146305323031,
+    "kinematics/roaming_survival_5min": 1.0375439333413845,
+    "activity/pause_share": 1.823209352645222,
+    "activity/flip_fraction": -4.323833219581191,
+    "activity/onset_rate_per_min": -6.035969325172498,
+    "uniform_lawn/roaming_fraction": -0.4796886587039444,
+    "uniform_lawn/roaming_bout_s": -3.3994607048847594,
+    "uniform_lawn/dwelling_bout_s": -0.32625904034977865,
+    "local_search/gamma_per_min": -1.9248884843813285,
+    "local_search/log_early_late_ratio": -2.532849702406768,
+    "chemotaxis/drift_mm_s": -1.2017018454900312,
+    "chemotaxis/log_quintile_ratio": -1.6577456831240327,
+    "chemotaxis/weathervane_deg_s": -2.514874065588415,
+    "chemotaxis/onset_per_min": 2.008662237746759,
+    "chemotaxis/flip_fraction": 1.3784883976092561
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": true,
+    "small_lawn/roaming_bout_s": true,
+    "small_lawn/dwelling_bout_s": true,
+    "small_lawn/exits_per_on_lawn_hour": false,
+    "small_lawn/pre_exit_enrichment": true,
+    "small_lawn/time_on_lawn": true,
+    "kinematics/dwelling_speed_median": true,
+    "kinematics/dwelling_speed_p90": false,
+    "kinematics/roaming_speed_median": false,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": true,
+    "activity/pause_share": true,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": false,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": true,
+    "local_search/log_early_late_ratio": true,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 2.6487116621450255,
+   "D_fit": 2.9044546988715823,
+   "time_on_lawn": 0.9960823556965529,
+   "reversal_share": 0.1910777777777778,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 2.0559775829315186,
+    "curvature": 0.21283400058746338,
+    "reversal": 2.4968292713165283,
+    "omega": 0.21389663219451904,
+    "delta": 2.02681565284729
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.04804643434641148,
+     "exits_per_on_lawn_hour": 0.06133322174029149
+    },
+    "pdfr-1": {
+     "roaming_fraction": 0.0018034875363452108,
+     "exits_per_on_lawn_hour": 9.881775042701324e-05
+    },
+    "tax-4": {
+     "roaming_fraction": -0.025407003682087287,
+     "exits_per_on_lawn_hour": 0.34754946209999726
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.04804643434641148,
+       "z": -6.21948429813405,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.06133322174029149,
+       "z": -0.03830708539886616,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.0018034875363452108,
+       "z": 1.2187877599143861,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 9.881775042701324e-05,
+       "z": -0.15431893024438395,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.025407003682087287,
+       "z": 2.033354172998519,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.34754946209999726,
+       "z": 0.11667220928610032,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    }
+   },
+   "D_truth": 3.2289757175946354
+  },
+  "80": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.20554010695187167,
+    "small_lawn/roaming_bout_s": 306.99680511182106,
+    "small_lawn/dwelling_bout_s": 1122.084592145015,
+    "small_lawn/exits_per_on_lawn_hour": 0.08470588235294117,
+    "small_lawn/pre_exit_enrichment": 0.1681972667855021,
+    "small_lawn/time_on_lawn": 0.9944904167287115,
+    "kinematics/dwelling_speed_median": 0.012320273978731982,
+    "kinematics/dwelling_speed_p90": 0.030310397171559696,
+    "kinematics/roaming_speed_median": 0.04167796408316399,
+    "kinematics/roaming_speed_p90": 0.06883432358553615,
+    "kinematics/roaming_survival_5min": 0.34677879398136296,
+    "activity/pause_share": 0.5076340739545607,
+    "activity/flip_fraction": 0.08174556789401909,
+    "activity/onset_rate_per_min": 1.0206646484632074,
+    "uniform_lawn/roaming_fraction": 0.19250939510393003,
+    "uniform_lawn/roaming_bout_s": 299.2409240924092,
+    "uniform_lawn/dwelling_bout_s": 1218.974358974359,
+    "local_search/gamma_per_min": null,
+    "local_search/log_early_late_ratio": 0.23609470366128768,
+    "chemotaxis/drift_mm_s": 0.005591036387109315,
+    "chemotaxis/log_quintile_ratio": 0.12521652041271775,
+    "chemotaxis/weathervane_deg_s": -0.1003319807805011,
+    "chemotaxis/onset_per_min": 3.4647621677678644,
+    "chemotaxis/flip_fraction": 0.07585199004975124
+   },
+   "z": {
+    "small_lawn/roaming_fraction": 0.9989541735250481,
+    "small_lawn/roaming_bout_s": 3.9758096310379045,
+    "small_lawn/dwelling_bout_s": 0.24061035572351094,
+    "small_lawn/exits_per_on_lawn_hour": -3.1636154603178506,
+    "small_lawn/pre_exit_enrichment": -1.8236722774708376,
+    "small_lawn/time_on_lawn": 2.652757719815504,
+    "kinematics/dwelling_speed_median": -0.7126972543462348,
+    "kinematics/dwelling_speed_p90": 1.8022396955305469,
+    "kinematics/roaming_speed_median": 4.571904563529129,
+    "kinematics/roaming_speed_p90": -1.0915272365999333,
+    "kinematics/roaming_survival_5min": 3.4751095280818824,
+    "activity/pause_share": 0.799519419806079,
+    "activity/flip_fraction": -4.038273937177537,
+    "activity/onset_rate_per_min": -5.60398769545785,
+    "uniform_lawn/roaming_fraction": -0.22696310590733995,
+    "uniform_lawn/roaming_bout_s": -0.9643554698300284,
+    "uniform_lawn/dwelling_bout_s": -0.0813173751138275,
+    "local_search/gamma_per_min": 10.0,
+    "local_search/log_early_late_ratio": -3.0846005140353276,
+    "chemotaxis/drift_mm_s": -1.2547458180729216,
+    "chemotaxis/log_quintile_ratio": -1.6566375649828609,
+    "chemotaxis/weathervane_deg_s": -0.5254734487632875,
+    "chemotaxis/onset_per_min": 2.492947299497872,
+    "chemotaxis/flip_fraction": 2.575607694885442
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": true,
+    "small_lawn/roaming_bout_s": false,
+    "small_lawn/dwelling_bout_s": true,
+    "small_lawn/exits_per_on_lawn_hour": false,
+    "small_lawn/pre_exit_enrichment": true,
+    "small_lawn/time_on_lawn": true,
+    "kinematics/dwelling_speed_median": true,
+    "kinematics/dwelling_speed_p90": true,
+    "kinematics/roaming_speed_median": false,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": false,
+    "activity/pause_share": true,
+    "activity/flip_fraction": false,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": true,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": false,
+    "local_search/log_early_late_ratio": false,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": true
+   },
+   "family_passes": null,
+   "D": 3.840216345251475,
+   "D_fit": 2.749431285293965,
+   "time_on_lawn": 0.9944904167287115,
+   "reversal_share": 0.21499,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.8339319229125977,
+    "curvature": 0.149711012840271,
+    "reversal": 2.1932315826416016,
+    "omega": 0.4465426206588745,
+    "delta": 1.463398814201355
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": 0.0008944967262695391,
+     "exits_per_on_lawn_hour": 0.03103982005199732
+    },
+    "pdfr-1": {
+     "roaming_fraction": -0.0008199019112907213,
+     "exits_per_on_lawn_hour": -0.015504686282885635
+    },
+    "tax-4": {
+     "roaming_fraction": -0.047391729553339534,
+     "exits_per_on_lawn_hour": 0.4007481807826146
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.0008944967262695391,
+       "z": -5.263912340347624,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.03103982005199732,
+       "z": -0.14660127571431134,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0008199019112907213,
+       "z": 1.160341907358468,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.015504686282885635,
+       "z": -0.21383197252233963,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.047391729553339534,
+       "z": 1.540228470815114,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.4007481807826146,
+       "z": 0.26523606263674876,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    }
+   },
+   "D_truth": 3.508749624028304
+  },
+  "90": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.1877544832365936,
+    "small_lawn/roaming_bout_s": 298.9310344827586,
+    "small_lawn/dwelling_bout_s": 1186.8037974683543,
+    "small_lawn/exits_per_on_lawn_hour": 0.3274711946634324,
+    "small_lawn/pre_exit_enrichment": 0.1885668698289455,
+    "small_lawn/time_on_lawn": 0.9772679168606866,
+    "kinematics/dwelling_speed_median": 0.01325491811643372,
+    "kinematics/dwelling_speed_p90": 0.031104000800046935,
+    "kinematics/roaming_speed_median": 0.038881905190129434,
+    "kinematics/roaming_speed_p90": 0.06599770689624182,
+    "kinematics/roaming_survival_5min": 0.3388430396312032,
+    "activity/pause_share": 0.5243331808684486,
+    "activity/flip_fraction": 0.10938556457065585,
+    "activity/onset_rate_per_min": 1.2019816140233335,
+    "uniform_lawn/roaming_fraction": 0.18333227519945824,
+    "uniform_lawn/roaming_bout_s": 275.015873015873,
+    "uniform_lawn/dwelling_bout_s": 1180.1223241590214,
+    "local_search/gamma_per_min": 0.11727135479821765,
+    "local_search/log_early_late_ratio": 0.6946341696815237,
+    "chemotaxis/drift_mm_s": 0.00407142489187895,
+    "chemotaxis/log_quintile_ratio": 0.06487527817055673,
+    "chemotaxis/weathervane_deg_s": 1.3625705891734339,
+    "chemotaxis/onset_per_min": 3.6138727317561394,
+    "chemotaxis/flip_fraction": 0.10647737898075547
+   },
+   "z": {
+    "small_lawn/roaming_fraction": 0.5078481432571413,
+    "small_lawn/roaming_bout_s": 3.620801113385296,
+    "small_lawn/dwelling_bout_s": 0.5281438197892999,
+    "small_lawn/exits_per_on_lawn_hour": -1.9362928215243593,
+    "small_lawn/pre_exit_enrichment": -1.5314992226441928,
+    "small_lawn/time_on_lawn": -0.13782436943855111,
+    "kinematics/dwelling_speed_median": 0.5730687567402876,
+    "kinematics/dwelling_speed_p90": 2.4891898456991406,
+    "kinematics/roaming_speed_median": 1.6796006185030286,
+    "kinematics/roaming_speed_p90": -1.7909232400751662,
+    "kinematics/roaming_survival_5min": 3.294740848258763,
+    "activity/pause_share": 1.317381097705703,
+    "activity/flip_fraction": -1.8226964123081826,
+    "activity/onset_rate_per_min": -4.799739597165516,
+    "uniform_lawn/roaming_fraction": -0.32851081643061864,
+    "uniform_lawn/roaming_bout_s": -1.7894946289453493,
+    "uniform_lawn/dwelling_bout_s": -0.15165865431738032,
+    "local_search/gamma_per_min": 0.21476539434889372,
+    "local_search/log_early_late_ratio": -1.8618390613516307,
+    "chemotaxis/drift_mm_s": -1.3486680529849058,
+    "chemotaxis/log_quintile_ratio": -1.735146474752683,
+    "chemotaxis/weathervane_deg_s": 1.131565580127769,
+    "chemotaxis/onset_per_min": 2.651130061452192,
+    "chemotaxis/flip_fraction": 4.0789422874893475
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": true,
+    "small_lawn/roaming_bout_s": false,
+    "small_lawn/dwelling_bout_s": true,
+    "small_lawn/exits_per_on_lawn_hour": true,
+    "small_lawn/pre_exit_enrichment": true,
+    "small_lawn/time_on_lawn": true,
+    "kinematics/dwelling_speed_median": true,
+    "kinematics/dwelling_speed_p90": true,
+    "kinematics/roaming_speed_median": true,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": false,
+    "activity/pause_share": true,
+    "activity/flip_fraction": true,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": true,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": true,
+    "local_search/log_early_late_ratio": true,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": true,
+    "chemotaxis/flip_fraction": false
+   },
+   "family_passes": null,
+   "D": 2.0881732797965102,
+   "D_fit": 2.147746109014041,
+   "time_on_lawn": 0.9772679168606866,
+   "reversal_share": 0.23517666666666667,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 2.105997085571289,
+    "curvature": 0.11567902565002441,
+    "reversal": 2.3376574516296387,
+    "omega": 0.40716254711151123,
+    "delta": 1.0558912754058838
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.007863402935437136,
+     "exits_per_on_lawn_hour": 0.10213239838480037
+    },
+    "pdfr-1": {
+     "roaming_fraction": -0.0018611004828598121,
+     "exits_per_on_lawn_hour": 0.04143755928838272
+    },
+    "tax-4": {
+     "roaming_fraction": -0.05353210265990055,
+     "exits_per_on_lawn_hour": 1.3766491321123293
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.007863402935437136,
+       "z": -5.434910381096088,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.10213239838480037,
+       "z": 0.10754361323565576,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0018611004828598121,
+       "z": 1.1371452987686919,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 0.04143755928838272,
+       "z": 0.0033504155393231407,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.05353210265990055,
+       "z": 1.4024975835812434,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 1.3766491321123293,
+       "z": 2.9905574502264725,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 2.8496030654970332
+  },
+  "100": {
+   "statistics": {
+    "small_lawn/roaming_fraction": 0.14685793812225673,
+    "small_lawn/roaming_bout_s": 261.793893129771,
+    "small_lawn/dwelling_bout_s": 1350.7118644067796,
+    "small_lawn/exits_per_on_lawn_hour": 0.20811476287335404,
+    "small_lawn/pre_exit_enrichment": 0.29798191952898884,
+    "small_lawn/time_on_lawn": 0.9881937244779214,
+    "kinematics/dwelling_speed_median": 0.013330140562715621,
+    "kinematics/dwelling_speed_p90": 0.03163866089359282,
+    "kinematics/roaming_speed_median": 0.03924518107280329,
+    "kinematics/roaming_speed_p90": 0.06452745335479064,
+    "kinematics/roaming_survival_5min": 0.24468053065464157,
+    "activity/pause_share": 0.521828019602926,
+    "activity/flip_fraction": 0.10139603232916973,
+    "activity/onset_rate_per_min": 1.1385593634574598,
+    "uniform_lawn/roaming_fraction": 0.15231507921399412,
+    "uniform_lawn/roaming_bout_s": 274.8473282442748,
+    "uniform_lawn/dwelling_bout_s": 1421.1347517730496,
+    "local_search/gamma_per_min": 0.09089781481710096,
+    "local_search/log_early_late_ratio": 0.7977452104774372,
+    "chemotaxis/drift_mm_s": 0.003831999193452433,
+    "chemotaxis/log_quintile_ratio": 0.0870113769896299,
+    "chemotaxis/weathervane_deg_s": 2.297223661146084,
+    "chemotaxis/onset_per_min": 4.0696550818140675,
+    "chemotaxis/flip_fraction": 0.10872061651701094
+   },
+   "z": {
+    "small_lawn/roaming_fraction": -0.6214088479116017,
+    "small_lawn/roaming_bout_s": 1.9862391963782418,
+    "small_lawn/dwelling_bout_s": 1.2563519929223643,
+    "small_lawn/exits_per_on_lawn_hour": -2.539710374993524,
+    "small_lawn/pre_exit_enrichment": 0.03790442487365948,
+    "small_lawn/time_on_lawn": 1.6324972029771463,
+    "kinematics/dwelling_speed_median": 0.6765503502137983,
+    "kinematics/dwelling_speed_p90": 2.951996237160094,
+    "kinematics/roaming_speed_median": 2.055381068338297,
+    "kinematics/roaming_speed_p90": -2.1534288457381128,
+    "kinematics/roaming_survival_5min": 1.1545577372992897,
+    "activity/pause_share": 1.2396926905913235,
+    "activity/flip_fraction": -2.4631244223237623,
+    "activity/onset_rate_per_min": -5.08105483013035,
+    "uniform_lawn/roaming_fraction": -0.6717258198262841,
+    "uniform_lawn/roaming_bout_s": -1.7952354998591167,
+    "uniform_lawn/dwelling_bout_s": 0.28469229983217964,
+    "local_search/gamma_per_min": -0.4254657038040381,
+    "local_search/log_early_late_ratio": -1.586878637278177,
+    "chemotaxis/drift_mm_s": -1.3634661752432347,
+    "chemotaxis/log_quintile_ratio": -1.7063455929632756,
+    "chemotaxis/weathervane_deg_s": 2.190253048822538,
+    "chemotaxis/onset_per_min": 3.1346431610865206,
+    "chemotaxis/flip_fraction": 4.189058002110244
+   },
+   "passes": {
+    "small_lawn/roaming_fraction": true,
+    "small_lawn/roaming_bout_s": true,
+    "small_lawn/dwelling_bout_s": true,
+    "small_lawn/exits_per_on_lawn_hour": true,
+    "small_lawn/pre_exit_enrichment": true,
+    "small_lawn/time_on_lawn": true,
+    "kinematics/dwelling_speed_median": true,
+    "kinematics/dwelling_speed_p90": true,
+    "kinematics/roaming_speed_median": true,
+    "kinematics/roaming_speed_p90": true,
+    "kinematics/roaming_survival_5min": true,
+    "activity/pause_share": true,
+    "activity/flip_fraction": true,
+    "activity/onset_rate_per_min": false,
+    "uniform_lawn/roaming_fraction": true,
+    "uniform_lawn/roaming_bout_s": true,
+    "uniform_lawn/dwelling_bout_s": true,
+    "local_search/gamma_per_min": true,
+    "local_search/log_early_late_ratio": true,
+    "chemotaxis/drift_mm_s": true,
+    "chemotaxis/log_quintile_ratio": true,
+    "chemotaxis/weathervane_deg_s": true,
+    "chemotaxis/onset_per_min": false,
+    "chemotaxis/flip_fraction": false
+   },
+   "family_passes": null,
+   "D": 2.1411755853030154,
+   "D_fit": 2.1662053921846685,
+   "time_on_lawn": 0.9881937244779214,
+   "reversal_share": 0.22857,
+   "saturated": 0.0,
+   "spread": {
+    "speed": 1.8829883337020874,
+    "curvature": 0.19532883167266846,
+    "reversal": 2.2273170948028564,
+    "omega": 0.4553985595703125,
+    "delta": 1.2600620985031128
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": 0.0007079414123086492,
+     "exits_per_on_lawn_hour": -0.023309834741937208
+    },
+    "pdfr-1": {
+     "roaming_fraction": 0.004902015715019664,
+     "exits_per_on_lawn_hour": -0.03885144300414842
+    },
+    "tax-4": {
+     "roaming_fraction": -0.06008820218026739,
+     "exits_per_on_lawn_hour": 1.1119016552412992
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.0007079414123086492,
+       "z": -5.2675548339146605,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.023309834741937208,
+       "z": -0.3408928221175479,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "pdfr-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": 0.004902015715019664,
+       "z": 1.2878191121729539,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.03885144300414842,
+       "z": -0.302878414708613,
+       "graded": true,
+       "passes": true
+      }
+     },
+     "passes": true
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.06008820218026739,
+       "z": 1.2554417959176498,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 1.1119016552412992,
+       "z": 2.2512181145654884,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   },
+   "D_truth": 2.759776495799988
+  }
+ },
+ "answer": [
+  0.9952155572290815,
+  0.3413049674251928,
+  0.3784029876362887,
+  0.1446603831742933,
+  0.584180423342888,
+  0.9593432887827352,
+  0.3476294701596865,
+  0.4931427761284352,
+  0.36780998359239886,
+  0.8523698953779343,
+  0.7135309766023494,
+  0.593057866259453,
+  0.5668736944633287,
+  0.9686904268929613,
+  0.9263901014639464,
+  0.8880555084810094,
+  0.12446845340057078,
+  0.9328682291292754,
+  0.7066022103700524,
+  0.30273224536976123,
+  0.23882821609071592,
+  0.05259223622602785,
+  0.2474649735133563,
+  0.9611367965252521,
+  0.6729020862354033,
+  0.19141295540631975,
+  0.7518724238856076,
+  0.43856127181382,
+  0.42130429621654875,
+  0.996183844413406,
+  0.40701372733038854,
+  0.6042534490176457,
+  0.0502338915797755,
+  0.07553858925907975,
+  0.6516563083375093,
+  0.036585900410254404,
+  0.4651788257197531,
+  0.01371658575684785,
+  0.42281516148988285,
+  0.7470473266904077,
+  0.04733031724371723,
+  0.21881607887958793,
+  0.31294733493761484,
+  0.3254358030219362,
+  0.16638541158249104,
+  0.01672105762544411,
+  0.41590737946130085,
+  0.008742661000264789,
+  0.6201453994569226,
+  0.5923508403647457,
+  0.002413498462100727,
+  0.41745552264055097,
+  0.9034786999579828,
+  0.6774610624345094,
+  0.9998592789509119,
+  0.8048101655837123,
+  0.880043210033634,
+  0.02862895476731761,
+  0.7782392815647152,
+  0.29249039139535166,
+  0.5533603685566519,
+  0.7238771604405746,
+  0.9917906798180511,
+  0.3833721604057268,
+  0.38317857093115804,
+  0.8951743583137934,
+  0.7777689651374965,
+  0.7764952600787376,
+  0.749706909187962,
+  0.1061292347397505,
+  0.9942970518706561,
+  0.6014049687791323,
+  0.9958534000355228,
+  0.3412369726740317,
+  0.7541446296790086,
+  0.5916256878136736,
+  0.23472941617633758,
+  0.09381752825934192,
+  0.21422434690046968,
+  0.27500118548177743,
+  0.5212622341986077,
+  0.7266864510153741,
+  0.9989198265708875,
+  0.40199951895757496,
+  0.12940042138463326,
+  0.4416522062781861,
+  0.43123858547523386,
+  0.7053408064944038,
+  0.5017826901288346,
+  0.3908504356360666,
+  0.8639158861718588,
+  0.46882085616318114,
+  0.18760432324815213,
+  0.7802536639596667,
+  0.15207041081288114,
+  0.4625635015413534,
+  0.6684912647086787,
+  0.33043869413767724,
+  0.3924066522874903,
+  0.24884152422310354,
+  0.10312767810121976,
+  0.029979949171867564,
+  0.5891839721262984,
+  0.2926461106029056,
+  0.42559389446196516,
+  0.5343548204895766,
+  0.5558382329888725,
+  0.6045531529310246,
+  0.5300741997961725,
+  0.006216383384510854,
+  0.8458746975849974,
+  0.2986771912864839,
+  0.5845826377506961,
+  0.4729898984946591,
+  0.2879355557497024,
+  0.5448911525376856,
+  0.5787746348897311,
+  0.40976476490135777,
+  0.042457567598216464,
+  0.23761914428070235,
+  0.29798733183661974,
+  0.9915787174612123,
+  0.7577800878968709,
+  0.5760133961592664,
+  0.5608949599742672,
+  0.8356327783273554,
+  0.06711845195815723,
+  0.31893373501646005,
+  0.7496694409519258,
+  0.5351477826405016,
+  0.34307250568352526,
+  0.6594352891485242,
+  0.9127613217835718,
+  0.4540278738605685,
+  0.37669724289273615,
+  0.10227441920937669,
+  0.9991190218698046
+ ]
+}

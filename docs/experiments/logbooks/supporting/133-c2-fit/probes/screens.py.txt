@@ -1,0 +1,134 @@
+"""Two screens after the pilot's 2a stalled: restart luck, or stage 1's settings? (description; discarded)
+
+The readiness pilot's 2a sat at D_fit 3.0-3.3 for 100 generations, its worm crossing the lawn edge
+8x as often as real worms. Logbook 131's curriculum, whose stage 1 was B04's (64 animals, population
+24), held the lawn from 2a's start. Both screens run stage 1 then 2a to generation 100, on the
+registered arm and objective (c2_fit's), each on 8 workers:
+
+- **(a)** the registered procedure with new CMA seeds: stage 1 at 200 animals and population 48;
+- **(b)** stage 1 as B04 ran it, 64 animals and population 24; 2a as registered.
+
+**The rule, fixed before either runs** (the maintainer's choice, 2026-11-11): a screen keeps pace when
+the mean of its 2a readouts at generations 80, 90 and 100 has time on the lawn at least 0.97 and D_fit
+at most 3.1. The curriculum's 2a read 0.987 and 2.98 there; the pilot's read 0.90 and 3.24.
+
+- only (b) keeps pace: amend stage 1 to B04's settings, with a D38 note;
+- only (a) keeps pace: restart luck; bring the maintainer a two-restart stage 1;
+- neither: bring the maintainer the diagnosis;
+- both: restart luck at the registered settings; bring the maintainer both.
+
+Seeds (discarded): (a) 1,010,000,000 and (b) 1,020,000,000; within each, stage 1 at + 0, 2a at
++ 2,000,000 (+ animals x (popsize x (n - 1) + m) + i), readouts at + 5,000,000 + i. CMA (a) 9516, 9517;
+(b) 9518, 9519. Run from the repository root: ``screens.py a`` and ``screens.py b``, in parallel.
+"""
+
+import json
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+from quantumnematode.connectome import encoder as enc
+
+SCREENS = {
+    "a": {"base": 1_010_000_000, "cma": (9516, 9517), "stage1": (200, 48)},
+    "b": {"base": 1_020_000_000, "cma": (9518, 9519), "stage1": (64, 24)},
+}
+GENERATIONS = (150, 100)
+STRIDE = 2_000_000
+READOUT = 5_000_000
+WORKERS = 8
+PACE = {"time_on_lawn": 0.97, "D_fit": 3.1}
+OUT = Path("build/c2-fit/screens")
+
+
+def _job(item):
+    stage, seeds, z = item
+    spec = fit.STAGES[stage]
+    record = fit.simulate_point(z, seeds, assays=fit.FIT_ASSAYS, mutants=())
+    return record
+
+
+def main(name):
+    cfg = SCREENS[name]
+    out = OUT / name
+    out.mkdir(parents=True, exist_ok=True)
+    state_path = out / "state.pkl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    names = fit.entries()
+    subset = fit.subset_indices(names)
+    timescale = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        state = {"stage": 0, "x": [0.5] * len(names), "es": None, "medians": {}, "readouts": {}, "answers": {}}
+    readout_seeds = list(range(cfg["base"] + READOUT, cfg["base"] + READOUT + 200))
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        while state["stage"] < 2:
+            s = state["stage"]
+            animals, popsize = cfg["stage1"] if s == 0 else (200, 48)
+            idx = subset if s == 0 else list(range(len(names)))
+            if state["es"] is None:
+                x = list(state["x"])
+                if s == 1:
+                    x[timescale] = names[timescale].unit(fit.TIMESCALE_AT_2A_S)
+                    state["x"] = x
+                sigma0 = fit.STAGES[s].sigma0
+                state["es"] = fit.fresh([x[i] for i in idx], sigma0, cfg["cma"][s], popsize)
+                state["medians"][s], state["readouts"][s] = [], {}
+            es, medians, readouts = state["es"], state["medians"][s], state["readouts"][s]
+            objective = fit.Objective(truth, bands, families=fit.FIT_FAMILIES, mutants=())
+
+            def full(point, x=state["x"], idx=idx):
+                out_ = list(x)
+                for j, i in enumerate(idx):
+                    out_[i] = float(np.clip(point[j], 0.0, 1.0))
+                return out_
+
+            if 0 not in readouts:
+                readouts[0] = fit.readout(pool, full(es.result.xfavorite), readout_seeds, truth)
+            while len(medians) < GENERATIONS[s]:
+                g = len(medians) + 1
+                points = es.ask()
+                jobs = []
+                for m, p in enumerate(points):
+                    start = cfg["base"] + STRIDE * s + animals * (popsize * (g - 1) + m)
+                    jobs.append((s, list(range(start, start + animals)), full(p)))
+                records = list(pool.map(_job, jobs))
+                scores = [objective(r) for r in records]
+                es.tell(points, scores)
+                medians.append(float(np.median(scores)))
+                if g % 10 == 0:
+                    readouts[g] = fit.readout(pool, full(es.result.xfavorite), readout_seeds, truth)
+                    r = readouts[g]
+                    print(f"screen {name} stage {s} readout {g}: D_fit {r['D_fit']:.2f} on-lawn {r['time_on_lawn']:.3f} "
+                          f"rev {r['spread']['reversal']:.2f}", flush=True)
+                print(f"screen {name} stage {s} gen {g}: median {medians[-1]:.2f} sigma {es.sigma:.4f} {time.time() - t0:.0f} s", flush=True)
+                state_path.write_bytes(pickle.dumps(state))
+            state["answers"][s] = full(es.result.xfavorite)
+            state["x"], state["es"], state["stage"] = state["answers"][s], None, s + 1
+            state_path.write_bytes(pickle.dumps(state))
+    last = [state["readouts"][1][g] for g in (80, 90, 100)]
+    reading = {
+        "time_on_lawn": float(np.mean([r["time_on_lawn"] for r in last])),
+        "D_fit": float(np.mean([r["D_fit"] for r in last])),
+    }
+    reading["keeps_pace"] = reading["time_on_lawn"] >= PACE["time_on_lawn"] and reading["D_fit"] <= PACE["D_fit"]
+    record = {"description": __doc__, "screen": name, **cfg, "pace": PACE, "reading": reading,
+              "medians": state["medians"], "readouts": {str(k): v for k, v in state["readouts"].items()},
+              "answers": state["answers"], "hours": (time.time() - t0) / 3600}
+    (OUT / f"{name}.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"screen {name} done: {reading}", flush=True)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])

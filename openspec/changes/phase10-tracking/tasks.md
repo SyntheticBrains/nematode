@@ -851,6 +851,15 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   - **The order:** the readiness pilot on discarded seeds (go: the wild type, tph-1 and tax-4 each in
     3 of 5), F.0b-ii at one truth (the pilot's answer, its limit stated), the registered fit (the
     same verdict), then a full tax-4 leave-one-out as description. About 124 h.
+  - *(2026-11-12, Part A amended before any registered run.)* **The first pilot was stopped at
+    2a** by its kill rule (D_fit 3.13 against 2.5): its worm never held the lawn. On discarded
+    seeds, 2 of 5 stage-1 answers led to a 2a that holds the lawn, and every 2a that held it by
+    generation 60 reached the bar. **The first half is now started up to six times,** stage 1 at
+    64 animals and population 24 (D38's note). A start is dropped when its mean time on the lawn
+    at 2a's generations 40, 50 and 60 is below 0.95, and the first kept start runs on. A run that
+    keeps no start has no answer: the registered fit fails, and the recovery's gate is not met.
+    About 114 h with every first start kept, and about 127 h at 2 starts in 5. **For W:** every
+    arm needs the same starts, and each arm's count of dropped starts is a reading.
   - **Held out:** Scheer's held-out dates, read beside W's minimum and band-cohort populations.
   - **Slow noise's positive control** (owed since Logbook 123) passes on Logbook 131's answer: the
     speed output responds, and the roaming 90th percentile rises 4.90 band scales at a 30-s

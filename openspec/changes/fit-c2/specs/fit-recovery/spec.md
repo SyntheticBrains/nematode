@@ -11,6 +11,7 @@ Before C.2's registered fit, the registered procedure SHALL recover one known tr
   - the oracle's gain (re-simulations 11–20) to be at least 0.85;
   - the box centre's gain (10 re-simulations) to be at most 0.25.
 - **The truth's stability:** if any of re-simulations 1–10 flips a statistic's definedness against the observation, the recovery SHALL return to the maintainer.
+- **The truth's lawn-holding:** if the observation's time on the lawn is below 0.95, the bar a start must reach to be kept, the recovery SHALL return to the maintainer.
 - **The gate:** the recovery's answer SHALL be re-simulated 10 times, and the fit SHALL run only if the gain at its median D, (prior D − D) / (prior D − floor), is at least 0.75.
 - **The wild-type reference:** a record at the bands' centres and the mutant bands' centres SHALL be scored by the same gain and reported beside the gate. The record SHALL state that the gate cannot tell recovering the truth from fitting the wild type.
 
@@ -23,6 +24,16 @@ Before C.2's registered fit, the registered procedure SHALL recover one known tr
 
 - **WHEN** the recovery's gain is 0.70
 - **THEN** no registered C.2 fit SHALL run until the maintainer decides
+
+#### Scenario: A truth that does not hold the lawn
+
+- **WHEN** the observation's time on the lawn is 0.94
+- **THEN** the recovery fit SHALL NOT run, and the change SHALL return to the maintainer
+
+#### Scenario: A recovery with no answer does not pass
+
+- **WHEN** every start of the recovery fit is dropped
+- **THEN** the gate SHALL NOT pass, and no registered C.2 fit SHALL run until the maintainer decides
 
 #### Scenario: A truth whose statistic flips
 

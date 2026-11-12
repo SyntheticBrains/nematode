@@ -31,7 +31,7 @@ The maintainer's decisions (2026-11-10), from the change plan:
 - **`scripts/analysis/c2_fit.py`**, the procedure fixed in advance, in the shape of `c1_v3_fit.py`:
 
   - the objective: the ranking score, the mutants at half the objective on the encoding table's graded statistics, the saturation and graded responsiveness guards, and each statistic's chance of failing a population;
-  - four stages at population 48 and 200 animals: stage 1 on the 77 parameters that carry senses to outputs, 2a, 2b with the mutants, and the failure-probability stage;
+  - four stages at population 48 and 200 animals (stage 1 at population 24 and 64 animals, and the first half started up to six times, from the amendment of 2026-11-12): stage 1 on the 77 parameters that carry senses to outputs, 2a, 2b with the mutants, and the failure-probability stage;
   - each later stage starts from the one before's mean, σ and per-parameter steps;
   - the noise measurement as a step of its own;
   - readouts every 10 generations recording every statistic, and state saved every generation;
@@ -85,5 +85,5 @@ None.
   - the pilot, the recovery and the registered fit are three runs;
   - the speed-noise control and the recovery's preflight add about 0.5 h each;
   - the leave-one-out, after the fit, is a fourth run of about 28.5 h;
-  - in all, about 124 h, or 5.2 days of machine time.
+  - in all, about 124 h, or 5.2 days of machine time. *(After the amendment of 2026-11-12: about 114 h with every first start kept, about 127 h at 2 starts in 5; design decision 3a.)*
 - **Engineering:** about 2 days.

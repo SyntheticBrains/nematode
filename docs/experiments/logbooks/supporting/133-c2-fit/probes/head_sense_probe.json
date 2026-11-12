@@ -1,0 +1,84 @@
+{
+ "description": "Does sensing food at the head stop the edge crossings? (description; discarded seeds 890,000,000 + i)\n\nThe pilot's 2a answer crosses the lawn edge 8x as often as real worms, though it hugs the edge less.\nThe point worm senses food contact where it is tracked (a real worm's midbody), so it can respond to\nthe edge only after crossing it; a real worm's head leads its midbody by about 0.5 mm. Here the\nevaluator is patched in this script only: food contact is the lawn density at a point ``offset`` mm\nahead of the worm along its heading. Eating, the on-lawn flag and the reversal kinematics stay at the\ntracked point. The network is NOT refitted: it was fitted with the sense at the tracked point.\n\nRead per offset (0, 0.25, 0.5 mm), on Scheer's small lawn and uniform well, the same 200 animals:\nedge crossings per minute, the share of seconds on the lawn, D_fit and every fitted statistic's z.\n",
+ "source": "pilot",
+ "rows": [
+  {
+   "offset_mm": 0.0,
+   "crossings_per_min": 0.48375,
+   "seconds_on_lawn": 0.9704291666666667,
+   "share_within_0.2mm": 0.22344495347848675,
+   "D_fit": 3.1199853633847474,
+   "z": {
+    "small_lawn/roaming_fraction": -1.4135095725938085,
+    "small_lawn/roaming_bout_s": 2.408620729749588,
+    "small_lawn/dwelling_bout_s": 4.157688899523988,
+    "small_lawn/exits_per_on_lawn_hour": -1.5576563651231865,
+    "small_lawn/pre_exit_enrichment": -3.056875968509978,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/dwelling_speed_median": 1.7643189164739974,
+    "kinematics/dwelling_speed_p90": 0.5641406958990166,
+    "kinematics/roaming_speed_median": 2.089108858152303,
+    "kinematics/roaming_speed_p90": -2.545024854841171,
+    "kinematics/roaming_survival_5min": -0.2832341667152691,
+    "activity/pause_share": -1.7763000232835098,
+    "activity/flip_fraction": -2.2653276468044647,
+    "activity/onset_rate_per_min": -4.528810482473425,
+    "uniform_lawn/roaming_fraction": -0.5511906002291294,
+    "uniform_lawn/roaming_bout_s": -3.265345330061506,
+    "uniform_lawn/dwelling_bout_s": -0.09127043613632263
+   }
+  },
+  {
+   "offset_mm": 0.25,
+   "crossings_per_min": 2.755,
+   "seconds_on_lawn": 0.8298687499999999,
+   "share_within_0.2mm": 0.40924895252010235,
+   "D_fit": 4.881450697565763,
+   "z": {
+    "small_lawn/roaming_fraction": 1.768427238101992,
+    "small_lawn/roaming_bout_s": 9.58866635494087,
+    "small_lawn/dwelling_bout_s": 0.4853657778624744,
+    "small_lawn/exits_per_on_lawn_hour": 10.0,
+    "small_lawn/pre_exit_enrichment": -0.784846353798854,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/dwelling_speed_median": 2.204169161655164,
+    "kinematics/dwelling_speed_p90": 3.507071447182101,
+    "kinematics/roaming_speed_median": 10.0,
+    "kinematics/roaming_speed_p90": 8.429159496352828,
+    "kinematics/roaming_survival_5min": 0.7168378741192836,
+    "activity/pause_share": -3.376116171764746,
+    "activity/flip_fraction": -1.1796428377955612,
+    "activity/onset_rate_per_min": -1.1324976050420927,
+    "uniform_lawn/roaming_fraction": -0.5518899876079466,
+    "uniform_lawn/roaming_bout_s": -3.21958193003781,
+    "uniform_lawn/dwelling_bout_s": -0.07721836599396285
+   }
+  },
+  {
+   "offset_mm": 0.5,
+   "crossings_per_min": 1.0534999999999999,
+   "seconds_on_lawn": 0.9361687500000001,
+   "share_within_0.2mm": 0.56764160663698,
+   "D_fit": 6.305009883210085,
+   "z": {
+    "small_lawn/roaming_fraction": 10.0,
+    "small_lawn/roaming_bout_s": 10.0,
+    "small_lawn/dwelling_bout_s": -3.251793864924246,
+    "small_lawn/exits_per_on_lawn_hour": 9.205782652923252,
+    "small_lawn/pre_exit_enrichment": -3.7990427203544557,
+    "small_lawn/time_on_lawn": -10.0,
+    "kinematics/dwelling_speed_median": 1.1240748016295496,
+    "kinematics/dwelling_speed_p90": 1.8045842763057658,
+    "kinematics/roaming_speed_median": 10.0,
+    "kinematics/roaming_speed_p90": 10.0,
+    "kinematics/roaming_survival_5min": 10.0,
+    "activity/pause_share": -8.221012152487502,
+    "activity/flip_fraction": 0.0601361044539853,
+    "activity/onset_rate_per_min": 3.341313159397888,
+    "uniform_lawn/roaming_fraction": -0.5737220092743338,
+    "uniform_lawn/roaming_bout_s": -3.219360299807967,
+    "uniform_lawn/dwelling_bout_s": -0.051228108750199404
+   }
+  }
+ ]
+}

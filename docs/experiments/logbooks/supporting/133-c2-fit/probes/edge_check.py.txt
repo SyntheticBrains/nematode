@@ -1,0 +1,61 @@
+"""The pilot's 2a worm at the lawn edge, against real worms (description; discarded seeds 890,000,000 + i)."""
+import json, pickle, sys
+from collections import Counter
+import numpy as np
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+from quantumnematode.benchmark import grading as g
+from quantumnematode.benchmark import references as refs
+
+
+def edge_stats(depth, on, minutes):
+    depth = np.asarray(depth, dtype=float); on = np.asarray(on, dtype=bool)
+    crossings = int(np.sum(on[:-1] & ~on[1:]))
+    inside = depth[on & np.isfinite(depth)]
+    return crossings / minutes, inside
+
+
+if __name__ == "__main__":
+    fit.nr._worker_setup()
+    state = pickle.loads(open("build/c2-fit/pilot/state.pkl", "rb").read())
+    z = list(np.clip(state["es"].result.xfavorite, 0.0, 1.0))
+    bands = bg.load_bands_v4()
+    seeds = list(range(890_000_000, 890_000_200))
+    _, factory = fit.controller(z)
+    pops, _ = bg.simulate_v2(fit.ARM, factory, seeds, bands, assays=("small_lawn",))
+    rates, depths, before = [], [], Counter()
+    agree = []
+    for animal in pops["small_lawn"]:
+        x = np.array([s.x for s in animal]); y = np.array([s.y for s in animal])
+        on = np.array([bool(s.on_lawn) for s in animal])
+        depth = 1.5 - np.hypot(x - 5.0, y - 5.0)
+        agree.append(np.mean((depth > 0) == on))
+        r, inside = edge_stats(depth, on, len(animal) / 60)
+        rates.append(r); depths.append(inside)
+        for k in np.flatnonzero(on[:-1] & ~on[1:]):
+            before[animal[k].primitive] += 1
+    d = np.concatenate(depths)
+    tracks = refs.load_scheer_tracks()
+    import benchmark_bands as bb
+    rows = tracks.arm(bb.WILD_TYPE); rows = rows[tracks.side[rows] == refs.BANDS]
+    rrates, rdepths = [], []
+    for i in rows:
+        x, y = np.asarray(tracks.x[i], float), np.asarray(tracks.y[i], float)
+        keep = np.isfinite(x)
+        on = np.asarray(g.real_on_lawn(x, y, tracks.boundary_radius[i]))[keep]
+        with np.errstate(invalid="ignore"):
+            depth = np.asarray(refs.boundary_distance(x, y, tracks.boundary_radius[i]))[keep]
+        r, inside = edge_stats(depth, on, keep.sum() / 60)
+        rrates.append(r); rdepths.append(inside)
+    rd_ = np.concatenate(rdepths)
+    q = lambda a: [round(float(np.quantile(a, p)), 3) for p in (0.1, 0.25, 0.5, 0.75)]
+    out = {
+        "position_agrees_with_on_lawn": float(np.mean(agree)),
+        "simulated": {"crossings_per_min": float(np.mean(rates)), "depth_quantiles_mm": q(d),
+                       "share_within_0.2mm": float(np.mean(d < 0.2)), "primitive_before_crossing": dict(before)},
+        "real": {"crossings_per_min": float(np.mean(rrates)), "depth_quantiles_mm": q(rd_),
+                  "share_within_0.2mm": float(np.mean(rd_ < 0.2))},
+    }
+    json.dump(out, open("build/c2-fit/edge_check.json", "w"), indent=1)
+    print(json.dumps(out, indent=1))

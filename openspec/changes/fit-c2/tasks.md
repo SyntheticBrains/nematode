@@ -117,22 +117,54 @@
 
 ## 4. The readiness pilot
 
-- [ ] 4.1 `pilot` (about 30 h, discarded seeds). Stop and return to the maintainer on a kill rule.
+- [x] 4.1 `pilot` (about 30 h, discarded seeds). Stop and return to the maintainer on a kill rule. *(2026-11-11: stopped by 2a's kill rule, D_fit 3.13 against 2.5.)*
+
+- [x] 4.1a Diagnose the first pilot on discarded seeds, each run's rule fixed before it ran: the two screens, the curriculum's 2a replayed on the registered arm, another CMA seed, the continuations, start (c) and the lawn-guard probe.
+
+- [x] 4.1b The amendment of 2026-11-12 (design decision 3a), on the maintainer's decision:
+
+  - `c2_fit.py`: stage 1 at 64 animals and population 24; up to six starts of the first half; the lawn-holding reading at 2a's generations 40, 50 and 60 (bar 0.95); each start's CMA seeds and animals; a run with no answer in the pilot, the recovery, the fit and the leave-one-out;
+  - the pilot on a new base (1,100,000,000) and new CMA seeds.
+
+  Tests:
+
+  - a start that does not hold the lawn is dropped, and the next begins from the box's centre on its own seeds;
+  - no start holds the lawn;
+  - the reading is a mean of its three readouts;
+  - an interrupted drop resumes to the same answer;
+  - each start has its own animals and CMA seeds, inside the run's block and C.2's CMA band;
+  - a start's candidates are simulated on its own animals;
+  - stage 1's checkpoint stops only the pilot;
+  - a registered fit with no answer fails, and a recovery with no answer does not pass; the pilot, the leave-one-out and the smoke with no answer;
+  - a run resumes inside any start to an uninterrupted run's answer;
+  - each start is read against its own bar, and every start's 2a opens at the 1-s timescale;
+  - F.0b-ii's preflight refuses a truth below the lawn-holding bar;
+  - deliberate bugs in the start loop, each caught;
+  - the smoke runs a dropped start and a kept one.
+
+- [x] 4.1c Part A amended and committed before the pilot runs again, with:
+
+  - the first pilot's record (`pilot_first.json`) and every diagnosis script and record under `probes/`;
+  - the manifest rebuilt;
+  - D38's note in the roadmap (stage 1 below 200 animals) and the tracker's seed row.
+
+- [ ] 4.1d `pilot` again (about 29 h, and about 2.1 h for each dropped start).
+
 - [ ] 4.2 Read the go rule. Part B: the result, the cost per stage and the plateau reading, committed. If the go rule fails, diagnose it and return to the maintainer before anything registered.
 
 ## 5. F.0b-ii
 
 - [ ] 5.1 `recovery-preflight`: the observation, its stability, floor, oracle, prior D, box centre and the band-centre reference. Return to the maintainer if a check fails. Commit the record before `recovery` runs.
-- [ ] 5.2 `recovery` (about 30 h): the gate. Return to the maintainer if the gain is below 0.75.
+- [ ] 5.2 `recovery` (about 29 h, and about 2.1 h for each dropped start): the gate. Return to the maintainer if the gain is below 0.75.
 - [ ] 5.3 Part C, the recovery's result, committed.
 
 ## 6. The registered fit
 
-- [ ] 6.1 `run` (about 30 h), `grade` (5 + 10 populations) and `read`: `fit.json` with the verdict, the pass rate, the held-out reading, the restart spread against the pilot, and the cost.
+- [ ] 6.1 `run` (about 29 h, and about 2.1 h for each dropped start), `grade` (5 + 10 populations) and `read`: `fit.json` with the verdict, the pass rate, the held-out reading, the restart spread against the pilot, and the cost.
 
 ## 7. The tax-4 leave-one-out
 
-- [ ] 7.1 `loo` (about 27 h), read beside the registered fit as description.
+- [ ] 7.1 `loo` (about 26 h), read beside the registered fit as description.
 
 ## 8. Close-out
 
