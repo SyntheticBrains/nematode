@@ -1,0 +1,48 @@
+# Tasks: Export the signed connectome and the neuromodulator layer for Wormturn
+
+Not a phase task. The maintainer approved the exporter on 2026-11-14; the decisions are in this
+change's `design.md`. No campaign runs in this change, and no experiment's input changes.
+
+## 1. Review
+
+- [ ] 1.1 **Spec review.** `/nematode-review-spec` was not run: the change was written in a session
+  that could not run the skill. The maintainer's review of the pull request stands in for it.
+
+## 2. The exporter
+
+- [ ] 2.1 **Shared helpers** in `scripts/export_wormlight.py` (design Decision E): `input_entry`,
+  `neuron_records`, `gap_records`, and `render` taking `record_lists`. Confirm the Wormlight export's
+  bytes are unchanged on one tree, before and after.
+- [ ] 2.2 **`scripts/export_wormturn.py`** building `wormturn.connectome/1` from public package API
+  and the two layer files: the signs of the Emmons 2024 wiring, passed explicitly, with no citation
+  excluded; the records of Decisions B and D; the provenance of Decision F, refusing a Git LFS
+  pointer; one record per line; a dirty tree refused without `--allow-dirty`. No planning references
+  in the script.
+
+## 3. Tests
+
+- [ ] 3.1 **`entrypoints/test_export_wormturn.py`**, git never called, covering every scenario:
+  - the schema and key order; counts and section totals; no muscles;
+  - neurons as the table and the atlas give them, and both record lists equal to the Wormlight
+    export's;
+  - every chemical edge with exactly one sign and source, the source counts, signs consistent with
+    their source, and example edges;
+  - each physiology sign's citation in the table, no citation on any other, and every key used;
+  - Emmons 2024 and Cook 2019 chemical edges identical, and the signs equal to either table;
+  - the layer and the receptor couplings round-trip against their files;
+  - provenance digests equal the files', and an LFS pointer refused;
+  - the rendering parses back, one record per line, and is stable; unknown or missing keys refused;
+  - a dirty tree refused, `--allow-dirty` recorded, a clean tree written.
+- [ ] 3.2 The Wormlight exporter's tests pass unchanged.
+
+## 4. Docs
+
+- [ ] 4.1 A CHANGELOG line under *Unreleased*, and the exporter in `AGENTS.md`'s commands.
+
+## 5. Close-out
+
+- [ ] 5.1 The new tests, the Wormlight exporter's and the connectome tests; the fast tier.
+- [ ] 5.2 `uv run pre-commit run --files` on the changed files, judged by its exit code.
+- [ ] 5.3 Two exports to the scratchpad with `--allow-dirty`, byte-identical. The pinned clean export
+  is made later, from a clone with Git LFS.
+- [ ] 5.4 `openspec validate add-wormturn-export --strict`; archive.
