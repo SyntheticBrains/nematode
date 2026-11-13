@@ -73,3 +73,18 @@ insert a blank line before each of its nested lists (whitespace only; no word ch
 Quality job runs `mdformat` on every file, so at that point either the blank lines are accepted or
 `investigation/BRIEF.md` is excluded from the hook. That choice is the maintainer's and is deferred
 until then. The other investigation documents are written to pass the hook.
+
+### A7. Accept the literature sweeps' coverage gap, and check the load-bearing claims (2026-11-14)
+
+**Decision.** All three literature agents ran out of web-search budget near the end of their sweeps,
+so work from late 2025 to November 2026 is under-covered. LANDSCAPE.md says so at the top and lists
+what was looked for and not found. Rather than re-running the sweeps, I re-opened the sources that
+carry the most weight and confirmed the quoted claims (Creamer v4, Randi 2023, r-elegans, flyvis,
+Beiran and Litwin-Kumar, Li et al. 2026, Mehta et al. 2023, Ding et al. 2023). Those are marked
+"checked" in the source table.
+
+**Reason.** A second sweep would cost as much as the first for a marginal gain, and the user's seed
+list (RECONCILE.md, next) is the brief's own mechanism for catching what the sweep missed.
+
+**Considered instead.** A fourth agent restricted to 2025 and 2026 work. Worth doing if the seed list
+shows the gap matters.
