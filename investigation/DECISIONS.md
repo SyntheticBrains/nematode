@@ -145,3 +145,20 @@ fixed from literature signs (option B), chosen at approval.
 **Reason.** The fitted model has optogenetic inputs and calcium outputs, and no motor neurons, so
 "unchanged" can only mean its fitted parameters are frozen. An interface fitted to the benchmark
 would break the brief's rule that behaviour is held out.
+
+## Reconciliation
+
+### A13. Mi et al. upgraded, and made the spike's alternative target (2026-11-14)
+
+**Decision.** Mi et al. 2022 was read in full from the Janelia-hosted PDF (text extracted locally with
+`pypdf`) after the user's seed list named it. LANDSCAPE.md and IDENTIFIABILITY.md now carry its
+numbers, and SPIKE_PLAN.md names it, on Yemini 2021 (DANDI 000541, CC-BY-4.0), as the target if
+neither data route to the Randi atlas opens. Its bars are r ≥ 0.25 on held-out neurons (about four
+seed standard errors below the published 0.319) and the dense variant below it.
+
+**Reason.** It is the one gradient-fitted connectome-constrained worm model with a held-out test, and
+its held-out-worm result (no connectome benefit on whole animals) qualifies what Part A said. Switching
+target keeps the spike inside the project's licence rule, where the unlicensed OSF fallback would not.
+
+**Considered instead.** Making Mi the primary target. Not done: it has no optogenetic perturbation, and
+the brief puts perturbation data first.

@@ -45,7 +45,11 @@ Both are under-determined at the parameter level. They under-determine different
   head. Creamer's connectome-masked linear model, fitted to it, predicts held-out animals' responses
   at 82% of the data's own reproducibility, while a relabelled connectome does poorly. Dunn 2025 adds
   stimulation of AWA, SMD, RIV and RIA. The silencing sets (Kato's AVA, Uzel's hubs, Kaplan's SMD and
-  motor neurons) constrain the outgoing influence of the silenced nodes through correlations.
+  motor neurons) constrain the outgoing influence of the silenced nodes through correlations. On
+  sensory-stimulus data (Yemini 2021), Mi et al.'s gradient-fitted model with connectome counts
+  predicts withheld neurons at r = 0.32 against about 0 for a dense model, yet both fit held-out worms
+  alike (r = 0.47 against 0.46): the connectome identifies routes to unrecorded neurons, not the
+  overall fit.
 - *Behaviour:* in C.2, 3,709 edges share two fitted scales and four group gains; per-edge magnitudes
   are synapse counts under a hand-chosen normaliser. Unconstrained fits switched inhibition off
   (LB 127). Behaviour constrains essentially no individual edge.

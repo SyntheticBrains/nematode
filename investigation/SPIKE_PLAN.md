@@ -54,6 +54,13 @@ fit-first method on the field's one benchmark result.
   both public with no licence stated. They match the paper's pipeline exactly, but nothing derived
   from them could be vendored under the project's CC0-or-CC-BY rule. The spike uses them only if DANDI
   cannot supply the traces, and only locally.
+- **Alternative target, if neither data route is open** (added at reconciliation): Mi et al. 2022's
+  connectome-constrained latent-voltage model on Yemini 2021 (DANDI 000541, CC-BY-4.0; code
+  TuragaLab/wormvae). Already gradient-fitted in PyTorch; scored on held-out neurons (published
+  r = 0.319) and held-out worms (0.474). It has sensory stimuli, not optogenetic perturbation, so it
+  answers the brief's "held-out neurons" branch only. R1's bar would become r ≥ 0.25 on held-out
+  neurons, about four of the paper's seed standard errors (±0.016) below its 0.319, and R2 would be
+  that the learned dense variant, fitted identically, scores below it.
 - **Preprocessing:** Creamer's `create_data_set.py` logic, re-implemented on the NWB input: drop each
   recording's first 120 samples, ΔF/F with F₀ the time mean, their neuron list and stimulation
   encoding. A day-1 check compares per-animal trace statistics with their OSF data's, if that fallback

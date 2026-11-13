@@ -70,11 +70,24 @@ club differ from the anatomical ones; structural hubs need not be influential.
 
 ### 1.2 Connectome-constrained fits to spontaneous or behaving activity
 
-- **Mi et al., ICLR 2022 (A; code TuragaLab/wormvae, R).** A connectome-constrained latent-variable
-  model: a biophysical simulation of latent voltages linked to observed calcium, fitted as a
-  variational autoencoder by gradient. Connectome constraints predicted withheld neurons
-  "substantially better" than unconstrained models, and conductance-based synapses beat current-based.
-  The full paper could not be opened, so its data and numbers are unknown here.
+- **Mi et al., ICLR 2022, "Connectome-constrained latent variable models of whole-brain neural
+  activity" (F, checked, from the Janelia-hosted PDF; code TuragaLab/wormvae, R).** The one
+  gradient-fitted connectome-constrained worm model with a held-out test.
+  - *Data:* Yemini et al. 2021: 21 immobilised NeuroPAL worms, 170 head neurons, 5 min at 4 Hz,
+    presented with 2-butanone, 2,3-pentanedione and NaCl.
+  - *Model:* passive point neurons with latent voltages for all 300 neurons, chemical (current- or
+    conductance-based) and electrical synapses, a calcium observation model, fitted as a variational
+    autoencoder by gradient, with a black-box model of sensory tuning. Nine variants, from learned
+    dense through connectome sparsity to connectome counts.
+  - *Held-out neurons* (each of 107 bilateral pairs withheld in turn, 4 seeds): conductance-based with
+    connectome counts r = 0.319 ± 0.016; with connectome sparsity 0.262; learned dense 0.008;
+    current-based learned dense −0.104. A learned sparse (L1) model did worse, so the gain comes from
+    the topology, not the parameter count. Predictions were better for interneurons and motor neurons
+    than for sensory neurons.
+  - *Held-out worms* (15 train, 6 test): every variant scored r = 0.44 to 0.47 (connectome counts 0.474,
+    current-based dense 0.465). On whole held-out animals, the connectome made almost no difference.
+    The authors read the dense model as "an equally accurate but mechanistically incorrect" fit.
+  - *No wiring null* beyond the unconstrained variants.
 - **Morrison and Young 2025, PLoS Comput Biol (F).** 15 premotor neurons with cubic intrinsic terms;
   gap weights fixed from White 1986; chemical weights and signs regressed on Atanas 2023's freely
   moving data, with 112 other recorded neurons fed in as inputs. No held-out split. It reproduces
@@ -154,12 +167,14 @@ estimates could not be read.
 
 - **Worked.** A connectome mask is enough to reach a fully connected model's accuracy on held-out
   animals' perturbation responses, and it beats a relabelled-connectome null (Creamer). Connectome
-  constraints help predict withheld neurons (Mi, abstract). Low-dimensional models predict
-  motor-command timing in held-out worms (Brennan and Proekt).
+  constraints, fitted by gradient, predict withheld neurons at r = 0.32 against about 0 unconstrained
+  (Mi). Low-dimensional models predict motor-command timing in held-out worms (Brennan and Proekt).
 - **Failed or weak.** Anatomy alone predicts signal propagation poorly (Randi; Uzel; Seyedolmohadesin;
   Dvali). The best perturbation fit agrees with data at r = 0.14 because the data agree with
-  themselves at only 0.17 (Creamer). Gradient-fitted connectome models have no held-out validation
-  (BAAIWorm; Morrison and Young). Pooled connectome-free models barely beat copying the last value
+  themselves at only 0.17 (Creamer). On whole held-out worms, connectome-constrained and dense models
+  score alike (r = 0.44 to 0.47; Mi), and on perturbation responses a fully connected model does as well
+  as the masked one (Creamer): the connectome shows on withheld neurons and against relabelling, not
+  on held-out animals' overall fit. BAAIWorm and Morrison and Young have no held-out validation. Pooled connectome-free models barely beat copying the last value
   (Simeon). The one open differentiable JAX effort reports no calcium gain yet (r-elegans).
 - **Not found.** No published work fits a connectome model to worm neural data and then scores it on
   held-out behaviour statistics.
@@ -279,8 +294,8 @@ estimates could not be read.
   Atanas 2023 and Dag 2023 nuclear GCaMP7f at about 1.7 Hz; Ji 2021 GCaMP6m at about 2 Hz.
 - **How modellers handled it.** Almost every fit to real worm data treats ΔF/F, or its z-score, as the
   state: Randi's kernels, Creamer, CePNEM, Linderman's rSLDS, Morrison and Young. Explicit observation
-  models appear in Warrington 2019 (synthetic data only), Mi et al.'s latent-voltage model (abstract
-  level), and, in the fly, Li 2026's GCaMP kernel.
+  models appear in Warrington 2019 (synthetic data only), Mi et al.'s latent-voltage model (fitted
+  to Yemini 2021's recordings), and, in the fly, Li 2026's GCaMP kernel.
 
 ### 4.2 Intrinsic currents and expression priors
 
@@ -421,7 +436,7 @@ source and confirmed the claim used here.
 | Randi et al. 2023, Nature 623:406 (arXiv 2208.04790) | F (arXiv) | yes |
 | Toyoshima et al. 2024, PLoS Comput Biol, 10.1371/journal.pcbi.1011848 | F | |
 | Dvali et al. 2025, PRX Life 3:033021 | A | |
-| Mi et al., ICLR 2022; TuragaLab/wormvae | A; R | |
+| Mi et al., ICLR 2022 (Janelia-hosted PDF); TuragaLab/wormvae | F; R | yes |
 | Morrison and Young 2025, PLoS Comput Biol 21:e1013818 | F | |
 | Zhao et al. 2024 (BAAIWorm), Nat Comput Sci 4:978 | F | |
 | Warrington, Spencer and Wood 2019, arXiv 1907.11075 | F | |
