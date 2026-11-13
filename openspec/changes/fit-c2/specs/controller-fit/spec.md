@@ -11,7 +11,7 @@ Before Part A, the registered speed-noise control SHALL run under its own rule o
 
 ### Requirement: C.2 is fitted by a staged procedure fixed in advance
 
-C.2 SHALL be fitted by sep-CMA (bounds [0, 1], both guards; population 24 and 64 animals a candidate in stage 1, population 48 and 200 animals a candidate after it) in four stages, every one fixed in the launch record before any scored run:
+C.2 SHALL be fitted by sep-CMA (bounds [0, 1], the three guards; population 24 and 64 animals a candidate in stage 1, population 48 and 200 animals a candidate after it) in four stages, every one fixed in the launch record before any scored run:
 
 - **stage 1:** the 77 parameters of the wiring, sensory, readout and noise blocks and the pool centres, from the graded box's centre at σ₀ 0.2, on D_fit's families, for 150 generations;
 - **2a:** all 137, from stage 1's answer with the speed noise's timescale set to 1 s, at σ₀ 0.1, on D_fit's families, for 300 generations;
@@ -71,9 +71,10 @@ The objective SHALL be the definedness-first ranking score against the truth on 
 - where a stage fits n_m mutants, each mutant's term (the RMS of 10·asinh(z/10) over the statistics the encoding table grades it on) SHALL weigh n_f / n_m, so the mutants together weigh as much as the n_f families;
 - 500 SHALL be added when over half the motor neurons sit at abs(h) > 0.99 in over half the steps;
 - 300·(1 − s/0.5) SHALL be added when the smaller of the speed and reversal outputs' 5th-to-95th-percentile spreads, s, is below 0.5;
+- in every stage, 300·(0.95 − t)/0.95 SHALL be added when the time on the small lawn, t, is below 0.95. An undefined time on the lawn SHALL count as 0;
 - in the final stage, 10·Σ Φ((abs(z) − bar) / SD) SHALL be added over every defined wild-type and table-graded mutant statistic, with the bars read from the bands and SD from the noise step.
 
-Both guards SHALL read the wild type's simulation only.
+The three guards SHALL read the wild type's simulation only. Each generation's share of candidates paying the lawn guard SHALL be recorded.
 
 The noise step SHALL grade 2b's answer on 30 populations of 200 without presence, and take each statistic's SD between them, floored at 0.05. A statistic defined in fewer than 2 populations SHALL take the floor.
 
@@ -86,6 +87,11 @@ The noise step SHALL grade 2b's answer on 30 populations of 200 without presence
 
 - **WHEN** a wild-type statistic's abs(z) equals the bands' wild-type bar in the final stage
 - **THEN** its failure term SHALL be 10 × 0.5 = 5
+
+#### Scenario: The lawn guard
+
+- **WHEN** a candidate's wild type is on the small lawn 47.5% of the time, in any stage
+- **THEN** its lawn guard SHALL be 150, and at 95% or more on the lawn SHALL be 0
 
 #### Scenario: tph-1's leaving is not scored
 
@@ -103,7 +109,7 @@ Every 10 generations, and at each stage's generation 0, the stage's mean SHALL b
 
 #### Scenario: A resume with changed settings
 
-- **WHEN** a run is resumed with a stage's generation count changed
+- **WHEN** a run is resumed with a stage's generation count, or the lawn guard's bar or weight, changed
 - **THEN** it SHALL refuse and run nothing
 
 ### Requirement: C.2's registered fit runs on the speed-following arm

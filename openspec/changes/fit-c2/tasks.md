@@ -148,7 +148,26 @@
   - the manifest rebuilt;
   - D38's note in the roadmap (stage 1 below 200 animals) and the tracker's seed row.
 
-- [ ] 4.1d `pilot` again (about 29 h, and about 2.1 h for each dropped start).
+- [x] 4.1d `pilot` again (about 29 h, and about 2.1 h for each dropped start). *(2026-11-13: no start of six held the lawn, and the pilot stopped with no answer after 15.8 h; `pilot_second/`.)*
+
+- [x] 4.1e Diagnose the second pilot on discarded seeds, each run's rule fixed before it ran: the guard probe resumed, two of its dropped starts' 2a again under the lawn guard, and a first half from the box centre with the guard in stage 1 and 2a.
+
+- [x] 4.1f The amendment of 2026-11-13 (design decision 3b), on the maintainer's decision:
+
+  - `c2_fit.py`: the lawn guard in the objective, in every stage, in the settings a resume checks, and each generation's share of candidates paying it recorded;
+  - the pilot on a new base (1,140,000,000) and new CMA seeds (9591–9594, restarts 9651–9660), clear of the seeds the Phase 10 table gives other work.
+
+  Tests:
+
+  - the lawn guard's values below, at and above 0.95, undefined, beside the other guards and in every stage's objective;
+  - a resume with a changed lawn guard is refused;
+  - each generation's share of candidates paying it is recorded in every stage;
+  - the second pilot's and its probes' seed blocks, and the CMA seeds the seed tables give other work, are earlier blocks;
+  - deliberate bugs in the guard and the pilot's seeds, each caught, and the first amendment's again on the new code.
+
+- [ ] 4.1g Part A amended and committed before the pilot runs a third time, with the second pilot's record, every diagnosis script and record under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's seed row.
+
+- [ ] 4.1h `pilot` a third time (about 30 h with its first start kept).
 
 - [ ] 4.2 Read the go rule. Part B: the result, the cost per stage and the plateau reading, committed. If the go rule fails, diagnose it and return to the maintainer before anything registered.
 

@@ -4,6 +4,8 @@
 
 **Part A amended 2026-11-12,** the maintainer's decision, before any registered run. The first readiness pilot was stopped at 2a's end by its kill rule. The amendment changes the first half of the procedure only: stage 1's size, and up to six starts of the first half with one rule that keeps a start (*The first half's starts*, below). Everything seen before it is listed under *Disclosures*. No registered simulation had run, and no verdict, gate or bar after 2a changes.
 
+**Part A amended again 2026-11-13,** the maintainer's decision, before any registered run. The second readiness pilot kept no start of six and stopped with no answer. The amendment adds a lawn guard to the objective in every stage (*The objective*, below) and moves the pilot to new seeds. The restarts and their rule are unchanged. Everything seen before it is listed under *Disclosures*. No registered simulation had run, and no verdict, gate or bar changes.
+
 ## Part A: the rules
 
 ### The controller and its arm
@@ -26,7 +28,8 @@ For a candidate's record against a truth T (the bands' centres; in F.0b-ii, the 
   - each mutant's term is the RMS of 10·asinh(z/10) over the statistics the encoding table grades it on, z its difference from the wild type on the same animals against T's, capped at 10, undefined at the cap;
   - with n_f families and n_m mutants, each mutant weighs n_f / n_m, so the mutants together are half;
 - **the saturation guard:** + 500 when over half the motor neurons sit at abs(h) > 0.99 in over half the steps;
-- **the graded responsiveness guard:** + 300·(1 − s/0.5) when s < 0.5, s the smaller of the speed and reversal outputs' 5th-to-95th-percentile spreads over 8 recorded animals. Both guards read the wild type's simulation only;
+- **the graded responsiveness guard:** + 300·(1 − s/0.5) when s < 0.5, s the smaller of the speed and reversal outputs' 5th-to-95th-percentile spreads over 8 recorded animals;
+- **the lawn guard,** in every stage (added 2026-11-13): + 300·(0.95 − t)/0.95 when t < 0.95, t the time on the small lawn, an undefined time counting as 0. The three guards read the wild type's simulation only;
 - **the failure probability,** in the final stage only: + 10·Σ Φ((abs(z) − bar) / SD) over every defined wild-type statistic and every graded mutant statistic, with the bands' bars (3.07809 and 2.24140) and SD from the noise step.
 
 **The graded statistics** are the encoding table's (`113-c1-fit/encodings.md`, bound):
@@ -60,9 +63,9 @@ Stage 1 and 2a are started up to **six** times in sequence. The rule is the same
 - **The lawn-holding reading:** a start's mean time on the lawn over 2a's readouts at generations 40, 50 and 60.
   - **Below 0.95, the start is dropped** at generation 60, and the next start begins.
   - **At 0.95 or above, the start is kept.** It runs 2a to its 300 generations, and the procedure continues from it. No later start runs.
-- **A run in which no start is kept has no answer.** No later stage runs. At 2 starts in 5 that is 1 run in 21, and at least one of the pilot, the recovery and the fit in 0.13 of chains.
+- **A run in which no start is kept has no answer.** No later stage runs. At 2 starts in 5 that is 1 run in 21, and at least one of the pilot, the recovery and the fit in 0.13 of chains. *(2026-11-13: without the lawn guard 2 of 11 starts held the lawn, and the second pilot kept none of six. With it, 3 of 4 runs held the lawn at generation 60, as Disclosures state. Every run's count is reported.)*
 - **An undefined time on the lawn counts as 0** in the reading.
-- **Recorded for every start:** every readout, every generation's median, best score and step size, the reading, and the search's mean where it was dropped.
+- **Recorded for every start:** every readout, every generation's median, best score and step size (from 2026-11-13, also the share of its candidates paying the lawn guard), the reading, and the search's mean where it was dropped.
 - **Reported, not selected on:** each start's output spreads at stage 1's end.
 
 ### The noise step
@@ -193,7 +196,8 @@ The first start takes the run's first two CMA seeds. Start a = 1–5 takes R + 2
 | Run | Base | CMA | Status |
 |---|---|---|---|
 | the first readiness pilot, stopped at 2a | 900,000,000, on the first layout | 9504–9507 | discarded |
-| the readiness pilot | 1,100,000,000 | 9531–9534, restarts 9541–9550 | discarded |
+| the second readiness pilot, which kept no start | 1,100,000,000 | 9531–9534, restarts 9541–9550 | discarded |
+| the readiness pilot (amended 2026-11-13) | 1,140,000,000 | 9591–9594, restarts 9651–9660 | discarded |
 | F.0b-ii's recovery fit | 920,000,000 | 5801–5804, restarts 5831–5840 | registered |
 | the truth's observation (q = 0) and re-simulations (1–20) | 940,000,000 + 200·q + i | | registered |
 | the prior draws | 941,000,000 + 200·j + i, j < 200 | `default_rng(5805)` | registered |
@@ -204,8 +208,9 @@ The first start takes the run's first two CMA seeds. Start a = 1–5 takes R + 2
 | the stand-in preflight | 885,000,000–887,100,999 | `default_rng(9512)` | discarded |
 | the smoke | 99,880,000–99,889,999: 8 animals, population 6, two generations a stage, two starts | 9508–9511, restart 9561–9562 | discarded |
 | the runs that diagnosed the first pilot | 1,010,000,000–1,055,000,199, and 890,000,000 + i for the checks of its worm | 9516–9525 | discarded |
+| the runs that diagnosed the second pilot | 1,060,000,000–1,065,000,199 and 1,090,000,000–1,095,000,199 (its starts 0 and 3 again), 1,130,000,000–1,135,000,199 (the guarded first half) | 9571, 9574, 9581–9582 | discarded |
 
-The tests check that every block is disjoint from the others, from the first pilot's and its diagnosis's, and from the seed table's earlier blocks, which reach 880,001,999.
+The tests check that every block is disjoint from the others, from both earlier pilots' and their diagnoses', and from the seed table's earlier blocks, which reach 880,001,999. They also check that no run takes a CMA seed the seed tables give earlier pilots, probes or tests (9601–9616 among them).
 
 ### Disclosures
 
@@ -295,6 +300,61 @@ Seen before this record was committed, all on discarded seeds:
   - the lawn-holding function, run on every recorded 2a above, sorts them as the table does;
   - **an independent review** (2026-11-12, a reviewer without the author's reading) found no defect in the start loop, the seeds or the handling of a run with no answer. It named seven deliberate bugs the first tests passed, each now caught, stale cost figures, now corrected, and the preflight's new check that the truth itself holds the lawn.
 
+**Seen before the amendment of 2026-11-13,** all on discarded seeds, each run's rule fixed before it ran (`pilot_second/`, the record split by start, and each script as run with its record under `probes/`):
+
+- **The second readiness pilot** (base 1,100,000,000, Part A as amended 2026-11-12). Every start was dropped at 2a's generation 60, and the pilot stopped with no answer after 15.8 h:
+
+  | Start | CMA | Stage 1: on the lawn, last three readouts | Stage 1: dopamine wiring gain | 2a: on the lawn, generations 40–60 |
+  |---|---|---|---|---|
+  | 0 | 9531, 9532 | 0.846 | +0.95 | 0.720 |
+  | 1 | 9541, 9542 | 0.878 | +1.40 | 0.880 |
+  | 2 | 9543, 9544 | 0.806 | +1.82 | 0.795 |
+  | 3 | 9545, 9546 | 0.902 | −1.50 | 0.921 |
+  | 4 | 9547, 9548 | 0.882 | +1.50 | 0.888 |
+  | 5 | 9549, 9550 | 0.885 | +1.71 | 0.833 |
+
+  Starts 0–3 had the machine to themselves: stage 1 took 0.88–0.92 h and 2a's 60 generations 1.34–1.40 h. Starts 4 and 5 shared it with the resumed guard probe.
+
+- **A dopamine lead, read and failed** (`dopamine_trace.py`, a read-only log of the pilot's state). Found after the pilot's third start: the two stage-1 answers whose 2a held the lawn had a negative dopamine wiring gain (−1.96 and −1.44), and the six that did not a positive one (+0.95 to +1.96). The prediction that start 3 (−1.50) would hold was written down before its reading, and failed at 0.921. The guard probe reached the bar at +0.84. The gain selects nothing.
+
+- **The lawn guard probe, resumed** during the pilot's starts 4 and 5 (2026-11-12 at about 22:05, from generation 88). It ended at 05:35 on 2026-11-13, after the pilot. It held the lawn, at 0.978 or above from generation 60, and **reached the bar at generations 200–220** (D_fit 2.63, 2.37 and 2.33; 0.992 on the lawn). Its own rule had read 0.949 at generations 40–60 as not holding, and its stated branch for that, "the guard cannot rescue it", was wrong.
+
+- **The second pilot's starts 0 and 3, their 2a again under the guard** (`guard_rep.py`, from their stage-1 answers in `pilot_starts.json`). The rule was fixed 2026-11-13 before they ran: the guard is a remedy worth registering if the probe and at least two of starts 0, 1 and 3 reach the bar.
+
+  - **Start 0** held the lawn, at 0.974 or above from generation 20. It **reached the bar at generation 290** (D_fit 2.54, 2.36 and 2.26, a mean of 2.39; 0.987 on the lawn).
+  - **Start 3** held the lawn, at 0.958 or above from generation 30, and stalled near D_fit 4.5 from generation 90. It was paused for 2.9 h at generation 178, to keep the machine within its cores, and resumed exactly. It was still running when this was committed. Its record is added in Part B.
+  - **Start 1 was not run,** the maintainer's decision: with the guard in stage 1, its question no longer decides the amendment. The rule is therefore not read. With start 0 at the bar and start 3 stalled, the rule turned on start 1 unless start 3 reaches the bar by its end. Its failure branch ("not reliable enough to replace restarts") agrees with keeping the restarts.
+
+- **A first half from the box centre, with the guard in stage 1 and 2a** (`guarded_first_half.py`). Its rule, fixed 2026-11-13 before 2a ran: the guard belongs in stage 1 too if this 2a reaches the bar by generation 150.
+
+  - Stage 1 ended on the lawn at 0.979 over its last three readouts, the first of 12 stage-1 answers at 0.95 or above.
+  - 2a's generation-0 readout, with the timescale reset to 1 s, read 0.852 on the lawn. From generation 10 it read 0.976 or above.
+  - **2a reached the bar at generation 120** (D_fit 2.48, 2.98 and 1.81, a mean of 2.42; 0.993 on the lawn). By its rule, the guard belongs in stage 1 too.
+
+- **What the amendment takes from them:**
+
+  - **holding the lawn:** with the guard, 3 of 4 runs held it by the registered reading at 2a's generation 60, and the fourth soon after. Without it, 2 of 11 starts held it;
+  - **reaching the bar:** from an unguarded stage 1, the guarded 2a reached it in 2 of 3 runs (generations 220 and 290), with start 3 still running. The one first half guarded from stage 1 reached it at generation 120, 100 generations sooner than the first of them. That is one run, and the pilot is its replicate;
+  - **the guard enters every stage,** the maintainer's decision. It needs no simulation. It still acts while the search's mean holds the lawn, since candidates off the lawn pay it: about 10% of start 0's at 2a's generations 260–273, and 30–60% of start 3's at generations 170–188. Each generation's share is recorded;
+  - **the earlier objection, that it counts time on the lawn twice,** holds only below 0.95. The band's centre is 0.978 with a scale of 0.006 at 200 animals, so below 0.95 the statistic is 4.6 scales off and already fails at 3.08. There the guard reorders only failing candidates. At stage 1's 64 animals (scale 0.010) it reaches the passing range's lower edge, 0.947–0.950. The final grade does not read it;
+  - **in F.0b-ii the guard keeps its absolute 0.95.** The preflight admits a truth at 0.95 or above. For a truth near 0.95, candidates at the truth itself would pay the guard whenever their animals read below 0.95, pulling the recovery off it. A kept start has held the lawn at 0.95 or above, and every guarded 2a read 0.97–0.99, so this is a stated limit, not a check;
+  - **the restarts stay,** as a safety net.
+
+- **The amended script's checks (2026-11-13):**
+
+  - 47 tests in the fast tier, with 22 deliberate bugs in the guard, its record and the pilot's seeds each caught, and the first amendment's 45 caught again on the new code (`probes/mutants_guard.py.txt` and its log);
+
+  - the smoke runs every stage with the guard on real simulation, a dropped start and a kept one;
+
+  - **an independent review** (2026-11-13, a reviewer without the author's reading) found no defect in the guard, in which records it scores, or in the new seed blocks. It found:
+
+    - the pilot's first restart seeds (9601–9610) overlapping seeds the Phase 10 table gives Logbook 132's tests and the sign-scale calibration, now moved to 9651–9660, with a test;
+    - lint failures in the test file;
+    - the second pilot's record not yet renamed;
+    - the guard probe's resumption misdated.
+
+    It also named the F.0b-ii limit, the guard's action while the mean holds the lawn, and stale cost figures. Each is now stated, and the share of candidates paying the guard is recorded.
+
 ### Slow noise's positive control
 
 `speed_noise_control.json` (run 2026-11-10 at HEAD `52212e43`; seeds 888,000,000 + i, reference episode 888,000,200): **passes.**
@@ -315,12 +375,12 @@ At the measured rates on 16 workers (77.7 s a generation on two assays, 309.5 s 
 
 | Stage | Estimate |
 |---|---|
-| a run of the procedure, its first start kept | about 29 h: stage 1 0.8 h (extrapolated from 1.6 h on 8 shared workers; the pilot measures it), 2a 6.5 h, 2b 17.2 h, the final stage 4.3 h, the noise step and the grade under 0.5 h |
-| each dropped start | about 2.1 h: stage 1 0.8 h, 2a's 60 generations 1.3 h. At 2 in 5 a run expects 1.5 of them (3.2 h). Five before a kept one add 10.5 h |
+| a run of the procedure, its first start kept | about 29 h: stage 1 0.8 h (extrapolated from 1.6 h on 8 shared workers; the pilot measures it), 2a 6.5 h, 2b 17.2 h, the final stage 4.3 h, the noise step and the grade under 0.5 h. *(2026-11-13: the second pilot's starts 0–3 measured stage 1 at 0.9 h and 2a at 83 s a generation (80.7–84.3 s), so 2a's 300 at 6.9 h and a run at about 30 h.)* |
+| each dropped start | about 2.1 h: stage 1 0.8 h, 2a's 60 generations 1.3 h. At 2 in 5 a run expects 1.5 of them (3.2 h). Five before a kept one add 10.5 h. *(2026-11-13: measured at 2.3 h.)* |
 | the pilot, F.0b-ii's fit, the registered fit | one run each |
 | `recovery-preflight` | 231 simulations, about 30 min |
 | the leave-one-out | about 26 h |
-| in all | about 114 h with every first start kept, about 127 h at 2 in 5 |
+| in all | about 114 h with every first start kept, about 127 h at 2 in 5. *(2026-11-13, at the measured rates: about 117 h with every first start kept (three runs at about 30 h, the leave-one-out at about 27 h, the preflight 0.5 h), and 2.3 h for each dropped start.)* |
 
 ### The guards
 

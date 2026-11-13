@@ -30,7 +30,7 @@ The maintainer's decisions (2026-11-10), from the change plan:
 
 - **`scripts/analysis/c2_fit.py`**, the procedure fixed in advance, in the shape of `c1_v3_fit.py`:
 
-  - the objective: the ranking score, the mutants at half the objective on the encoding table's graded statistics, the saturation and graded responsiveness guards, and each statistic's chance of failing a population;
+  - the objective: the ranking score, the mutants at half the objective on the encoding table's graded statistics, the saturation and graded responsiveness guards, a lawn guard below 0.95 on the lawn (from the amendment of 2026-11-13), and each statistic's chance of failing a population;
   - four stages at population 48 and 200 animals (stage 1 at population 24 and 64 animals, and the first half started up to six times, from the amendment of 2026-11-12): stage 1 on the 77 parameters that carry senses to outputs, 2a, 2b with the mutants, and the failure-probability stage;
   - each later stage starts from the one before's mean, σ and per-parameter steps;
   - the noise measurement as a step of its own;

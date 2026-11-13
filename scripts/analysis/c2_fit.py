@@ -14,6 +14,8 @@ speed noise), on the grading arm whose on-food reversals follow the worm's run s
   grades it on (:data:`GRADED`), each weighing n_f / n_m, so the mutants together are half;
 - 500 for a saturated network, and 300·(1 - s/0.5) for one whose speed or reversal output spans
   s < 0.5 between its 5th and 95th percentiles, both read on the wild type's simulation;
+- 300·(0.95 - t)/0.95 for a wild type on the small lawn a share t < 0.95 of the time, in every
+  stage;
 - in the final stage, 10·Σ Φ((abs(z) - bar) / SD), each statistic's chance of failing a
   population, with SD measured by the noise step.
 
@@ -136,6 +138,9 @@ SATURATED_SHARE = 0.5
 SATURATION_PENALTY = 500.0
 SPREAD_FLOOR = 0.5
 RESPONSIVE_PENALTY = 300.0
+# The lawn guard: paid below this time on the small lawn, where the statistic already fails at 200.
+LAWN_GUARD_BELOW = 0.95
+LAWN_PENALTY = 300.0
 RECORDED_ANIMALS = 8
 FAILURE_WEIGHT = 10.0
 SD_FLOOR = 0.05
@@ -346,7 +351,7 @@ SMOKE_LAYOUT = Layout(
 )
 SMOKE_GENERATIONS = (2, 12, 2, 2)
 RUNS: dict[str, Run] = {
-    "pilot": Run("pilot", Layout(1_100_000_000), (9531, 9532, 9533, 9534), 9541, kill_rules=True),
+    "pilot": Run("pilot", Layout(1_140_000_000), (9591, 9592, 9593, 9594), 9651, kill_rules=True),
     "recovery": Run("recovery", Layout(920_000_000), (5801, 5802, 5803, 5804), 5831),
     "fit": Run("fit", Layout(960_000_000), (5811, 5812, 5813, 5814), 5841),
     "loo": Run(
@@ -607,6 +612,19 @@ def mutant_z(truth: dict[str, Any], record: dict[str, Any], scale: float, m: str
     return abs(g.z_score(float(value), g.Band(float(centre), scale)))
 
 
+def lawn_guard(record: dict[str, Any]) -> float:
+    """Return the lawn guard's penalty on a record's wild type.
+
+    It reads the time on the small lawn, an undefined time counting as 0, and grows linearly from 0
+    at :data:`LAWN_GUARD_BELOW` to :data:`LAWN_PENALTY` at 0.
+    """
+    lawn = record["statistics"].get(LAWN_STATISTIC)
+    lawn = 0.0 if lawn is None else float(lawn)
+    if lawn < LAWN_GUARD_BELOW:
+        return LAWN_PENALTY * (LAWN_GUARD_BELOW - lawn) / LAWN_GUARD_BELOW
+    return 0.0
+
+
 class Objective:
     """A stage's score of a candidate's record against a truth."""
 
@@ -649,12 +667,12 @@ class Objective:
 
     @staticmethod
     def guards(record: dict[str, Any]) -> float:
-        """Return the saturation and graded responsiveness guards' penalty."""
+        """Return the saturation, graded responsiveness and lawn guards' penalty."""
         penalty = SATURATION_PENALTY if record["saturated"] > SATURATED_SHARE else 0.0
         least = min(record["spread"]["speed"], record["spread"]["reversal"])
         if least < SPREAD_FLOOR:
             penalty += RESPONSIVE_PENALTY * (1.0 - least / SPREAD_FLOOR)
-        return penalty
+        return penalty + lawn_guard(record)
 
     def failure(self, record: dict[str, Any]) -> float:
         """Return 10 x the summed chance that each defined statistic fails a population."""
@@ -1167,6 +1185,7 @@ def settings_of(run: Run, truth: dict[str, Any]) -> dict[str, Any]:
         "generations": list(run.generations),
         "hold_readouts": list(run.hold_readouts),
         "hold_bars": list(run.hold_bars),
+        "lawn_guard": [LAWN_GUARD_BELOW, LAWN_PENALTY],
         "stages": [dataclasses.asdict(s) for s in STAGES],
         "arm": ARM,
         "settings": {k: repr(v) for k, v in SETTINGS.items()},
@@ -1421,6 +1440,7 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
                 "best": [],
                 "sigmas": [],
                 "failure": [],
+                "lawn_guarded": [],
             }
             state["readouts"][stage.name] = {}
             state["seconds"][stage.name] = 0.0
@@ -1496,6 +1516,8 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
             history["best"].append(float(scores[best]))
             history["sigmas"].append(float(es.sigma))
             history["failure"].append(objective.failure(records[best]))
+            # The share of the generation's candidates that pay the lawn guard.
+            history["lawn_guarded"].append(float(np.mean([lawn_guard(r) > 0 for r in records])))
             if g % READOUT_EVERY == 0 or g == generations:
                 readouts[g] = readout(
                     pool,

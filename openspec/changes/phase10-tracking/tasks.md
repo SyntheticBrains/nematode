@@ -860,6 +860,14 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     keeps no start has no answer: the registered fit fails, and the recovery's gate is not met.
     About 114 h with every first start kept, and about 127 h at 2 starts in 5. **For W:** every
     arm needs the same starts, and each arm's count of dropped starts is a reading.
+  - *(2026-11-13, Part A amended again before any registered run.)* **The second pilot kept no
+    start** (all six dropped at 2a's generation 60, 15.8 h). **The objective now carries a lawn
+    guard in every stage,** 300·(0.95 − t)/0.95 below 0.95 on the small lawn, where the statistic
+    already fails at 200 animals. On discarded seeds 3 of 4 guarded runs held the lawn at 2a's
+    generation 60 and the fourth soon after, against 2 of 11 starts without it, and a first half
+    guarded from stage 1 reached 2a's bar at generation 120. The restarts are unchanged. The pilot runs a third time on new seeds. About 117 h at
+    the second pilot's measured rates, with every first start kept. **For W:** every arm gets the
+    same guard.
   - **Held out:** Scheer's held-out dates, read beside W's minimum and band-cohort populations.
   - **Slow noise's positive control** (owed since Logbook 123) passes on Logbook 131's answer: the
     speed output responds, and the roaming 90th percentile rises 4.90 band scales at a 30-s

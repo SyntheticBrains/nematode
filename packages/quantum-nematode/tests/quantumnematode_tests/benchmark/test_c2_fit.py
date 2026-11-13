@@ -9,9 +9,9 @@ failed pilot blocks the recovery", "The longest stage stays inside its sub-block
 reproduce W's minimum", "The smoke reads no held-out track", "A start that does not hold the lawn
 is dropped", "A registered run misses a checkpoint", "No start holds the lawn", "The
 lawn-holding reading is a mean", "An interrupted drop resumes to the same answer", "Each start has
-its own animals" and "A registered fit with no answer fails"; and the fit-recovery spec's "The
-preflight fails", "The recovery falls short", "A truth whose statistic flips", "The preflight runs
-once" and "A recovery with no answer does not pass".
+its own animals", "A registered fit with no answer fails" and "The lawn guard"; and the
+fit-recovery spec's "The preflight fails", "The recovery falls short", "A truth whose statistic
+flips", "The preflight runs once" and "A recovery with no answer does not pass".
 """
 
 from __future__ import annotations
@@ -140,6 +140,35 @@ def test_an_undefined_statistic_and_the_guards(bands: dict[str, Any]) -> None:
     assert objective(pinned) == pytest.approx(500.0 + 300.0 * 0.5)
 
 
+@pytest.mark.parametrize("stage", fit.STAGES, ids=lambda s: s.name)
+def test_the_lawn_guard(bands: dict[str, Any], stage: Any) -> None:
+    """Covers "The lawn guard": 0 at 0.95 and above, 150 at 0.475, 300 undefined, in every stage."""
+    truth = fit.band_truth(bands)
+    sd = {
+        **dict.fromkeys(truth["statistics"], 1.0),
+        **{f"{m}/{s}": 1.0 for m in fit.MUTANTS for s in fit.GRADED[m]},
+    }
+    objective = fit.Objective(
+        truth,
+        bands,
+        families=stage.families,
+        mutants=fit.MUTANTS if stage.mutants else (),
+        sd=sd if stage.failure else None,
+    )
+    assert truth["statistics"][fit.LAWN_STATISTIC] > fit.LAWN_GUARD_BELOW
+    for lawn, paid in ((None, 300.0), (0.0, 300.0), (0.475, 150.0), (0.95, 0.0), (0.99, 0.0)):
+        record = _record(truth)
+        record["statistics"][fit.LAWN_STATISTIC] = lawn
+        assert fit.lawn_guard(record) == pytest.approx(paid, abs=1e-9)
+        assert fit.Objective.guards(record) == pytest.approx(paid, abs=1e-9)
+        rest = objective.distance(record) + objective.failure(record)
+        assert objective(record) - rest == pytest.approx(paid, abs=1e-9)
+    # It adds to the other guards.
+    pinned = _record(truth, saturated=0.6)
+    pinned["statistics"][fit.LAWN_STATISTIC] = 0.475
+    assert fit.Objective.guards(pinned) == pytest.approx(500.0 + 150.0)
+
+
 def test_a_statistic_undefined_in_most_noise_populations(bands: dict[str, Any]) -> None:
     """Covers "A statistic undefined in most noise populations": its SD is the floor."""
     truth = fit.band_truth(bands)
@@ -172,7 +201,7 @@ def _fake_entries() -> list[Any]:
     ]
 
 
-def _fake(  # noqa: PLR0913 - the patches, the run's shape and what its starts read
+def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its starts read
     monkeypatch: pytest.MonkeyPatch,
     build: Path,
     bands: dict[str, Any],
@@ -185,12 +214,14 @@ def _fake(  # noqa: PLR0913 - the patches, the run's shape and what its starts r
     d_fit: tuple[float, ...] = (1.0,),
     kill_rules: bool = False,
     interrupt: tuple[int, int, int] | None = None,
+    candidate_lawn: float | None = None,
 ) -> dict:
     """Run the procedure on fake simulations: every candidate and readout seen, every hand-off.
 
     ``lawn``, ``reversal`` and ``d_fit`` give each start's time on the lawn, reversal spread and
     D_fit at every readout, the last value serving every later start. ``interrupt`` stops the run
     as (stage, generation, start) begins to simulate, as a process dying there would.
+    ``candidate_lawn``, when given, is every candidate's time on the small lawn.
     """
     seen: dict[str, Any] = {"candidates": {}, "carried": [], "fresh": [], "stores": [], "start": 0}
     truth = fit.band_truth(bands)
@@ -209,6 +240,8 @@ def _fake(  # noqa: PLR0913 - the patches, the run's shape and what its starts r
             record = _record(truth)
             key = "small_lawn/roaming_fraction"
             record["statistics"][key] = truth["statistics"][key] + 0.01 * float(np.sum(z))
+            if candidate_lawn is not None:
+                record["statistics"][fit.LAWN_STATISTIC] = candidate_lawn
             out.append(record)
         return out
 
@@ -321,7 +354,23 @@ def test_a_plateau_does_not_stop_a_stage(fake_run: dict) -> None:
     assert fake_run["record"]["noise"]["populations"] == 2
 
 
-def test_a_resume_with_changed_settings(fake_run: dict) -> None:
+@pytest.mark.parametrize(("lawn", "share"), [(None, 0.0), (0.5, 1.0), (0.95, 0.0)])
+def test_each_generation_records_who_pays_the_lawn_guard(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bands: dict[str, Any],
+    lawn: float | None,
+    share: float,
+) -> None:
+    """Every stage records, each generation, the share of its candidates paying the lawn guard."""
+    done = _fake(monkeypatch, tmp_path, bands, candidate_lawn=lawn)
+    histories = done["record"]["histories"]
+    assert set(histories) == {s.name for s in fit.STAGES}
+    for name, n in zip(histories, done["run"].generations, strict=True):
+        assert histories[name]["lawn_guarded"] == [share] * n
+
+
+def test_a_resume_with_changed_settings(fake_run: dict, monkeypatch: pytest.MonkeyPatch) -> None:
     """Covers "A resume with changed settings": the saved state is refused."""
     run = fake_run["run"]
     changed = dataclasses.replace(run, generations=(3, 3, 3, 46))
@@ -331,6 +380,12 @@ def test_a_resume_with_changed_settings(fake_run: dict) -> None:
     for other in ({"hold_bars": (0.6,)}, {"restart_seed": 13}):
         with pytest.raises(RuntimeError, match="other settings"):
             fit.procedure(dataclasses.replace(run, **other), fake_run["truth"], pool=None)
+    # So is a changed lawn guard, its bar or its weight.
+    for name, value in (("LAWN_GUARD_BELOW", 0.9), ("LAWN_PENALTY", 200.0)):
+        with monkeypatch.context() as patch:
+            patch.setattr(fit, name, value)
+            with pytest.raises(RuntimeError, match="other settings"):
+                fit.procedure(run, fake_run["truth"], pool=None)
     # Resumed with its own settings, the finished run returns its answer unchanged.
     again = fit.procedure(run, fake_run["truth"], pool=None)
     assert again["answer"] == fake_run["record"]["answer"]
@@ -789,6 +844,26 @@ EARLIER = (
     (890_000_000, 890_000_199),
     (900_000_000, 916_000_199),
     (1_010_000_000, 1_055_000_199),
+    # The second readiness pilot, which kept no start, and the runs that diagnosed it.
+    (1_060_000_000, 1_065_000_199),
+    (1_090_000_000, 1_095_000_199),
+    (1_100_000_000, 1_118_002_999),
+    (1_130_000_000, 1_135_000_199),
+)
+# The CMA seeds the seed tables give earlier pilots, probes and tests: C.2's pilots and probes,
+# the speed-following reversals' tests (9601-9605) and the sign-scale calibration (9601-9616).
+EARLIER_CMA = frozenset(
+    [
+        *range(9504, 9508),
+        *range(9516, 9526),
+        *range(9531, 9535),
+        *range(9541, 9551),
+        9571,
+        9574,
+        9581,
+        9582,
+        *range(9601, 9617),
+    ],
 )
 
 
@@ -866,6 +941,7 @@ def test_each_start_has_its_own_animals() -> None:
         seeds[name] += [run_.cma_seeds[s] for s in (2, 3)]
     flat = [seed for group in seeds.values() for seed in group] + [fit.PRIOR_SEED]
     assert len(flat) == len(set(flat))
+    assert not EARLIER_CMA & set(flat), "a run reuses an earlier pilot's or probe's CMA seed"
     for name in ("recovery", "fit", "loo"):
         assert all(5801 <= seed <= 5864 for seed in seeds[name])
 

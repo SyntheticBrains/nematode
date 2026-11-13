@@ -1,0 +1,28 @@
+"""Log the dopamine wiring gain of the pilot's search mean as it runs (read-only; description)."""
+import pickle
+import sys
+import time
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+STATE = "build/c2-fit/pilot/state.pkl"
+K = 3  # wiring.unsigned.dopamine, in the full vector and in stage 1's subset; gain = 4 x unit - 2
+seen = None
+while True:
+    try:
+        s = pickle.loads(open(STATE, "rb").read())
+    except Exception:  # a state being replaced
+        time.sleep(5)
+        continue
+    name = ("1", "2a", "2b", "final")[min(s["stage"], 3)]
+    done = len(s["histories"].get(name, {}).get("medians", []))
+    key = (s["start"], name, done)
+    if s["es"] is not None and key != seen and done % 10 == 0:
+        gain = 4.0 * float(np.clip(s["es"].result.xfavorite[K], 0, 1)) - 2.0
+        print(time.strftime("%H:%M"), "start", s["start"], name, "gen", done, f"dopamine gain {gain:+.2f}", flush=True)
+        seen = key
+    if s["killed"] or s["stage"] >= 2:
+        print("first half over:", "killed" if s["killed"] else f"start {s['kept']} kept", flush=True)
+        break
+    time.sleep(20)

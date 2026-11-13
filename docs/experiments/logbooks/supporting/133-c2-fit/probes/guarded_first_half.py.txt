@@ -1,0 +1,145 @@
+"""A first half from the box centre with the lawn guard in both stages (description; discarded seeds)
+
+The lawn guard, added to 2a alone, took the first pilot's stalled start to the bar (generation 220)
+and put two of the re-run pilot's dropped starts on the lawn by generations 20 and 30. Those 2a's all
+began from stage-1 answers fitted without the guard, which sit at 0.81-0.94 on the lawn, and each
+spent its first 20-60 generations getting onto the lawn with D_fit rising to 6-7. A registered
+procedure could carry the guard from stage 1. This runs that, once:
+
+- stage 1 as registered after the amendment of 2026-11-12 (77 parameters from the box centre, sigma0
+  0.2, 64 animals, population 24, 150 generations, the registered arm and objective), **plus the
+  guard** 300 x (0.95 - t) / 0.95 while a candidate's time on the small lawn t is below 0.95;
+- 2a as registered (all 137 from stage 1's answer, the speed noise's timescale at 1 s, sigma0 0.1,
+  200 animals, population 48, up to 300 generations), plus the same guard.
+
+**The readings, fixed before it runs** (2026-11-13, 09:20):
+- stage 1 **ends on the lawn** when the mean time on the lawn of its last three readouts is at least
+  0.95 (every unguarded stage 1 so far ended at 0.81-0.94);
+- 2a **reaches the bar** when the mean of three consecutive readouts has time on the lawn at least
+  0.97 and D_fit at most 2.5, and stops there; otherwise it is read at generation 300;
+- the guard belongs in stage 1 too if this 2a reaches the bar by generation 150, sooner than the
+  first guarded 2a did (220); if it is slower, or stage 1 does not end on the lawn, the evidence is
+  for the guard from 2a only, as the replicates test it.
+
+Seeds (discarded): 1,130,000,000; stage 1 at + 0 (+ 64 x (24 x (g - 1) + m) + i), 2a at + 2,000,000
+(+ 200 x (48 x (g - 1) + m) + i), readouts at + 5,000,000 + i. CMA 9581, 9582. 8 workers.
+"""
+
+import json
+import os
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-fit")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+from continue_screen import BAR, _job, reading
+from guard_probe import GUARD, GUARD_BELOW, lawn_guard
+from quantumnematode.connectome import encoder as enc
+
+BASE, CMA, SIZES = 1_130_000_000, (9581, 9582), ((64, 24), (200, 48))
+GENERATIONS, STRIDE, READOUT, WORKERS = (150, 300), 2_000_000, 5_000_000, 8
+OUT = Path("build/c2-fit/guarded_first_half")
+
+
+def save(path, state):
+    tmp = path.with_suffix(".tmp")
+    tmp.write_bytes(pickle.dumps(state))
+    os.replace(tmp, path)
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path = OUT / "state.pkl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    names = fit.entries()
+    subset = fit.subset_indices(names)
+    timescale = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
+    objective = fit.Objective(truth, bands, families=fit.FIT_FAMILIES, mutants=())
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        state = {"stage": 0, "x": [0.5] * len(names), "es": None, "medians": {}, "guarded": {}, "readouts": {},
+                 "answers": {}, "stage1": None, "verdict": None}
+    readout_seeds = list(range(BASE + READOUT, BASE + READOUT + 200))
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        while state["stage"] < 2:
+            s = state["stage"]
+            animals, popsize = SIZES[s]
+            idx = subset if s == 0 else list(range(len(names)))
+            if state["es"] is None:
+                x = list(state["x"])
+                if s == 1:
+                    x[timescale] = names[timescale].unit(fit.TIMESCALE_AT_2A_S)
+                    state["x"] = x
+                state["es"] = fit.fresh([x[i] for i in idx], fit.STAGES[s].sigma0, CMA[s], popsize)
+                state["medians"][s], state["guarded"][s], state["readouts"][s] = [], [], {}
+            es, medians, readouts = state["es"], state["medians"][s], state["readouts"][s]
+
+            def full(point, x=state["x"], idx=idx):
+                out_ = list(x)
+                for j, i in enumerate(idx):
+                    out_[i] = float(np.clip(point[j], 0.0, 1.0))
+                return out_
+
+            def read(g, readouts=readouts, full=full, es=es, s=s):
+                r = readouts[g] = fit.readout(pool, full(es.result.xfavorite), readout_seeds, truth)
+                print(f"guarded stage {s} readout {g}: D_fit {r['D_fit']:.2f} on-lawn {r['time_on_lawn']:.3f} "
+                      f"speed {r['spread']['speed']:.2f} rev {r['spread']['reversal']:.2f}", flush=True)
+
+            if 0 not in readouts:
+                read(0)
+            while len(medians) < GENERATIONS[s] and state["verdict"] is None:
+                g = len(medians) + 1
+                points = es.ask()
+                jobs = []
+                for m, p in enumerate(points):
+                    first = BASE + STRIDE * s + animals * (popsize * (g - 1) + m)
+                    jobs.append((list(range(first, first + animals)), full(p)))
+                records = list(pool.map(_job, jobs))
+                guards = [lawn_guard(r) for r in records]
+                scores = [objective(r) + q for r, q in zip(records, guards)]
+                es.tell(points, scores)
+                medians.append(float(np.median(scores)))
+                state["guarded"][s].append(float(np.mean([q > 0 for q in guards])))
+                if g % 10 == 0:
+                    read(g)
+                    if s == 1 and g >= 30:
+                        three = reading(readouts, (g - 20, g - 10, g))
+                        if three["arrives"]:
+                            state["verdict"] = {**three, "verdict": "reaches the bar"}
+                print(f"guarded stage {s} gen {g}: median {medians[-1]:.2f} guarded {state['guarded'][s][-1]:.2f} "
+                      f"sigma {es.sigma:.4f} {time.time() - t0:.0f} s", flush=True)
+                save(state_path, state)
+            state["answers"][s] = full(es.result.xfavorite)
+            if s == 0:
+                lawn = float(np.mean([readouts[g]["time_on_lawn"] or 0.0 for g in (130, 140, 150)]))
+                state["stage1"] = {"time_on_lawn": lawn, "ends_on_the_lawn": lawn >= GUARD_BELOW}
+                print(f"guarded stage 1 ends: {state['stage1']}", flush=True)
+                state["x"], state["es"] = state["answers"][s], None
+            state["stage"] = s + 1
+            save(state_path, state)
+    if state["verdict"] is None:
+        g = len(state["medians"][1])
+        state["verdict"] = {**reading(state["readouts"][1], (g - 20, g - 10, g)), "verdict": "does not reach the bar"}
+        save(state_path, state)
+    record = {"description": __doc__, "base": BASE, "cma": CMA, "bar": BAR, "guard": {"weight": GUARD, "below": GUARD_BELOW},
+              "stage1": state["stage1"], "reading": state["verdict"], "medians": state["medians"],
+              "guarded_share": state["guarded"],
+              "readouts": {str(k): {str(g): r for g, r in v.items()} for k, v in state["readouts"].items()},
+              "answers": state["answers"]}
+    Path("build/c2-fit/guarded_first_half.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"guarded first half done: stage 1 {state['stage1']} reading {state['verdict']}", flush=True)
+
+
+if __name__ == "__main__":
+    main()
