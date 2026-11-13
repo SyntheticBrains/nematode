@@ -162,3 +162,21 @@ target keeps the spike inside the project's licence rule, where the unlicensed O
 
 **Considered instead.** Making Mi the primary target. Not done: it has no optogenetic perturbation, and
 the brief puts perturbation data first.
+
+## Review of Part A
+
+### A14. Three independent reviewers, corrections held for the maintainer (2026-11-14)
+
+**Decision.** At the maintainer's request, three reviewers read Part A, each with no context from
+this investigation and each with one scope: project facts, literature and data, and the spike's
+design and fairness. Their findings, my re-checks of the load-bearing ones, and what I propose are in
+REVIEW_PART_A.md. The Part A documents are left as reviewed until the maintainer decides how the
+corrections are applied, because the maintainer is reading them at the same time.
+
+**Why.** Separate scopes keep each reviewer's report checkable in one sitting. Starting them with no
+context keeps their reading independent of mine. I re-checked four findings myself before recording
+them: the W sizing against the tracker and launch 133, the vendored Creamer weights, the spike
+plan's session count, and Mi et al.'s Table 2.
+
+**Considered instead.** One reviewer for everything. Not done: the literature check alone took about
+130 tool calls, and a single report would have mixed fact errors with design judgements.
