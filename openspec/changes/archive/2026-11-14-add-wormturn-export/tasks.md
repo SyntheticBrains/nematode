@@ -53,4 +53,6 @@ change's `design.md`. No campaign runs in this change, and no experiment's input
   system's node: pre-commit's own node install fails on this machine.**
 - [x] 5.3 Two exports to the scratchpad with `--allow-dirty`, byte-identical. The pinned clean export
   is made later, from a clone with Git LFS. **Done.**
-- [ ] 5.4 `openspec validate add-wormturn-export --strict`; archive.
+- [x] 5.4 `openspec validate add-wormturn-export --strict`; archive. **The OpenSpec CLI is not
+  installed in this session, so the change was checked by hand against the archived changes' format
+  and not validated; archived.**
