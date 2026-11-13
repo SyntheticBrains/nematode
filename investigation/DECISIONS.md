@@ -110,3 +110,38 @@ project file itself is not changed on this branch.
 **Reason.** I confirmed the licence on DANDI's API (`spdx:CC-BY-4.0`, version 0.240930.1859). The
 correction removes what looked like a hard blocker for fit-first inside this repository. Editing
 `data/` is outside this investigation's remit, so the fix to PROVENANCE.md is left to the maintainer.
+
+### A10. The spike reproduces Creamer, Leifer and Pillow (2026-11-14)
+
+**Decision.** SPIKE_PLAN.md proposes reproducing Creamer, Leifer and Pillow's connectome-constrained
+linear dynamical system on the Randi atlas, refitted by gradient descent.
+
+**Reason.** It is the only published fit of a connectome-constrained model to worm perturbation data,
+its numbers are stated in the text, its code is MIT, and its data are CC-BY-4.0 on DANDI.
+
+**Considered instead.** Mi et al.'s latent-voltage model (wormvae): gradient-based already, but its
+paper could not be opened and its data and numbers are unknown. Morrison and Young's premotor model:
+no held-out split to reproduce. BAAIWorm: no held-out data and an unpublished gradient method.
+
+### A11. PyTorch on CPU with a steady-state Kalman filter (2026-11-14)
+
+**Decision.** The spike fits by gradient on the exact marginal likelihood in PyTorch, float64 on CPU,
+using a steady-state filter per animal.
+
+**Reason.** PyTorch is already a dependency and the model is small. Apple's GPU offers no float64 in
+PyTorch, and jax-metal is abandoned. With each animal's recorded set fixed, the steady-state filter
+cuts a gradient step from minutes to seconds; the published EM fit takes about 10 hours on 10 CPUs.
+
+**Considered instead.** JAX (a new dependency for no gain at this size); the exact time-varying filter
+throughout (used only where a recording breaks mid-session).
+
+### A12. The bridge's interface is fixed in advance, from neural data only (2026-11-14)
+
+**Decision.** The bridging test adds a sensory input map and a locomotion readout, both fixed before
+any run and neither fitted to the behaviour benchmark: inputs through the model's own fitted filters,
+scaled to one optogenetic unit; the readout either fitted to freely moving recordings (option A) or
+fixed from literature signs (option B), chosen at approval.
+
+**Reason.** The fitted model has optogenetic inputs and calcium outputs, and no motor neurons, so
+"unchanged" can only mean its fitted parameters are frozen. An interface fitted to the benchmark
+would break the brief's rule that behaviour is held out.
