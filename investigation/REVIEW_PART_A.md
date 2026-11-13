@@ -11,7 +11,8 @@ author, and each had a separate scope:
 
 The reviewers were read-only and ran no compute. Their findings are summarised below. Each says
 whether I re-checked it myself and what I propose to do. Line numbers refer to the commit reviewed
-(5ddd1e70). Nothing has been changed yet; the corrections wait for the maintainer's decision.
+(5ddd1e70). **Status:** every correction below was applied on 2026-11-14 (decision A15), except P9, P10 and
+the spike-plan items of P11, which the revised SPIKE_PLAN.md carries (A16).
 
 ## 1. Project facts
 
@@ -112,8 +113,7 @@ I accept these points. The Part B comparison will apply the same priors to every
   keeps gradient fitting. Scoring Creamer's released EM model through the spike's own pipeline
   separates a fitter failure from a data or scoring failure. That addresses the point without
   dropping the brief's requirement.
-- **Everything else** I accept as stated. The corrections are not yet applied. They wait for the
-  maintainer's decision.
+- **Everything else** I accept as stated.
 
 ## 5. What changes for the conclusions
 

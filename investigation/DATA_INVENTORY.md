@@ -16,10 +16,13 @@ licence, which in law means all rights reserved.
   2025 (Kato lab; AWA, SMD, RIV and RIA stimulation). **Both are on DANDI under CC-BY-4.0**, which I
   checked on the hosts.
 - **This corrects a project record.** `data/connectome/PROVENANCE.md` (checked 2026-09-23) found the
-  Randi atlas unusable under the project's CC0-or-CC-BY rule because its OSF deposit states no licence
-  and `wormneuroatlas` is GPL-3.0. It did not check DANDI 001075, which is CC-BY-4.0 (version
-  0.240930.1859, 113 subjects, 223 NWB files, 4.07 TB). Whether the extracted traces sit in the small
-  segmentation files (13 to 25 MB each) or only inside the 8 to 60 GB imaging files is not yet known.
+  Randi atlas could not be vendored, because its OSF deposit states no licence (so all rights are
+  reserved) and `wormneuroatlas` is GPL-3.0, which it did not take into this Apache-2.0 repository.
+  It did not check DANDI 001075, which is CC-BY-4.0 (version 0.240930.1859, 113 subjects, 223 NWB
+  files, 4.07 TB). Whether the extracted traces sit in the 110 segmentation files (1.9 to 42.1 MB,
+  median 15.9 MB; three sessions have none) or only inside the 113 imaging files (4.4 to 60.5 GB,
+  median 39.4 GB) is not yet known. 110 matches Creamer's animal count; whether that is why is
+  unverified.
 - **Silencing and mutant data with whole-brain readout** exist from the Zimmer lab (HisCl silencing of
   AVA, hub neurons, SMD, RIS, motor neurons; npr-1, daf-2), the Flavell lab (tdc-1, flp-13) and the
   Samuel lab (unc-13 on a sensory panel). The Zimmer sets state no licence.
@@ -47,7 +50,6 @@ licence, which in law means all rights reserved.
 | `wormneuroatlas` (Randi) | pairwise matrices | from the atlas | derived | per-pair mean and all-trial responses, q, equivalence q, trial counts, fitted kernels, wild type and unc-31 | 113 + 18 | GPL-3.0 | 18.3 MB HDF5 | H |
 | Creamer, Leifer and Pillow, derived | 154 to 156 modelled | from the atlas | derived | fitted to 110 wild-type animals | 110 | repository MIT; their reformatted data on OSF qxhjd: not stated | 42 KB weights CSV (vendored); 3 × 20 MB model pickles | H+P |
 | Dunn et al. 2025, Curr Biol (Kato lab) | 45 to 140 detected; 0 to 82 identified | NeuroPAL, by hand; many unlabelled | immobilised (tetramisole, chip) | closed-loop AWA drive timed to head-swing phase; single-neuron SMDD, SMDV, RIV, RIA stimulation | 95 NWB subjects | DANDI 001623: CC-BY-4.0 (**checked**); Zenodo CC-BY-4.0 | 774 GB NWB; 0.67 GB pickles | H+P |
-| Kato lab SK1, SK2 (DANDI 000565, 000472) | 78 to 180 segmented, 30 to 82 identified | partial NeuroPAL | immobilised | DANDI says none; WormID calls SK1 "single cell optical stimulation" (unresolved) | 21 + 10 | CC-BY-4.0 | 46 + 18 GB NWB | H |
 
 **Mapping to model variables.** The signal is nuclear calcium at 2 Hz, not voltage. A stimulation is
 a brief depolarising current into one identified node. Each response is effective: it sums every
@@ -60,8 +62,9 @@ timing, which the atlas lacks.
 SIA, SIB, RMF; AWCon against AWCoff); a pair counts only if the stimulated neuron responds and both
 are identified unambiguously; pairs were sampled 1 to 59 times; the transgenic strain is
 "significantly less active than WT"; GUR-3 is over-expressed in every neuron and is itself
-light-sensitive (Gauthey et al. 2024, second-hand); Creamer drops each recording's first minute; the
-data reproduce themselves at only 0.16 to 0.17 (Creamer).
+light-sensitive (Gauthey et al. 2024, second-hand); the data reproduce themselves at only 0.16 to
+0.17 between training and test animals (Creamer). An earlier note that Creamer drops each
+recording's first minute is in neither his v4 text nor his repository's README, so it is withdrawn.
 
 ## 2. Silencing, ablation or mutant backgrounds with population readout
 
@@ -129,6 +132,11 @@ confirm); head-angle sign flips per dataset in the raw HDF5.
   common rate (the sources disagree between versions on which), with no stimulus timing; the card
   says MIT, source terms not checked.
 - **Atanas et al. 2026, eLife (H+P).** NeuroPAL labelling training data, 516 GB, CC0-1.0.
+- **Kato lab SK1 and SK2 (DANDI 000565, 000472; H).** 21 + 10 worms, 78 to 180 neurons segmented and
+  30 to 82 identified, partial NeuroPAL, immobilised; CC-BY-4.0; 46 + 18 GB NWB. Listed under
+  stimulate-and-record data before review and moved here: DANDI describes 000565 as unstimulated, and
+  000472 holds NeuroPAL images only, with no activity. WormID calls SK1 "single cell optical
+  stimulation", which the hosts do not bear out.
 - Also: fDNC (Yu et al. 2021, OSF, not stated); the TWISP strain characterisation (Sharma et al. 2024,
   Figshare, CC-BY-4.0); light-evoked dynamics (Gauthey et al. 2024, OSF, not stated).
 
@@ -157,7 +165,7 @@ is measured in an intact network.
 | CeNGEN L4 (Taylor et al. 2021, Cell) | 118 classes, 128 types; 100,955 cells; four calibrated thresholds | cengen.org not stated; R package GPL-3.0 | H+P |
 | CeNGEN L1, adult hermaphrodite, adult male (2024 to 2026) | all neurons per stage | site not stated; L1 preprint CC-BY-4.0; files not found | H+P |
 | Ripoll-Sánchez et al. 2023, Neuron, and NemaMod | 302 neurons, 92 peptide-receptor couples, three distance ranges | figshare CC-BY-4.0 (vendored by the project) | H+P |
-| Beets et al. 2023, Cell Rep | 161 GPCRs × 344 peptides; 459 to 461 couples with EC50s | article CC-BY; full data "upon request" | P |
+| Beets et al. 2023, Cell Rep | 161 GPCRs × 344 peptides; 459 to 461 couples with EC50s | article CC-BY; EC50s published in Table S6 (machine-readable form unverified); other data "upon request" | P |
 | Bentley et al. 2016, PLoS Comput Biol | monoamine 1,940 edges; peptide 7,035 | CC-BY (vendored) | P |
 | Wang et al. 2024, eLife, transmitter atlas | all neurons, both sexes | CC-BY-4.0 (vendored) | P |
 | Bhattacharya et al. 2019, Cell, innexin atlas | 118 classes × 14 innexins, L1 to adult and dauer | not verified | P |
@@ -180,7 +188,9 @@ junctions, so adult gap-junction counts still rest on White, Varshney and Cook 2
 
 ## 9. Behaviour datasets already in the project
 
-None of these carries neural recordings. All are vendored with checksums under `data/`.
+None of these carries neural recordings. All are vendored under `data/`. SHA-256 checksums are
+recorded for Chen, the classifier and the bands; for Scheer, Calhoun and Roberts only the source
+deposits' checksums are recorded, not the derived files'.
 
 | Dataset | What was measured | Animals | Licence | Use in the project |
 |---|---|---|---|---|
@@ -218,16 +228,17 @@ datasets (section 4's freely moving sets are the others).
 
 ## 11. Licences at a glance
 
-- **CC-BY-4.0 or CC0, usable under the project's rule:** Randi 2023 raw (DANDI 001075), Dunn 2025
+- **CC-BY-4.0 or CC0, open for reuse with attribution:** Randi 2023 raw (DANDI 001075), Dunn 2025
   (DANDI 001623), Yemini 2021, Seyedolmohadesin 2026, Atanas 2023 (DANDI), Kimura 000692, Kato lab
   000565 and 000472, Kramer 2026, Pradhan 2025, Baskoylu 2026, Lin 2023, Susoy 2021, the Mendeley
   electrophysiology sets, Ripoll-Sánchez, Bentley, Wang, Fenyves, Emmons 2024, and every behaviour
-  dataset the project vendors.
+  dataset the project vendors except the WormPose eigenworms (BSD-3).
 - **Not stated (all rights reserved by default):** every Zimmer-lab OSF project (Kato 2015, Nichols,
   Skora, Kaplan, Uzel), Randi's OSF exports and the unc-31 arm, Creamer's reformatted data, Dag 2023's
   latest Zenodo version, WormWideWeb, Hallinen's node, Rusu, Pritz, cengen.org, wormwiring.org.
 - **Copyleft:** `wormneuroatlas` (GPL-3.0), CeNGEN's R package (GPL-3.0).
-- **On request only:** Beets 2023's full EC50 table.
+- **Published, machine-readable form unverified:** Beets 2023's EC50 table (Table S6); its other data
+  are "upon request".
 
 A local, unvendored analysis of a "not stated" dataset is a different question from vendoring it; that
 call is the maintainer's, and the spike plan avoids needing it.

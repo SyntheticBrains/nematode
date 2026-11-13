@@ -51,7 +51,8 @@ fit to the worm's perturbation data.
 **Randi, Sharma, Dvali and Leifer 2023, Nature 623:406 (F via arXiv, checked).** The perturbation
 atlas itself.
 
-- 23,427 neuron pairs measured; at least 1,314 (6%) functionally connected under stringent criteria.
+- 23,433 neuron pairs measured; at least 1,310 (6%) functionally connected under stringent criteria
+  (published version; the arXiv version gives 23,427 and 1,314).
 - Anatomy-based simulations agreed poorly with measurement: "fairly poor agreement", with R² < 0 over
   all pairs. Fitting weights and signs to the data improved agreement but left it poor.
 - In unc-31 mutants (no dense-core vesicle release), 53 connections were lost, which the authors treat
@@ -79,20 +80,25 @@ club differ from the anatomical ones; structural hubs need not be influential.
     conductance-based) and electrical synapses, a calcium observation model, fitted as a variational
     autoencoder by gradient, with a black-box model of sensory tuning. Nine variants, from learned
     dense through connectome sparsity to connectome counts.
-  - *Held-out neurons* (each of 107 bilateral pairs withheld in turn, 4 seeds): conductance-based with
-    connectome counts r = 0.319 ± 0.016; with connectome sparsity 0.262; learned dense 0.008;
-    current-based learned dense −0.104. A learned sparse (L1) model did worse, so the gain comes from
-    the topology, not the parameter count. Predictions were better for interneurons and motor neurons
-    than for sensory neurons.
-  - *Held-out worms* (15 train, 6 test): every variant scored r = 0.44 to 0.47 (connectome counts 0.474,
-    current-based dense 0.465). On whole held-out animals, the connectome made almost no difference.
-    The authors read the dense model as "an equally accurate but mechanistically incorrect" fit.
+  - *Held-out neurons* (each of 107 bilateral pairs withheld in turn, 4 seeds, Table 2):
+    conductance-based with connectome counts r = 0.319 ± 0.016; with connectome sparsity 0.262;
+    learned dense 0.081 ± 0.012; learned sparse (L1) 0.008 ± 0.011. Current-based learned dense
+    −0.104. The learned sparse model did worse than the connectome-constrained ones, so the gain comes
+    from the topology, not the parameter count. Predictions were better for interneurons and motor
+    neurons than for sensory neurons.
+  - *Held-out worms* (15 train, 6 test): every variant scored r = 0.44 to 0.47, SE 0.006 over 4 seeds
+    (connectome count 0.474, current-based dense 0.465, conductance-based dense 0.457). The authors
+    write that the connectome-count models "performed better at predicting calcium traces from held
+    out worms". My reading, not theirs: a gap of about 0.01 to 0.02 is small, so on whole held-out
+    animals the connectome made little difference. The authors suggest the dense model "has
+    potentially discovered an equally accurate but mechanistically incorrect" solution.
   - *No wiring null* beyond the unconstrained variants.
 - **Morrison and Young 2025, PLoS Comput Biol (F).** 15 premotor neurons with cubic intrinsic terms;
   gap weights fixed from White 1986; chemical weights and signs regressed on Atanas 2023's freely
   moving data, with 112 other recorded neurons fed in as inputs. No held-out split. It reproduces
-  dwell times qualitatively; in-silico ablations partly disagree with the literature; the authors write
-  that "identifiability has not been established".
+  dwell times qualitatively; in-silico ablations partly disagree with the literature. The authors note
+  that identifiability "has not been generally established for larger nonlinear systems", a general
+  remark rather than a statement about their own fit.
 - **BAAIWorm (Zhao et al. 2024, Nat Comput Sci; F).** 136 multicompartment neurons, channel
   parameters fitted to patch-clamp recordings of five neurons and shared across groups; weights and
   signs fitted by approximate backpropagation through time to one 65-neuron correlation matrix (MSE
@@ -103,8 +109,9 @@ club differ from the anatomical ones; structural hubs need not be influential.
 - **nih-niddk-mbs/r-elegans (R, checked).** A "differentiable, connectome-constrained C. elegans
   simulation in JAX", MIT, active to November 2026. Its goal is one shared model fitted to physiology,
   neural activity, movement and perturbation data, tested on held-out animals. Its README says it is
-  "not yet an achieved biological model", and reports that in its latest fits "calcium agreement was
-  essentially unchanged". Self-reported and unreviewed.
+  "not yet an achieved biological model". Its section on an early pilot (E050) reports that "calcium
+  agreement was essentially unchanged"; its later fits (E066 to E073) were not read for this.
+  Self-reported and unreviewed.
 
 ### 1.3 Anatomy against function, and variability between animals
 
@@ -112,8 +119,8 @@ club differ from the anatomical ones; structural hubs need not be influential.
   non-local features (triplet motifs, shared inputs) do better; connection strength adds nothing.
 - **Seyedolmohadesin et al. 2025, bioRxiv (F).** Functional connectivity is very similar between sexes
   (R² = 0.8), with no clear relation to their synaptic differences.
-- **Witvliet et al. 2021, Nature (F of preprint).** "About 43% of all connections and 16% of all
-  synapses are not conserved" between isogenic animals. Any model's mask is not the recorded animal's
+- **Witvliet et al. 2021, Nature (F of preprint).** "About 43% of all cell-cell connections, which
+  account for 16% of total number of chemical synapses, are not conserved" between isogenic animals. Any model's mask is not the recorded animal's
   wiring.
 - **Brennan and Proekt 2019, eLife (F of preprint).** Some identified neurons behave qualitatively
   differently across worms.
@@ -167,15 +174,18 @@ estimates could not be read.
 
 - **Worked.** A connectome mask is enough to reach a fully connected model's accuracy on held-out
   animals' perturbation responses, and it beats a relabelled-connectome null (Creamer). Connectome
-  constraints, fitted by gradient, predict withheld neurons at r = 0.32 against about 0 unconstrained
-  (Mi). Low-dimensional models predict motor-command timing in held-out worms (Brennan and Proekt).
+  constraints, fitted by gradient, predict withheld neurons at r = 0.32 against 0.08 at best
+  unconstrained (Mi). Low-dimensional models predict motor-command timing in held-out worms (Brennan
+  and Proekt).
 - **Failed or weak.** Anatomy alone predicts signal propagation poorly (Randi; Uzel; Seyedolmohadesin;
   Dvali). The best perturbation fit agrees with data at r = 0.14 because the data agree with
   themselves at only 0.17 (Creamer). On whole held-out worms, connectome-constrained and dense models
-  score alike (r = 0.44 to 0.47; Mi), and on perturbation responses a fully connected model does as well
-  as the masked one (Creamer): the connectome shows on withheld neurons and against relabelling, not
-  on held-out animals' overall fit. BAAIWorm and Morrison and Young have no held-out validation. Pooled connectome-free models barely beat copying the last value
-  (Simeon). The one open differentiable JAX effort reports no calcium gain yet (r-elegans).
+  score within about 0.01 to 0.02 of each other (r = 0.44 to 0.47; Mi), a gap I read as small and
+  its authors read as a gain. On perturbation responses a fully connected model does as well as the
+  masked one (Creamer). So the connectome shows clearly on withheld neurons and against relabelling,
+  and little on held-out animals' overall fit. BAAIWorm and Morrison and Young have no held-out
+  validation. Pooled connectome-free models barely beat copying the last value (Simeon). The one open
+  differentiable JAX effort reported no calcium gain in an early pilot (r-elegans).
 - **Not found.** No published work fits a connectome model to worm neural data and then scores it on
   held-out behaviour statistics.
 
@@ -251,8 +261,9 @@ estimates could not be read.
 - **Degeneracy is the norm at conductance level.** Prinz, Bucher and Marder 2004 (A): "virtually
   indistinguishable network activity can arise from widely disparate sets of underlying mechanisms".
   Gonçalves et al. 2020 (F): in a 31-parameter pyloric model, many parameters are "only weakly
-  constrained", lying on connected sets with stiff and sloppy directions; a genetic algorithm found
-  one small region and missed the rest. Deistler et al. 2022 (F): extra objectives narrow the set
+  constrained", lying on connected sets with stiff and sloppy directions. In a separate comparison on
+  an 8-parameter Hodgkin and Huxley model, a genetic algorithm's solutions were "concentrated in
+  small regions" of what the posterior allows. Deistler et al. 2022 (F): extra objectives narrow the set
   without removing it.
 - **Prediction becomes identifiable before parameters do.** Beiran and Litwin-Kumar 2024/2025
   (F of preprint, checked): "a connectome is often insufficient to constrain the dynamics of networks
@@ -260,7 +271,10 @@ estimates could not be read.
   degeneracy": for a 300-neuron network, error on unrecorded neurons falls sharply once more than about
   30 are recorded. Yet "the unknown parameters are never precisely recovered". The number needed scales
   with the dynamics' dimensionality and grows for chaotic networks. Unmodelled peptides are named as a
-  threat.
+  threat. The caveat that matters here: the student shares the teacher's exact signed connectivity
+  matrix and fits only per-neuron gains and biases (2N unknowns); with noise added to the weights,
+  errors "increase smoothly". The worm case, fitting about 2,000 weights from synapse counts, is not
+  covered by the 30-neuron result.
 - **Connectivity from spontaneous activity is biased.** Das and Fiete 2020 (F of preprint): in strongly
   coupled networks the error is bias that "do[es] not shrink with data volume"; partial observation
   adds more. Qian et al. 2024 (F): with about 5% of neurons observed, fitted models invent attractors,
@@ -353,12 +367,16 @@ estimates could not be read.
   neurons, again in separate groups, with high variability between animals.
 - **Worm learning models impose plasticity rather than infer it.** Hironaka and Sumi 2025 (F) fitted a
   five-neuron klinotaxis circuit to a behavioural chemotaxis index, with memory as an imposed sign
-  switch at one synapse. A network with the opposite sign fitted equally well, so behaviour did not
-  discriminate. No worm learning model with a local rule fitted to neural data was found.
-- **Rule inference is unidentified even elsewhere.** Mehta et al. 2023 (F, checked) fitted plasticity
-  rules by gradient through whole trajectories; on behaviour from 18 flies, the model "fails to
-  identify a unique, sparse solution even with extensive data". The fly mushroom-body model of Jiang
-  and Litwin-Kumar 2021 (F) takes its dopamine-gated rule from experiment. Lim et al. 2015, Confavreux
+  switch at the ASER to AIY synapse. Separately, its unconstrained fits to naive chemotaxis found
+  networks with opposite signs at the AIY to AIZ synapse that fitted about equally well (chemotaxis
+  index 0.855 against 0.877), so behaviour did not discriminate that sign. No worm learning model
+  with a local rule fitted to neural data was found.
+- **Rule inference is not shown to be unique even elsewhere.** Mehta et al. 2023 (F, checked) fitted
+  plasticity rules by gradient through whole trajectories. On behaviour from 18 flies the fit found a
+  significant weight-dependent decay term (p about 5 × 10⁻⁵). In their limitations section the
+  authors write that the method in general "fails to identify a unique, sparse solution even with
+  extensive data". The fly mushroom-body model of Jiang and Litwin-Kumar 2021 (F) takes its
+  dopamine-gated rule from experiment. Lim et al. 2015, Confavreux
   et al. 2020 and Ashwood et al. 2020 were seen only second-hand.
 
 ### 4.5 Variability between animals
@@ -409,8 +427,9 @@ Each item is named by at least one source above.
 03. **One model across animals.** Data reproduce themselves at 0.17 (Creamer); 43% of connections
     differ between isogenic animals (Witvliet); encodings and routes differ (Atanas; Toyoshima).
 04. **Parameters against predictions.** Parameters are degenerate (Prinz; Gonçalves) and not recovered
-    even when prediction succeeds (Beiran and Litwin-Kumar); fitted worm models say so themselves
-    (BAAIWorm; Morrison and Young).
+    even when prediction succeeds (Beiran and Litwin-Kumar, with the weights given and only gains and
+    biases fitted); fitted worm models say so themselves (BAAIWorm) or note it as a general limit
+    (Morrison and Young).
 05. **Signs.** Measured signs conflict with predicted ones (Randi, AFD to AIY) and regressed signs
     conflict across studies (Morrison and Young).
 06. **Calcium against voltage.** Calcium is low-pass and lagged (Simeon; Berens); few worm fits model
@@ -522,7 +541,7 @@ source and confirmed the claim used here.
 | Eschbach et al. 2019 preprint (2020 Nat Neurosci) | A | |
 
 **Looked for and not found or not opened:** "Reimers et al. 2026" (no match found); the flybench
-preprint; Haspel et al.'s full text; the full texts of Uzel 2022, Kato 2015, Mi 2022 and modWorm;
+preprint; Haspel et al.'s full text; the full texts of Uzel 2022, Kato 2015 and modWorm;
 any 2024 to 2026 graph-network or foundation model of worm activity with held-out-animal results;
 any nonlinear refit of the Randi atlas; flyvis's training compute; a count of worm neurons with
 patch-clamp recordings; any measurement of neuropeptide release or diffusion time courses in the worm

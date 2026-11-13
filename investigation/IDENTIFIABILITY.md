@@ -16,7 +16,9 @@ the short names used there.
 **Two levels, which the literature keeps apart.** A fit can identify a *prediction* without
 identifying the *parameters* behind it. Beiran and Litwin-Kumar find connectome-constrained networks
 predict unrecorded neurons once enough are recorded, while "the unknown parameters are never
-precisely recovered". Pospisil et al. show stimulation identifies the network's effective causal map
+precisely recovered". Their student network was given the teacher's exact signed weight matrix and
+fitted only per-neuron gains and biases; errors grew smoothly with noise added to those weights. The
+worm case, fitting about 2,000 weights from synapse counts, is not covered by that result. Pospisil et al. show stimulation identifies the network's effective causal map
 (the Jacobian of its dynamics), not its biophysical parameters. Degeneracy at conductance level is
 the norm (Prinz; Gonçalves). Each class below is therefore marked at both levels where they differ.
 
@@ -27,13 +29,15 @@ for a fair comparison, against the behaviour statistics the current approach fit
 
 - *Neural perturbation data* (Randi's atlas): 23,433 head pairs measured, at least 1,310 of them (6%)
   significantly connected, each a response time course, from 113 animals. The data agree with
-  themselves at r = 0.16 to 0.17 between halves (Creamer), so most of each response is noise or
-  animal-to-animal variation. Creamer's mask leaves about 2,000 to 2,200 free weights over 154 head
-  neurons (9.4% of pairs; the vendored table holds 2,011).
-- *Behaviour statistics* (benchmark v4): 24 wild-type statistics plus one or two per mutant, about 28
-  numbers, against C.2's 137 parameters. In C.1, single parameters missed their true value by up to
-  0.86 of their range while behaviour matched (LB 121). Wild-type behaviour did not identify C.2's
-  perturbation responses (LB 128).
+  themselves at r = 0.16 to 0.17 between the 80 training and 30 test animals (Creamer; 55/55 halves
+  appear only in a robustness check), so most of each response is noise or animal-to-animal
+  variation. Creamer learns 9.4% of pairs, which over 154 head neurons is about 2,200 weights by my
+  arithmetic; the vendored table holds 2,011 entries over 125 neurons.
+- *Behaviour statistics* (benchmark v4): 24 wild-type statistics plus one or two per mutant, 29
+  numbers in all (24 + 1 for tph-1 + 2 for pdfr-1 + 2 for tax-4), against C.2's 137 parameters. In
+  C.1, single parameters missed their true value by up to 0.86 of their range while behaviour matched
+  (LB 121). Wild-type behaviour did not identify C.2's perturbation responses (LB 128); fitting the
+  mutants constrained them, in-sample (LB 129).
 
 Both are under-determined at the parameter level. They under-determine different things.
 
@@ -47,16 +51,19 @@ Both are under-determined at the parameter level. They under-determine different
   stimulation of AWA, SMD, RIV and RIA. The silencing sets (Kato's AVA, Uzel's hubs, Kaplan's SMD and
   motor neurons) constrain the outgoing influence of the silenced nodes through correlations. On
   sensory-stimulus data (Yemini 2021), Mi et al.'s gradient-fitted model with connectome counts
-  predicts withheld neurons at r = 0.32 against about 0 for a dense model, yet both fit held-out worms
-  alike (r = 0.47 against 0.46): the connectome identifies routes to unrecorded neurons, not the
-  overall fit.
+  predicts withheld neurons at r = 0.32, against 0.08 for the conductance-based dense model and −0.10
+  for the current-based one. On held-out worms all nine variants score 0.44 to 0.47 (SE 0.006). The
+  authors read the connectome-count models as better there; I read a gap of about 0.01 to 0.02 as
+  small. So the connectome shows far more clearly in routes to unrecorded neurons than in the overall
+  fit.
 - *Behaviour:* in C.2, 3,709 edges share two fitted scales and four group gains; per-edge magnitudes
   are synapse counts under a hand-chosen normaliser. Unconstrained fits switched inhibition off
   (LB 127). Behaviour constrains essentially no individual edge.
 - *Signs:* expression-based polarity (Fenyves 2020) covers about 73% of synapses and disagreed with
   measured polarity at 1 of 12 interneuronal connections; the transmitter atlas (Wang 2024) and 67
   physiology overrides cover more. Randi measured AFD to AIY excitatory where expression predicts
-  inhibitory, and about 11% of significant connections inhibitory, against about 20% predicted.
+  inhibitory, and about 11% of significant connections inhibitory, which Randi calls comparable to the
+  roughly 20% estimate and likely a lower bound.
 
 **Limits.** Head neurons only: Creamer's weights cover 1,049 of 3,709 chemical edges and none onto a
 body motor neuron. Chemical and gap paths are not separable in these data. Fitted weights correlate
@@ -84,7 +91,8 @@ fitted weights correlate weakly (Creamer).
 **What constrains them.**
 
 - *Neural:* nothing separates electrical from chemical coupling in vivo. Creamer merges them in one
-  weight; electrical synapse counts correlate with fitted weight magnitudes at r = 0.107. Toyoshima's
+  weight; electrical synapse counts correlate with fitted weight magnitudes at r = 0.108 (v4; v3 gave
+  0.107). Toyoshima's
   inferred functional network resembled the gap-junction network more than the chemical one.
   Kaplan's whole-nervous-system recordings constrain head to ventral-cord coupling, which is
   gap-dominated (AVA and AVB onto A- and B-class motor neurons), through correlations.
@@ -98,8 +106,8 @@ few class-wide scales, **constrained with priors** if fitted jointly with pertur
 **Priors that could help.** EM gap counts (White, Varshney, Cook 2019; Witvliet, Cook 2025 and Yim omit
 gap junctions) and the innexin expression atlas (Bhattacharya 2019: 14 innexins across 118 classes,
 L1 to adult), which says which pairs can couple and which may rectify. Together they narrow the
-*structure* (which pairs, which direction) but barely the *magnitudes*, given r = 0.107 between counts
-and fitted weights. unc-7 and unc-9 mutants would separate gap from chemical paths, but no
+*structure* (which pairs, which direction) but barely the *magnitudes*, given r = 0.108 between
+electrical synapse counts and fitted weights. unc-7 and unc-9 mutants would separate gap from chemical paths, but no
 stimulate-and-record data exist in them.
 
 ## 3. Time constants
@@ -115,8 +123,10 @@ stimulate-and-record data exist in them.
   AWA, depolarisation appeared in fluorescence after about 1 s (Liu 2018).
 - *Electrophysiology:* membrane properties (capacitance, input resistance, I-V curves) for about 15
   classes.
-- *Behaviour:* C.2's neurons have no time constants; its two modulator timescales are fitted to bout
-  statistics (Flavell's dwelling τ ≈ 482 s, roaming 75 and 520 s, are the targets).
+- *Behaviour:* C.2's neurons have no time constants; its two modulator timescales are fitted to the
+  whole objective, whose bout targets are Scheer's censoring-aware bout means and the 5-min roaming
+  survival. Flavell's dwelling τ ≈ 482 s and roaming 75 and 520 s are reported beside the grade, not
+  graded (LB 109).
 
 **Marks.**
 
@@ -183,7 +193,7 @@ unaddressed.
 | Level | Mark |
 |---|---|
 | Release kinetics, diffusion, concentrations | **not constrained** |
-| Where each modulator can act, and its sign | **constrained with priors** (receptor maps; G-protein coupling for some receptors: 16 monoamine receptors fixed in the project's layer, and a draft literature table resolving 24 of 54 free signs, LB 128) |
+| Where each modulator can act, and its sign | **constrained with priors** (receptor maps; G-protein coupling for some receptors: 16 monoamine signs fixed in the project's layer by default, and 19 under the registered procedure, which adds pdf-1 and pdf-2 onto pdfr-1 and serotonin onto ser-5; a draft literature table resolving 24 of 54 free signs, LB 128) |
 | Effect magnitudes and timescales | **not constrained** by neural data. By behaviour and mutants, an effective state-level timescale and a few directions are fitted in-sample (C.2), which is the most any approach currently reaches |
 
 **Priors that could help, and how much they narrow.** Little. The peptide network admits more than ten
@@ -207,12 +217,15 @@ approach.
   2022: basal glutamate release and a receptor-dependent sign flip), thermotaxis (Hawk 2018: AFD
   adaptation at τ ≈ 45 s warming, about 14 min cooling), tap habituation (reviewed by Bozorgmehr
   2013). No whole-brain imaging of the same animals before and after learning was found.
-- *Behaviour:* the worm learning model found (Hironaka and Sumi 2025) imposes a sign switch at one
-  synapse; a network with the opposite sign fits equally well. Phase 7 found no biologically
-  plausible rule that learns this substrate (LB 069).
-- *Elsewhere:* inferring a rule by gradient through whole trajectories "fails to identify a unique,
-  sparse solution even with extensive data" (Mehta 2023, on 18 flies' behaviour). Fly mushroom-body
-  models take their rule from experiment (Jiang and Litwin-Kumar 2021).
+- *Behaviour:* the worm learning model found (Hironaka and Sumi 2025) imposes memory as a sign switch
+  at one synapse. Separately, in its unconstrained fits to naive chemotaxis, networks with opposite
+  signs at the AIY to AIZ synapse fitted about equally well (chemotaxis index 0.855 against 0.877).
+  Phase 7 found no biologically plausible rule that learns this substrate (LB 069).
+- *Elsewhere:* Mehta 2023 inferred plasticity rules by gradient through whole trajectories. On 18
+  flies' behaviour the fit found a significant weight-dependent decay term (p about 5 × 10⁻⁵). In
+  their limitations section the authors write that the method in general "fails to identify a
+  unique, sparse solution even with extensive data". Fly mushroom-body models take their rule from
+  experiment (Jiang and Litwin-Kumar 2021).
 
 **Mark: not constrained.** For sensory adaptation specifically (AFD, AWC), the time constants and
 direction are measured, so that narrow case is **constrained with priors**.
@@ -236,17 +249,18 @@ parameters.
 
 ## What this says about the hypothesis (without a verdict)
 
-- **No parameter class is well constrained by the data alone.** What is well constrained is a
-  prediction: the head network's effective response to single-neuron stimulation, up to a ceiling the
-  data set themselves (r = 0.17 between halves).
+- **No parameter class is well constrained by the data alone.** What comes closest is a prediction:
+  the head network's effective response to single-neuron stimulation, constrained with priors (the
+  mask and the signs), up to a ceiling the data set themselves (r = 0.17 between training and test
+  animals).
 - **Neural data and behaviour data identify different layers.** Perturbation recordings reach
   effective head coupling and slow timescales, which behaviour statistics reach not at all. Behaviour
   and mutants reach state-level neuromodulator effects, which neural recordings currently reach no
   better. Neither reaches gap conductances separately, intrinsic currents broadly, modulator release,
   or plasticity rules.
-- **The brief's worry is partly right.** Fit-first would move the bottleneck from "behaviour does not
-  identify the internals" (LB 127, 128) to "neural data identify the head's effective coupling and
-  little else". It does not move it for neuromodulator dynamics or plasticity, the two layers the
+- **The brief's worry is partly right.** Fit-first would move the bottleneck from "wild-type behaviour
+  statistics do not identify perturbation responses" (LB 127, 128; fitting the mutants constrains
+  them in-sample, LB 129) to "neural data identify the head's effective coupling and little else". It does not move it for neuromodulator dynamics or plasticity, the two layers the
   long-run goal names that no data constrain.
 - **The closed-loop bridge is the weakest link.** The perturbation data cover the head; the closed
   loop needs motor neurons and a readout to locomotion, which no perturbation dataset reaches.
