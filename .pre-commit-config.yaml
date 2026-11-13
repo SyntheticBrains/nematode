@@ -3,6 +3,9 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
+        # C.2's fit records (pilot, recovery, fit) keep every readout's statistics and run past
+        # 500 KB; the fit's guards bind each as one committed file.
+        exclude: ^docs/experiments/logbooks/supporting/133-c2-fit/
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml
