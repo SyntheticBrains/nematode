@@ -88,3 +88,25 @@ list (RECONCILE.md, next) is the brief's own mechanism for catching what the swe
 
 **Considered instead.** A fourth agent restricted to 2025 and 2026 work. Worth doing if the seed list
 shows the gap matters.
+
+### A8. Commit the agents' raw notes beside the curated documents (2026-11-14)
+
+**Decision.** The six research reports and two sub-audits are committed under `investigation/notes/`,
+with em dashes replaced and bare URLs wrapped so they pass the Markdown hooks, and a README saying they
+are unreviewed agent output superseded by the curated documents.
+
+**Reason.** The curated documents compress about 6,000 lines of notes into a reviewable size. Keeping
+the notes lets every claim be traced to the URL opened and the access level reached, which the brief's
+citation rule needs, and matches the project's habit of committing every reading.
+
+**Considered instead.** Leaving them in the session scratchpad, which is deleted with the session.
+
+### A9. Correct the project's licence finding on the Randi atlas (2026-11-14)
+
+**Decision.** ORIENTATION.md and DATA_INVENTORY.md record that the Randi 2023 atlas is available under
+CC-BY-4.0 on DANDI 001075, against `data/connectome/PROVENANCE.md`, which judged it unusable. The
+project file itself is not changed on this branch.
+
+**Reason.** I confirmed the licence on DANDI's API (`spdx:CC-BY-4.0`, version 0.240930.1859). The
+correction removes what looked like a hard blocker for fit-first inside this repository. Editing
+`data/` is outside this investigation's remit, so the fix to PROVENANCE.md is left to the maintainer.

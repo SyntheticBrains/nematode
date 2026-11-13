@@ -19,8 +19,9 @@ under `packages/quantum-nematode/quantumnematode/`. Effort estimates are judgeme
   in its third readiness pilot. Launch record 133 itself calls the coming verdict in-sample.
 - **Neural data.** The only asset derived from recordings is a table of Creamer, Leifer and Pillow's
   fitted weights (125 neurons). Used as a weight prior in Phase 8, it changed nothing measurable. The
-  current controller does not read it. No recordings are vendored, and the Randi 2023 atlas is
-  excluded by the project's data-licence rule.
+  current controller does not read it. No recordings are vendored. The project's licence record says
+  the Randi 2023 atlas is excluded by its CC0-or-CC-BY rule, but that check missed the atlas's DANDI
+  deposit, which is CC-BY-4.0 (DATA_INVENTORY.md).
 - **Roadmap and pacing.** Phases 0 to 9 are closed and Phase 10 is three weeks in. Calendar speed is
   high: recent phases take about three weeks, with 250 to 400 commits each. The slow part is yield.
   From Phase 6a to Phase 9, every phase's headline was a STOP or a SPLIT, or a positive later traced
@@ -178,11 +179,13 @@ itself evidence that behaviour statistics under-determine the controller.
   refuses any weight prior other than random, so the current phase does not read it.
 - **Nothing else** derived from neural activity is in the repository: no recordings, no loader, no
   observation model.
-- **Licensing blocks the obvious source.** The project vendors only CC0 or CC BY data
-  (`data/neuromodulators/PROVENANCE.md`, checked). The Randi atlas's OSF deposit states no licence,
-  its `funatlas.h5` ships under GPL-3.0, and Creamer's reformatted recordings state none
-  (`data/connectome/PROVENANCE.md`, checked 2026-09-23 by the project). Under the current rule, the
-  main perturbation dataset cannot be vendored here.
+- **The licence record is out of date.** The project vendors only CC0 or CC BY data
+  (`data/neuromodulators/PROVENANCE.md`, checked). Its 2026-09-23 check of the Randi atlas
+  (`data/connectome/PROVENANCE.md`) found the OSF deposit with no licence, `funatlas.h5` under
+  GPL-3.0 and Creamer's reformatted recordings with none, and concluded the atlas could not be
+  vendored. It did not check DANDI 001075, the atlas's raw NWB deposit, which is CC-BY-4.0 (checked
+  on the host 2026-11-14; DATA_INVENTORY.md). The recordings themselves are usable under the rule; the
+  convenient processed forms are not.
 
 ## 4. The roadmap
 
@@ -341,7 +344,8 @@ imitation is its nearest precedent, and shows the memoryless brain's limit.
 
 ### 6.3 What fitting to neural data would need that does not exist
 
-- recordings with a licence the project accepts (none vendored; the Randi atlas excluded);
+- recordings ingested from a source the project's licence rule accepts (none are vendored; the
+  Randi atlas and Dunn 2025 are CC-BY-4.0 on DANDI, but only as large NWB files);
 - a calcium observation model: indicator kinetics, a per-neuron scale, offset and nonlinearity,
   noise, bleaching, the sampling rate;
 - neural time constants and persistent state (the settling model resets every second);
