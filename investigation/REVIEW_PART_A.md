@@ -128,3 +128,39 @@ available. Three findings shift the balance, and Part B must carry them:
   behaviour fits (P5).
 - **The spike as planned could not have told a fitter failure from a data failure** (D1, D2). It
   also gave the brief's own tests no registered bar (D3).
+
+## 6. Re-review of the revised spike plan
+
+The design reviewer re-read the revised SPIKE_PLAN.md against its own findings. Its verdict: ready
+to approve after small, named fixes to rules, with no redesign.
+
+**Earlier findings.** 13 were fixed and 12 partly fixed. None was left unfixed.
+
+**Corrections to its first report.** Both were seen through fetch summaries, so session 0 confirms
+them:
+
+- `exp_test.yml` is probably a 10-recording test configuration, not the paper's split, so the
+  "split not recovered" branch is probably the main path.
+- His measured STAMs are inside his MIT repository, so G1 and G2 can use them without breaking A20.
+
+**New findings** (N1 to N13), each now applied in SPIKE_PLAN.md:
+
+| # | Finding | Applied as |
+|---|---|---|
+| N1 | R1's tolerance came from shared noise. | R1 is now two parts. R1a compares penalised likelihood on the training animals. R1b is a paired bootstrap with a margin of 10% of S_C. |
+| N2 | G1 failed spuriously without the split, and was weak with it. | G1 is now three matching checks: the example recording, STAMs pooled over all 110 animals, and test STAMs only if the split is recovered. The split is also inferred from his test array, accepted only on an exact match. |
+| N3 | The coupling-free score is 0/0. | An undefined correlation scores 0, so m = 0.25 × the wild type's score. G3's must-fail arm is now the relabelled fit. |
+| N4 | The verdict map had a logic error and missing branches. | Relabelling-fails-but-rewiring-passes is now read as coherent. Each contrast has four levels: pass, below m, absent, reversed. Rows for unconverged arms, R4 and R5, and the counted dense fit are added. |
+| N5 | The null's matching rule might never accept a draw. | A reciprocity-preserving rewire of the model's own mask, which keeps the count, degrees and reciprocal pairs exactly and always terminates. |
+| N6 | The bridge's comparison of two distances saturates. | The distance between the two simulated populations, by W's real-halves rule, set against 2.597 and the wild type's own spread. Raw per-statistic differences are reported uncapped. |
+| N7 | M-a's parity check at zero input was vacuous. | Parity at 100 random nonzero inputs to 10⁻⁶, a unit test of the added-input path, and R1's metric on R1's pairs. |
+| N8 | Gates had no retry rule. | A gate may be retried once under a committed amendment naming the bug. Bars are still read once. |
+| N9 | G2 was pinned to a rounded number. | G2 now compares with his own `predict_stams.py`, run in the same sandbox, to 10⁻⁶. |
+| N10 to N13 | Minor items. | Separate synthetic sets for the learning rate (9701) and for G3 (9702). R4's minimum effect and ceiling defined. The split checksum committed before G1. Curvature in degrees per second. The odour taken as the `derivative` rate. The bridge's arm named (`connectome_c2`). Missing-frame animals all use the exact filter. M-b scored on changes with a coupling-free baseline. M-d's drift caveat. The readout checked against Atanas reversals. |
+
+**Two choices of mine, not the reviewer's** (decision A23):
+
+- **The null.** It rewires the model's untyped mask with reciprocity preserved, rather than either
+  of the reviewer's two options.
+- **R1a without the split.** It compares against a fit warm-started from Creamer's parameters,
+  because his parameters, fitted to a different 80 animals, would be too easy to beat.

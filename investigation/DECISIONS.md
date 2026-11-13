@@ -180,3 +180,110 @@ plan's session count, and Mi et al.'s Table 2.
 
 **Considered instead.** One reviewer for everything. Not done: the literature check alone took about
 130 tool calls, and a single report would have mixed fact errors with design judgements.
+
+## The maintainer's decisions after the review (2026-11-14)
+
+Each was put to the maintainer with options and a recommendation; each took the recommendation.
+
+### A15. Every correction applied at once
+
+All of REVIEW_PART_A.md's findings are applied to the Part A documents in one commit, so the
+maintainer can read one diff after their review. Considered instead: waiting until their read was
+done, or applying only the load-bearing findings.
+
+### A16. The spike plan revised and re-presented before Part B
+
+SPIKE_PLAN.md is rewritten with the design review's fixes, and Part B starts only when the
+maintainer approves the revised plan. Considered instead: approving now and fixing in session 0, or
+holding Part B.
+
+### A17. A hard stop at 10 sessions
+
+The fixes and the three readings Part B needs (M-a for C.2, M-b, M-d) are kept. Nine sessions are
+planned, so one is in reserve. Considered instead: keeping 8 by cutting scope, or keeping 8 with the
+fixes only.
+
+### A18. Compute locally now, yielding to C.2
+
+The third readiness pilot was stopped on 2026-11-14, so the machine is idle. The spike runs in the
+gap, checkpoints, and exits whenever a C.2 run starts, within 16 workers in total. Considered
+instead: waiting for the C.2 sequence, renting CPU, or renting a GPU.
+
+### A19. Creamer's pickles opened in isolation
+
+They are listed with `pickletools`, loaded in an empty directory with `python -I` through an
+allow-list unpickler, and exported to a checksummed `.npz` in the spike's folder. Nothing is added to
+`data/`. Considered instead: an oracle generated from a model the spike fits itself, which would
+inherit any error in the fitter.
+
+### A20. Mi on Yemini as the only fallback, and no OSF data
+
+If DANDI cannot supply Randi's traces, the target becomes Mi et al. on Yemini 2021 under its own
+committed amendment. The unlicensed OSF deposits are not used, even locally. Considered instead: OSF
+data locally, or stopping. This also supersedes A13's wording that the switch keeps the spike
+"inside the project's licence rule": the project record's reasons for the Randi exclusion were the
+missing licence and the GPL package (REVIEW_PART_A.md P3).
+
+### A21. Bridge readout B, with an interface-only row
+
+Literature signs and unit gains, plus the coupling-free model bridged identically, so a pass cannot
+be the readout's doing alone. The time saved goes to scoring C.2 on Randi's held-out responses. This
+reverses my earlier recommendation of option A. Option A cost two to three sessions on a bridge
+expected to fail, and AWC and AIB are missing from the released weights. Considered instead: option
+A, or both.
+
+## The revised plan's own design choices
+
+### A22. How the revision answers the design review (2026-11-14)
+
+**Decisions.**
+
+- **Hyperparameters.** Every arm uses Creamer's own ridge and pruning, and only the learning rate is
+  chosen, on synthetic data. This replaces per-arm selection on validation, which would have cost
+  about 30 extra fits. It also matches the paper's own comparisons, since his dense and relabelled
+  models used his recipe.
+- **R1.** R1 becomes non-inferiority to Creamer's released model scored through the spike's own
+  pipeline, with the tolerance from a bootstrap over test animals. The v3-to-v4 shift is no longer
+  the tolerance.
+- **The minimum effect.** For the wiring bars it is a quarter of what coupling adds over none. It is
+  scale-free, and it makes the wiring question unreadable, by a named branch, when coupling itself
+  is not detectable.
+- **No null on the held-out-perturbation folds.** Those would be 24 more fits, so the limit is stated
+  instead.
+- **Seeds.** The spike's seeds are listed in the plan, outside every band on both branches. The
+  tracker's seed table is current-phase work, so the spike does not edit it.
+
+**Why.** Each choice keeps a fix the reviewer asked for within the 10-session stop.
+
+**Considered instead.**
+
+- Per-arm selection.
+- A fixed 0.10 tolerance.
+- A minimum effect anchored to the paper's analysis revisions.
+
+### A23. The re-review's fixes, and two choices of mine (2026-11-14)
+
+**Decision.** Every fix the design reviewer named on re-reading the revised plan (N1 to N13,
+REVIEW_PART_A.md § 6) is applied before the plan goes to the maintainer. Two choices are mine:
+
+- **The degree-preserving null** rewires the model's own mask. Reciprocal entries are swapped among
+  themselves and the others by directed swaps, and any swap that creates a duplicate, a
+  self-connection or a new reciprocal pair is rejected. This preserves exactly the number of free
+  weights, every in- and out-degree, and the number of reciprocal pairs, and it always terminates.
+- **R1a in the unrecovered branch** compares against a spike fit initialised at Creamer's
+  parameters on the same 80 animals.
+
+**Why.**
+
+- **The null.** The model gives every mask entry its own free directed weight, whatever the synapse
+  type, so the mask is the structure it sees. The reviewer's options were to rewire the typed edge
+  classes and keep their overlap, or to equalise counts after rewiring. The first is harder to make
+  terminate, and the second perturbs degrees.
+- **R1a.** His parameters were fitted to a different 80 animals, so on the spike's 80 they are not
+  an optimum, and beating them would not show that the fitter works.
+
+**Considered instead.**
+
+- `rewire_degree_preserving` on a typed `Connectome`.
+- Accepting draws whose count lies within 1% of the wild type's.
+- R1a against his parameters in both branches.
