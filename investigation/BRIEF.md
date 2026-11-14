@@ -13,6 +13,7 @@ The long-run goal is a high-fidelity simulation of the C. elegans nervous system
 **Fit-first:** fit a connectome-constrained model directly to recordings of neural activity, especially perturbation data (stimulate one neuron, record the rest), using gradient-based fitting in a differentiable simulator. Add biophysical fidelity only where it improves prediction. Behaviour benchmarks, including the new feeding and lawn-navigation benchmark, then become held-out tests the model was never fitted to.
 
 **The alternatives must get a fair hearing:**
+
 - The current approach may already be close to this, or may be the better route.
 - Fit-first may only move the bottleneck. Calcium is a slow, indirect read of voltage, many neurons go unrecorded, worms differ from one another, and neuromodulators and plasticity are barely measured.
 - A hybrid may beat both.
@@ -24,6 +25,7 @@ The long-run goal is a high-fidelity simulation of the C. elegans nervous system
 Complete these in order, then stop for review.
 
 1. **`investigation/ORIENTATION.md`: the current approach, described honestly.**
+
    - How neuron and synapse parameters are set today, and where each value comes from.
    - Every benchmark that exists, what it measures, and how the current model scores on it.
    - The roadmap: phases done, the current phase, and what remains.
@@ -31,6 +33,7 @@ Complete these in order, then stop for review.
    - Whether the simulator could be made differentiable, and at what cost (JAX or PyTorch backend, an adapter, or a rewrite).
 
 2. **`investigation/LANDSCAPE.md`: an independent review.**
+
    - Who fits connectome-constrained models to worm neural data, what worked, what failed, and what remains open.
    - Analogues in other organisms where they inform method, such as the fly visual system.
    - Which parts of the goal fit-first does not address, such as plasticity and neuromodulator dynamics, and how others have handled them.
@@ -38,6 +41,7 @@ Complete these in order, then stop for review.
    - Give no verdict yet.
 
 3. **`investigation/DATA_INVENTORY.md`: every candidate dataset.** For each one record:
+
    - what was measured (number of neurons, identified or not, immobilised or freely moving, stimuli, perturbations, behaviour recorded alongside, number of worms);
    - access, licence, size and format;
    - how it maps to model variables (calcium indicator kinetics and the voltage-to-calcium link);
@@ -46,6 +50,7 @@ Complete these in order, then stop for review.
    Include the behaviour datasets already used in the project.
 
 4. **`investigation/IDENTIFIABILITY.md`: the deciding analysis.** For each class of parameter, list which datasets constrain it and whether that is enough. Mark each class "well constrained", "constrained with priors", or "not constrained". The classes:
+
    - synaptic weights and signs;
    - gap junction conductances;
    - time constants;
@@ -56,6 +61,7 @@ Complete these in order, then stop for review.
    For classes the data does not reach, name the priors that could help, such as per-neuron gene expression for ion channels and receptors, or neuropeptide receptor maps, and how much they would narrow the range.
 
 5. **`investigation/SPIKE_PLAN.md`: a timeboxed technical spike, proposed but not yet run.**
+
    - **Minimum scope:** reproduce one published connectome-constrained fit on one public dataset in a differentiable framework.
      - Score it on held-out perturbations or held-out neurons.
      - Compare it with a degree-preserving shuffled-connectome control.
@@ -72,6 +78,7 @@ Then I will paste a short list of my own seed sources and claims. Reconcile them
 1. Run the spike as approved and write `investigation/SPIKE_REPORT.md`, negative results included.
 
 2. **`investigation/COMPARISON.md`.** Compare the current roadmap, fit-first and a hybrid against shared milestones, so that pacing can be compared like for like:
+
    - **M-a:** predicts responses to held-out perturbations.
    - **M-b:** predicts freely moving whole-brain activity on held-out worms.
    - **M-c:** passes the existing behaviour benchmarks in closed loop with no fitting to them.
@@ -79,6 +86,7 @@ Then I will paste a short list of my own seed sources and claims. Reconcile them
    - **M-e:** shows an experience-dependent change in behaviour (this links to the separate Wormturn project).
 
    For each approach and milestone, give:
+
    - estimated time at part-time pace;
    - fidelity reached;
    - main risks;
@@ -89,11 +97,13 @@ Then I will paste a short list of my own seed sources and claims. Reconcile them
    Base the estimates on the spike and the pacing history, not on optimism.
 
 3. **`investigation/PLACEMENT.md`.** If fit-first or a hybrid wins, decide where it lives:
+
    - a new phase or module inside Quantum Nematode;
    - a new repository that depends on Quantum Nematode for data, connectome and benchmarks;
    - a standalone repository.
 
    Judge them on:
+
    - **architecture:** whether the current simulation core can take a differentiable backend without distorting it;
    - **identity:** whether fit-first suits the project's stated scope, purpose and name, and how it would be positioned publicly;
    - **dependencies:** the weight of new ones, such as JAX;
@@ -104,6 +114,7 @@ Then I will paste a short list of my own seed sources and claims. Reconcile them
    Name which existing parts carry over and which do not.
 
 4. **`investigation/RECOMMENDATION.md`.** Give one recommendation: switch, hybrid, or stay. Include:
+
    - the first three milestones under it;
    - kill criteria;
    - what happens to the current phase's work in progress.

@@ -406,3 +406,12 @@ The merge contains everything except the raw agent notes, which stay on a tagged
 A handover brief for the Phase 10 session is added as a file and also sent to that session. Both
 notes to authors are deferred. Considered instead: merging everything, or the conclusions only;
 the handover as a file only.
+
+### A34. BRIEF.md formatted for the merge; the raw notes kept at a tag
+
+For the merge, mdformat is allowed to format BRIEF.md. It adds 11 blank lines before nested lists
+and changes no word, so CI's all-files check passes without an exclusion. This supersedes A6 from
+here on, and the verbatim original stays in git history at dd0c5b92.
+
+The raw agent notes (`investigation/notes/`) are left out of the merge, as A33 says. They stay at
+the annotated tag `fit-first-investigation-notes`.

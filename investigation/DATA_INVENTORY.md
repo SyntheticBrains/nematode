@@ -2,7 +2,7 @@
 
 Written 2026-11-14. A research agent inspected public data hosts and papers read-only (no files
 downloaded); I re-checked the licences that matter most on the hosts. Its full notes, with every URL it
-opened and a provenance tag per fact, are in [`notes/data_inventory_raw.md`](notes/data_inventory_raw.md).
+opened and a provenance tag per fact, are in `notes/data_inventory_raw.md` (kept at the git tag `fit-first-investigation-notes`, not on `main`).
 This document is the curated version.
 
 **Provenance column (src):** H, the data host's own page or API; P, the paper or its preprint; 2,
