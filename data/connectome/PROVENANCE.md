@@ -276,6 +276,21 @@ Also not vendored, from the Creamer repository and deposit:
 
 A licence such as CC BY on the two OSF deposits would remove the obstacle to vendoring either.
 
+**Added 2026-11-14: the atlas is also on DANDI, under CC BY 4.0.**
+
+- **DANDI 001075** (<https://dandiarchive.org/dandiset/001075>, version 0.240930.1859) holds the
+  atlas as NWB under **CC-BY-4.0**: 113 imaging files and 110 segmentation files. The segmentation
+  files carry the traces, NeuroPAL labels and stimulation table. The 2026-09-23 check above did not
+  look there.
+- **The traces are sound:** Creamer's preparation reproduces his example recording from them at a
+  median per-neuron r of 1.0000000.
+- **The metadata are incomplete:**
+  - `OptogeneticStimulusTable.target_pumpprobe_id` names the stimulated neuron for only 2,815 of
+    5,614 stimulations;
+  - the labels do not reproduce the 154-neuron set Creamer et al. used.
+- So the deposit is licensed but cannot replace the OSF exports for an exact reproduction. The
+  evidence is in `investigation/spike/SESSION_0.md`, on the fit-first investigation's record.
+
 ## Verification
 
 To verify the vendored files match the upstream mirror after a fresh clone:
