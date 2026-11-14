@@ -7,11 +7,12 @@ with changed settings", "A fitted mutant fails the verdict", "pdfr-1 does not de
 never scored", "The fit refuses before the recovery is recorded", "A changed config stops a run", "A
 failed pilot blocks the recovery", "The longest stage stays inside its sub-block", "The real halves
 reproduce W's minimum", "The smoke reads no held-out track", "A start that does not hold the lawn
-is dropped", "A registered run misses a checkpoint", "No start holds the lawn", "The
-lawn-holding reading is a mean", "An interrupted drop resumes to the same answer", "Each start has
-its own animals", "A registered fit with no answer fails" and "The lawn guard"; and the
-fit-recovery spec's "The preflight fails", "The recovery falls short", "A truth whose statistic
-flips", "The preflight runs once" and "A recovery with no answer does not pass".
+is dropped", "A start that misses 2a's descent or bar is dropped", "A registered run misses a
+checkpoint", "A start's 2a ends above the bar", "No start holds the lawn", "The lawn-holding
+reading is a mean", "The descent reading is a mean", "An interrupted drop resumes to the same
+answer", "Each start has its own animals", "A registered fit with no answer fails" and "The lawn
+guard"; and the fit-recovery spec's "The preflight fails", "The recovery falls short", "A truth
+whose statistic flips", "The preflight runs once" and "A recovery with no answer does not pass".
 """
 
 from __future__ import annotations
@@ -209,6 +210,11 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
     generations: tuple[int, ...] = (3, 3, 3, 45),
     hold: int = 3,
     hold_bars: tuple[float, ...] = (0.5,),
+    descent: int | None = None,
+    descent_bars: tuple[float, ...] | None = None,
+    reach_bars: tuple[float, ...] | None = None,
+    readings: tuple[tuple[int, ...], ...] | None = None,
+    at: dict[tuple[int, int], dict[str, float]] | None = None,
     lawn: tuple[float, ...] = (0.9,),
     reversal: tuple[float, ...] = (1.0,),
     d_fit: tuple[float, ...] = (1.0,),
@@ -219,8 +225,11 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
     """Run the procedure on fake simulations: every candidate and readout seen, every hand-off.
 
     ``lawn``, ``reversal`` and ``d_fit`` give each start's time on the lawn, reversal spread and
-    D_fit at every readout, the last value serving every later start. ``interrupt`` stops the run
-    as (stage, generation, start) begins to simulate, as a process dying there would.
+    D_fit at every readout, the last value serving every later start. 2a reads the lawn at
+    ``hold``, the descent at ``descent`` (2a's end unless given) and the bar at 2a's end, each
+    against the registered bar unless given; ``readings``, when given, are the three readings'
+    readouts. ``at`` overrides a readout's values at (start, 2a's generation). ``interrupt`` stops
+    the run as (stage, generation, start) begins to simulate, as a process dying there would.
     ``candidate_lawn``, when given, is every candidate's time on the small lawn.
     """
     seen: dict[str, Any] = {"candidates": {}, "carried": [], "fresh": [], "stores": [], "start": 0}
@@ -235,6 +244,8 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
             raise KeyboardInterrupt
         seen["candidates"].setdefault(stage, []).extend(candidates)
         seen["stores"].append((stage, g, first_half_start, path.name))
+        # The readout that follows a generation reads its stage and generation.
+        seen["at"] = (stage, g)
         out = []
         for z in candidates:
             record = _record(truth)
@@ -250,11 +261,15 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
 
     def readout(_pool, z, _seeds, _truth):
         seen.setdefault("readouts", []).append(list(z))
-        return {
+        out = {
             "spread": {"speed": 1.0, "reversal": of(reversal)},
             "time_on_lawn": of(lawn),
             "D_fit": of(d_fit),
         }
+        stage, g = seen.get("at", (None, None))
+        if at is not None and stage == 1:
+            out |= at.get((seen["start"], g), {})
+        return out
 
     def fresh(x0, sigma0, seed, popsize):
         seen["fresh"].append({"x0": list(x0), "sigma0": sigma0, "seed": seed, "popsize": popsize})
@@ -287,15 +302,20 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
     monkeypatch.setattr(fit, "head", lambda: "head")
     monkeypatch.setattr(fit, "manifest_digest", lambda: "digest")
     sizes = {"animals": 1, "popsize": 4, "first_animals": 1, "first_popsize": 3}
-    layout = fit.Layout(1, **sizes, early_generations=hold)
+    layout = fit.Layout(1, **sizes)
+    starts = len(hold_bars)
     run = fit.Run(
         "fake",
         layout,
         (1, 2, 3, 4),
         11,
         generations=generations,
-        hold_readouts=(hold,),
+        hold_readouts=readings[0] if readings else (hold,),
         hold_bars=hold_bars,
+        descent_readouts=readings[1] if readings else (descent or generations[1],),
+        descent_bars=descent_bars or (fit.DESCENT_BAR,) * starts,
+        reach_readouts=readings[2] if readings else (generations[1],),
+        reach_bars=reach_bars or (fit.REACH_BAR,) * starts,
         kill_rules=kill_rules,
     )
     record = fit.procedure(run, truth, pool=None)
@@ -376,8 +396,15 @@ def test_a_resume_with_changed_settings(fake_run: dict, monkeypatch: pytest.Monk
     changed = dataclasses.replace(run, generations=(3, 3, 3, 46))
     with pytest.raises(RuntimeError, match="other settings"):
         fit.procedure(changed, fake_run["truth"], pool=None)
-    # A changed lawn-holding bar, or other restart seeds, is a changed run too.
-    for other in ({"hold_bars": (0.6,)}, {"restart_seed": 13}):
+    # A changed bar or readout of any of 2a's readings, or other restart seeds, is a changed run.
+    for other in (
+        {"hold_bars": (0.6,)},
+        {"descent_bars": (4.0,)},
+        {"descent_readouts": (2,)},
+        {"reach_bars": (2.4,)},
+        {"reach_readouts": (2,)},
+        {"restart_seed": 13},
+    ):
         with pytest.raises(RuntimeError, match="other settings"):
             fit.procedure(dataclasses.replace(run, **other), fake_run["truth"], pool=None)
     # So is a changed lawn guard, its bar or its weight.
@@ -401,11 +428,10 @@ def test_the_pilot_kills_on_the_mean_of_its_last_readouts() -> None:
     assert fit._kill(stage1, {130: dip, 140: dip, 150: {**good, "time_on_lawn": 0.95}}) is not None
     pinned = {**good, "spread": {"speed": 1.0, "reversal": 0.2}}
     assert fit._kill(stage1, {130: pinned, 140: pinned, 150: good}) is not None
-    assert fit._kill(stage2a, {280: {**good, "D_fit": 2.6}, 290: good, 300: good}) is None
-    assert (
-        fit._kill(stage2a, {290: {**good, "D_fit": 3.0}, 300: {**good, "D_fit": 3.0}}) is not None
-    )
-    assert fit._kill(fit.STAGES[2], {200: {**good, "D_fit": 9.0}}) is None
+    # 2a's bar is a reading of every run's starts, so no kill rule reads 2a, or any later stage.
+    high = {**good, "D_fit": 9.0}
+    assert fit._kill(stage2a, {280: high, 290: high, 300: high}) is None
+    assert fit._kill(fit.STAGES[2], {200: high}) is None
 
 
 # ---------------------------------------------------------------------------------------------
@@ -429,14 +455,23 @@ def test_a_start_that_does_not_hold_the_lawn_is_dropped(
     dropped, kept = record["starts"]
     assert (dropped["start"], dropped["kept"], kept["start"], kept["kept"]) == (0, False, 1, True)
     assert dropped["holding"] == {
+        "name": "lawn",
         "generations": [10],
         "time_on_lawn": 0.9,
         "bar": 0.95,
         "holds": False,
+        "passes": False,
     }
+    assert dropped["readings"] == {"lawn": dropped["holding"]}
     assert "on the lawn 0.900" in dropped["dropped"]
     assert kept["holding"]["holds"] is True
     assert kept["dropped"] is None
+    # The kept start passed all three of 2a's readings.
+    assert [(r["name"], r["passes"]) for r in kept["readings"].values()] == [
+        ("lawn", True),
+        ("descent", True),
+        ("reach", True),
+    ]
     # The dropped start stopped at its reading, with everything it produced; the kept one ran on.
     assert len(dropped["histories"]["1"]["medians"]) == 3
     assert len(dropped["histories"]["2a"]["medians"]) == 10
@@ -488,18 +523,18 @@ def test_the_checkpoints_stop_only_the_pilot(
     tmp_path: Path,
     bands: dict[str, Any],
 ) -> None:
-    """Covers "A registered run misses a checkpoint": stage 1's and 2a's stop the pilot alone."""
+    """Covers "A registered run misses a checkpoint" and "A start's 2a ends above the bar"."""
     bars = {**LONG, "hold_bars": (0.95, 0.95, 0.95), "lawn": (0.9, 0.97)}
-    # 2a ending at D_fit 2.8, in the start kept after a dropped one.
-    late = {**bars, "d_fit": (1.0, 2.8)}
-    registered = _fake(monkeypatch, tmp_path / "registered", bands, **late)["record"]
-    assert registered["answer"] is not None
-    assert registered["killed"] is None
-    assert registered["checkpoints"]["2a"]["kill"].startswith("2a")
-    pilot = _fake(monkeypatch, tmp_path / "pilot", bands, **late, kill_rules=True)["record"]
-    assert pilot["killed"].startswith("2a")
-    assert (pilot["kept"], pilot["answer"]) == (1, None)
-    assert set(pilot["histories"]) == {"1", "2a"}
+    # 2a ending at D_fit 2.8 in the second start: dropped at its bar in every run, the pilot's too,
+    # and the third start, at D_fit 1.0, kept.
+    late = {**bars, "d_fit": (1.0, 2.8, 1.0)}
+    for name, kill in (("registered", False), ("pilot", True)):
+        record = _fake(monkeypatch, tmp_path / name, bands, **late, kill_rules=kill)["record"]
+        assert (record["killed"], record["kept"]) == (None, 2)
+        assert record["answer"] is not None
+        assert record["checkpoints"]["2a"]["kill"] is None
+        assert [a["dropped"] is None for a in record["starts"]] == [False, False, True]
+        assert record["starts"][1]["dropped"] == "2a: D_fit 2.80 at generations [20] (bar 2.5)"
     # Stage 1 below its bar: no start is dropped for it, and the pilot stops at whichever start.
     for n, spreads in enumerate(((0.2,), (1.0, 0.2))):
         low = {**bars, "reversal": spreads}
@@ -521,7 +556,7 @@ def test_no_start_holds_the_lawn(
     """Covers "No start holds the lawn": the run has no answer, and no later stage runs."""
     out = _fake(monkeypatch, tmp_path, bands, **LONG, hold_bars=(0.95, 0.95), lawn=(0.9,))
     record = out["record"]
-    assert record["killed"] == "no start of 2 held the lawn"
+    assert record["killed"] == "no start of 2 held the lawn and reached 2a's bar"
     assert record["kept"] is None
     assert record["answer"] is None
     assert [a["kept"] for a in record["starts"]] == [False, False]
@@ -550,6 +585,178 @@ def test_the_lawn_holding_reading_is_a_mean() -> None:
     assert fit.lawn_holding(exact, (40, 50, 60), 0.95)["holds"] is True
 
 
+# 2a reads the lawn at 10, the descent at 20 and the bar at 30.
+THREE = {"generations": (3, 30, 3, 45), "hold": 10, "descent": 20, "hold_bars": (0.5,) * 3}
+
+
+def test_a_start_that_misses_the_descent_or_the_bar_is_dropped(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bands: dict[str, Any],
+) -> None:
+    """Covers "A start that misses 2a's descent or bar is dropped", each at its own reading."""
+    # Start 0 at D_fit 5.0 misses the descent (4.25); start 1 at 3.0 passes it and misses the bar
+    # (2.5); start 2 at 2.0 passes both.
+    out = _fake(monkeypatch, tmp_path, bands, **THREE, d_fit=(5.0, 3.0, 2.0))
+    record, seen = out["record"], out["seen"]
+    assert (record["killed"], record["kept"]) == (None, 2)
+    descent, bar, kept = record["starts"]
+    assert descent["dropped"] == "2a: D_fit 5.00 at generations [20] (bar 4.25)"
+    assert bar["dropped"] == "2a: D_fit 3.00 at generations [30] (bar 2.5)"
+    assert kept["dropped"] is None
+    # Each dropped start holds every reading it took, and stopped at the one it failed.
+    assert [(n, r["passes"]) for n, r in descent["readings"].items()] == [
+        ("lawn", True),
+        ("descent", False),
+    ]
+    assert descent["readings"]["descent"] == {
+        "name": "descent",
+        "generations": [20],
+        "D_fit": 5.0,
+        "bar": 4.25,
+        "passes": False,
+    }
+    assert [(n, r["passes"]) for n, r in bar["readings"].items()] == [
+        ("lawn", True),
+        ("descent", True),
+        ("reach", False),
+    ]
+    assert [len(a["histories"]["2a"]["medians"]) for a in (descent, bar)] == [20, 30]
+    assert sorted(bar["readouts"]["2a"], key=int) == ["0", "10", "20", "30"]
+    assert all(r["passes"] for r in kept["readings"].values())
+    # The kept start's 2a is the record's; the dropped ones ran no later stage.
+    assert len(record["histories"]["2a"]["medians"]) == 30
+    assert set(record["histories"]) == {"1", "2a", "2b", "final"}
+    assert [f["seed"] for f in seen["fresh"]] == [1, 2, 11, 12, 13, 14]
+    assert all(f["x0"] == [0.5] * 5 for f in seen["fresh"][::2])
+    # A start is read against its own bars: with start 1's bar at 3.0, it is kept.
+    again = _fake(
+        monkeypatch,
+        tmp_path / "own",
+        bands,
+        **THREE,
+        d_fit=(5.0, 3.0, 2.0),
+        reach_bars=(2.5, 3.0, 2.5),
+    )
+    assert again["record"]["kept"] == 1
+    # And with start 1's descent and bar at 6.0, start 1 at D_fit 5.0 passes both and is kept.
+    own_descent = _fake(
+        monkeypatch,
+        tmp_path / "own_descent",
+        bands,
+        **THREE,
+        d_fit=(5.0, 5.0, 2.0),
+        descent_bars=(4.25, 6.0, 4.25),
+        reach_bars=(2.5, 6.0, 2.5),
+    )
+    assert own_descent["record"]["kept"] == 1
+    # Every start missing the bar: no answer, and no later stage runs.
+    none = _fake(monkeypatch, tmp_path / "none", bands, **THREE, d_fit=(3.0,))["record"]
+    assert (none["killed"], none["kept"], none["answer"]) == (
+        fit.NO_START_KEPT.format(3),
+        None,
+        None,
+    )
+    assert none["histories"] == {}
+    assert [a["readings"]["reach"]["passes"] for a in none["starts"]] == [False] * 3
+
+
+def test_each_reading_in_a_run_is_a_mean_of_its_readouts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bands: dict[str, Any],
+) -> None:
+    """In a run, each of 2a's readings takes the mean of all its readouts, at its last one."""
+    # 2a of 60 generations reads the lawn at 10 and 20, the descent at 30 and 40, the bar at 50, 60.
+    shape = {
+        "generations": (3, 60, 3, 45),
+        "readings": ((10, 20), (30, 40), (50, 60)),
+        "hold_bars": (0.9,) * 4,
+        "lawn": (0.95,),
+    }
+    # Each start's last readout passes its reading and the mean of its two does not: start 0 at the
+    # lawn (0.6, then 1.0), start 1 at the descent (8.0, then 2.0), start 2 at the bar (5.0, 1.0).
+    at = {
+        (0, 10): {"time_on_lawn": 0.6},
+        (0, 20): {"time_on_lawn": 1.0},
+        (1, 30): {"D_fit": 8.0},
+        (1, 40): {"D_fit": 2.0},
+        (2, 50): {"D_fit": 5.0},
+        (2, 60): {"D_fit": 1.0},
+    }
+    record = _fake(monkeypatch, tmp_path, bands, **shape, at=at)["record"]
+    assert record["kept"] == 3
+    lawn, descent, bar, kept = record["starts"]
+    assert lawn["readings"]["lawn"]["time_on_lawn"] == pytest.approx(0.8)
+    assert descent["readings"]["descent"]["D_fit"] == pytest.approx(5.0)
+    assert bar["readings"]["reach"]["D_fit"] == pytest.approx(3.0)
+    assert [r["generations"] for r in kept["readings"].values()] == [[10, 20], [30, 40], [50, 60]]
+    # Each was taken at its last readout, and the start dropped there.
+    assert [len(a["histories"]["2a"]["medians"]) for a in (lawn, descent, bar)] == [20, 40, 60]
+
+
+def test_the_descent_reading_is_a_mean() -> None:
+    """Covers "The descent reading is a mean": of its three readouts, at most its bar."""
+    readouts = {g: {"D_fit": 9.0} for g in (0, 120, 160)}
+    for g, d in zip((130, 140, 150), (4.0, 4.5, 4.2), strict=True):
+        readouts[g] = {"D_fit": d}
+    reading = fit.descent_reading(readouts, (130, 140, 150), 4.25)
+    assert reading["D_fit"] == pytest.approx(4.2333333)
+    assert reading["passes"] is True
+    # A last readout under the bar does not carry a mean above it.
+    high = {130: {"D_fit": 4.6}, 140: {"D_fit": 4.5}, 150: {"D_fit": 3.9}}
+    assert fit.descent_reading(high, (130, 140, 150), 4.25)["passes"] is False
+    # An undefined D_fit is infinitely far, and readouts all at the bar pass.
+    undefined = {130: {"D_fit": None}, 140: {"D_fit": 1.0}, 150: {"D_fit": 1.0}}
+    assert fit.descent_reading(undefined, (130, 140, 150), 4.25)["D_fit"] == math.inf
+    assert fit.descent_reading(undefined, (130, 140, 150), 4.25)["passes"] is False
+    assert fit.descent_reading(undefined, (130, 140, 150), math.inf)["passes"] is True
+    exact = {g: {"D_fit": 2.5} for g in (280, 290, 300)}
+    assert fit.descent_reading(exact, (280, 290, 300), 2.5)["passes"] is True
+    # The registered readings, in order, on every registered run.
+    for run in (fit.RUNS[n] for n in ("pilot", "recovery", "fit", "loo")):
+        assert run.readings(5) == [
+            ("lawn", (40, 50, 60), 0.95),
+            ("descent", (130, 140, 150), 4.25),
+            ("reach", (280, 290, 300), 2.5),
+        ]
+
+
+@pytest.mark.parametrize(
+    "interrupt",
+    [
+        (1, 15, 0),  # between the lawn and the descent, in the start that misses the descent
+        (0, 1, 1),  # the descent's drop saved, the next start opened
+        (1, 25, 1),  # between the descent and the bar, in the start that misses the bar
+        (1, 5, 2),  # the bar's drop saved, inside the kept start's 2a
+        (2, 2, 0),  # past the first half
+    ],
+)
+def test_a_run_resumes_across_the_descent_and_the_bar(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bands: dict[str, Any],
+    interrupt: tuple[int, int, int],
+) -> None:
+    """A run stopped around a descent or bar drop resumes to an uninterrupted run's answer."""
+    shape = {**THREE, "d_fit": (5.0, 3.0, 2.0)}
+    whole = _fake(monkeypatch, tmp_path / "whole", bands, **shape)["record"]
+    with pytest.raises(KeyboardInterrupt):
+        _fake(monkeypatch, tmp_path / "cut", bands, **shape, interrupt=interrupt)
+    again = _fake(monkeypatch, tmp_path / "cut", bands, **shape)
+    resumed = again["record"]
+    assert resumed["answer"] == whole["answer"]
+    assert resumed["histories"] == whole["histories"]
+    assert _timeless(resumed["starts"]) == _timeless(whole["starts"])
+    # It resumed, not restarted: simulation began at the interrupted generation, and no earlier
+    # start's first half ran again.
+    stage, generation, start = interrupt
+    stores = again["seen"]["stores"]
+    assert min((s, g) for s, g, a, _n in stores if a == start or s >= 2) == (stage, generation)
+    assert not [x for x in stores if x[0] < 2 and x[2] < start]
+    assert stage >= 2 or not [x for x in stores if x[0] < 2 and x[2] == start and x[0] < stage]
+
+
 def _timeless(starts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [{k: v for k, v in a.items() if k != "seconds"} for a in starts]
 
@@ -557,13 +764,26 @@ def _timeless(starts: list[dict[str, Any]]) -> list[dict[str, Any]]:
 RESUMED = {**LONG, "hold_bars": (0.95, 0.95), "lawn": (0.9, 0.97)}
 
 
+@pytest.mark.parametrize(
+    "shape",
+    [
+        RESUMED,  # dropped at the lawn
+        {**THREE, "d_fit": (5.0, 2.0)},  # dropped at the descent
+        {**THREE, "d_fit": (3.0, 2.0)},  # dropped at the bar
+    ],
+    ids=["lawn", "descent", "bar"],
+)
 def test_an_interrupted_drop_resumes_to_the_same_answer(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     bands: dict[str, Any],
+    shape: dict[str, Any],
 ) -> None:
-    """Covers "An interrupted drop resumes to the same answer": the reading is taken again."""
-    whole = _fake(monkeypatch, tmp_path / "whole", bands, **RESUMED)["record"]
+    """Covers "An interrupted drop resumes to the same answer", at each of 2a's readings.
+
+    The drop is made again from the reading the saved state holds.
+    """
+    whole = _fake(monkeypatch, tmp_path / "whole", bands, **shape)["record"]
     drop = fit._drop
     calls = []
 
@@ -575,8 +795,8 @@ def test_an_interrupted_drop_resumes_to_the_same_answer(
 
     monkeypatch.setattr(fit, "_drop", interrupted)
     with pytest.raises(KeyboardInterrupt):
-        _fake(monkeypatch, tmp_path / "cut", bands, **RESUMED)
-    again = _fake(monkeypatch, tmp_path / "cut", bands, **RESUMED)
+        _fake(monkeypatch, tmp_path / "cut", bands, **shape)
+    again = _fake(monkeypatch, tmp_path / "cut", bands, **shape)
     resumed = again["record"]
     assert len(calls) == 2
     assert resumed["answer"] == whole["answer"]
@@ -638,7 +858,7 @@ def test_a_starts_candidates_are_simulated_on_its_own_animals(
         assert [r["member"] for r in records] == [0, 1]
         assert seen[-1]["seeds"] == run.layout.candidate_seeds(stage, generation, 1, start)
         assert seen[-1]["assays"] == fit.FIT_ASSAYS
-    assert seen[0]["seeds"][0] == 960_000_000 + 250_000 * 3 + 64 * 24
+    assert seen[0]["seeds"][0] == 1_280_000_000 + 250_000 * 3 + 64 * 24
     # A stored candidate is reused at the same vector, and refused at another.
     path = tmp_path / "0_2.jsonl"
     count = len(seen)
@@ -648,8 +868,10 @@ def test_a_starts_candidates_are_simulated_on_its_own_animals(
     assert len(seen) == count
     with pytest.raises(ValueError, match="another vector"):
         fit._generation(pool, run, 0, 2, [[0.4] * 3, z], path, 3)
-    assert seen[2]["seeds"][0] == 960_000_000 + 12_500_000 + 576_000 * 3 + 200 * 48 * 59
-    assert seen[4]["seeds"][0] == 960_000_000 + 4_000_000 + 200 * 48 * 60
+    # Every generation of 2a is the start's own: before generation 60's reading and after it.
+    own = 1_280_000_000 + 20_000_000 + 2_880_000 * 3
+    assert seen[2]["seeds"][0] == own + 200 * 48 * 59
+    assert seen[4]["seeds"][0] == own + 200 * 48 * 60
 
 
 def test_a_reading_without_a_readout_is_refused(
@@ -657,19 +879,37 @@ def test_a_reading_without_a_readout_is_refused(
     tmp_path: Path,
     bands: dict[str, Any],
 ) -> None:
-    """A lawn-holding generation with no readout, or past 2a's seeds for a start, is refused."""
+    """A reading without a readout, out of order or past 2a, or 2a past its seeds, is refused."""
     with pytest.raises(ValueError, match="has no readout"):
         _fake(monkeypatch, tmp_path / "a", bands, generations=(3, 20, 3, 45), hold=7)
+    with pytest.raises(ValueError, match="has no readout"):
+        _fake(monkeypatch, tmp_path / "b", bands, generations=(3, 20, 3, 45), hold=10, descent=15)
+    with pytest.raises(ValueError, match="out of order"):
+        _fake(monkeypatch, tmp_path / "c", bands, generations=(3, 30, 3, 45), hold=20, descent=10)
     truth = fit.band_truth(bands)
-    layout = fit.Layout(1, animals=1, popsize=4, early_generations=10)
-    run = fit.Run("fake", layout, (1, 2, 3, 4), 11, generations=(3, 30, 3, 45), hold_readouts=(20,))
-    with pytest.raises(ValueError, match="does not match"):
-        fit.procedure(run, truth, pool=None)
+    layout = fit.Layout(1, animals=1, popsize=4)
+    run = fit.Run("fake", layout, (1, 2, 3, 4), 11, generations=(3, 30, 3, 45))
+    shapes = (
+        # The registered readings' generations, past this run's 2a of 30.
+        ({}, "past 2a's end"),
+        ({"hold_readouts": (10,), "descent_readouts": (20,), "reach_readouts": (40,)}, "past 2a"),
+        # Bars for a different number of starts.
+        ({"hold_readouts": (10,), "descent_readouts": (20,), "reach_readouts": (30,)}, "bars for"),
+    )
+    for change, match in shapes:
+        bars = {"descent_bars": (4.25,)} if match == "bars for" else {}
+        with pytest.raises(ValueError, match=match):
+            fit.procedure(dataclasses.replace(run, **change, **bars), truth, pool=None)
+    # 2a's generations past a start's slice of seeds.
+    fitting = {"hold_readouts": (10,), "descent_readouts": (20,), "reach_readouts": (30,)}
+    tight = dataclasses.replace(layout, two_a_stride=4 * 30 - 1)
+    with pytest.raises(ValueError, match="do not fit"):
+        fit.procedure(dataclasses.replace(run, layout=tight, **fitting), truth, pool=None)
 
 
 def test_a_registered_run_with_no_answer(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Covers "A registered fit with no answer fails" and the recovery's "no answer" scenario."""
-    reason = "no start of 6 held the lawn"
+    reason = fit.NO_START_KEPT.format(6)
     killed = {"killed": reason, "answer": None}
     monkeypatch.setattr(fit, "BUILD", tmp_path)
     for name in ("FIT", "RECOVERY", "PILOT", "LOO"):
@@ -759,7 +999,11 @@ def test_pdfr1_does_not_decide() -> None:
 # ---------------------------------------------------------------------------------------------
 
 
-def _preflight(monkeypatch: pytest.MonkeyPatch, distances: dict[str, float], bands: dict) -> dict:
+def _preflight(
+    monkeypatch: pytest.MonkeyPatch,
+    distances: dict[str, Any],
+    bands: dict,
+) -> dict:
     monkeypatch.setattr(
         fit,
         "recovery_distance",
@@ -768,7 +1012,12 @@ def _preflight(monkeypatch: pytest.MonkeyPatch, distances: dict[str, float], ban
 
     def run(kind: str) -> dict[str, Any]:
         statistics = {"a": 1.0, fit.LAWN_STATISTIC: distances.get("lawn", 0.98)}
-        return {"kind": kind, "statistics": statistics, "delta": {"tph-1": {"s": 0.1}}}
+        return {
+            "kind": kind,
+            "statistics": statistics,
+            "delta": {"tph-1": {"s": 0.1}},
+            "D_fit": distances.get("d_fit", 1.8),
+        }
 
     repeats = [run("floor")] * 10 + [run("oracle")] * 10
     return fit.preflight_record(run("floor"), repeats, [run("prior")], [run("centre")], bands)
@@ -790,6 +1039,11 @@ def test_the_preflight_checks(monkeypatch: pytest.MonkeyPatch, bands: dict[str, 
     off = _preflight(monkeypatch, {**good, "lawn": 0.94}, bands)
     assert (off["checks"]["holds_lawn"], off["passed"]) == (False, False)
     assert off["observation_time_on_lawn"] == 0.94
+    # Covers "A truth past 2a's bar": no start recovering it could be kept, and at the bar it can.
+    assert (record["checks"]["reaches_bar"], record["observation_D_fit"]) == (True, 1.8)
+    for d_fit, reaches in ((2.5, True), (2.6, False), (None, False)):
+        far = _preflight(monkeypatch, {**good, "d_fit": d_fit}, bands)
+        assert (far["checks"]["reaches_bar"], far["passed"]) == (reaches, reaches)
 
 
 def test_a_truth_whose_statistic_flips() -> None:
@@ -849,9 +1103,15 @@ EARLIER = (
     (1_090_000_000, 1_095_000_199),
     (1_100_000_000, 1_118_002_999),
     (1_130_000_000, 1_135_000_199),
+    # The third readiness pilot, whose kept start missed 2a's bar, and the check that diagnosed it.
+    (1_140_000_000, 1_158_002_999),
+    (1_170_000_000, 1_170_003_199),
+    # The fit-first investigation's reserved animals.
+    (1_500_000_000, 1_501_000_199),
 )
 # The CMA seeds the seed tables give earlier pilots, probes and tests: C.2's pilots and probes,
-# the speed-following reversals' tests (9601-9605) and the sign-scale calibration (9601-9616).
+# the speed-following reversals' tests (9601-9605), the sign-scale calibration (9601-9616) and the
+# fit-first investigation's generators and reserved seeds (9701-9722, 9731, 9732, 9741-9759).
 EARLIER_CMA = frozenset(
     [
         *range(9504, 9508),
@@ -862,7 +1122,13 @@ EARLIER_CMA = frozenset(
         9574,
         9581,
         9582,
+        *range(9591, 9595),
         *range(9601, 9617),
+        *range(9651, 9661),
+        *range(9701, 9723),
+        9731,
+        9732,
+        *range(9741, 9760),
     ],
 )
 
@@ -892,42 +1158,57 @@ def test_seed_blocks_do_not_overlap() -> None:
 
 
 def test_the_longest_stage_stays_inside_its_sub_block() -> None:
-    """Covers "The longest stage stays inside its sub-block": 2a's last candidate."""
-    layout = fit.Layout(960_000_000)
-    last = layout.candidate_seeds(1, 300, fit.POPSIZE - 1)[-1]
-    assert last < layout.candidate_seeds(2, 1, 0)[0]
-    assert last == 960_000_000 + 4_000_000 + 200 * 14_400 - 1
+    """Covers "The longest stage stays inside its sub-block": 2a's last candidate, every start's."""
+    base = 1_280_000_000
+    layout = fit.Layout(base)
+    for a in range(fit.STARTS):
+        last = layout.candidate_seeds(1, 300, fit.POPSIZE - 1, a)[-1]
+        assert last == base + 20_000_000 + 2_880_000 * (a + 1) - 1
+        if a + 1 < fit.STARTS:
+            assert last < layout.candidate_seeds(1, 1, 0, a + 1)[0]
+    # The last start's 2a ends inside the run's 40,000,000, before the next run's block.
+    last = layout.candidate_seeds(1, 300, fit.POPSIZE - 1, fit.STARTS - 1)[-1]
+    assert last < base + 40_000_000 == fit.RUNS["loo"].layout.base
+    bases = [fit.RUNS[n].layout.base for n in ("pilot", "recovery", "fit", "loo")]
+    assert [b - a for a, b in itertools.pairwise(bases)] == [40_000_000] * 3
     smoke = fit.RUNS["smoke"]
     for start, end in smoke.layout.spans(smoke.generations, smoke.starts).values():
         assert 99_880_000 <= start <= end <= 99_889_999
 
 
 def test_each_start_has_its_own_animals() -> None:
-    """Covers "Each start has its own animals": stage 1 and 2a up to the reading, per start."""
-    base = 960_000_000
+    """Covers "Each start has its own animals": stage 1 and every generation of 2a, per start."""
+    base = 1_280_000_000
     layout = fit.Layout(base)
     run = fit.RUNS["fit"]
     assert (run.starts, run.hold_readouts, set(run.hold_bars)) == (6, (40, 50, 60), {0.95})
+    assert (run.descent_readouts, set(run.descent_bars)) == ((130, 140, 150), {4.25})
+    assert (run.reach_readouts, set(run.reach_bars)) == ((280, 290, 300), {2.5})
+    assert len(run.descent_bars) == len(run.reach_bars) == run.starts
     assert (layout.popsize_of(0), layout.popsize_of(1), layout.popsize_of(3)) == (24, 48, 48)
     assert len(layout.candidate_seeds(0, 1, 0)) == 64
     assert len(layout.candidate_seeds(1, 1, 0)) == 200
     # Stage 1: each start's 150 generations inside its own slice of stage 1's sub-block.
     assert layout.candidate_seeds(0, 2, 5, 3)[0] == base + 250_000 * 3 + 64 * (24 + 5)
-    final_last = layout.candidate_seeds(3, 50, 47)[-1]
+    grade_last = layout.grade_seeds(layout.grade_populations - 1)[-1]
     spans = layout.spans(run.generations, run.starts)
     for a in range(run.starts):
         first, last = spans[f"stage 0 start {a}"]
         assert base + 250_000 * a == first <= last < base + 250_000 * (a + 1) <= base + 4_000_000
-        # 2a to generation 60: each start's own, after the final stage's candidates.
+        # 2a, all 300 generations: each start's own, after the grade's animals.
         first, last = spans[f"stage 1 start {a}"]
-        own = base + 12_500_000 + 576_000 * a
-        assert final_last < own == first <= last == own + 576_000 - 1 < base + 16_000_000
-        assert layout.candidate_seeds(1, 60, 47, a)[-1] == last
-        # From generation 61 the kept start, whichever it is, takes 2a's own positions.
-        later = layout.candidate_seeds(1, 61, 0, a)
-        assert later[0] == base + 4_000_000 + 200 * 48 * 60
-        assert later == layout.candidate_seeds(1, 61, 0, 0)
-    assert spans["stage 1"] == (base + 4_000_000 + 576_000, base + 4_000_000 + 200 * 14_400 - 1)
+        own = base + 20_000_000 + 2_880_000 * a
+        assert grade_last < own == first <= last == own + 2_880_000 - 1
+        assert layout.candidate_seeds(1, 300, 47, a)[-1] == last
+        # Past the lawn's and the descent's readings, a start's animals are still its own.
+        for g in (61, 151):
+            later = layout.candidate_seeds(1, g, 0, a)
+            assert later[0] == own + 200 * 48 * (g - 1)
+            assert a == 0 or later != layout.candidate_seeds(1, g, 0, 0)
+    # The second half's stages are the kept start's, whichever it is.
+    assert spans["stage 2"] == (base + 8_000_000, base + 8_000_000 + 200 * 9_600 - 1)
+    assert spans["stage 3"] == (base + 12_000_000, base + 12_000_000 + 200 * 2_400 - 1)
+    assert "stage 1" not in spans
     # The first half's CMA seeds are each start's own; the later stages' are the run's.
     assert [run.cma_seed(0, a) for a in range(6)] == [5811, 5841, 5843, 5845, 5847, 5849]
     assert [run.cma_seed(1, a) for a in range(6)] == [5812, 5842, 5844, 5846, 5848, 5850]

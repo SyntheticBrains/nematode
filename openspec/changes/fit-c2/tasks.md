@@ -165,21 +165,50 @@
   - the second pilot's and its probes' seed blocks, and the CMA seeds the seed tables give other work, are earlier blocks;
   - deliberate bugs in the guard and the pilot's seeds, each caught, and the first amendment's again on the new code.
 
-- [ ] 4.1g Part A amended and committed before the pilot runs a third time, with the second pilot's record, every diagnosis script and record under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's seed row.
+- [x] 4.1g Part A amended and committed before the pilot runs a third time, with the second pilot's record, every diagnosis script and record under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's seed row.
 
-- [ ] 4.1h `pilot` a third time (about 30 h with its first start kept).
+- [x] 4.1h `pilot` a third time (about 30 h with its first start kept). *(2026-11-14: its first start held the lawn and was kept, and 2a's kill rule stopped it at 2a's end, D_fit 3.83 against 2.5, after 9.9 h; `pilot_third.json`.)*
+
+- [x] 4.1i Diagnose the third pilot on discarded seeds, its rule fixed before it ran: every guarded 2a against 2a's bar, and the dopamine wiring gain mirrored at five answers (`probes/dopamine_flip.py.txt`).
+
+- [x] 4.1j The amendment of 2026-11-14 (design decision 3c), on the maintainer's decision:
+
+  - `c2_fit.py`: 2a's descent reading (generations 130–150, D_fit at most 4.25) and bar reading (280–300, at most 2.5), each dropping a start in every run; 2a's kill rule removed; every reading a start takes recorded; the readings' readouts and bars in the settings a resume checks; a run with readings out of order, past 2a or without a readout refused;
+  - each start's own animals for all of 2a, so 40,000,000-animal blocks and new bases for every run (pilot 1,200,000,000, recovery 1,240,000,000, fit 1,280,000,000, leave-one-out 1,320,000,000);
+  - the pilot's new CMA seeds (9661–9664, restarts 9671–9680), clear of the fit-first investigation's;
+  - F.0b-ii's preflight requires the truth's D_fit at most 2.5 against the bands, as a kept start's must be;
+  - the neural reading declared in Part A as description, with its paired test and wiring-only control;
+  - the smoke's four starts, failing the lawn, the descent and the bar in turn.
+
+  Tests:
+
+  - a start dropped at the descent and at the bar, each at its own generation, with every reading it took recorded, and each start read against its own bars;
+  - no start kept when every start misses the bar;
+  - the descent reading's mean, its undefined D_fit and its bar, and each reading in a run taking the mean of all its readouts at its last one;
+  - the preflight refusing a truth past 2a's bar;
+  - a resume across each drop, and an interrupted drop at each reading, each resuming rather than restarting;
+  - a resume with a changed reading refused, and a run with a reading out of order, past 2a or without a readout, or a 2a past its seeds, refused;
+  - every start's 2a on its own animals in every generation, inside the run's block;
+  - the earlier blocks and CMA seeds, including the third pilot's, its diagnosis's and the investigation's;
+  - deliberate bugs in the readings, the layout and the seeds each caught, and both earlier amendments' again on the new code.
+
+- [ ] 4.1k Part A amended and committed before the pilot runs a fourth time, with the third pilot's record, its diagnosis's script and record and start 3's guarded 2a under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row and its neural reading).
+
+- [ ] 4.1l `pilot` a fourth time (about 30 h with its first start kept; about 4.4 h for a start dropped at the descent and 8 h at the bar).
 
 - [ ] 4.2 Read the go rule. Part B: the result, the cost per stage and the plateau reading, committed. If the go rule fails, diagnose it and return to the maintainer before anything registered.
 
 ## 5. F.0b-ii
 
 - [ ] 5.1 `recovery-preflight`: the observation, its stability, floor, oracle, prior D, box centre and the band-centre reference. Return to the maintainer if a check fails. Commit the record before `recovery` runs.
-- [ ] 5.2 `recovery` (about 29 h, and about 2.1 h for each dropped start): the gate. Return to the maintainer if the gain is below 0.75.
+- [ ] 5.2 `recovery` (about 30 h, and 2.3–8 h for each dropped start): the gate. Return to the maintainer if the gain is below 0.75.
 - [ ] 5.3 Part C, the recovery's result, committed.
 
 ## 6. The registered fit
 
-- [ ] 6.1 `run` (about 29 h, and about 2.1 h for each dropped start), `grade` (5 + 10 populations) and `read`: `fit.json` with the verdict, the pass rate, the held-out reading, the restart spread against the pilot, and the cost.
+- [ ] 6.1 `run` (about 30 h, and 2.3–8 h for each dropped start), `grade` (5 + 10 populations) and `read`: `fit.json` with the verdict, the pass rate, the held-out reading, the restart spread against the pilot, and the cost.
+
+- [ ] 6.2 The neural reading's paired test and wiring-only control written to Part A's rules, tested on Logbook 131's answer and committed with Part B or Part C before `run`; then the reading on the registered answer, as Part A declares it: the answer's r and the box centre's, chance, the paired test, the wiring-only control and sign agreement, as description beside `fit.json`.
 
 ## 7. The tax-4 leave-one-out
 

@@ -868,6 +868,21 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     guarded from stage 1 reached 2a's bar at generation 120. The restarts are unchanged. The pilot runs a third time on new seeds. About 117 h at
     the second pilot's measured rates, with every first start kept. **For W:** every arm gets the
     same guard.
+  - *(2026-11-14, Part A amended a third time before any registered run.)* **The third pilot kept
+    its first start,** which held the lawn, and stopped at 2a's end at D_fit 3.83 against 2.5
+    (9.9 h). On discarded seeds 3 of 5 guarded 2a runs reached the bar, and the two that did not
+    lagged at generation 150. **2a now reads each start twice more,** dropping it when D_fit
+    averages above 4.25 over generations 130–150 or above 2.5 over 280–300, in every run. 2a's kill
+    rule is that last reading. Each start has its own animals for all of 2a, so every run moves to a
+    40,000,000-animal block. The pilot runs a fourth time on new seeds. About 119 h with every first
+    start kept, and about 3 h more a run on average. **For W:** every arm gets the same readings,
+    and a null wiring may stall more often; each arm reports its starts.
+  - *(2026-11-14.)* **A neural reading is declared as description beside C.2's verdict:** the
+    registered answer's in-silico stimulation responses against Creamer et al.'s measured ones (Logbook
+    134's M-a), with a paired test against the unfitted network and a wiring-only control, fixed in
+    launch record 133. Whether W's arms carry it is decided with W's design. At registered size
+    W is about 1,200–2,900 machine-hours at about 30 h a fit (the fit-first investigation's handover),
+    so W registers only after one of its cuts is chosen.
   - **Held out:** Scheer's held-out dates, read beside W's minimum and band-cohort populations.
   - **Slow noise's positive control** (owed since Logbook 123) passes on Logbook 131's answer: the
     speed output responds, and the roaming 90th percentile rises 4.90 band scales at a 30-s

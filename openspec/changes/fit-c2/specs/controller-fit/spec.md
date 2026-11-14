@@ -35,23 +35,36 @@ Each stage SHALL run its full generation count. The plateau rule SHALL be read o
 - **WHEN** the final stage's medians plateau at generation 40
 - **THEN** it SHALL run to generation 50, and its plateau generation SHALL be reported
 
-### Requirement: The first half is started until a start holds the lawn
+### Requirement: The first half is started until a start holds the lawn and reaches 2a's bar
 
 The first half of the procedure (stage 1 and 2a) SHALL be started up to six times in sequence. Each start SHALL begin from the graded box's centre with its own CMA seeds and its own candidate animals, and SHALL be read on the run's readout animals. The rule SHALL be the same in every run of the procedure.
 
-- **At 2a's generation 60** a start SHALL be dropped when its mean time on the lawn over 2a's readouts at generations 40, 50 and 60 is below 0.95. An undefined time on the lawn SHALL count as 0.
-- **The first start that is not dropped** SHALL run 2a to its 300 generations, and the procedure SHALL continue from it.
+2a SHALL read each start three times, each reading a mean over three of 2a's readouts, and SHALL drop the start at the first reading it fails:
+
+- **the lawn, at generation 60:** time on the lawn over the readouts at generations 40, 50 and 60 at least 0.95. An undefined time on the lawn SHALL count as 0;
+- **the descent, at generation 150:** D_fit over the readouts at generations 130, 140 and 150 at most 4.25;
+- **the bar, at generation 300:** D_fit over the readouts at generations 280, 290 and 300 at most 2.5.
+
+An undefined D_fit SHALL fail its reading.
+
+- **The first start that passes all three readings** SHALL be kept, and the procedure SHALL continue from its 2a.
 - **A run in which every start is dropped** SHALL have no answer, and no later stage SHALL run.
-- **Every start** SHALL be recorded with its readouts, its histories, its lawn-holding reading and the reason it was dropped.
+- **Every start** SHALL be recorded with its readouts, its histories, every reading it took and the reason it was dropped.
+- **A run whose readings have no readout, are out of order, or fall past 2a's end** SHALL be refused.
 
 #### Scenario: A start that does not hold the lawn is dropped
 
 - **WHEN** a start's 2a readouts at generations 40, 50 and 60 average 0.90 on the lawn
 - **THEN** it SHALL stop at generation 60, and the next start SHALL begin from the box's centre on its own CMA seeds and animals
 
+#### Scenario: A start that misses 2a's descent or bar is dropped
+
+- **WHEN** a start holds the lawn and its 2a readouts at generations 130, 140 and 150 average D_fit 5.0, or average 3.0 there and 3.0 at generations 280, 290 and 300
+- **THEN** it SHALL stop at generation 150, or at generation 300, with the reading it failed recorded, and the next start SHALL begin from the box's centre on its own CMA seeds and animals
+
 #### Scenario: No start holds the lawn
 
-- **WHEN** every start is dropped
+- **WHEN** every start is dropped, at any of 2a's readings
 - **THEN** no later stage SHALL run, and the run SHALL have no answer
 
 #### Scenario: The lawn-holding reading is a mean
@@ -59,9 +72,14 @@ The first half of the procedure (stage 1 and 2a) SHALL be started up to six time
 - **WHEN** a start's 2a readouts at generations 40, 50 and 60 read 0.90, 0.94 and 0.99 on the lawn
 - **THEN** it SHALL be dropped, its mean being 0.943
 
+#### Scenario: The descent reading is a mean
+
+- **WHEN** a start's 2a readouts at generations 130, 140 and 150 read D_fit 4.6, 4.5 and 3.9
+- **THEN** it SHALL be dropped, its mean being 4.33
+
 #### Scenario: An interrupted drop resumes to the same answer
 
-- **WHEN** a run stops after 2a's generation 60 is saved and before its start is dropped, and is resumed
+- **WHEN** a run stops after the generation of any of 2a's readings is saved and before its start is dropped, and is resumed
 - **THEN** its starts and its answer SHALL equal an uninterrupted run's
 
 ### Requirement: C.2's objective weighs the mutants at half and scores each statistic's chance of failing
@@ -109,7 +127,7 @@ Every 10 generations, and at each stage's generation 0, the stage's mean SHALL b
 
 #### Scenario: A resume with changed settings
 
-- **WHEN** a run is resumed with a stage's generation count, or the lawn guard's bar or weight, changed
+- **WHEN** a run is resumed with a stage's generation count, the lawn guard's bar or weight, or any of 2a's readings' readouts or bars changed
 - **THEN** it SHALL refuse and run nothing
 
 ### Requirement: C.2's registered fit runs on the speed-following arm
@@ -128,10 +146,9 @@ The registered procedure SHALL run once on discarded seeds before any registered
 The pilot SHALL stop on any kill rule:
 
 - a start's stage 1 unresponsive, or holding the lawn less than 75% of the time, on the mean of its last three readouts;
-- no start of its six holding the lawn at 2a's generation 60;
-- 2a with D_fit above 2.5, on the mean of its last three readouts.
+- no start of its six kept by 2a's readings.
 
-In the registered runs stage 1's and 2a's checkpoints SHALL be reported, not stops.
+In the registered runs stage 1's checkpoint SHALL be reported, not a stop. 2a's bar SHALL be a reading of every run's starts, not a kill rule.
 
 #### Scenario: The pilot fails its go rule
 
@@ -140,8 +157,13 @@ In the registered runs stage 1's and 2a's checkpoints SHALL be reported, not sto
 
 #### Scenario: A registered run misses a checkpoint
 
-- **WHEN** a registered run's 2a ends with D_fit 2.8
+- **WHEN** a registered run's stage 1 ends with its reversal output's spread at 0.2
 - **THEN** it SHALL continue to its answer, and the checkpoint SHALL be reported
+
+#### Scenario: A start's 2a ends above the bar
+
+- **WHEN** a start's 2a ends with D_fit 2.8, in the pilot or a registered run
+- **THEN** the start SHALL be dropped and the next one begun, and no kill rule SHALL stop the run
 
 ### Requirement: C.2's verdict
 
@@ -155,7 +177,8 @@ Reported beside the verdict, and never read in its place:
 - the final stage's plateau reading;
 - the reversal share;
 - the cost;
-- the restart spread: the median capped D between the pilot's and the registered answer's populations g < 15, on W's fitted families and on all six.
+- the restart spread: the median capped D between the pilot's and the registered answer's populations g < 15, on W's fitted families and on all six;
+- the neural reading: the answer's in-silico single-neuron stimulation responses against Creamer et al.'s measured ones, with a paired test against the unfitted network and a wiring-only control, on rules fixed in Part A.
 
 A pass with a poor held-out reading, or with the leave-one-out's tax-4 failing, SHALL be read by the outcomes the launch record names in advance.
 
@@ -235,14 +258,14 @@ Parts B and C SHALL change no rule. Part A SHALL record SHA-256 digests of `c2_f
 
 ### Requirement: C.2's seed blocks do not overlap
 
-Each run of the procedure SHALL take its animals from its own block of 20,000,000 seeds: four stage sub-blocks, the readout animals, the noise populations and the grade. Each start's stage 1 SHALL sit in its own slice of stage 1's sub-block, and each start's 2a to generation 60 in its own slice after the final stage's candidates. From generation 61 the kept start SHALL take 2a's own positions. The smoke SHALL have its own layout inside 99,880,000–99,889,999. The pilot, the recovery fit, the truth's observations, the prior draws, the box centre, the registered fit, the leave-one-out, the control, the stand-in preflight and the smoke SHALL be disjoint from one another and from every earlier block in the seed table.
+Each run of the procedure SHALL take its animals from its own block of 40,000,000 seeds: stage 1's and 2a's blocks, a sub-block each for 2b and the final stage, the readout animals, the noise populations and the grade. Each start's stage 1 SHALL sit in its own slice of stage 1's block, and every generation of each start's 2a in its own slice of 2a's block. The smoke SHALL have its own layout inside 99,880,000–99,889,999. The pilot, the recovery fit, the truth's observations, the prior draws, the box centre, the registered fit, the leave-one-out, the control, the stand-in preflight and the smoke SHALL be disjoint from one another and from every earlier block in the seed table.
 
 #### Scenario: Each start has its own animals
 
-- **WHEN** two starts' candidates for stage 1 and for 2a to generation 60 are enumerated
+- **WHEN** two starts' candidates for stage 1 and for every generation of 2a are enumerated
 - **THEN** no animal seed SHALL be shared between them, or with any other use in the run's block
 
 #### Scenario: The longest stage stays inside its sub-block
 
-- **WHEN** 2a's last generation's last member's animal seeds are enumerated
-- **THEN** they SHALL lie below the next sub-block's start
+- **WHEN** 2a's last generation's last member's animal seeds are enumerated, for every start
+- **THEN** they SHALL lie below the next start's slice, and the last start's below the next run's block

@@ -134,7 +134,7 @@ Every stage runs on the speed-following arm. Stage 1 runs with population 24 and
   | | The route (Logbook 131) | Procedure B |
   |---|---|---|
   | stage 1 | 64 animals, population 24 (B04) | the same from 2026-11-12 (decision 3a); first registered at 200 animals and population 48 |
-  | the first half | one start | up to six starts, the first that holds the lawn kept (decision 3a) |
+  | the first half | one start | up to six starts, the first that holds the lawn and reaches 2a's bar kept (decisions 3a and 3c) |
   | the lawn | no guard | a guard below 0.95 on the lawn, in every stage (decision 3b) |
   | after 2a | 500 generations: 2b 150, stage 3 150, four continuations of 50 | 250: 2b 200, the final stage 50 |
   | the mutants | from stage 3 | from 2b, the maintainer's choice, so serotonin's producers are shaped while the search is broad |
@@ -202,6 +202,38 @@ The second readiness pilot (base 1,100,000,000; `pilot_second/`) kept no start. 
 - **Cost:** none in simulation, since it reads a statistic every candidate already has. A run that keeps its first start saves the 2.3 h a dropped start cost in the second pilot.
 - **It acts while the search's mean holds the lawn.** Candidates off the lawn still pay it: about 10% of start 0's candidates at 2a's generations 260–273, and 30–60% of start 3's at generations 170–188. The procedure records each generation's share of candidates paying it.
 
+### 3c. Restarts on 2a's bar (amended 2026-11-14)
+
+The third readiness pilot (base 1,140,000,000; `pilot_third.json`) kept its first start, the first start any pilot has kept: it read 0.965, 0.974 and 0.989 on the lawn at 2a's generations 40, 50 and 60. 2a's kill rule then stopped it at 2a's end, with mean D_fit 3.83 over generations 280–300 (3.87, 3.85, 3.76) against 2.5, while it held the lawn at 0.97–0.99 from generation 30. It ran 9.9 h: stage 1 1.6 h on 8 workers, and 2a 8.3 h (56 generations on 8 workers, then 244 on 16 at about 87 s).
+
+Every guarded 2a so far, each from its own start:
+
+| Run | Guarded | Mean D_fit over 2a's generations 130–150 | Against 2a's bar |
+|---|---|---|---|
+| the guarded first half (decision 3b) | stage 1 and 2a | not run: stopped at the bar | reaches it at generation 120 |
+| the guard probe | 2a | 2.92 | reaches it at generations 200–220 |
+| the second pilot's start 0, again | 2a | 3.90 | reaches it at generation 290 |
+| the second pilot's start 3, again | 2a | 4.62 | does not: 4.23 over generations 280–300 |
+| the third pilot's start 0 | every stage | 4.65 | does not: 3.83 |
+
+- **What it shows.**
+  - The lawn guard works: every guarded run held the lawn.
+  - 2a's descent now decides. Three of five reach the bar, two of them late in 2a's budget (generations 220 and 290). Two stall near 4 and stay flat for more than 100 generations.
+  - Both stalls fail the same statistics: the dwelling-speed tail far too fast (z about 10), the on-lawn pause share too high (z 4–7) and the on-lawn onset rate too low (z −4 to −6). The third pilot's answer reverses for 70% of its seconds on the lawn.
+  - No earlier readout separates the two groups cleanly: at generation 100 the latest of the three that reached the bar reads 4.45, and one of the stalls 4.63.
+  - The dopamine wiring gain differs between the groups: −1.49 and −1.36 in the stalls, against +0.04, +0.89 and +0.84 in the three that reached the bar. A check on discarded seeds (`probes/dopamine_flip.py.txt`, its rule fixed first) mirrored that gain alone at each answer. Every answer whose gain was above 0.8 in size broke (D_fit 7.0–8.7), stalls and reachers alike, and the answer at +0.04 did not change. The gain carries weight in every answer and does not switch between the two outcomes, so it is not a remedy.
+- **The amendment** (the maintainer's decision, 2026-11-14):
+  - **2a reads each start twice more,** each reading a mean over three readouts: the descent at generations 130, 140 and 150, where D_fit must be at most 4.25, and the bar at generations 280, 290 and 300, where it must be at most 2.5. A start that fails any of 2a's three readings is dropped, and the next begins from the box centre, as at the lawn reading. There are still up to six starts in all, and the first to pass all three is kept. The rule holds in every run.
+  - **An undefined D_fit fails a reading,** as an infinitely distant one.
+  - **2a's kill rule becomes the bar reading.** The pilot no longer stops on 2a, since a start that misses the bar is dropped in every run. Stage 1's kill rule is unchanged.
+  - **Each start has its own animals for all of 2a,** since any start may now run 2a to its end. Each run's block grows to 40,000,000 animals, and all four runs move to new bases (decision 11).
+  - **The fourth pilot runs on new seeds:** base 1,200,000,000, CMA 9661–9664, restarts 9671–9680.
+- **Where 4.25 comes from.** It is set on these five runs: at generation 150 the two stalls read 4.62 and 4.65, and the slowest of the three that reached the bar read 3.90. A drop never makes an answer wrong, only later, so a bar chosen on these runs risks time, not a verdict. It would have dropped neither run that reached the bar.
+- **Why the rule cannot bias a verdict:** as decision 3a's. It selects a start on fitted statistics of the run's own readout animals, before any graded population is simulated.
+- **Odds and cost.** At 3 in 5, all six starts miss with probability about 0.004. A start dropped at the lawn costs about 2.3 h, at the descent about 4.4 h (stage 1 0.9 h and 150 generations of 2a at about 85 s), and at the bar about 8 h. Both stalls in this sample would have been dropped at the descent. At 2 in 5 a run expects 0.67 dropped starts, about 3 h; five dropped at the bar would add about 40 h.
+- **F.0b-ii's preflight gains a check:** the truth's observation has D_fit at most 2.5 against the bands. 2a's readings read D_fit against the bands in every run, the recovery's too, so a truth past the bar could not be recovered by a start the procedure keeps. It mirrors decision 3a's check that the truth holds the lawn.
+- **For W:** W's arms run this procedure, so a fit's cost grows by its dropped starts. A null wiring may stall more often than the true one, and that rate is unmeasured. Each arm reports its starts.
+
 ### 4. The noise step
 
 - 2b's answer is graded on 30 populations of 200, without presence. Presence leaves every statistic's value unchanged, and grading without it is 1.76× faster.
@@ -235,6 +267,7 @@ The second readiness pilot (base 1,100,000,000; `pilot_second/`) kept no start. 
   - the final stage's plateau reading;
   - the reversal share against Roberts' 17.3%;
   - the cost per stage;
+  - **the neural reading** (added 2026-11-14, the maintainer's decision): the answer's in-silico single-neuron stimulation responses against Creamer et al.'s measured ones, as Logbook 134's M-a read Logbook 131's answer, with a paired test against the unfitted network and a wiring-only control. Its rules are fixed in Part A, and it is description, never graded;
   - **the restart spread:** the median over g < 15 of the capped D between the pilot's population g and the registered answer's population g, on W's fitted families (the small lawn, kinematics, activity) beside W's minimum, and on all six beside it.
 - **Description-only outcomes, named in advance:**
   - **a pass with a poor held-out reading** (the answer's median distance to a held-out half above the band-cohort reference's 95th percentile): C.2 passes, and C.4 states the held-out distance as a limit of the fit;
@@ -249,10 +282,9 @@ The second readiness pilot (base 1,100,000,000; `pilot_second/`) kept no start. 
 - **Its kill rules,** to save the machine, again from the curriculum. The pilot stops and returns to the maintainer if:
 
   - the mean of a start's last three stage-1 readouts (generations 130, 140 and 150) is unresponsive (spread below 0.5) or on the lawn less than 75% of the time. B04's readouts swung from 0.44 to 0.83 between generations 50 and 60, and plateaued at 0.80–0.87, so one readout is too noisy to kill on;
-  - no start of its six holds the lawn at 2a's generation 60 (decision 3a, amended 2026-11-12);
-  - the mean of 2a's last three readouts has D_fit above 2.5.
+  - no start of its six is kept by 2a's readings (decisions 3a and 3c, amended 2026-11-12 and 2026-11-14).
 
-  In the registered runs these checkpoints are reported, not stops.
+  Until 2026-11-14 the pilot also stopped when the mean of 2a's last three readouts had D_fit above 2.5. That is now 2a's bar reading, which drops a start in every run (decision 3c). In the registered runs, stage 1's checkpoint is reported, not a stop.
 
 - **If the go rule fails,** the procedure is diagnosed and Part A is amended before anything registered runs.
 
@@ -353,13 +385,13 @@ The fitted worm against held-out recording dates, on W's own rule (`benchmark_v4
 
 ### 11. Seeds
 
-Each run of the procedure has a block of 20,000,000 animal seeds from its base B, and four CMA seeds, one per stage. The first start of the first half takes the run's first two CMA seeds, and start a = 1–5 takes the run's restart seeds R + 2·(a − 1) for stage 1 and R + 2·(a − 1) + 1 for 2a (amended 2026-11-12, decision 3a).
+Each run of the procedure has a block of 40,000,000 animal seeds from its base B, and four CMA seeds, one per stage (amended 2026-11-14, decision 3c: until then a block was 20,000,000 and only 2a's first 60 generations were each start's own). The first start of the first half takes the run's first two CMA seeds, and start a = 1–5 takes the run's restart seeds R + 2·(a − 1) for stage 1 and R + 2·(a − 1) + 1 for 2a (amended 2026-11-12, decision 3a).
 
 | Within a block | Use |
 |---|---|
 | B + 250,000·a + 64·(24·(n − 1) + m) + i | stage 1 of start a, generation n, member m; a start's 3,600 candidates reach 230,400 |
-| B + 12,500,000 + 576,000·a + 200·(48·(n − 1) + m) + i | 2a's generations 1–60 of start a, after the final stage's candidates (which end at B + 12,480,000) |
-| B + 4,000,000·(s − 1) + 200·(48·(n − 1) + m) + i | stage s = 2–4 (2a from generation 61 for the kept start, 2b, final), generation n, member m; 2a's 14,400 positions reach 2,880,000 |
+| B + 20,000,000 + 2,880,000·a + 200·(48·(n − 1) + m) + i | 2a of start a, every generation n; a start's 14,400 candidates fill its 2,880,000, so the last start's end at B + 37,280,000 |
+| B + 4,000,000·(s − 1) + 200·(48·(n − 1) + m) + i | stage s = 3 (2b, at B + 8,000,000) and s = 4 (the final stage, at B + 12,000,000), generation n, member m; the kept start's alone |
 | B + 16,000,000 + i | the readout animals, the same at every readout |
 | B + 17,000,000 + 200·p + i | the noise populations, p < 30 |
 | B + 18,000,000 + 200·g + i | the grade: g < 5 the verdict (or the go rule), 5 ≤ g < 15 the pass rate; in the recovery, the answer's re-simulations, g < 10 |
@@ -368,32 +400,39 @@ Each run of the procedure has a block of 20,000,000 animal seeds from its base B
 |---|---|---|---|
 | the first pilot, stopped at 2a | 900,000,000 | 9504–9507 | discarded, on the first layout |
 | the second pilot, which kept no start | 1,100,000,000 | 9531–9534, restarts 9541–9550 | discarded |
-| the pilot (amended 2026-11-13, decision 3b) | 1,140,000,000 | 9591–9594, restarts 9651–9660 | discarded |
+| the third pilot, whose kept start missed 2a's bar | 1,140,000,000 | 9591–9594, restarts 9651–9660 | discarded, on the 20,000,000 layout |
+| the pilot (amended 2026-11-14, decision 3c) | 1,200,000,000 | 9661–9664, restarts 9671–9680 | discarded |
 | the runs that diagnosed the first pilot | 1,010,000,000–1,055,000,199, and 890,000,000 + i for the checks of its worm | 9516–9525 | discarded |
 | the runs that diagnosed the second pilot | 1,060,000,000–1,065,000,199, 1,090,000,000–1,095,000,199 and 1,130,000,000–1,135,000,199 | 9571, 9574, 9581–9582 | discarded |
-| F.0b-ii's recovery fit | 920,000,000 | 5801–5804, restarts 5831–5840 | registered |
+| the check that diagnosed the third pilot | 1,170,000,000 + 1,000·p + i, p < 4 | | discarded |
+| F.0b-ii's recovery fit | 1,240,000,000 (920,000,000 until 2026-11-14) | 5801–5804, restarts 5831–5840 | registered |
 | the truth's observation and re-simulations | 940,000,000 + 200·q + i, q ≤ 20 | | registered |
 | the prior draws | 941,000,000 + 200·j + i, j < 200 | `default_rng(5805)` | registered |
 | the box centre | 942,000,000 + 200·q + i, q < 10 | | registered |
-| the registered fit | 960,000,000 | 5811–5814, restarts 5841–5850 | registered |
-| the tax-4 leave-one-out | 980,000,000 | 5821–5824, restarts 5851–5860 | registered, description |
+| the registered fit | 1,280,000,000 (960,000,000 until 2026-11-14) | 5811–5814, restarts 5841–5850 | registered |
+| the tax-4 leave-one-out | 1,320,000,000 (980,000,000 until 2026-11-14) | 5821–5824, restarts 5851–5860 | registered, description |
 | the speed-noise control | 888,000,000 + i | | the control's reading |
 | the stand-in preflight | the truth 885,000,000 + 200·q + i (q < 9), prior draws 886,000,000 + 200·j + i (j < 20, `default_rng(9512)`), box centre 887,000,000 + 200·q + i (q < 2) | | discarded |
-| the smoke | 99,880,000–99,889,999, on its own layout (below) | 9508–9511, restart 9561–9562 | discarded |
+| the smoke | 99,880,000–99,889,999, on its own layout (below) | 9508–9511, restarts 9561–9566 | discarded |
 
 - **The smoke's layout,** 8 animals and population 6, fits its own range:
 
-  - stage s at 99,880,000 + 2,000·(s − 1) + 8·(6·(n − 1) + m) + i, for two generations;
-  - two starts, stage 1 at + 200·a and 2a at + 6,500 + 200·a. The first start's bar is 2.0, which no worm reaches, and the second's is 0, so the smoke runs a dropped start and a kept one;
-  - readouts at + 8,000;
+  - stage s = 3 and 4 at 99,880,000 + 1,000·(s − 1) + 8·(6·(n − 1) + m) + i, for two generations;
+  - four starts, stage 1 at + 200·a and 2a, 22 generations, at + 4,000 + 1,100·a. Its starts fail the lawn (bar 2.0, which no worm reaches), the descent (bar −1) and the bar (−1) in turn, at 2a's generations 10, 20 and 22, and the fourth passes all three, so the smoke runs every path;
+  - readouts at + 8,500;
   - 3 noise populations at + 9,000 + 8·p;
   - 2 grade populations at + 9,500 + 8·g.
 
   The fit's layout would have put the smoke inside C.1's registered block (110–125 M).
 
-- Every block is clear of every earlier registration and probe. Before this change the highest was 880,000,000 + 200·g + i; the first pilot (900,000,000–916,000,199) and the runs that diagnosed it (890,000,000–890,000,199 and 1,010,000,000–1,055,000,199) are now earlier blocks too, as are the second pilot (1,100,000,000–1,118,002,999) and the runs that diagnosed it.
+- Every block is clear of every earlier registration and probe. Before this change the highest was 880,000,000 + 200·g + i. These are now earlier blocks too:
 
-- The CMA seeds lie in C.2's reserved band (5801–5864) or, for discarded runs, in 9504–9660, clear of the seeds the Phase 10 table gives other work (9601–9616).
+  - the first pilot (900,000,000–916,000,199) and the runs that diagnosed it (890,000,000–890,000,199 and 1,010,000,000–1,055,000,199);
+  - the second pilot (1,100,000,000–1,118,002,999) and the runs that diagnosed it;
+  - the third pilot (1,140,000,000–1,158,002,999) and the check that diagnosed it (1,170,000,000–1,170,003,199);
+  - the fit-first investigation's reserved animals (1,500,000,000–1,501,000,199, Logbook 134).
+
+- The CMA seeds lie in C.2's reserved band (5801–5864) or, for discarded runs, in 9504–9680. They are clear of the seeds the Phase 10 table gives other work: 9601–9616, and the fit-first investigation's 9701–9722, 9731, 9732 and 9741–9759.
 
 - Tests check that no two blocks overlap.
 
@@ -445,6 +484,7 @@ The guards, through `cma_recovery.launch_committed`:
   - C.2's stage 1 runs at 64 animals per evaluation, below D38's 200. It only finds 2a's starting point, and is started up to six times. Every later stage, every readout and every grade stays at 200.
   - The first half's restarts, their selection rule and their count are pre-registered like a stage's budget.
 - **D38**, a note of 2026-11-13 (decision 3b), the maintainer's decision: C.2's objective carries a lawn guard in every stage, paid only below 0.95 on the lawn, where the statistic already fails at 200 animals. It is pre-registered like the other guards and W's arms inherit it.
+- **D38**, a note of 2026-11-14 (decision 3c), the maintainer's decision: a start of C.2's first half is also dropped when 2a's D_fit lags at generation 150 (above 4.25) or misses 2a's bar at its end (above 2.5), in every run. A run is kept on its first start to pass all three of 2a's readings. The readings, their bars and the count of starts are pre-registered like a stage's budget, and W's arms inherit them.
 - **D38**, amended 2026-11-10:
   - C.2's procedure is staged, with each stage's families, budget, x₀ and σ₀ (or carried search state) pre-registered, and every stage a fixed generation count.
   - The plateau criterion is read on the final stage and reported, not used as a stop, so W's arms run at equal budget.
@@ -460,12 +500,13 @@ The guards, through `cma_recovery.launch_committed`:
 
 - **[Procedure B is untested as a whole]**
   - 2b has to find every family and the mutants at once from 2a's state. In the curriculum, 2b without the mutants reached five families.
-  - Mitigation: the pilot runs the exact procedure with a go rule and kill rules. A failed pilot costs at most about 40 h (five dropped starts and a full run) and changes no registered reading. The second pilot cost 15.8 h and dropped all six starts.
+  - Mitigation: the pilot runs the exact procedure with a go rule and kill rules. A failed pilot changes no registered reading. From 2026-11-14 it costs at most about 48 h with no answer (six starts dropped at 2a's bar), or about 71 h when five are dropped there before a kept start runs to its answer. The second pilot cost 15.8 h and dropped all six starts at the lawn; the third cost 9.9 h.
 - **[Noise measured on 2b's answer, not the final one]**
   - The final stage moves the answer, and its SDs may differ there. Logbook 131's ranged across answers: pre-exit enrichment 1.00–1.39, the onset rate 0.09–0.15.
   - The floor of 0.05 bounds a near-zero SD, but not a statistic whose SD shrinks at the final answer. The final stage's readouts record every statistic, so a drift is visible.
 - **[The first half is unreliable]**
-  - Without the lawn guard, 2 of 11 starts held the lawn, and the second pilot dropped all six. With it, 3 of 4 runs held the lawn by 2a's generation 60 and the fourth soon after, and the one guarded first half reached the bar. The guarded rate rests on four runs, one of them from the box centre, so every run's own count is reported.
+  - Without the lawn guard, 2 of 11 starts held the lawn, and the second pilot dropped all six. With it, every one of five runs held the lawn, and 3 of the 5 reached 2a's bar (decision 3c). The rates rest on five runs, two of them from the box centre, so every run's own count is reported.
+  - The descent's bar of 4.25 was set on the five runs it would have read. A bar too strict drops starts that would have reached 2a's bar, and costs time, not a verdict.
   - A run with no answer is a failure of the search, not evidence about the wiring. W has to state the same for an arm whose starts all drop, and reports each arm's count.
   - The lawn-holding rule was read off four of the lineages it now selects. Start (c) is its one reading ahead of time.
   - The guard was chosen on probes run on the real wiring. Every W arm gets the same guard. An arm that cannot hold the lawn pays it in every stage, and fails the statistic as it would without it. W's arms report their time on the lawn.
@@ -489,4 +530,5 @@ The guards, through `cma_recovery.launch_committed`:
   - It cannot fail a fit that merely reaches the wild type, as the amendment states. The registered fit's own verdict and the pilot's go rule carry that test instead.
 - **[Cost]**
   - About 114 h on one machine with every first start kept, and about 127 h at 2 starts in 5: three runs, the leave-one-out, the control and the preflight (124 h before the amendment of 2026-11-12).
+  - From 2026-11-14 (decision 3c), each run expects about 3 h more for starts dropped at the descent or the bar. At the third pilot's measured 2a (about 87 s a generation), the four runs come to about 119 h with every first start kept. A run that drops five starts at the bar adds about 40 h.
   - Every stage is resumable, and each part's guard stops a later stage from running on a failed earlier one.

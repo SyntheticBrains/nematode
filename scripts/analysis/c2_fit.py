@@ -34,10 +34,15 @@ stage 1, which runs at population 24 and 64 animals:
 Each stage runs its full count; the final stage's plateau is read and reported.
 
 **The first half is started up to six times** (:data:`STARTS`), in sequence, each from the box's
-centre with its own CMA seeds and animals. A start is dropped at 2a's generation 60 when its mean
-time on the lawn over the readouts at generations 40, 50 and 60 is below 0.95
-(:func:`lawn_holding`). The first start that holds the lawn runs 2a to its end and the procedure
-continues from it. A run in which no start holds the lawn has no answer.
+centre with its own CMA seeds and animals. 2a reads each start three times, each a mean over three
+readouts, and drops it at the first reading it fails:
+
+- the lawn at generations 40, 50 and 60: time on the lawn at least 0.95 (:func:`lawn_holding`);
+- the descent at generations 130, 140 and 150: D_fit at most 4.25 (:func:`descent_reading`);
+- the bar at generations 280, 290 and 300: D_fit at most 2.5.
+
+The first start that passes all three is kept, and the procedure continues from its 2a. A run in
+which no start is kept has no answer.
 
 **The reads.** The pilot's go rule, F.0b-ii (one truth, the pilot's answer), the registered verdict
 (the wild type, tph-1 and tax-4 each in at least 3 of 5 populations), the held-out reading on
@@ -148,15 +153,20 @@ TIMESCALE_AT_2A_S = 1.0
 READOUT_EVERY = 10
 KILL_READOUTS = 3
 HOLDS_LAWN = 0.75
-# The first half's starts: stage 1's size, how many, and the lawn-holding reading that keeps one.
+# The first half's starts: stage 1's size, how many, and the readings in 2a that keep one.
 STAGE1_ANIMALS = 64
 STAGE1_POPSIZE = 24
 STARTS = 6
 HOLD_READOUTS: tuple[int, ...] = (40, 50, 60)
 HOLD_BAR = 0.95
+# 2a's descent, read twice: midway, where a start that will not reach the bar already lags, and at
+# 2a's end, against the bar the second half starts from.
+DESCENT_READOUTS: tuple[int, ...] = (130, 140, 150)
+DESCENT_BAR = 4.25
+REACH_READOUTS: tuple[int, ...] = (280, 290, 300)
+REACH_BAR = 2.5
 LAWN_STATISTIC = "small_lawn/time_on_lawn"
 FIRST_HALF: tuple[str, ...] = ("1", "2a")
-D_FIT_KILL = 2.5
 VERDICT_POPULATIONS = 5
 PASS_NEEDED = 3
 ROBERTS_REVERSE_SHARE = 0.173
@@ -218,11 +228,12 @@ NOISE_AFTER = "2b"
 
 @dataclasses.dataclass(frozen=True)
 class Layout:
-    """A run's animal seeds: the stage sub-blocks, each start's, the readout, noise and grade.
+    """A run's animal seeds: each start's first half, the second half, the readout, noise and grade.
 
-    Stage 1 runs at its own size, each start in its own slice of stage 1's sub-block. 2a's
-    generations up to the lawn-holding reading (``early_generations``) are each start's own, in the
-    ``early`` block; the kept start's later generations sit in 2a's sub-block at their own positions.
+    Every start of the first half has its own animals, since any of them may run 2a to its end:
+    stage 1, at its own size, in the start's slice of stage 1's block, and every generation of 2a
+    in the start's slice of 2a's block (``two_a``). 2b and the final stage, which only the kept
+    start runs, each have a sub-block at ``stage_stride`` times their stage index.
     """
 
     base: int
@@ -237,9 +248,9 @@ class Layout:
     first_animals: int = STAGE1_ANIMALS
     first_popsize: int = STAGE1_POPSIZE
     start_stride: int = 250_000
-    early: int = 12_500_000
-    early_stride: int = 576_000
-    early_generations: int = HOLD_READOUTS[-1]
+    two_a: int = 20_000_000
+    # 2a's 300 generations of 48 candidates of 200 animals, per start.
+    two_a_stride: int = 2_880_000
 
     def _block(self, start: int) -> list[int]:
         return list(range(start, start + self.animals))
@@ -261,8 +272,8 @@ class Layout:
             first = self.base + self.start_stride * start + self.first_animals * k
             return list(range(first, first + self.first_animals))
         k = self.popsize * (generation - 1) + member
-        if stage == 1 and generation <= self.early_generations:
-            own = self.base + self.early + self.early_stride * start
+        if stage == 1:
+            own = self.base + self.two_a + self.two_a_stride * start
             return self._block(own + self.animals * k)
         return self._block(self.base + self.stage_stride * stage + self.animals * k)
 
@@ -284,15 +295,12 @@ class Layout:
         for a in range(starts):
             last = self.candidate_seeds(0, generations[0], self.first_popsize - 1, a)[-1]
             out[f"stage 0 start {a}"] = (self.candidate_seeds(0, 1, 0, a)[0], last)
-            n = min(generations[1], self.early_generations)
-            last = self.candidate_seeds(1, n, self.popsize - 1, a)[-1]
+            last = self.candidate_seeds(1, generations[1], self.popsize - 1, a)[-1]
             out[f"stage 1 start {a}"] = (self.candidate_seeds(1, 1, 0, a)[0], last)
         for s, n in enumerate(generations):
-            if s == 0 or (s == 1 and n <= self.early_generations):
-                continue
-            g = self.early_generations + 1 if s == 1 else 1
-            first = self.candidate_seeds(s, g, 0)[0]
-            out[f"stage {s}"] = (first, self.candidate_seeds(s, n, self.popsize - 1)[-1])
+            if s >= len(FIRST_HALF):
+                first = self.candidate_seeds(s, 1, 0)[0]
+                out[f"stage {s}"] = (first, self.candidate_seeds(s, n, self.popsize - 1)[-1])
         out["readout"] = (self.readout_seeds()[0], self.readout_seeds()[-1])
         last_noise = self.noise_seeds(self.noise_populations - 1)[-1]
         out["noise"] = (self.noise_seeds(0)[0], last_noise)
@@ -304,9 +312,9 @@ class Layout:
 class Run:
     """One run of the procedure: its seeds, its CMA seeds, its starts and the mutants it fits.
 
-    ``hold_bars`` gives one lawn-holding bar per start, so its length is the number of starts.
-    The first start takes the run's CMA seeds; each later one takes the next two from
-    ``restart_seed``, for stage 1 and 2a.
+    Each of 2a's three readings gives its readouts and one bar per start, so the bars' length is
+    the number of starts. The first start takes the run's CMA seeds; each later one takes the next
+    two from ``restart_seed``, for stage 1 and 2a.
     """
 
     name: str
@@ -318,11 +326,23 @@ class Run:
     kill_rules: bool = False
     hold_readouts: tuple[int, ...] = HOLD_READOUTS
     hold_bars: tuple[float, ...] = (HOLD_BAR,) * STARTS
+    descent_readouts: tuple[int, ...] = DESCENT_READOUTS
+    descent_bars: tuple[float, ...] = (DESCENT_BAR,) * STARTS
+    reach_readouts: tuple[int, ...] = REACH_READOUTS
+    reach_bars: tuple[float, ...] = (REACH_BAR,) * STARTS
 
     @property
     def starts(self) -> int:
         """Return how many times the first half may be started."""
         return len(self.hold_bars)
+
+    def readings(self, start: int) -> list[tuple[str, tuple[int, ...], float]]:
+        """Return 2a's readings of a start, in order: each one's name, readouts and bar."""
+        return [
+            ("lawn", self.hold_readouts, self.hold_bars[start]),
+            ("descent", self.descent_readouts, self.descent_bars[start]),
+            ("reach", self.reach_readouts, self.reach_bars[start]),
+        ]
 
     def cma_seed(self, stage: int, start: int) -> int:
         """Return a stage's CMA seed: the first half's stages take each start's own."""
@@ -331,13 +351,13 @@ class Run:
         return self.restart_seed + len(FIRST_HALF) * (start - 1) + stage
 
 
-# The smoke's stage 1 has its own size and its 2a runs past the reading, as the procedure's do.
+# The smoke's stage 1 has its own size and its 2a runs past each reading, as the procedure's do.
 SMOKE_LAYOUT = Layout(
     99_880_000,
     animals=8,
     popsize=6,
-    stage_stride=2_000,
-    readout=8_000,
+    stage_stride=1_000,
+    readout=8_500,
     noise=9_000,
     grade=9_500,
     noise_populations=3,
@@ -345,23 +365,23 @@ SMOKE_LAYOUT = Layout(
     first_animals=6,
     first_popsize=4,
     start_stride=200,
-    early=6_500,
-    early_stride=500,
-    early_generations=10,
+    two_a=4_000,
+    two_a_stride=1_100,
 )
-SMOKE_GENERATIONS = (2, 12, 2, 2)
+SMOKE_GENERATIONS = (2, 22, 2, 2)
 RUNS: dict[str, Run] = {
-    "pilot": Run("pilot", Layout(1_140_000_000), (9591, 9592, 9593, 9594), 9651, kill_rules=True),
-    "recovery": Run("recovery", Layout(920_000_000), (5801, 5802, 5803, 5804), 5831),
-    "fit": Run("fit", Layout(960_000_000), (5811, 5812, 5813, 5814), 5841),
+    "pilot": Run("pilot", Layout(1_200_000_000), (9661, 9662, 9663, 9664), 9671, kill_rules=True),
+    "recovery": Run("recovery", Layout(1_240_000_000), (5801, 5802, 5803, 5804), 5831),
+    "fit": Run("fit", Layout(1_280_000_000), (5811, 5812, 5813, 5814), 5841),
     "loo": Run(
         "loo",
-        Layout(980_000_000),
+        Layout(1_320_000_000),
         (5821, 5822, 5823, 5824),
         5851,
         mutants=("tph-1", "pdfr-1"),
     ),
-    # The smoke's first start can never hold the lawn and its second always does, so both paths run.
+    # The smoke's starts fail the lawn, the descent and the bar in turn, and its fourth passes all
+    # three, so every path runs.
     "smoke": Run(
         "smoke",
         SMOKE_LAYOUT,
@@ -369,7 +389,11 @@ RUNS: dict[str, Run] = {
         9561,
         generations=SMOKE_GENERATIONS,
         hold_readouts=(10,),
-        hold_bars=(2.0, 0.0),
+        hold_bars=(2.0, 0.0, 0.0, 0.0),
+        descent_readouts=(20,),
+        descent_bars=(math.inf, -1.0, math.inf, math.inf),
+        reach_readouts=(22,),
+        reach_bars=(math.inf, math.inf, -1.0, math.inf),
     ),
 }
 
@@ -1084,18 +1108,22 @@ def preflight_record(
     centre = float(np.median([distance(r) for r in centre_runs]))
     reference = distance(band_truth(bands))
     flips = definedness_flips(observation, repeats[:10])
-    # The procedure keeps only a start that holds the lawn, so the truth it recovers must.
+    # The procedure keeps only a start that holds the lawn and reaches 2a's bar, both read against
+    # the bands, so the truth it recovers must do both.
     lawn = observation["statistics"].get(LAWN_STATISTIC) or 0.0
+    d_fit = observation.get("D_fit")
     checks = {
         "separated": prior - floor >= SEPARATION,
         "oracle": gain(prior, oracle, floor) >= ORACLE_GATE,
         "centre": gain(prior, centre, floor) <= START_GATE,
         "stable": not flips,
         "holds_lawn": lawn >= HOLD_BAR,
+        "reaches_bar": d_fit is not None and d_fit <= REACH_BAR,
     }
     return {
         "floor": floor,
         "observation_time_on_lawn": lawn,
+        "observation_D_fit": d_fit,
         "oracle_D": oracle,
         "prior_D": prior,
         "centre_D": centre,
@@ -1185,6 +1213,10 @@ def settings_of(run: Run, truth: dict[str, Any]) -> dict[str, Any]:
         "generations": list(run.generations),
         "hold_readouts": list(run.hold_readouts),
         "hold_bars": list(run.hold_bars),
+        "descent_readouts": list(run.descent_readouts),
+        "descent_bars": list(run.descent_bars),
+        "reach_readouts": list(run.reach_readouts),
+        "reach_bars": list(run.reach_bars),
         "lawn_guard": [LAWN_GUARD_BELOW, LAWN_PENALTY],
         "stages": [dataclasses.asdict(s) for s in STAGES],
         "arm": ARM,
@@ -1265,7 +1297,10 @@ def _generation(  # noqa: PLR0913 - the pool, the run, the stage, its generation
 
 
 def _kill(stage: Stage, readouts: dict[int, dict[str, Any]]) -> str | None:
-    """Return the pilot's kill reason after stage 1 or 2a, from the mean of the last three readouts."""
+    """Return the pilot's kill reason after stage 1, from the mean of its last three readouts.
+
+    2a's bar is a reading of every run's starts (:func:`descent_reading`), so no kill rule reads 2a.
+    """
     last = [readouts[g] for g in sorted(readouts)[-KILL_READOUTS:]]
     if stage.name == "1":
         spread = float(
@@ -1274,10 +1309,6 @@ def _kill(stage: Stage, readouts: dict[int, dict[str, Any]]) -> str | None:
         lawn = float(np.mean([r["time_on_lawn"] or 0.0 for r in last]))
         if spread < SPREAD_FLOOR or lawn < HOLDS_LAWN:
             return f"stage 1: mean spread {spread:.2f} (floor 0.5), on the lawn {lawn:.2f} (0.75)"
-    if stage.name == "2a":
-        d_fit = float(np.mean([r["D_fit"] for r in last]))
-        if d_fit > D_FIT_KILL:
-            return f"2a: mean D_fit {d_fit:.2f} above 2.5"
     return None
 
 
@@ -1302,6 +1333,50 @@ def lawn_holding(
     }
 
 
+def descent_reading(
+    readouts: dict[int, dict[str, Any]],
+    generations: Sequence[int],
+    bar: float,
+) -> dict[str, Any]:
+    """Return a start's descent reading: its mean D_fit over 2a's given readouts, at most a bar.
+
+    An undefined D_fit is infinitely far, so it passes only a bar that every value passes.
+    """
+    values = [readouts[g]["D_fit"] for g in generations]
+    d_fit = math.inf if any(v is None for v in values) else float(np.mean(values))
+    return {
+        "generations": list(generations),
+        "D_fit": d_fit,
+        "bar": bar,
+        # Readouts all at the bar pass, whatever the rounding of their mean.
+        "passes": d_fit <= bar + 1e-12,
+    }
+
+
+def _take_readings(
+    state: dict[str, Any],
+    run: Run,
+    readouts: dict[int, dict[str, Any]],
+    done: int,
+) -> tuple[dict[str, Any] | None, bool]:
+    """Take each of 2a's readings once, at its last readout; return the first failed, and if any new.
+
+    The readings are the current start's (``state["readings"]``), so a resumed run reads none again.
+    """
+    taken, new = state["readings"], False
+    for name, generations, bar in run.readings(state["start"]):
+        if name not in taken and done >= generations[-1]:
+            if name == "lawn":
+                reading = lawn_holding(readouts, generations, bar)
+                reading["passes"] = reading["holds"]
+            else:
+                reading = descent_reading(readouts, generations, bar)
+            taken[name], new = {"name": name, **reading}, True
+        if name in taken and not taken[name]["passes"]:
+            return taken[name], new
+    return None, new
+
+
 def _start_record(state: dict[str, Any], run: Run) -> dict[str, Any]:
     return {
         "start": state["start"],
@@ -1319,34 +1394,43 @@ def _start_json(start: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+NO_START_KEPT = "no start of {} held the lawn and reached 2a's bar"
+
+
 def _drop(
     state: dict[str, Any],
     run: Run,
-    holding: dict[str, Any],
+    failed: dict[str, Any],
     mean: list[float],
 ) -> None:
     """Set a start aside with everything it produced, and return the run to the box's centre.
 
-    ``holding`` is the lawn-holding reading that drops it, and ``mean`` the search's mean there.
+    ``failed`` is the reading that drops it, and ``mean`` the search's mean there.
     """
-    lawn, bar = holding["time_on_lawn"], holding["bar"]
-    reason = f"2a: on the lawn {lawn:.3f} at generations {holding['generations']} (bar {bar})"
+    gens, bar = failed["generations"], failed["bar"]
+    if failed["name"] == "lawn":
+        reason = f"2a: on the lawn {failed['time_on_lawn']:.3f} at generations {gens} (bar {bar})"
+    else:
+        reason = f"2a: D_fit {failed['D_fit']:.2f} at generations {gens} (bar {bar})"
+    readings = state["readings"]
     record: dict[str, Any] = {
         **_start_record(state, run),
         "kept": False,
         "dropped": reason,
-        "holding": holding,
+        "holding": readings.get("lawn"),
+        "readings": readings,
         "mean_at_drop": mean,
     }
     for key in ("answers", "histories", "readouts", "checkpoints", "seconds"):
         record[key] = {n: state[key].pop(n) for n in FIRST_HALF if n in state[key]}
     state["starts"].append(record)
+    state["readings"] = {}
     state["start"] += 1
     state["stage"], state["es"] = 0, None
     state["x"] = [0.5] * len(state["x"])
     state.pop("previous", None)
     if state["start"] >= run.starts:
-        state["killed"] = f"no start of {run.starts} held the lawn"
+        state["killed"] = NO_START_KEPT.format(run.starts)
 
 
 def noise_step(pool: Any, run: Run, z: list[float], path: Path) -> list[dict[str, Any]]:  # noqa: ANN401
@@ -1373,6 +1457,31 @@ def noise_step(pool: Any, run: Run, z: list[float], path: Path) -> list[dict[str
                 handle.write(json.dumps(nr._finite(stored[p]), allow_nan=False) + "\n")
                 handle.flush()
     return [stored[p] for p in range(run.layout.noise_populations)]
+
+
+def _check_readings(run: Run) -> None:
+    """Refuse a run whose readings have no readout, are out of order, or outrun 2a or its seeds."""
+    two_a = run.generations[1]
+    ends = []
+    for name, generations, _bar in run.readings(0):
+        if any(g % READOUT_EVERY and g != two_a for g in generations):
+            msg = f"{run.name}: a {name} reading's generation of {generations} has no readout"
+            raise ValueError(msg)
+        if generations[-1] > two_a:
+            msg = f"{run.name}: the {name} reading at {generations[-1]} is past 2a's end"
+            raise ValueError(msg)
+        ends.append(generations[-1])
+    if ends != sorted(ends):
+        msg = f"{run.name}: 2a's readings at {ends} are out of order"
+        raise ValueError(msg)
+    bars = [len(run.hold_bars), len(run.descent_bars), len(run.reach_bars)]
+    if len(set(bars)) != 1:
+        msg = f"{run.name}: the readings give bars for {bars} starts"
+        raise ValueError(msg)
+    layout = run.layout
+    if two_a * layout.popsize * layout.animals > layout.two_a_stride:
+        msg = f"{run.name}: 2a's {two_a} generations do not fit a start's seeds"
+        raise ValueError(msg)
 
 
 def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
@@ -1409,16 +1518,11 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
             "start": 0,
             "starts": [],
             "kept": None,
+            "readings": {},
         }
     timescale = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
     subset = subset_indices(names)
-    hold_at = run.hold_readouts[-1]
-    if any(g % READOUT_EVERY and g != run.generations[1] for g in run.hold_readouts):
-        msg = f"{run.name}: a lawn-holding generation of {run.hold_readouts} has no readout"
-        raise ValueError(msg)
-    if hold_at > run.generations[1] or hold_at != run.layout.early_generations:
-        msg = f"{run.name}: the lawn-holding reading at {hold_at} does not match 2a or its seeds"
-        raise ValueError(msg)
+    _check_readings(run)
     while state["stage"] < len(STAGES) and state["killed"] is None:
         s = state["stage"]
         stage = STAGES[s]
@@ -1475,25 +1579,17 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
         store = (
             f"start_{state['start']}_stage_{stage.name}" if first_half else f"stage_{stage.name}"
         )
-        not_holding = None
+        reads = stage.name == FIRST_HALF[-1] and state["kept"] is None
+        failed = None
         while True:
             done = len(history["medians"])
-            if stage.name == FIRST_HALF[-1] and state["kept"] is None and done >= hold_at:
-                # The start's lawn-holding reading, taken once, at its last readout's generation.
-                holding = lawn_holding(readouts, run.hold_readouts, run.hold_bars[state["start"]])
-                if not holding["holds"]:
-                    not_holding = holding
+            if reads:
+                # 2a's readings of the start, each taken once, at its last readout's generation.
+                failed, new = _take_readings(state, run, readouts, done)
+                if new:
+                    _write_pickle(state_path, state)
+                if failed is not None:
                     break
-                state["kept"] = state["start"]
-                state["starts"].append(
-                    {
-                        **_start_record(state, run),
-                        "kept": True,
-                        "dropped": None,
-                        "holding": holding,
-                    },
-                )
-                _write_pickle(state_path, state)
             if done >= generations:
                 break
             g = done + 1
@@ -1533,10 +1629,23 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
             )
             _write_pickle(state_path, state)
         answer = full(es.result.xfavorite)
-        if not_holding is not None:
-            _drop(state, run, not_holding, answer)
+        if failed is not None:
+            _drop(state, run, failed, answer)
             _write_pickle(state_path, state)
             continue
+        if reads:
+            # Every reading passed: the start is kept, and the second half runs from its 2a.
+            state["kept"] = state["start"]
+            state["starts"].append(
+                {
+                    **_start_record(state, run),
+                    "kept": True,
+                    "dropped": None,
+                    "holding": state["readings"].get("lawn"),
+                    "readings": state["readings"],
+                },
+            )
+            state["readings"] = {}
         state["answers"][stage.name] = answer
         state["checkpoints"][stage.name] = checkpoints(stage, readouts)
         state["x"], state["previous"], state["es"] = answer, es, None
@@ -1962,7 +2071,7 @@ def _grade(workers: int) -> int:
 def _read() -> int:
     record = _json(BUILD / "fit_procedure.json")
     if record.get("killed"):
-        # No start held the lawn: the fit has no answer, and that is its verdict.
+        # No start was kept: the fit has no answer, and that is its verdict.
         out = {"description": DESCRIPTION, **record, "verdict": no_answer(record["killed"])}
         _write_json(FIT_PATH, out)
         print(json.dumps(nr._finite({"verdict": out["verdict"]})))
@@ -2019,7 +2128,7 @@ def _loo(workers: int) -> int:
 
 
 def _smoke(workers: int) -> int:
-    """Every stage, a dropped start and a kept one, the noise step, a grade, the preflight, the reading."""
+    """Every stage, a start dropped at each reading and a kept one, the noise step, a grade, reads."""
     import shutil
 
     from quantumnematode.benchmark import references as refs
@@ -2062,12 +2171,16 @@ def _smoke(workers: int) -> int:
         all(len(v["medians"]) == ran[k] for k, v in record["histories"].items())
         and len(grades) == 2
     )
-    # The first start is dropped at its lawn-holding reading with its two stages, the second kept.
-    dropped, kept = record["starts"]
-    ok = ok and record["kept"] == 1 and kept["kept"] and not dropped["kept"]
-    reading = run.hold_readouts[-1]
-    lengths = [len(dropped["histories"][n]["medians"]) for n in FIRST_HALF]
-    ok = ok and lengths == [ran[FIRST_HALF[0]], reading]
+    # The first three starts are dropped at the lawn, the descent and the bar, each with its two
+    # stages as far as that reading; the fourth is kept.
+    *dropped, kept = record["starts"]
+    ok = ok and record["kept"] == len(dropped) and kept["kept"]
+    readings = run.readings(0)
+    for start, (name, generations, _bar) in zip(dropped, readings, strict=True):
+        lengths = [len(start["histories"][n]["medians"]) for n in FIRST_HALF]
+        ok = ok and not start["kept"] and start["readings"][name]["passes"] is False
+        ok = ok and lengths == [ran[FIRST_HALF[0]], generations[-1]]
+    ok = ok and all(kept["readings"][name]["passes"] for name, _g, _b in readings)
     return 0 if ok else 1
 
 
