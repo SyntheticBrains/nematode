@@ -70,17 +70,22 @@ fidelity, graded separately, on one connectome".
   provenance records the commit and every source file's SHA-256. Wormlight runs a graded,
   conductance-based network that drives a body, so it can take fitted weights for the neurons a fit
   covers, and keep its own defaults elsewhere.
-- **Wormturn** (plasticity research) needs to know which parameters a fit constrains and which it
-  leaves free. Plasticity rules can then act on the unconstrained ones without overwriting what the
-  data pinned.
+- **Wormturn** (plasticity research) also consumes a versioned export now. `main` gained
+  `scripts/export_wormturn.py` on 2026-11-14 (PR #532), after this branch was cut. It writes
+  `wormturn.connectome/1`: the signed chemical wiring, with each sign's source and citation, and the
+  data-derived neuromodulator layer, under the same provenance rules. On top of that, Wormturn needs
+  to know which parameters a fit constrains and which it leaves free. Plasticity rules can then act
+  on the unconstrained ones without overwriting what the data pinned.
 
 Both want the same thing: a fitted model with its neuron names, the wiring it was fitted on, its
 parameters, and an honest statement of what the data constrained.
 
 ## The export format: `nematode.fit/1`
 
-One directory per fitted model, following the `wormlight.connectome/1` pattern: deterministic,
-versioned and provenance-first.
+One directory per fitted model, following the pattern of `wormlight.connectome/1` and
+`wormturn.connectome/1`: deterministic, versioned and provenance-first. A fit does not carry its own
+copy of the wiring. It names the connectome export it was fitted on, by schema, commit and SHA-256,
+so consumers already holding that export can join the two.
 
 - **`manifest.json`:**
   - **`schema`:** `"nematode.fit/1"`. The major version changes for any change a consumer must
@@ -116,7 +121,8 @@ versioned and provenance-first.
 - **Quantum Nematode** reads an export through one adapter class that implements `BatchedController`.
 - **Wormlight** gets a JSON-only projection, the fitted weights mapped onto its connectome's
   neuron and synapse records, written by an extension of the existing export script.
-- **Wormturn** reads the `constrained` flags.
+- **Wormturn** joins a fit to the `wormturn.connectome/1` export it names, and reads the
+  `constrained` flags.
 
 ## What carries over, and what does not
 
