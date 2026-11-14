@@ -376,3 +376,33 @@ new study now, or pausing the investigation.
 
 It reports the parsing bug, with the line and the counts, and asks for a licence. The maintainer
 decides whether to send it. Considered instead: recording the bug in our documents only.
+
+## After the independent check (2026-11-14)
+
+### A32. H0 run, and the recommendation finalised from it
+
+The maintainer adopted the independent check's proposed first test (H0) and the revision mapped to
+its outcomes. H0 passed: the unfitted encoder on the true wiring scores 0.0653 against the measured
+responses, against a median of 0.0050 for 19 degree-preserving rewirings. RECOMMENDATION.md is
+revised accordingly:
+
+- H1 is floored by the degree-preserving null;
+- H2 carries a causal bar beside imputation;
+- H3 is gated on that bar.
+
+The first version is kept in git history at 54d96b73. Considered instead: keeping the recommendation
+as written, or staying without running H0.
+
+### A33. The merge, and the handover
+
+The merge contains everything except the raw agent notes, which stay on a tagged branch:
+
+- the conclusions and the Part A documents;
+- the spike's records;
+- a logbook entry;
+- the provenance correction;
+- the seed-table entries.
+
+A handover brief for the Phase 10 session is added as a file and also sent to that session. Both
+notes to authors are deferred. Considered instead: merging everything, or the conclusions only;
+the handover as a file only.
