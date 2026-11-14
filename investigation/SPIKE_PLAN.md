@@ -499,4 +499,7 @@ Taken on 2026-11-14 (DECISIONS.md A15 to A21; A22 records the design choices mad
 - Mi on Yemini as the only fallback, by amendment, and no OSF data;
 - bridge readout B with an interface-only row.
 
-**Needs approval:** this plan, as the spike's registration. Part B starts only after that.
+**Needs approval:** this plan, as the spike's registration. *(2026-11-14: the fresh review found it
+not ready (REVIEW_PART_A.md § 7). The maintainer approved session 0 as fact-finding only (A24),
+the two departures from the brief's stop rule (A25), and the Phase 10 rule (A26). The plan is
+revised with session 0's facts and every fix, then re-presented for registration.)*

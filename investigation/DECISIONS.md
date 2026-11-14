@@ -287,3 +287,43 @@ REVIEW_PART_A.md § 6) is applied before the plan goes to the maintainer. Two ch
 - `rewire_degree_preserving` on a typed `Connectome`.
 - Accepting draws whose count lies within 1% of the wild type's.
 - R1a against his parameters in both branches.
+
+## After the fresh review (2026-11-14)
+
+### A24. Session 0 runs as fact-finding only, before the plan is registered
+
+The maintainer's decision, on the fresh reviewer's recommendation (REVIEW_PART_A.md § 7, M15).
+Session 0 runs no fits and reads no test animals. It establishes the facts that the plan's rules
+depend on:
+
+- Creamer's ridge, pruning, missing-value handling, split, neuron set, preprocessing stage and
+  input encoding;
+- the pickles' contents, opened under A19's isolation;
+- what the 110 DANDI segmentation files hold, and how they compare with his example recording;
+- the missing values per neuron and frame;
+- the measured cost of one exact-filter likelihood pass;
+- DANDI 000776's layout.
+
+One revision then applies every fix (X1 to X3, M1 to M15 and the minor findings) together with
+those facts, and goes to the maintainer for registration. Considered instead: revising the whole
+plan first, or stopping the spike.
+
+### A25. Two departures from the brief's stop rule, approved
+
+The brief says "if reproduction fails within the timebox, record why and stop". The maintainer
+approved two departures, each to be named in the report:
+
+- if Creamer's split is not recovered and the held-out reproduction fails while the fitter itself is
+  verified, the spike continues;
+- C.2 is scored on Randi's held-out responses even if reproduction fails, since that needs only the
+  verified pipeline and scorer.
+
+Considered instead: allowing only the second, or neither.
+
+### A26. Phase 10 is not paused yet; W waits for Part B
+
+No Phase 10 work is paused now, because session 0 needs no machine time. If session 0 shows the
+spike's fits cost 10 to 50 times the estimate, I bring the measured cost and a float64 GPU quote,
+and the maintainer chooses between renting and pausing C.2. W is not registered until Part B
+recommends switch, hybrid or stay. Considered instead: pausing Phase 10 now, or keeping it going
+fully with no hold on W.
