@@ -360,3 +360,19 @@ reproduction (A25). Considered instead: keeping it inside the spike, or dropping
 
 The note asks whether the missing target identities, or a licence for the OSF exports, could be
 provided. The maintainer decides whether to send it. Considered instead: leaving the data as they are.
+
+## The spike's end (2026-11-14)
+
+### A30. The spike stops at fact-finding; Part B follows
+
+Session 0b found that Mi et al.'s code has no licence, parses polyadic chemical synapses in reverse,
+and records no scoring protocol, so neither target can be reproduced as specified on licensed
+materials. The maintainer chose to stop under the brief's stop rule and write SPIKE_REPORT.md, then
+Part B. A re-implementation of Mi, with correct wiring, Mi's wiring and degree-preserving nulls,
+becomes a candidate milestone for Part B to weigh. Considered instead: that re-implementation as a
+new study now, or pausing the investigation.
+
+### A31. A note to Mi's authors, drafted for the maintainer to send
+
+It reports the parsing bug, with the line and the counts, and asks for a licence. The maintainer
+decides whether to send it. Considered instead: recording the bug in our documents only.
