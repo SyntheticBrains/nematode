@@ -1,0 +1,97 @@
+"""Parity and the added-input unit test, before any reading. No measured matrix is read here.
+
+The spike-local settling copy is checked against the package's encoded forward at 100 random
+nonzero sensory inputs (default_rng(9732)), for C.2 (hinge4.json's z written as the run wrote it),
+for package_vector(z), and for the box centre. Then the registered added-input unit test is run.
+"""
+import json, os, sys
+for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ[k] = "8"
+import numpy as np, torch
+torch.set_num_threads(8)
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.brain.arch import connectome_ppo as cp
+from quantumnematode.connectome import encoder as enc
+
+OUT = "investigation/spike/ma_c2/parity.json"
+TOL = 1e-5
+z = json.load(open("docs/experiments/logbooks/supporting/131-c2-clean-start/probes/hinge4.json"))["z"]
+brain = p.encoded_brain((), **p.PROCEDURE_SETTINGS)
+top = brain.topology
+entries = list(top.encoder.entries)
+vectors = {"c2_as_run": np.asarray(z, float), "c2_package_vector": p.package_vector(z, entries),
+           "box_centre": np.full(len(entries), 0.5)}
+
+
+def snapshot():
+    """The forward's fixed pieces for the written vector, as NumPy float32."""
+    e = top.encoder
+    with torch.no_grad():
+        R = (e.chemical() + top.g_gap * e.gap_scale()).numpy().astype(np.float32)
+        W = e.injection().numpy().astype(np.float32)
+        centres = None if e.pool_centres is None else e.pool_centres.detach().numpy().astype(np.float32)
+        return {"R": R, "inj": W, "centres": centres, "readout": top.readout.detach().numpy().astype(np.float32),
+                "bias": top.readout_bias.detach().numpy().astype(np.float32), "mode": e.readout_mode,
+                "motor": top._motor_flat_indices.numpy(), "slices": list(top._motor_class_slices),
+                "depth": top.forward_pass_depth, "width": top.readout_width}
+
+
+def settle(S, h0, added=None):
+    """Spike-local copy of the encoded settling: h <- tanh(h @ R + added), depth times; then readout."""
+    h = np.asarray(h0, np.float32)
+    for _ in range(S["depth"]):
+        pre = h @ S["R"]
+        if added is not None:
+            pre = pre + np.asarray(added, np.float32)
+        h = np.tanh(pre)
+    acts = h[..., S["motor"]]
+    pooled = np.stack([acts[..., a:b].mean(-1) for a, b in S["slices"]], -1)
+    if S["centres"] is not None:
+        pooled = pooled - S["centres"]
+    mean = pooled @ S["readout"].T + S["bias"]
+    if S["mode"] == "soft_cap":
+        mean = cp.READOUT_CAP * np.tanh(mean / cp.READOUT_CAP)
+    return mean, h
+
+
+rng = np.random.default_rng(9732)
+n_mod = brain._n_concentrations + 1
+F = top.n_food_features
+feats = np.column_stack([rng.uniform(0.05, 1.0, 100), rng.uniform(-1, 1, 100), rng.uniform(-1, 1, 100), rng.uniform(0.05, 1.0, 100)]).astype(np.float32)
+assert F == 4 and np.all(feats != 0)
+record = {"tolerance": TOL, "inputs": "default_rng(9732): strength U(0.05,1), lateral U(-1,1), dC/dt U(-1,1), contact U(0.05,1); modulators zero",
+          "depth": int(top.forward_pass_depth), "readout_cap": float(cp.READOUT_CAP), "brains": {}}
+for name, v in vectors.items():
+    enc.write_encoder(brain, v.tolist())
+    S = snapshot()
+    with torch.no_grad():
+        mods = torch.zeros(100, n_mod)
+        mean_pkg, h_pkg = top.forward_with_hidden_batched(torch.from_numpy(feats), modulators=mods)
+        mean_pkg0, h_pkg0 = top.forward_with_hidden_batched(torch.from_numpy(feats), modulators=None)
+        held0 = top.modulator_current(torch.zeros(n_mod)).numpy()
+    mean_ours, h_ours = settle(S, feats @ S["inj"])
+    # Unit test: an added input equal to a sensory neuron's own drive, from rest.
+    drive = feats @ S["inj"]
+    mean_add, h_add = settle(S, np.zeros_like(drive), added=drive)
+    # The same drive as the initial state with no added input (the package's sensory path).
+    sens = [i for i in range(302) if np.any(S["inj"][:, i] != 0)]
+    rest_mean, rest_h = settle(S, np.zeros(302, np.float32), added=np.zeros(302, np.float32))
+    record["brains"][name] = {
+        "parity_max_abs_output": float(np.abs(mean_ours - mean_pkg.numpy()).max()),
+        "parity_max_abs_hidden": float(np.abs(h_ours - h_pkg.numpy()).max()),
+        "parity_passes": bool(max(np.abs(mean_ours - mean_pkg.numpy()).max(), np.abs(h_ours - h_pkg.numpy()).max()) <= TOL),
+        "zero_modulators_equal_none": float(np.abs(h_pkg.numpy() - h_pkg0.numpy()).max()),
+        "held_current_at_rest_max_abs": float(np.abs(held0).max()),
+        "rest_activity_max_abs": float(np.abs(rest_h).max()),
+        "sensory_neurons_with_injection": [top.neuron_names[i] for i in sens],
+        "unit_test_added_drive_vs_sensory_forward_max_abs_hidden": float(np.abs(h_add - h_pkg.numpy()).max()),
+        "unit_test_added_drive_vs_sensory_forward_max_abs_output": float(np.abs(mean_add - mean_pkg.numpy()).max()),
+        "unit_test_passes": bool(np.abs(h_add - h_pkg.numpy()).max() <= TOL),
+    }
+    print(name, json.dumps({k: v for k, v in record["brains"][name].items() if k != "sensory_neurons_with_injection"}))
+names = json.load(open("investigation/spike/session0/creamer_154_names.json"))
+record["names_unmatched_in_c2"] = [n for n in names if n not in top.neuron_names]
+record["n_names_matched"] = len(names) - len(record["names_unmatched_in_c2"])
+print("matched", record["n_names_matched"], "unmatched", record["names_unmatched_in_c2"])
+json.dump(record, open(OUT, "w"), indent=1)
