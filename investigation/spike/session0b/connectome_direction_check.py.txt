@@ -1,0 +1,46 @@
+"""Compare wormvae's parsed chemical mask with a directed graph built from the NeuronConnect rows'
+documented meanings (S/Sp: Neuron 1 sends to Neuron 2; R/Rp: Neuron 1 receives from Neuron 2).
+
+Usage: python -I connectome_direction_check.py <worm_connectivity dir> <parsed_matrices.npz> <out.json>
+"""
+import json, sys
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+base = Path(sys.argv[1])
+m = np.load(sys.argv[2])
+names = list(m["names"]); idx = {n: i for i, n in enumerate(names)}; N = len(names)
+code_sp = m["chem_sp"]
+conn = pd.read_csv(base / "white_neuron_connect.csv", skipinitialspace=True)
+send = np.zeros((N, N)); recv = np.zeros((N, N))  # [post, pre]
+for _, r in conn.iterrows():
+    a, b, t, n = r["Neuron 1"], r["Neuron 2"], r["Type"], int(r["Nbr"])
+    if a not in idx or b not in idx:
+        continue
+    if t in ("S", "Sp"):
+        send[idx[b], idx[a]] += n
+    elif t in ("R", "Rp"):
+        recv[idx[a], idx[b]] += n
+off = ~np.eye(N, dtype=bool)
+o = {}
+o["send_pairs"] = int((send > 0).sum()); o["recv_pairs"] = int((recv > 0).sum())
+o["send_recv_mask_equal"] = bool(np.array_equal(send > 0, recv > 0))
+o["send_recv_count_diff_entries"] = int((send != recv).sum())
+o["send_total"] = float(send.sum()); o["recv_total"] = float(recv.sum())
+true = (send > 0) | (recv > 0)
+o["true_directed_pairs_union"] = int(true.sum())
+o["true_reciprocal_pairs"] = int((true & true.T & off).sum() // 2)
+o["code_entries"] = int(code_sp.sum())
+o["code_entries_not_in_true"] = int(((code_sp > 0) & ~true).sum())
+o["true_entries_not_in_code"] = int((true & ~(code_sp > 0)).sum())
+o["code_entries_reversed_of_true_only"] = int(((code_sp > 0) & ~true & true.T).sum())
+o["code_reciprocal_pairs"] = int(((code_sp > 0) & (code_sp.T > 0) & off).sum() // 2)
+# Sp rows only
+sp = np.zeros((N, N))
+for _, r in conn.iterrows():
+    if r["Type"] == "Sp" and r["Neuron 1"] in idx and r["Neuron 2"] in idx:
+        sp[idx[r["Neuron 2"]], idx[r["Neuron 1"]]] = 1
+o["Sp_pairs"] = int(sp.sum())
+o["Sp_reversed_present_in_code"] = int(((sp.T > 0) & (code_sp > 0)).sum())
+json.dump(o, open(sys.argv[3], "w"), indent=1); print(json.dumps(o, indent=1))

@@ -1,0 +1,98 @@
+"""List every global a pickle references, using pickletools only (nothing is executed).
+
+For each file: protocol, opcode count, and the set of (module, name) pairs referenced by
+GLOBAL, INST and STACK_GLOBAL. STACK_GLOBAL takes its module and name from the stack, so the
+string pushes and the memo are simulated to resolve them; any STACK_GLOBAL whose two operands
+are not both resolved strings is reported as unresolved (which would block loading).
+
+Usage: python -I list_pickle_globals.py <out_json> <file.pkl> [<file.pkl> ...]
+"""
+
+import collections
+import hashlib
+import json
+import pickletools
+import sys
+
+STRING_OPS = {
+    "SHORT_BINUNICODE",
+    "BINUNICODE",
+    "BINUNICODE8",
+    "UNICODE",
+    "SHORT_BINSTRING",
+    "BINSTRING",
+    "STRING",
+}
+GET_OPS = {"GET", "BINGET", "LONG_BINGET"}
+PUT_OPS = {"PUT", "BINPUT", "LONG_BINPUT"}
+NO_STACK_CHANGE = {"MEMOIZE", "PUT", "BINPUT", "LONG_BINPUT", "PROTO", "FRAME", "STOP"}
+OTHER = object()
+
+
+def scan(path):
+    with open(path, "rb") as fh:
+        data = fh.read()
+    sha = hashlib.sha256(data).hexdigest()
+    memo = {}
+    memo_next = 0
+    recent = collections.deque(maxlen=2)
+    last = OTHER
+    found = collections.Counter()
+    unresolved = 0
+    protocol = None
+    n_ops = 0
+    for op, arg, _pos in pickletools.genops(data):
+        n_ops += 1
+        name = op.name
+        if name == "PROTO":
+            protocol = arg
+        if name in STRING_OPS:
+            last = arg if isinstance(arg, str) else arg.decode("latin-1")
+            recent.append(last)
+        elif name in GET_OPS:
+            last = memo.get(arg, OTHER)
+            recent.append(last)
+        elif name == "MEMOIZE":
+            memo[memo_next] = last
+            memo_next += 1
+        elif name in PUT_OPS:
+            memo[arg] = last
+        elif name in ("GLOBAL", "INST"):
+            module, qual = arg.split(" ", 1)
+            found[(module, qual)] += 1
+            last = OTHER
+            recent.append(OTHER)
+        elif name == "STACK_GLOBAL":
+            if len(recent) == 2 and all(isinstance(x, str) for x in recent):
+                found[(recent[0], recent[1])] += 1
+            else:
+                unresolved += 1
+            last = OTHER
+            recent.clear()
+            recent.append(OTHER)
+        elif name not in NO_STACK_CHANGE:
+            last = OTHER
+            recent.append(OTHER)
+    return {
+        "path": path,
+        "bytes": len(data),
+        "sha256": sha,
+        "protocol": protocol,
+        "opcodes": n_ops,
+        "globals": [
+            {"module": m, "name": n, "count": c} for (m, n), c in sorted(found.items())
+        ],
+        "unresolved_stack_globals": unresolved,
+    }
+
+
+out = []
+for p in sys.argv[2:]:
+    r = scan(p)
+    out.append(r)
+    print(f"{p}\n  bytes={r['bytes']} protocol={r['protocol']} opcodes={r['opcodes']} "
+          f"unresolved={r['unresolved_stack_globals']}\n  sha256={r['sha256']}")
+    for g in r["globals"]:
+        print(f"    {g['module']}.{g['name']}  x{g['count']}")
+with open(sys.argv[1], "w") as fh:
+    json.dump(out, fh, indent=1)

@@ -1,0 +1,159 @@
+"""Facts about Creamer's released models, from the exported .npz files (no pickles read here).
+
+1. Is the connectome model's mask exactly the NemaNode connectome (chem + gap + eye > 0, 'or'
+   over four files) on its 154 neurons, i.e. unpruned?
+2. Is the shuffled model's mask the connectome mask permuted by default_rng(seed).permutation
+   on rows and columns (run_inference.fit_experimental's permute_mask), and for which seed?
+3. Input filters: block-diagonal per lag? which neurons have nonzero filters (only neurons
+   stimulated in training get one)? peak amplitude and its lag.
+4. Q, R diagonal? C identity? D zero? spectral radius of A.
+5. Does the project's vendored weights CSV equal the model's off-diagonal masked weights?
+
+Usage: python -I check_models.py <exports_dir> <worm_connectomes_dir> <vendored_csv> <out_json>
+"""
+
+import csv
+import json
+import os
+import sys
+
+import numpy as np
+
+exports, conn_dir, vendored_csv, out_json = sys.argv[1:5]
+facts = {}
+
+
+def load(stem):
+    z = np.load(os.path.join(exports, stem + ".npz"))
+    with open(os.path.join(exports, stem + ".structure.json")) as fh:
+        nodes = json.load(fh)["nodes"]
+    cell_ids = [n for n in nodes if n["path"].endswith(".cell_ids")][0]["value"]
+    return z, cell_ids
+
+
+def anatomy(cell_ids):
+    files = ["white_1986_jsh.csv", "white_1986_n2u.csv", "witvliet_2020_7.csv", "witvliet_2020_8.csv"]
+    idx = {c: i for i, c in enumerate(cell_ids)}
+    n = len(cell_ids)
+    chem = np.zeros((n, n))
+    gap = np.zeros((n, n))
+    for f in files:
+        with open(os.path.join(conn_dir, f)) as fh:
+            rows = list(csv.reader(fh, delimiter="\t"))[1:]
+        for pre, post, typ, syn in rows:
+            if pre in idx and post in idx:
+                i, j = idx[post], idx[pre]
+                if typ == "electrical":
+                    gap[i, j] += float(syn)
+                    if i != j:
+                        gap[j, i] += float(syn)
+                else:
+                    chem[i, j] += float(syn)
+    return chem, gap
+
+
+models = {}
+for stem in ["connectome_constrained", "fully_connected", "shuffled_constrained"]:
+    z, ids = load(stem)
+    models[stem] = (z, ids)
+z_cc, ids = models["connectome_constrained"]
+n = len(ids)
+eye = np.eye(n, dtype=bool)
+chem, gap = anatomy(ids)
+anat_mask = (chem + gap + np.eye(n)) > 0
+mask_cc = z_cc["connectome_constrained.param_props.mask.dynamics_weights"]
+facts["anatomy_mask_entries_incl_diag"] = int(anat_mask.sum())
+facts["anatomy_offdiag_entries"] = int((anat_mask & ~eye).sum())
+facts["anatomy_offdiag_density"] = float((anat_mask & ~eye).sum() / (n * n - n))
+facts["chem_offdiag_pairs"] = int(((chem > 0) & ~eye).sum())
+facts["gap_offdiag_pairs"] = int(((gap > 0) & ~eye).sum())
+facts["both_chem_and_gap_pairs"] = int(((chem > 0) & (gap > 0) & ~eye).sum())
+facts["reciprocal_offdiag_entries"] = int((anat_mask & anat_mask.T & ~eye).sum())
+facts["cc_mask_equals_anatomy"] = bool(np.array_equal(mask_cc, anat_mask))
+facts["cc_mask_entries"] = int(mask_cc.sum())
+W = z_cc["connectome_constrained.dynamics_weights"]
+facts["cc_weights_outside_mask_max_abs"] = float(np.abs(W[~mask_cc]).max()) if (~mask_cc).any() else 0.0
+facts["cc_masked_weights_exactly_zero_count"] = int(((W == 0) & mask_cc).sum())
+
+# shuffled
+z_sh, ids_sh = models["shuffled_constrained"]
+mask_sh = z_sh["shuffled_constrained.param_props.mask.dynamics_weights"]
+facts["sh_mask_entries"] = int(mask_sh.sum())
+facts["sh_mask_equals_anatomy"] = bool(np.array_equal(mask_sh, anat_mask))
+facts["sh_diag_all_true"] = bool(mask_sh[eye].all())
+hit = None
+for seed in range(0, 2000):
+    perm = np.random.default_rng(seed).permutation(n)
+    if np.array_equal(anat_mask[np.ix_(perm, perm)], mask_sh):
+        hit = seed
+        break
+facts["sh_mask_is_default_rng_permutation_seed"] = hit
+facts["sh_row_degree_multiset_equals_cc"] = bool(
+    np.array_equal(np.sort(mask_sh.sum(1)), np.sort(anat_mask.sum(1)))
+)
+facts["sh_offdiag_overlap_with_anatomy"] = int((mask_sh & anat_mask & ~eye).sum())
+
+# fully connected
+z_fc, _ = models["fully_connected"]
+facts["fc_mask_entries"] = int(z_fc["fully_connected.param_props.mask.dynamics_weights"].sum())
+facts["fc_weights_exact_zero_offdiag"] = int(
+    ((z_fc["fully_connected.dynamics_weights"] == 0) & ~eye).sum()
+)
+
+per_model = {}
+for stem, (z, _ids) in models.items():
+    p = stem + "."
+    A = z[p + "dynamics_weights"]
+    B = z[p + "dynamics_input_weights"]
+    Q = z[p + "dynamics_cov"]
+    R = z[p + "emissions_cov"]
+    C = z[p + "emissions_weights"]
+    lags = B.shape[1] // n
+    blocks = B.reshape(n, lags, n)  # [neuron, lag, input]
+    diag = np.stack([blocks[:, k, :].diagonal() for k in range(lags)])  # [lag, neuron]
+    off = blocks.copy()
+    for k in range(lags):
+        off[:, k, :][eye] = 0
+    has_filter = np.abs(diag).sum(0) > 0
+    peak_lag = np.abs(diag).argmax(0)
+    eig = np.linalg.eigvals(A)
+    per_model[stem] = {
+        "input_lags": int(lags),
+        "B_offdiag_max_abs": float(np.abs(off).max()),
+        "neurons_with_nonzero_filter": int(has_filter.sum()),
+        "neurons_without_filter": [_ids[i] for i in np.where(~has_filter)[0]],
+        "filter_peak_abs_median": float(np.median(np.abs(diag).max(0)[has_filter])),
+        "filter_peak_lag_median": float(np.median(peak_lag[has_filter])),
+        "filter_lag0_median": float(np.median(diag[0, has_filter])),
+        "filter_sum_median": float(np.median(diag.sum(0)[has_filter])),
+        "Q_is_diag": bool(np.count_nonzero(Q - np.diag(np.diag(Q))) == 0),
+        "R_is_diag": bool(np.count_nonzero(R - np.diag(np.diag(R))) == 0),
+        "Q_diag_median": float(np.median(np.diag(Q))),
+        "R_diag_median": float(np.median(np.diag(R))),
+        "C_is_identity": bool(np.array_equal(C, np.eye(n))),
+        "D_all_zero": bool(np.all(z[p + "emissions_input_weights"] == 0)),
+        "A_spectral_radius": float(np.abs(eig).max()),
+        "A_diag_median": float(np.median(np.diag(A))),
+        "A_offdiag_nonzero": int(((A != 0) & ~eye).sum()),
+    }
+    for name in ["AWAL", "AWAR", "CEPDL", "CEPDR", "CEPVL", "CEPVR", "ADEL", "ADER"]:
+        i = _ids.index(name)
+        per_model[stem].setdefault("filter_present", {})[name] = bool(has_filter[i])
+facts["per_model"] = per_model
+
+# vendored CSV against the model
+with open(vendored_csv) as fh:
+    rows = list(csv.reader(fh))[1:]
+idx = {c: i for i, c in enumerate(ids)}
+diffs = []
+for pre, post, w in rows:
+    diffs.append(abs(W[idx[post], idx[pre]] - float(w)))
+facts["vendored_csv_rows"] = len(rows)
+facts["vendored_csv_max_abs_diff_vs_cc"] = float(max(diffs))
+facts["vendored_csv_neurons"] = len({r[0] for r in rows} | {r[1] for r in rows})
+facts["cc_neurons_with_no_offdiag_mask_entry"] = [
+    ids[i] for i in range(n) if not ((mask_cc[i] | mask_cc[:, i]) & ~eye[i]).any()
+]
+with open(out_json, "w") as fh:
+    json.dump(facts, fh, indent=1)
+print(json.dumps(facts, indent=1))

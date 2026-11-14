@@ -1,0 +1,126 @@
+"""Load Creamer's pickles through an allow-list unpickler, describe them, and export arrays.
+
+Allow-list: NumPy array, dtype and scalar reconstruction, and the model class
+`ssm_classes.Lgssm`, which is mapped to an inert local stub (no methods), so none of the
+repository's modules is imported. Anything else raises before it is resolved.
+
+Usage (run from an empty directory, with python -I):
+    python -I load_pickles.py <export_dir> <file.pkl> [<file.pkl> ...]
+Writes <export_dir>/<stem>.npz (compressed; every ndarray found, keyed by its path) and
+<export_dir>/<stem>.structure.json (every node's type, shape, dtype, NaN count, and every
+non-array leaf's value when small).
+"""
+
+import hashlib
+import json
+import os
+import pickle
+import sys
+
+import numpy as np
+import numpy._core.multiarray as np_multiarray
+
+ALLOWED = {
+    ("numpy", "dtype"): np.dtype,
+    ("numpy", "ndarray"): np.ndarray,
+    ("numpy.core.multiarray", "_reconstruct"): np_multiarray._reconstruct,
+    ("numpy._core.multiarray", "_reconstruct"): np_multiarray._reconstruct,
+    ("numpy.core.multiarray", "scalar"): np_multiarray.scalar,
+    ("numpy._core.multiarray", "scalar"): np_multiarray.scalar,
+}
+
+
+class LgssmStub:
+    """Inert stand-in for ssm_classes.Lgssm: holds the pickled __dict__, defines nothing."""
+
+
+class AllowListUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if (module, name) in ALLOWED:
+            return ALLOWED[(module, name)]
+        if (module, name) == ("ssm_classes", "Lgssm"):
+            return LgssmStub
+        raise pickle.UnpicklingError(f"refused global {module}.{name}")
+
+    def persistent_load(self, pid):
+        raise pickle.UnpicklingError("refused persistent id")
+
+
+def describe(obj, path, arrays, out, depth=0):
+    node = {"path": path, "type": type(obj).__name__}
+    if isinstance(obj, LgssmStub):
+        node["type"] = "Lgssm(stub)"
+        out.append(node)
+        for k in sorted(vars(obj)):
+            describe(vars(obj)[k], f"{path}.{k}", arrays, out, depth + 1)
+        return
+    if isinstance(obj, np.ndarray):
+        node.update(shape=list(obj.shape), dtype=str(obj.dtype))
+        if obj.dtype.kind == "f":
+            node["nan"] = int(np.isnan(obj).sum())
+            finite = obj[np.isfinite(obj)]
+            if finite.size:
+                node["min"] = float(finite.min())
+                node["max"] = float(finite.max())
+        if obj.dtype.kind == "b":
+            node["true"] = int(obj.sum())
+        if obj.dtype.kind in "fiub" and obj.size:
+            arrays[path] = obj
+        elif obj.dtype.kind in "US" and obj.size <= 2000:
+            node["value"] = obj.tolist()
+        elif obj.dtype.kind == "O":
+            node["object_array"] = True
+            out.append(node)
+            for i, x in enumerate(obj.reshape(-1)[:500]):
+                describe(x, f"{path}[{i}]", arrays, out, depth + 1)
+            return
+        out.append(node)
+        return
+    if isinstance(obj, dict):
+        node["keys"] = [str(k) for k in obj.keys()]
+        out.append(node)
+        for k, v in obj.items():
+            describe(v, f"{path}.{k}", arrays, out, depth + 1)
+        return
+    if isinstance(obj, (list, tuple)):
+        node["len"] = len(obj)
+        if all(isinstance(x, (str, int, float, bool, type(None), np.generic)) for x in obj):
+            if len(obj) <= 5000:
+                node["value"] = [x.item() if isinstance(x, np.generic) else x for x in obj]
+            out.append(node)
+            return
+        out.append(node)
+        for i, x in enumerate(obj):
+            describe(x, f"{path}[{i}]", arrays, out, depth + 1)
+        return
+    if isinstance(obj, np.generic):
+        node["value"] = obj.item()
+    elif isinstance(obj, (str, int, float, bool, type(None))):
+        node["value"] = obj
+    else:
+        node["repr"] = repr(obj)[:200]
+    out.append(node)
+
+
+export_dir = sys.argv[1]
+os.makedirs(export_dir, exist_ok=True)
+for p in sys.argv[2:]:
+    with open(p, "rb") as fh:
+        raw = fh.read()
+    import io
+
+    obj = AllowListUnpickler(io.BytesIO(raw)).load()
+    stem = os.path.splitext(os.path.basename(p))[0]
+    arrays, nodes = {}, []
+    describe(obj, stem, arrays, nodes)
+    npz_path = os.path.join(export_dir, stem + ".npz")
+    np.savez_compressed(npz_path, **{k.replace("/", "_"): v for k, v in arrays.items()})
+    with open(os.path.join(export_dir, stem + ".structure.json"), "w") as fh:
+        json.dump(
+            {"source": os.path.basename(p), "source_sha256": hashlib.sha256(raw).hexdigest(),
+             "nodes": nodes},
+            fh,
+            indent=1,
+            default=str,
+        )
+    print(f"{stem}: {len(nodes)} nodes, {len(arrays)} arrays -> {npz_path}")

@@ -1,0 +1,79 @@
+{
+ "checkpoint_factor": 1.3381615598885794,
+ "per_animal_frame_ms": {
+  "single process, batched (0.72-0.77 ms)": 0.745,
+  "8 concurrent processes (0.26 ms aggregate)": 0.2604166666666667
+ },
+ "sets": {
+  "last_80_sorted (block hypothesis)": {
+   "animal_frames": 241057,
+   "single process, batched (0.72-0.77 ms)": {
+    "s_per_step": 240.3,
+    "h_per_fit_2000": 133.5,
+    "h_per_fit_5000": 333.8
+   },
+   "8 concurrent processes (0.26 ms aggregate)": {
+    "s_per_step": 84.0,
+    "h_per_fit_2000": 46.7,
+    "h_per_fit_5000": 116.7
+   },
+   "steady_state_single_process_s_per_step": 17.2
+  },
+  "first_80_sorted": {
+   "animal_frames": 275764,
+   "single process, batched (0.72-0.77 ms)": {
+    "s_per_step": 274.9,
+    "h_per_fit_2000": 152.7,
+    "h_per_fit_5000": 381.8
+   },
+   "8 concurrent processes (0.26 ms aggregate)": {
+    "s_per_step": 96.1,
+    "h_per_fit_2000": 53.4,
+    "h_per_fit_5000": 133.5
+   },
+   "steady_state_single_process_s_per_step": 19.7
+  },
+  "mean_x80": {
+   "animal_frames": 266055,
+   "single process, batched (0.72-0.77 ms)": {
+    "s_per_step": 265.2,
+    "h_per_fit_2000": 147.4,
+    "h_per_fit_5000": 368.4
+   },
+   "8 concurrent processes (0.26 ms aggregate)": {
+    "s_per_step": 92.7,
+    "h_per_fit_2000": 51.5,
+    "h_per_fit_5000": 128.8
+   },
+   "steady_state_single_process_s_per_step": 19.0
+  },
+  "80_shortest": {
+   "animal_frames": 226038,
+   "single process, batched (0.72-0.77 ms)": {
+    "s_per_step": 225.3,
+    "h_per_fit_2000": 125.2,
+    "h_per_fit_5000": 313.0
+   },
+   "8 concurrent processes (0.26 ms aggregate)": {
+    "s_per_step": 78.8,
+    "h_per_fit_2000": 43.8,
+    "h_per_fit_5000": 109.4
+   },
+   "steady_state_single_process_s_per_step": 16.2
+  },
+  "80_longest": {
+   "animal_frames": 318770,
+   "single process, batched (0.72-0.77 ms)": {
+    "s_per_step": 317.8,
+    "h_per_fit_2000": 176.6,
+    "h_per_fit_5000": 441.4
+   },
+   "8 concurrent processes (0.26 ms aggregate)": {
+    "s_per_step": 111.1,
+    "h_per_fit_2000": 61.7,
+    "h_per_fit_5000": 154.3
+   },
+   "steady_state_single_process_s_per_step": 22.8
+  }
+ }
+}

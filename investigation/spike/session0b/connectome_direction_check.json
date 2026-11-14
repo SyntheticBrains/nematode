@@ -1,0 +1,17 @@
+{
+ "send_pairs": 2194,
+ "recv_pairs": 2193,
+ "send_recv_mask_equal": false,
+ "send_recv_count_diff_entries": 1,
+ "send_total": 6394.0,
+ "recv_total": 6393.0,
+ "true_directed_pairs_union": 2194,
+ "true_reciprocal_pairs": 233,
+ "code_entries": 3464,
+ "code_entries_not_in_true": 1270,
+ "true_entries_not_in_code": 0,
+ "code_entries_reversed_of_true_only": 1270,
+ "code_reciprocal_pairs": 1503,
+ "Sp_pairs": 1625,
+ "Sp_reversed_present_in_code": 1625
+}

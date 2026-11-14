@@ -1,0 +1,31 @@
+"""Does smoothing, or a monotone transform, bring NWB traces to the .mat traces? Median over matched
+neurons of Pearson r (lag -1) between mat and gaussian-smoothed NWB (sigma 0..4 frames), and of
+Spearman r, and of r between smoothed mat and smoothed NWB.
+Usage: python -I compare_mat_nwb_smooth.py <mat> <worm> <nwb_small.npz> <out.json>"""
+import json, sys, re
+import numpy as np, scipy.io as sio
+from scipy.ndimage import gaussian_filter1d
+from scipy.stats import spearmanr
+m = sio.loadmat(sys.argv[1]); w = int(sys.argv[2]); z = np.load(sys.argv[3])
+raw = z["raw"]; labels = [str(x).strip() for x in z["labels"]]
+tr = m["traces"]; cls = [str(m["neurons"][i][0][0]) for i in range(m["neurons"].shape[0])]
+norm = lambda n: (lambda mm: mm.group(1) + mm.group(2) if mm else n)(re.match(r"^([A-Z]+)0(\d)$", n))
+mt = {}
+for f in range(tr.shape[0]):
+    cell = tr[f][0]
+    for side, s in ((("L", w), ("R", w + 21)) if cell.shape[1] == 42 else (("", w),)):
+        d = cell[0][s]
+        if d.shape[0] >= 1 and d[0].shape[0] > 0: mt[norm(cls[f]) + side] = d[0].astype(float)
+pairs = [(mt[l], raw[:, k]) for k, l in enumerate(labels) if l in mt]
+o = {"matched": len(pairs)}
+for lag in (-1, 0):
+    for sig in (0, 1, 2, 3, 4):
+        rs, rss, rboth = [], [], []
+        for y, x in pairs:
+            t = np.arange(len(y)); u = t + lag; ok = (u >= 0) & (u < len(x)) & ~np.isnan(y)
+            yy = y[ok]; xx = gaussian_filter1d(x, sig)[u[ok]] if sig else x[u[ok]]
+            rs.append(np.corrcoef(yy, xx)[0, 1]); rss.append(spearmanr(yy, xx)[0])
+            if sig: rboth.append(np.corrcoef(gaussian_filter1d(yy, sig), xx)[0, 1])
+        o[f"lag{lag}_sigma{sig}"] = {"pearson_median": round(float(np.median(rs)), 4), "spearman_median": round(float(np.median(rss)), 4),
+                                    "both_smoothed_median": round(float(np.median(rboth)), 4) if rboth else None}
+json.dump(o, open(sys.argv[4], "w"), indent=1); print(json.dumps(o, indent=1))

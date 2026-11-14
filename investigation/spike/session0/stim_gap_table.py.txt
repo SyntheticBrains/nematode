@@ -1,0 +1,20 @@
+"""For each example stimulation event: start time minus the preceding timestamp, and whether his
+frame is k-1 or k (k = first timestamp >= start). Usage: python -I stim_gap_table.py <exports> <nwb> <summary> <names>"""
+import json, sys
+import h5py, numpy as np
+exports, nwb, summ, names_p = sys.argv[1:5]
+ex = np.load(exports + "/example_recording.npz"); inp = ex["example_recording.inputs"]
+names = json.load(open(names_p))
+lab = [r for r in json.load(open(summ)) if nwb.endswith(r["file"])][0]["roi_labels"]
+with h5py.File(nwb, "r") as f:
+    ts = f["processing/ophys/GreenSignals/BaseGreenSignal/timestamps"][()]
+    st = f["intervals/OptogeneticStimulusTable"]
+    start = st["start_time"][()]; tgt = st["target_pumpprobe_id"][()]
+ex_ev = {(int(t) + 120, names[j]) for t, j in np.argwhere(inp == 1)}
+rows = []
+for x, m in zip(start, tgt):
+    if np.isnan(m) or lab[int(m)] not in names: continue
+    k = int(np.searchsorted(ts, x)); L = lab[int(m)]
+    which = "k" if (k, L) in ex_ev else ("k-1" if (k - 1, L) in ex_ev else "absent")
+    rows.append((round(x - ts[k - 1], 4), round(ts[k] - ts[k - 1], 4), which, L, k - 120))
+for r in sorted(rows): print(r)

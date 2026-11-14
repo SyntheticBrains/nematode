@@ -1,0 +1,73 @@
+"""Structure of measured_stams / measured_corr (NaN patterns and counts only; no correlations are
+computed against the test arrays), and split clues from the NWB stimulation record.
+
+Clue 1: DB1 has no fitted input filter in any released model, so (if his data equal the NWB data)
+no training recording contains an identified DB1 stimulation after the 120-frame cut.
+Clue 2: a stimulated neuron whose column of measured_stams['train'] is entirely NaN was probably
+never stimulated in training. Checked against two contiguous blocks over the 110 recordings in
+sorted (chronological) order: the first 80 for training (the pre-May-2026 loader) and the last 80
+(the current loader with hold_out_start 0).
+
+Usage: python -I stams_structure.py <exports> <nwb_summary.json> <names.json> <nwb_dir> <out_json>
+"""
+
+import json
+import os
+import sys
+
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import creamer_preprocess as cp  # noqa: E402
+
+exports, summ_path, names_path, nwb_dir, out_path = sys.argv[1:6]
+names = json.load(open(names_path))
+n = len(names)
+eye = np.eye(n, dtype=bool)
+out = {}
+for stem in ("measured_stams", "measured_corr"):
+    z = np.load(os.path.join(exports, stem + ".npz"))
+    for part in ("train", "test"):
+        a = z[f"{stem}.{part}"]
+        fin = np.isfinite(a)
+        out[f"{stem}.{part}"] = {
+            "shape": list(a.shape),
+            "finite_total": int(fin.sum()),
+            "finite_offdiag": int((fin & ~eye).sum()),
+            "finite_diag": int((fin & eye).sum()),
+            "columns_all_nan": int((~fin).all(0).sum()),
+            "rows_all_nan": int((~fin).all(1).sum()),
+            "symmetric_nan_pattern": bool(np.array_equal(fin, fin.T)),
+            "symmetric_values": bool(np.allclose(np.nan_to_num(a), np.nan_to_num(a.T))),
+        }
+    tr = np.isfinite(z[f"{stem}.train"])
+    te = np.isfinite(z[f"{stem}.test"])
+    out[f"{stem}.overlap"] = {"both_finite_offdiag": int((tr & te & ~eye).sum()),
+                              "test_finite_not_train": int((te & ~tr & ~eye).sum())}
+z = np.load(os.path.join(exports, "measured_stams.npz"))
+train_cols_nan = [names[j] for j in np.where((~np.isfinite(z["measured_stams.train"])).all(0))[0]]
+test_cols_nan = [names[j] for j in np.where((~np.isfinite(z["measured_stams.test"])).all(0))[0]]
+out["stams_train_columns_all_nan"] = train_cols_nan
+out["stams_test_columns_all_nan_count"] = len(test_cols_nan)
+
+summary = sorted(json.load(open(summ_path)), key=lambda r: r["pumpprobe_name"])
+stim_sets = {}
+for r in summary:
+    _g, inputs, kept, _info, _ts = cp.load_recording(os.path.join(nwb_dir, r["file"]), r["roi_labels"], names)
+    inp = inputs[cp.START_INDEX:]
+    stim_sets[r["pumpprobe_name"]] = sorted({kept[j] for j in np.where(inp.sum(0) > 0)[0]})
+order = [r["pumpprobe_name"] for r in summary]
+out["recordings_with_db1_stim"] = [nm for nm in order if "DB1" in stim_sets[nm]]
+out["db1_stim_positions_in_sorted_order"] = [order.index(nm) for nm in out["recordings_with_db1_stim"]]
+for label, train in (("first_80_train", order[:80]), ("last_80_train", order[30:])):
+    stimulated = set().union(*[stim_sets[nm] for nm in train])
+    out[label] = {
+        "neurons_stimulated_in_train": len(stimulated),
+        "db1_stimulated_in_train": "DB1" in stimulated,
+        "train_all_nan_columns_but_stimulated": sorted(set(train_cols_nan) & stimulated),
+        "stimulated_never_but_train_column_finite": sorted(set(names) - stimulated - set(train_cols_nan)),
+    }
+all_stim = set().union(*stim_sets.values())
+out["neurons_never_stimulated_in_any_nwb_recording"] = sorted(set(names) - all_stim)
+json.dump(out, open(out_path, "w"), indent=1)
+print(json.dumps(out, indent=1))

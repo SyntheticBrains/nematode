@@ -1,0 +1,13 @@
+"""Pool the per-worm mat-vs-NWB comparisons. Usage: python -I compare_all_summary.py <compare_all dir>"""
+import json, sys
+import numpy as np
+d = sys.argv[1]; per = []; allr = []; nn = 0
+for i in range(21):
+    j = json.load(open(f"{d}/w{i}.json")); rp = np.array([r["r_plain"] for r in j["rows"]], float)
+    nn += int(np.isnan(rp).sum()); allr += rp.tolist()
+    per.append({"worm": i, "matched": len(rp), "median_r": round(float(np.nanmedian(rp)), 3), "n_nan_r": int(np.isnan(rp).sum()),
+                "n_ge_0.9": int((rp >= 0.9).sum()), "median_r_diff": j["summary"]["r_diff_quantiles_0_5_25_50_75_100"][3]})
+a = np.array(allr)
+o = {"per_worm": per, "pooled_n": int(len(a)), "nan_r": nn, "pooled_median_r": float(np.nanmedian(a)),
+     "pooled_q05_q95": np.nanquantile(a, [.05, .95]).tolist(), "frac_ge_0.9": float(np.nanmean(a >= 0.9)), "frac_ge_0.99": float(np.nanmean(a >= 0.99))}
+json.dump(o, open(f"{d}/summary.json", "w"), indent=1); print(json.dumps({k: v for k, v in o.items() if k != "per_worm"}, indent=1))

@@ -1,0 +1,63 @@
+"""Peek at one NWB segmentation file's labels, ROI matching, stimulation table and signals.
+Usage: python -I nwb_peek.py <file.nwb>"""
+
+import sys
+
+import h5py
+import numpy as np
+
+
+def s(x):
+    return x.decode() if isinstance(x, bytes) else str(x)
+
+
+with h5py.File(sys.argv[1], "r") as f:
+    oph = f["processing/ophys"]
+    g = oph["GreenSignals/BaseGreenSignal/data"][()]
+    gi = oph["GreenSignals/InterpolatedGreenSignal/data"][()]
+    ts = oph["GreenSignals/BaseGreenSignal/timestamps"][()]
+    r = oph["RedSignals/BaseRedSignal/data"][()]
+    print("green", g.shape, "nan frac", np.isnan(g).mean().round(4), "interp nan", np.isnan(gi).mean())
+    fin = ~np.isnan(g)
+    print("interp equals base where base finite:", np.allclose(g[fin], gi[fin]))
+    print("timestamps first", ts[:5], "last", ts[-3:], "dt unique", np.unique(np.round(np.diff(ts), 4))[:10])
+    print("green value range", np.nanmin(g), np.nanmax(g), "median", np.nanmedian(g))
+    print("red value range", np.nanmin(r), np.nanmax(r), "nan frac", np.isnan(r).mean().round(4))
+    tr = oph["GreenSignals/BaseGreenSignal/table_region"][()]
+    print("green table_region first", tr[:10], "len", len(tr))
+    pp = oph["PumpProbeGreenSegmentations/PumpProbeGreenPlaneSegmentation"]
+    ppid = pp["id"][()]
+    npids = [s(x) for x in pp["neuropal_ids"][()]]
+    print("pumpprobe ids first", ppid[:10], "neuropal_ids first", npids[:15])
+    npal = oph["NeuroPALSegmentations/NeuroPALPlaneSegmentation"]
+    np_id = npal["id"][()]
+    labels = [s(x) for x in npal["labels"][()]]
+    conf = npal["labels_confidences"][()]
+    comments = [s(x) for x in npal["labels_comments"][()]]
+    print("neuropal ids first", np_id[:10], "n", len(np_id))
+    print("labels sample", labels[:25])
+    print("confidences unique", np.unique(conf)[:20])
+    print("comments sample", [c for c in comments if c][:10])
+    id_to_label = {int(i): l for i, l in zip(np_id, labels)}
+    matched = [id_to_label.get(int(x)) if x not in ("", "nan") else None for x in npids]
+    print("pumpprobe ROIs matched to a NeuroPAL id:", sum(m is not None for m in matched),
+          "with nonblank label:", sum(bool(m) for m in matched))
+    print("matched labels sample", [m for m in matched if m][:40])
+    st = f["intervals/OptogeneticStimulusTable"]
+    start = st["start_time"][()]
+    stop = st["stop_time"][()]
+    tgt = st["target_pumpprobe_id"][()]
+    power = st["power"][()]
+    print("n stim", len(start), "start first", start[:5], "dur", np.unique(np.round(stop - start, 3)))
+    print("target_pumpprobe_id first", tgt[:15], "nan count", np.isnan(tgt).sum())
+    print("power unique", np.unique(power))
+    targets = st["targets"][()]
+    print("targets first", targets[:3], type(targets[0]))
+    try:
+        ref = targets[0]
+        print("targets[0] deref name:", f[ref].name)
+    except Exception as e:  # noqa: BLE001
+        print("targets deref failed", e)
+    print("stim inter-onset s:", np.unique(np.round(np.diff(start), 1))[:10])
+    frames = np.searchsorted(ts, start)
+    print("stim frames first", frames[:10])

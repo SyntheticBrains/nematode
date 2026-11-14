@@ -1,0 +1,57 @@
+"""Read only the small datasets (labels, the two trace series, stimulus intervals, rates) of every
+DANDI 000541 NWB by HTTP byte ranges, without downloading the 1.4 GB raw video in each file.
+
+Usage: python -I nwb_remote_traces.py <assets_p1.json> <out_dir> <summary.json>
+"""
+import json
+import sys
+import time
+from pathlib import Path
+
+import fsspec
+import h5py
+import numpy as np
+
+assets = sorted(json.load(open(sys.argv[1]))["results"], key=lambda r: r["path"])
+out_dir = Path(sys.argv[2]); out_dir.mkdir(parents=True, exist_ok=True)
+fs = fsspec.filesystem("http")
+TR = "processing/CalciumActivity/SignalRawFluor/SignalCalciumImResponseSeries"
+DN = "processing/CalciumActivity/SignalRawFluordNMF/dNMFCalciumImResponseSeries"
+
+
+def strs(a):
+    return [x.decode() if isinstance(x, bytes) else str(x) for x in np.asarray(a).ravel()]
+
+
+summary = []
+t0 = time.time()
+for a in assets:
+    url = f"https://api.dandiarchive.org/api/assets/{a['asset_id']}/download/"
+    sid = a["path"].split("/")[0]
+    with fs.open(url, "rb", block_size=2**20, cache_type="blockcache") as fh:
+        with h5py.File(fh, "r") as f:
+            labels = strs(f["processing/CalciumActivity/NeuronIDs/labels"][()])
+            raw = f[TR + "/data"][()]
+            dn = f[DN + "/data"][()]
+            rate = float(f[TR + "/starting_time"].attrs["rate"])
+            start = float(f[TR + "/starting_time"][()])
+            st = f["intervals/chemical_stimuli/start_time"][()]
+            sp = f["intervals/chemical_stimuli/stop_time"][()]
+            stim = strs(f["intervals/chemical_stimuli/stimulus"][()])
+            vid_shape = list(f["acquisition/CalciumImageSeries/data"].shape)
+            strain = f["general/subject/strain"][()]
+            strain = strain.decode() if isinstance(strain, bytes) else str(strain)
+    np.savez(out_dir / f"{sid}.npz", raw=raw, dnmf=dn, labels=np.array(labels), stim_start=st,
+             stim_stop=sp, stim=np.array(stim), rate=rate, start=start)
+    nonblank = [l for l in labels if l.strip()]
+    summary.append({
+        "subject": sid, "frames": int(raw.shape[0]), "rois": int(raw.shape[1]),
+        "labelled": len(nonblank), "unique_labels": len(set(nonblank)),
+        "duplicate_labels": sorted({l for l in nonblank if nonblank.count(l) > 1}),
+        "nan_frac": float(np.isnan(raw).mean()), "raw_equals_dnmf": bool(np.array_equal(raw, dn)),
+        "rate": rate, "start": start, "stim": stim, "stim_start": st.tolist(), "stim_stop": sp.tolist(),
+        "video_shape": vid_shape, "strain": strain,
+        "min": float(np.nanmin(raw)), "max": float(np.nanmax(raw)),
+    })
+    print(sid, summary[-1]["frames"], summary[-1]["rois"], summary[-1]["labelled"], f"{time.time()-t0:.0f}s", flush=True)
+json.dump(summary, open(sys.argv[3], "w"), indent=1)
