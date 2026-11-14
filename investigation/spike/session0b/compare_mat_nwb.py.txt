@@ -1,0 +1,63 @@
+"""Compare the wormvae .mat traces (dF/F0, L/R slots) with the NWB SignalRawFluor traces of the same
+worm, neuron by neuron, at frame lags -3..3. Reports Pearson r, and the R^2 of an affine fit.
+
+Usage: python -I compare_mat_nwb.py <mat> <worm index 0-20> <nwb_small.npz> <out.json>
+"""
+import json
+import sys
+
+import numpy as np
+import scipy.io as sio
+
+m = sio.loadmat(sys.argv[1])
+w = int(sys.argv[2])
+z = np.load(sys.argv[3], allow_pickle=False)
+raw = z["raw"]; labels = [str(x) for x in z["labels"]]
+tr = m["traces"]; cls = [str(m["neurons"][i][0][0]) for i in range(m["neurons"].shape[0])]
+awcl_off = int(m["is_AWCL_OFF"][w][0])
+mat_traces = {}
+for f in range(tr.shape[0]):
+    cell = tr[f][0]
+    if cell.shape[1] == 42:
+        for side, s in (("L", w), ("R", w + 21)):
+            d = cell[0][s]
+            if d.shape[0] >= 1 and d[0].shape[0] > 0:
+                mat_traces[cls[f] + side] = d[0].astype(float)
+    else:
+        d = cell[0][w]
+        if d.shape[0] >= 1 and d[0].shape[0] > 0:
+            mat_traces[cls[f]] = d[0].astype(float)
+res = []
+for k, lab in enumerate(labels):
+    lab = lab.strip()
+    if lab not in mat_traces:
+        continue
+    y = mat_traces[lab]; x = raw[:, k]
+    best = None
+    for lag in range(-3, 4):
+        # compare mat frame t with nwb frame t+lag
+        t = np.arange(len(y)); u = t + lag
+        ok = (u >= 0) & (u < len(x)) & ~np.isnan(y)
+        if ok.sum() < 100:
+            continue
+        r = np.corrcoef(y[ok], x[u[ok]])[0, 1]
+        if best is None or r > best[1]:
+            A = np.vstack([x[u[ok]], np.ones(ok.sum())]).T
+            coef, *_ = np.linalg.lstsq(A, y[ok], rcond=None)
+            pred = A @ coef
+            r2 = 1 - np.sum((y[ok] - pred) ** 2) / np.sum((y[ok] - y[ok].mean()) ** 2)
+            # dF/F0 with F0 = -intercept/slope ?
+            best = (lag, float(r), float(r2), coef.tolist(), int(ok.sum()))
+    res.append({"label": lab, "lag": best[0], "r": best[1], "affine_r2": best[2], "coef": best[3], "n": best[4]})
+rs = np.array([r["r"] for r in res])
+lags = [r["lag"] for r in res]
+o = {"worm": w, "awcl_off": awcl_off, "nwb_labels_nonblank": sum(1 for l in labels if l.strip()),
+     "mat_neurons_present": len(mat_traces), "matched": len(res),
+     "nwb_labels_not_in_mat": [l for l in labels if l.strip() and l.strip() not in mat_traces],
+     "mat_neurons_not_in_nwb": [n for n in mat_traces if n not in [l.strip() for l in labels]],
+     "r_quantiles": np.quantile(rs, [0, 0.05, 0.25, 0.5, 0.75, 1]).tolist() if len(rs) else None,
+     "n_r_ge_0.99": int((rs >= 0.99).sum()), "n_r_lt_0.9": int((rs < 0.9).sum()),
+     "lag_counts": {str(l): lags.count(l) for l in sorted(set(lags))},
+     "worst": sorted(res, key=lambda r: r["r"])[:8]}
+json.dump({"summary": o, "per_neuron": res}, open(sys.argv[4], "w"), indent=1)
+print(json.dumps(o, indent=1))

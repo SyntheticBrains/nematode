@@ -1,0 +1,141 @@
+"""Re-implement wormvae's WhiteConnectomeData parse (model/connectome_preprocess.py 18-107) without
+importing it, and report the matrices' size, density, symmetry and reciprocity.
+
+Usage: python -I connectome_facts.py <repo>/data/worm_connectivity <out.json>
+"""
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+base = Path(sys.argv[1])
+out = {}
+
+chemdf = pd.read_csv(base / "chem.csv", skipinitialspace=True, quotechar='"').drop("Unnamed: 0", axis=1)
+gjsym = pd.read_csv(base / "elec_symmetric.csv", skipinitialspace=True, quotechar='"').drop("Unnamed: 0", axis=1)
+spec = pd.read_csv(base / "herm_specific_cells.csv", skipinitialspace=True, quotechar='"')
+shared = pd.read_csv(base / "sex_shared_cells.csv", skipinitialspace=True, quotechar='"')
+conn = pd.read_csv(base / "white_neuron_connect.csv", skipinitialspace=True)
+types = pd.read_csv(base / "white_neuron_types.csv", skipinitialspace=True)
+
+cols = list(chemdf.columns)
+out["chem_csv_columns"] = len(cols)
+out["shared_rows"] = len(shared)
+out["herm_specific_rows"] = len(spec)
+# neuron list: same rule as __generate_neuron_list (index = column position in chem.csv)
+neurons = []
+for i, name in enumerate(cols):
+    if name in list(shared["name"]):
+        neurons.append((name, i, "shared"))
+    if name in list(spec["name"]):
+        neurons.append((name, i, "herm_specific"))
+N = len(neurons)
+out["N"] = N
+out["max_index"] = max(i for _, i, _ in neurons)
+out["index_equals_position"] = all(i == k for k, (_, i, _) in enumerate(neurons))
+out["chem_columns_not_in_lists"] = [c for c in cols if c not in list(shared["name"]) and c not in list(spec["name"])]
+out["names_in_both_lists"] = [c for c in cols if c in list(shared["name"]) and c in list(spec["name"])]
+name_idx = {n: i for n, i, _ in neurons}
+names = [n for n, _, _ in neurons]
+
+# neuron types as __overwrite_neuron_types
+typ = {}
+missing_type = []
+for _, row in types.iterrows():
+    if row["Neuron"] not in name_idx:
+        missing_type.append(row["Neuron"])
+        continue
+    t = row["Type"]
+    typ[row["Neuron"]] = {"sensory": "sensory", "motor": "motor", "interneuron": "inter"}.get(t, "pharyngeal")
+out["types_rows"] = len(types)
+out["types_names_not_in_neuron_list"] = missing_type
+out["type_counts"] = {k: sum(1 for v in typ.values() if v == k) for k in ["sensory", "motor", "inter", "pharyngeal"]}
+out["neurons_without_type"] = [n for n in names if n not in typ]
+out["raw_type_values"] = types["Type"].value_counts().to_dict()
+out["sensory_neurons"] = sorted([n for n in names if typ.get(n) == "sensory"])
+out["motor_neurons"] = sorted([n for n in names if typ.get(n) == "motor"])
+
+# weight matrices as __generate_weight_matrices
+chem = np.zeros((N, N))
+elec = np.zeros((N, N))
+chem_sp = np.zeros((N, N))
+el_sp = np.zeros((N, N))
+type_counts = conn["Type"].value_counts().to_dict()
+out["connect_types"] = type_counts
+skipped = {}
+overwrites_conflict = 0
+for _, row in conn.iterrows():
+    a, b, t, nbr = row["Neuron 1"], row["Neuron 2"], row["Type"], int(row["Nbr"])
+    if a in name_idx and b in name_idx:
+        i1, i2 = name_idx[a], name_idx[b]
+        if t == "EJ":
+            elec[i1, i2] = nbr
+            el_sp[i1, i2] = 1
+        elif t in ("S", "SP"):
+            if chem[i2, i1] not in (0, nbr):
+                overwrites_conflict += 1
+            chem[i2, i1] = nbr
+            chem_sp[i2, i1] = 1
+        else:
+            if chem[i1, i2] not in (0, nbr):
+                overwrites_conflict += 1
+            chem[i1, i2] = nbr
+            chem_sp[i1, i2] = 1
+    else:
+        skipped[t] = skipped.get(t, 0) + 1
+out["rows_skipped_by_type"] = skipped
+out["chem_value_conflicts_on_overwrite"] = overwrites_conflict
+out["note_type_Sp_spelling"] = "code tests 'S' or 'SP'; file types listed in connect_types"
+
+off = ~np.eye(N, dtype=bool)
+out["chem_nonzero"] = int((chem_sp > 0).sum())
+out["chem_nonzero_diag"] = int(np.diag(chem_sp).sum())
+out["chem_density_offdiag"] = float(chem_sp[off].mean())
+out["chem_total_count"] = float(chem.sum())
+out["chem_reciprocal_pairs"] = int(((chem_sp > 0) & (chem_sp.T > 0) & off).sum() // 2)
+out["elec_entries_nonzero"] = int((el_sp > 0).sum())
+out["elec_sparsity_symmetric"] = bool((el_sp == el_sp.T).all())
+out["elec_sparsity_asym_entries"] = int((el_sp != el_sp.T).sum())
+out["elec_counts_symmetric"] = bool((elec == elec.T).all())
+out["elec_count_asym_entries"] = int((elec != elec.T).sum())
+out["elec_nonzero_diag"] = int(np.diag(el_sp).sum())
+sym_gap = (el_sp + el_sp.T) > 0
+out["elec_undirected_pairs_union"] = int((sym_gap & off).sum() // 2)
+out["elec_density_offdiag_directed_mask"] = float(el_sp[off].mean())
+# effective W_e = sparsity_e * (M + M^T): nonzero where sparsity_e is 1
+eff = el_sp * (elec + elec.T)
+out["elec_effective_nonzero_entries"] = int((eff > 0).sum())
+out["elec_effective_symmetric"] = bool(((eff > 0) == (eff.T > 0)).all())
+out["elec_total_count_upper"] = float(np.triu(elec, 1).sum())
+out["chem_and_elec_overlap_pairs_directed"] = int(((chem_sp > 0) & (el_sp > 0)).sum())
+union = ((chem_sp + el_sp + el_sp.T) > 0) & off
+out["union_offdiag_directed_entries"] = int(union.sum())
+out["union_density_offdiag"] = float(union[off].mean())
+indeg = (chem_sp * off).sum(1)
+outdeg = (chem_sp * off).sum(0)
+out["chem_isolated_neurons"] = [names[k] for k in range(N) if indeg[k] == 0 and outdeg[k] == 0]
+gdeg = (sym_gap & off).sum(1)
+out["neurons_no_chem_no_gap"] = [names[k] for k in range(N) if indeg[k] == 0 and outdeg[k] == 0 and gdeg[k] == 0]
+out["chem_indeg_max"] = int(indeg.max())
+out["chem_outdeg_max"] = int(outdeg.max())
+out["gap_deg_max"] = int(gdeg.max())
+out["chem_unique_counts_top"] = np.unique(chem[chem > 0], return_counts=True)[0][:10].tolist()
+out["chem_count_max"] = float(chem.max())
+out["elec_count_max"] = float(elec.max())
+# chem.csv itself (not used for weights by the code): compare to the NeuronConnect-derived matrix
+cvals = chemdf.fillna(0).values.astype(float)
+out["chem_csv_shape"] = list(cvals.shape)
+out["chem_csv_nonzero"] = int((cvals > 0).sum())
+out["chem_csv_total"] = float(cvals.sum())
+if cvals.shape == (N, N):
+    # chem.csv rows are presynaptic? test both orientations
+    out["chem_csv_equals_parsed_T"] = bool(np.array_equal((cvals.T > 0), chem_sp > 0))
+    out["chem_csv_equals_parsed"] = bool(np.array_equal((cvals > 0), chem_sp > 0))
+    out["chem_csv_counts_equal_parsed_T"] = int((cvals.T != chem).sum())
+json.dump({"names": names, **out}, open(sys.argv[2], "w"), indent=1)
+for k, v in out.items():
+    s = json.dumps(v)
+    print(k, s if len(s) < 400 else s[:400] + "...")
+np.savez(sys.argv[2].replace(".json", "_matrices.npz"), chem=chem, chem_sp=chem_sp, elec=elec, el_sp=el_sp, names=np.array(names))

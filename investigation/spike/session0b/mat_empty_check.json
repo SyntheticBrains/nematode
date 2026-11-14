@@ -1,0 +1,24 @@
+{
+ "placeholder_outer_shapes": {
+  "(1, 960)": 2186,
+  "(1, 959)": 1018,
+  "(1, 0)": 419,
+  "(1, 957)": 173,
+  "(1, 936)": 173
+ },
+ "inner_shapes_top": {
+  "(960,)": 2186,
+  "(959,)": 1018,
+  "(0,)": 419,
+  "(957,)": 173,
+  "(936,)": 173
+ },
+ "nonempty_traces": 3550,
+ "samples_sum": 3550,
+ "samples_equal_nonempty_per_class": true,
+ "nonempty_traces_with_nan": {
+  "any": 3550
+ },
+ "total_slots": 3969,
+ "scipy": "1.18.1"
+}

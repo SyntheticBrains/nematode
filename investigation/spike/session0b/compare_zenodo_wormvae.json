@@ -1,0 +1,108 @@
+{
+ "zenodo_keys": [
+  "files",
+  "fps",
+  "is_AWCL_OFF",
+  "is_L",
+  "max_norm_traces",
+  "max_traces",
+  "neurons",
+  "norm_traces",
+  "positions",
+  "samples",
+  "stim_names",
+  "stim_times",
+  "stims",
+  "traces"
+ ],
+ "wormvae_keys": [
+  "files",
+  "fps",
+  "is_AWCL_OFF",
+  "is_L",
+  "max_traces",
+  "neurons",
+  "neurons_i",
+  "norm_traces",
+  "samples",
+  "stim_names",
+  "stim_times",
+  "stims",
+  "traces"
+ ],
+ "zenodo_header": "b'MATLAB 5.0 MAT-file, Platform: MACI64, Created on: Tue Jun 23 17:48:55 2020'",
+ "wormvae_header": "b'MATLAB 5.0 MAT-file, Platform: MACI64, Created on: Tue May 12 17:08:10 2020'",
+ "zenodo_files": [
+  "0924_01",
+  "0924_02",
+  "0924_03",
+  "0925_01",
+  "0925_04",
+  "0928_01",
+  "0928_03",
+  "0928_05",
+  "0928_07",
+  "0928_08",
+  "0928_11",
+  "0928_13",
+  "0929_02",
+  "0929_03",
+  "0929_05",
+  "0929_06",
+  "0929_07",
+  "1030_03",
+  "1030_07",
+  "1104_08",
+  "1104_10"
+ ],
+ "stim_times_zenodo": [
+  [
+   60.5,
+   70.5
+  ],
+  [
+   120.5,
+   130.5
+  ],
+  [
+   180.5,
+   190.5
+  ]
+ ],
+ "stim_times_wormvae": [
+  [
+   60,
+   70
+  ],
+  [
+   120,
+   130
+  ],
+  [
+   180,
+   190
+  ]
+ ],
+ "wormvae_files_basenames_match": true,
+ "files_equal": false,
+ "zenodo_n_classes": 109,
+ "neurons_equal": true,
+ "zenodo_classes_not_in_wormvae": [],
+ "wormvae_classes_not_in_zenodo": [],
+ "fps_equal": true,
+ "stims_equal": true,
+ "stim_times_equal": false,
+ "is_AWCL_OFF_equal": true,
+ "samples_equal": true,
+ "traces_slots": 3969,
+ "traces_identical_slots": 3969,
+ "traces_different": 0,
+ "traces_length_mismatch": 0,
+ "traces_max_abs_diff": 0.0,
+ "norm_traces_slots": 3969,
+ "norm_traces_identical_slots": 3969,
+ "norm_traces_different": 0,
+ "norm_traces_length_mismatch": 0,
+ "norm_traces_max_abs_diff": 0.0,
+ "wormvae_traces_equal_zenodo_norm_traces": "3 of 3550"
+}

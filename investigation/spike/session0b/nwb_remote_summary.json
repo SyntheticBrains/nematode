@@ -1,0 +1,758 @@
+[
+ {
+  "subject": "sub-20190924-01",
+  "frames": 961,
+  "rois": 181,
+  "labelled": 180,
+  "unique_labels": 180,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "pentanedione",
+   "butanone",
+   "nacl"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.0424804650247097,
+  "max": 3.8876752853393555
+ },
+ {
+  "subject": "sub-20190924-02",
+  "frames": 961,
+  "rois": 178,
+  "labelled": 176,
+  "unique_labels": 176,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "pentanedione",
+   "butanone",
+   "nacl"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.0186102744191885,
+  "max": 4.197488784790039
+ },
+ {
+  "subject": "sub-20190924-03",
+  "frames": 962,
+  "rois": 188,
+  "labelled": 184,
+  "unique_labels": 184,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "pentanedione",
+   "butanone",
+   "nacl"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   963,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.05267144739627838,
+  "max": 3.4501280784606934
+ },
+ {
+  "subject": "sub-20190925-01",
+  "frames": 962,
+  "rois": 184,
+  "labelled": 180,
+  "unique_labels": 180,
+  "duplicate_labels": [],
+  "nan_frac": 0.005434782608695652,
+  "raw_equals_dnmf": false,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "pentanedione",
+   "butanone",
+   "nacl"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   963,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.016917236149311066,
+  "max": 3.346579074859619
+ },
+ {
+  "subject": "sub-20190925-04",
+  "frames": 960,
+  "rois": 177,
+  "labelled": 176,
+  "unique_labels": 176,
+  "duplicate_labels": [],
+  "nan_frac": 0.011299435028248588,
+  "raw_equals_dnmf": false,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "pentanedione",
+   "butanone",
+   "nacl"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   961,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.06659693270921707,
+  "max": 2.707960605621338
+ },
+ {
+  "subject": "sub-20190928-01",
+  "frames": 961,
+  "rois": 172,
+  "labelled": 169,
+  "unique_labels": 169,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "nacl",
+   "pentanedione",
+   "butanone"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.02495616115629673,
+  "max": 2.6107747554779053
+ },
+ {
+  "subject": "sub-20190928-03",
+  "frames": 961,
+  "rois": 168,
+  "labelled": 167,
+  "unique_labels": 167,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "nacl",
+   "pentanedione",
+   "butanone"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.022304784506559372,
+  "max": 3.6832237243652344
+ },
+ {
+  "subject": "sub-20190928-05",
+  "frames": 961,
+  "rois": 172,
+  "labelled": 164,
+  "unique_labels": 164,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "nacl",
+   "pentanedione",
+   "butanone"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.01318152155727148,
+  "max": 2.592344045639038
+ },
+ {
+  "subject": "sub-20190928-07",
+  "frames": 959,
+  "rois": 180,
+  "labelled": 179,
+  "unique_labels": 179,
+  "duplicate_labels": [],
+  "nan_frac": 0.011111111111111112,
+  "raw_equals_dnmf": false,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "nacl",
+   "pentanedione",
+   "butanone"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   960,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.012987663969397545,
+  "max": 3.904507875442505
+ },
+ {
+  "subject": "sub-20190928-08",
+  "frames": 960,
+  "rois": 183,
+  "labelled": 183,
+  "unique_labels": 183,
+  "duplicate_labels": [],
+  "nan_frac": 0.00546448087431694,
+  "raw_equals_dnmf": false,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "nacl",
+   "pentanedione",
+   "butanone"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   961,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.03315398469567299,
+  "max": 2.3168418407440186
+ },
+ {
+  "subject": "sub-20190928-11",
+  "frames": 962,
+  "rois": 181,
+  "labelled": 177,
+  "unique_labels": 177,
+  "duplicate_labels": [],
+  "nan_frac": 0.011049723756906077,
+  "raw_equals_dnmf": false,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "nacl",
+   "pentanedione",
+   "butanone"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   963,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.008191652595996857,
+  "max": 4.099419116973877
+ },
+ {
+  "subject": "sub-20190928-13",
+  "frames": 961,
+  "rois": 175,
+  "labelled": 175,
+  "unique_labels": 175,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "nacl",
+   "pentanedione",
+   "butanone"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.03196483477950096,
+  "max": 2.5366737842559814
+ },
+ {
+  "subject": "sub-20190929-02",
+  "frames": 961,
+  "rois": 166,
+  "labelled": 164,
+  "unique_labels": 164,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "butanone",
+   "nacl",
+   "pentanedione"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.01104571670293808,
+  "max": 3.3836121559143066
+ },
+ {
+  "subject": "sub-20190929-03",
+  "frames": 961,
+  "rois": 178,
+  "labelled": 175,
+  "unique_labels": 175,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "butanone",
+   "nacl",
+   "pentanedione"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.018071945756673813,
+  "max": 3.2249960899353027
+ },
+ {
+  "subject": "sub-20190929-05",
+  "frames": 961,
+  "rois": 170,
+  "labelled": 168,
+  "unique_labels": 168,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "butanone",
+   "nacl",
+   "pentanedione"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.01918509416282177,
+  "max": 3.251345157623291
+ },
+ {
+  "subject": "sub-20190929-06",
+  "frames": 961,
+  "rois": 178,
+  "labelled": 175,
+  "unique_labels": 175,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "butanone",
+   "nacl",
+   "pentanedione"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.011302399449050426,
+  "max": 3.321617841720581
+ },
+ {
+  "subject": "sub-20190929-07",
+  "frames": 936,
+  "rois": 177,
+  "labelled": 176,
+  "unique_labels": 176,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "butanone",
+   "nacl",
+   "pentanedione"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   937,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.0352623350918293,
+  "max": 2.7450387477874756
+ },
+ {
+  "subject": "sub-20191030-03",
+  "frames": 961,
+  "rois": 185,
+  "labelled": 182,
+  "unique_labels": 182,
+  "duplicate_labels": [],
+  "nan_frac": 0.010810810810810811,
+  "raw_equals_dnmf": false,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "pentanedione",
+   "butanone",
+   "nacl"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.02931310050189495,
+  "max": 3.4001846313476562
+ },
+ {
+  "subject": "sub-20191030-07",
+  "frames": 960,
+  "rois": 180,
+  "labelled": 175,
+  "unique_labels": 175,
+  "duplicate_labels": [],
+  "nan_frac": 0.016666666666666666,
+  "raw_equals_dnmf": false,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "butanone",
+   "nacl",
+   "pentanedione"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   961,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.005829016212373972,
+  "max": 2.2098419666290283
+ },
+ {
+  "subject": "sub-20191104-08",
+  "frames": 961,
+  "rois": 179,
+  "labelled": 177,
+  "unique_labels": 177,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "butanone",
+   "nacl",
+   "pentanedione"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.12543243169784546,
+  "max": 3.199357509613037
+ },
+ {
+  "subject": "sub-20191104-10",
+  "frames": 961,
+  "rois": 174,
+  "labelled": 174,
+  "unique_labels": 174,
+  "duplicate_labels": [],
+  "nan_frac": 0.0,
+  "raw_equals_dnmf": true,
+  "rate": 4.0,
+  "start": 0.0,
+  "stim": [
+   "pentanedione",
+   "butanone",
+   "nacl"
+  ],
+  "stim_start": [
+   60.5,
+   120.5,
+   180.5
+  ],
+  "stim_stop": [
+   70.5,
+   130.5,
+   190.5
+  ],
+  "video_shape": [
+   962,
+   256,
+   128,
+   21
+  ],
+  "strain": "OH16230",
+  "min": 0.033233802765607834,
+  "max": 2.487772226333618
+ }
+]

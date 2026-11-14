@@ -1,0 +1,10 @@
+"""List a remote zip's central directory by HTTP byte ranges (no extraction).
+Usage: python -I zip_listing.py <url> <out.tsv>"""
+import sys, zipfile, fsspec
+fs = fsspec.filesystem("http")
+with fs.open(sys.argv[1], "rb", block_size=2**20, cache_type="blockcache") as fh:
+    z = zipfile.ZipFile(fh)
+    rows = [(i.filename, i.file_size, i.compress_size, "%04d-%02d-%02d" % i.date_time[:3]) for i in z.infolist()]
+with open(sys.argv[2], "w") as o:
+    for r in rows: o.write("\t".join(map(str, r)) + "\n")
+print(len(rows), sum(r[1] for r in rows))
