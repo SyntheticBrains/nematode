@@ -1,0 +1,59 @@
+"""Does load_data's neuron rule reproduce Creamer's 154 from the NWB labels? A label is kept if, in
+at least neuron_freq (0.1) of the training recordings, it has at most 50% missing frames
+(preprocessed; approximated here by the raw NaN fraction after the 120-frame cut, which the
+missingness run showed differs by over 0.01 for only 18 of 6,511 neuron-recordings), minus the blacklist AWCL, AWCR.
+Training sets tried: all 110; first 80 (sorted); last 80; and every contiguous block of 80
+(wrapping), as the current loader's hold_out_start allows.
+
+Usage: python -I neuron_set_rule.py <nwb_dir> <nwb_summary.json> <names.json> <out_json>
+"""
+
+import collections
+import json
+import os
+import sys
+
+import h5py
+import numpy as np
+
+nwb_dir, summ_path, names_path, out_path = sys.argv[1:5]
+names = set(json.load(open(names_path)))
+rows = sorted(json.load(open(summ_path)), key=lambda r: r["pumpprobe_name"])
+measured = []  # per recording: set of labels with <= 50% missing
+for r in rows:
+    with h5py.File(os.path.join(nwb_dir, r["file"]), "r") as f:
+        g = f["processing/ophys/GreenSignals/BaseGreenSignal/data"][()][120:]
+    frac = np.isnan(g).mean(0)
+    seen = set()
+    m = set()
+    for j, lab in enumerate(r["roi_labels"]):
+        if not lab or lab in seen:
+            continue
+        seen.add(lab)
+        if frac[j] <= 0.5:
+            m.add(lab)
+    measured.append(m)
+
+
+def rule(train_idx, freq=0.1):
+    cnt = collections.Counter(l for i in train_idx for l in measured[i])
+    n = len(train_idx)
+    return {l for l, c in cnt.items() if c / n >= freq} - {"AWCL", "AWCR"}
+
+
+out = {}
+for label, idx in (("all_110", range(110)), ("first_80", range(80)), ("last_80", range(30, 110))):
+    s = rule(list(idx))
+    out[label] = {"size": len(s), "equals_154": s == names, "missing_from_rule": sorted(names - s),
+                  "extra_in_rule": sorted(s - names)}
+blocks = []
+for start in range(110):
+    test = {(start + k) % 110 for k in range(30)}
+    train = [i for i in range(110) if i not in test]
+    s = rule(train)
+    blocks.append((len(names ^ s), start, len(s)))
+blocks.sort()
+out["contiguous_test_blocks_best"] = [{"test_start": b[1], "symmetric_difference": b[0], "size": b[2]} for b in blocks[:8]]
+out["contiguous_test_blocks_exact"] = [b[1] for b in blocks if b[0] == 0]
+json.dump(out, open(out_path, "w"), indent=1)
+print(json.dumps(out, indent=1))

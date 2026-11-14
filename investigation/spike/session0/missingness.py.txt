@@ -1,0 +1,95 @@
+"""Missing values per neuron and frame on the 110 NWB recordings, after Creamer's preparation.
+
+For each recording: the ROIs labelled with one of his 154 names, prepared by
+creamer_preprocess.preprocess. Reports per animal: frames, recorded neurons, missing fraction
+per neuron, neurons with any within-recording missing frame, frames with any missing entry
+among recorded neurons, entries missing, photobleach fallbacks; the raw (pre-preparation) NaN
+fraction beside it. Writes a per-(animal, neuron) CSV, a per-animal JSON and each animal's
+recorded-neuron missingness mask (bit-packed) for the cost benchmark.
+
+Usage: python -I missingness.py <nwb_dir> <nwb_summary.json> <names.json> <out_dir> [workers]
+"""
+
+import csv
+import json
+import os
+import sys
+from concurrent.futures import ProcessPoolExecutor
+
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import creamer_preprocess as cp  # noqa: E402
+
+nwb_dir, summ_path, names_path, out_dir = sys.argv[1:5]
+workers = int(sys.argv[5]) if len(sys.argv) > 5 else 6
+names = json.load(open(names_path))
+summary = json.load(open(summ_path))
+
+
+def one(rec):
+    os.environ["OMP_NUM_THREADS"] = "1"
+    path = os.path.join(nwb_dir, rec["file"])
+    green, inputs, kept, info, ts = cp.load_recording(path, rec["roi_labels"], names)
+    raw_nan_cut = np.isnan(green[cp.START_INDEX:]).mean(0) if green.size else np.array([])
+    if not kept:
+        return rec, kept, None, None, info, raw_nan_cut, ts
+    out, inp, fit = cp.preprocess(green, inputs)
+    return rec, kept, np.isnan(out), fit, info, raw_nan_cut, ts
+
+
+def main():
+    os.makedirs(out_dir, exist_ok=True)
+    per_animal = []
+    masks = {}
+    rows = []
+    with ProcessPoolExecutor(max_workers=workers) as ex:
+        for rec, kept, nanmask, fit, info, raw_nan_cut, ts in ex.map(one, summary):
+            a = {"file": rec["file"], "name": rec["pumpprobe_name"], "raw_frames": rec["frames"],
+                 "neurons_labelled_in_154": len(kept), **info}
+            dt = np.diff(ts)
+            a["timestamp_gaps_over_0.75s"] = int((dt > 0.75).sum())
+            a["timestamp_max_gap_s"] = float(dt.max())
+            if nanmask is None:
+                a.update(frames=0, recorded=0)
+                per_animal.append(a)
+                continue
+            T = nanmask.shape[0]
+            frac = nanmask.mean(0)
+            recorded = frac < 1
+            a.update(
+                frames=int(T),
+                recorded=int(recorded.sum()),
+                all_nan_after_prep=int((~recorded).sum()),
+                photobleach_set_nan=len(fit["bad_1exp"]),
+                photobleach_1exp_fallback=len(fit["bad_2exp"]),
+                recorded_over_half_missing=int((frac[recorded] > 0.5).sum()),
+                recorded_with_any_missing=int((frac[recorded] > 0).sum()),
+                entries_missing_fraction=float(nanmask[:, recorded].mean()) if recorded.any() else None,
+                frames_with_any_missing_fraction=float(nanmask[:, recorded].any(1).mean()) if recorded.any() else None,
+                neuron_missing_fraction_quantiles=[float(q) for q in np.quantile(frac[recorded], [0, .25, .5, .75, 1])] if recorded.any() else None,
+                distinct_missingness_patterns=int(len(np.unique(np.packbits(nanmask[:, recorded], axis=1), axis=0))) if recorded.any() else 0,
+            )
+            # the same restricted to neurons with at most half their frames missing
+            keep_half = recorded & (frac <= 0.5)
+            a["le_half_recorded"] = int(keep_half.sum())
+            a["le_half_with_any_missing"] = int((frac[keep_half] > 0).sum())
+            a["le_half_frames_with_any_missing_fraction"] = float(nanmask[:, keep_half].any(1).mean()) if keep_half.any() else None
+            a["le_half_entries_missing_fraction"] = float(nanmask[:, keep_half].mean()) if keep_half.any() else None
+            per_animal.append(a)
+            masks[rec["pumpprobe_name"]] = np.packbits(nanmask[:, recorded], axis=0)
+            masks[rec["pumpprobe_name"] + "__shape"] = np.array(nanmask[:, recorded].shape)
+            for i, n in enumerate(kept):
+                rows.append([rec["pumpprobe_name"], n, T, round(float(frac[i]), 6), round(float(raw_nan_cut[i]), 6)])
+    with open(os.path.join(out_dir, "missingness_per_neuron.csv"), "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["recording", "neuron", "frames_after_prep", "missing_fraction_after_prep", "raw_nan_fraction_after_cut"])
+        w.writerows(rows)
+    with open(os.path.join(out_dir, "missingness_per_animal.json"), "w") as fh:
+        json.dump(per_animal, fh, indent=1)
+    np.savez_compressed(os.path.join(out_dir, "missingness_masks.npz"), **masks)
+    print("animals", len(per_animal), "rows", len(rows))
+
+
+if __name__ == "__main__":
+    main()

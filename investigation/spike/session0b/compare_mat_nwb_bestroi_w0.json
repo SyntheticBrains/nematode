@@ -1,0 +1,188 @@
+{
+ "mat_neurons": 177,
+ "best_roi_is_same_label": 111,
+ "best_r_median": 0.8618,
+ "own_r_median": 0.8396,
+ "mismatches": [
+  {
+   "mat": "ADAL",
+   "best_roi_label": "RMGL",
+   "best_r": 0.6774,
+   "own_r": 0.5526
+  },
+  {
+   "mat": "ADAR",
+   "best_roi_label": "M2R",
+   "best_r": 0.6752,
+   "own_r": 0.4616
+  },
+  {
+   "mat": "ADER",
+   "best_roi_label": "FLPR",
+   "best_r": 0.671,
+   "own_r": 0.5557
+  },
+  {
+   "mat": "ADFR",
+   "best_roi_label": "AFDR",
+   "best_r": 0.8761,
+   "own_r": 0.7675
+  },
+  {
+   "mat": "ADLL",
+   "best_roi_label": "IL2VR",
+   "best_r": 0.7419,
+   "own_r": 0.6281
+  },
+  {
+   "mat": "AIAR",
+   "best_roi_label": "RMER",
+   "best_r": 0.8802,
+   "own_r": 0.7097
+  },
+  {
+   "mat": "AINL",
+   "best_roi_label": "RIPR",
+   "best_r": 0.7718,
+   "own_r": 0.7339
+  },
+  {
+   "mat": "AIYL",
+   "best_roi_label": "RMER",
+   "best_r": 0.8637,
+   "own_r": 0.7954
+  },
+  {
+   "mat": "AIYR",
+   "best_roi_label": "AIAL",
+   "best_r": 0.8962,
+   "own_r": 0.7181
+  },
+  {
+   "mat": "AIZL",
+   "best_roi_label": "RIFR",
+   "best_r": 0.5021,
+   "own_r": 0.4581
+  },
+  {
+   "mat": "AIZR",
+   "best_roi_label": "RICR",
+   "best_r": 0.7955,
+   "own_r": 0.7937
+  },
+  {
+   "mat": "ASHL",
+   "best_roi_label": "ASHR",
+   "best_r": 0.6678,
+   "own_r": 0.6033
+  },
+  {
+   "mat": "ASKR",
+   "best_roi_label": "IL2VR",
+   "best_r": 0.7074,
+   "own_r": 0.6816
+  },
+  {
+   "mat": "AUAL",
+   "best_roi_label": "RMDDL",
+   "best_r": 0.9546,
+   "own_r": 0.941
+  },
+  {
+   "mat": "AVAL",
+   "best_roi_label": "RIML",
+   "best_r": 0.8638,
+   "own_r": 0.7832
+  },
+  {
+   "mat": "AVAR",
+   "best_roi_label": "RIML",
+   "best_r": 0.8886,
+   "own_r": 0.8706
+  },
+  {
+   "mat": "AVBL",
+   "best_roi_label": "RMDDL",
+   "best_r": 0.8663,
+   "own_r": 0.807
+  },
+  {
+   "mat": "AVBR",
+   "best_roi_label": "RIBR",
+   "best_r": 0.9555,
+   "own_r": 0.9485
+  },
+  {
+   "mat": "AVDL",
+   "best_roi_label": "AVDR",
+   "best_r": 0.6373,
+   "own_r": 0.6137
+  },
+  {
+   "mat": "AVFR",
+   "best_roi_label": "SMBDL",
+   "best_r": 0.7264,
+   "own_r": 0.7042
+  },
+  {
+   "mat": "AVG",
+   "best_roi_label": "",
+   "best_r": 0.5855,
+   "own_r": 0.5825
+  },
+  {
+   "mat": "AVHR",
+   "best_roi_label": "AVJR",
+   "best_r": 0.862,
+   "own_r": 0.85
+  },
+  {
+   "mat": "AVJL",
+   "best_roi_label": "RIML",
+   "best_r": 0.9375,
+   "own_r": 0.932
+  },
+  {
+   "mat": "AVKL",
+   "best_roi_label": "VB1",
+   "best_r": 0.7858,
+   "own_r": 0.7807
+  },
+  {
+   "mat": "AWAL",
+   "best_roi_label": "ASER",
+   "best_r": 0.9106,
+   "own_r": 0.8982
+  },
+  {
+   "mat": "CEPDR",
+   "best_roi_label": "NSML",
+   "best_r": 0.7686,
+   "own_r": 0.6259
+  },
+  {
+   "mat": "CEPVL",
+   "best_roi_label": "URAVR",
+   "best_r": 0.6819,
+   "own_r": 0.578
+  },
+  {
+   "mat": "DB1",
+   "best_roi_label": "RIH",
+   "best_r": 0.7929,
+   "own_r": 0.6799
+  },
+  {
+   "mat": "FLPL",
+   "best_roi_label": "URAVR",
+   "best_r": 0.5889,
+   "own_r": 0.5186
+  },
+  {
+   "mat": "FLPR",
+   "best_roi_label": "M2R",
+   "best_r": 0.7579,
+   "own_r": 0.7214
+  }
+ ]
+}

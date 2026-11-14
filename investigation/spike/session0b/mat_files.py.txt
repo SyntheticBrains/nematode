@@ -1,0 +1,9 @@
+"""Print the mat file's per-worm file names and class names. Usage: python -I mat_files.py <mat> <out.json>"""
+import json, sys
+import numpy as np, scipy.io as sio
+m = sio.loadmat(sys.argv[1])
+files = [str(np.array(m["files"][i][0]).ravel()[0]) for i in range(m["files"].shape[0])]
+cls = [str(m["neurons"][i][0][0]) for i in range(m["neurons"].shape[0])]
+two = [int(m["traces"][i][0].shape[1]) for i in range(m["traces"].shape[0])]
+o = {"files": files, "classes": cls, "class_slots": two}
+json.dump(o, open(sys.argv[2], "w"), indent=1); print(json.dumps(files)); print(json.dumps(list(zip(cls, two))))

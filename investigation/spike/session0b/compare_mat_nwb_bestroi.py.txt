@@ -1,0 +1,30 @@
+"""For each mat neuron of a worm, which NWB ROI correlates best (lag -1)? Is it the ROI with the same label?
+Usage: python -I compare_mat_nwb_bestroi.py <mat> <worm> <nwb_small.npz> <out.json>"""
+import json, sys, re
+import numpy as np, scipy.io as sio
+m = sio.loadmat(sys.argv[1]); w = int(sys.argv[2]); z = np.load(sys.argv[3])
+raw = z["raw"]; labels = [str(x).strip() for x in z["labels"]]
+tr = m["traces"]; cls = [str(m["neurons"][i][0][0]) for i in range(m["neurons"].shape[0])]
+norm = lambda n: (lambda mm: mm.group(1) + mm.group(2) if mm else n)(re.match(r"^([A-Z]+)0(\d)$", n))
+mt = {}
+for f in range(tr.shape[0]):
+    cell = tr[f][0]
+    for side, s in ((("L", w), ("R", w + 21)) if cell.shape[1] == 42 else (("", w),)):
+        d = cell[0][s]
+        if d.shape[0] >= 1 and d[0].shape[0] > 0: mt[norm(cls[f]) + side] = d[0].astype(float)
+X = raw[:-1, :]  # nwb frame t-1 vs mat frame t -> lag -1 means mat t ~ nwb t-1
+X = (X - X.mean(0)) / X.std(0)
+same, rows = 0, []
+for name, y in mt.items():
+    n = min(len(y) - 1, X.shape[0]); yy = y[1:n+1]; ok = ~np.isnan(yy); Xn = X[:n][ok]
+    Xn = (Xn - Xn.mean(0)) / Xn.std(0)
+    yz = (yy[ok] - yy[ok].mean()) / yy[ok].std()
+    r = (Xn.T @ yz) / ok.sum()
+    j = int(np.argmax(r)); own = labels.index(name) if name in labels else None
+    rows.append({"mat": name, "best_roi_label": labels[j], "best_r": round(float(r[j]), 4), "own_r": round(float(r[own]), 4) if own is not None else None})
+    same += labels[j] == name
+o = {"mat_neurons": len(mt), "best_roi_is_same_label": same,
+     "best_r_median": float(np.median([r["best_r"] for r in rows])),
+     "own_r_median": float(np.median([r["own_r"] for r in rows if r["own_r"] is not None])),
+     "mismatches": [r for r in rows if r["best_roi_label"] != r["mat"]][:30]}
+json.dump(o, open(sys.argv[4], "w"), indent=1); print(json.dumps({k: v for k, v in o.items() if k != "mismatches"}, indent=1)); print(json.dumps(o["mismatches"][:12]))

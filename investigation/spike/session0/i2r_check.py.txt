@@ -1,0 +1,34 @@
+"""Pooled r of the full variant, and I2R's photobleach fit: loss at the fitted parameters versus
+the parameters implied by Creamer's trace. Usage: python -I i2r_check.py <exports> <nwb> <summary> <names>"""
+import json, sys, warnings
+import h5py, numpy as np, scipy.optimize as sopt
+exports, nwb, summ, names_p = sys.argv[1:5]
+ex = np.load(exports + "/example_recording.npz"); act = ex["example_recording.activity"]
+names = json.load(open(names_p))
+lab = [r for r in json.load(open(summ)) if nwb.endswith(r["file"])][0]["roi_labels"]
+with h5py.File(nwb, "r") as f:
+    g = f["processing/ophys/GreenSignals/BaseGreenSignal/data"][()]
+j = lab.index("I2R"); col = g[120:, j]
+x = col.copy(); nan = np.isnan(x); x[nan] = 0
+filt = np.ones(2) / 2
+y = np.convolve(x, filt, "valid") / np.where(np.convolve(~nan, filt / 2 * 2 / 2, "valid") == 0, 1, np.convolve(~nan, filt, "valid"))
+y[np.concatenate((nan, [False]))[: len(y)]] = np.nan
+t = np.arange(len(y)); m = ~np.isnan(y); y0 = np.where(m, y, 0)
+def approx(p):
+    return np.exp(p[2]) * np.exp(-t / np.exp(p[0])) + np.exp(p[3]) * np.exp(-t / np.exp(p[1]))
+def loss(p):
+    return (((approx(p) - y0) ** 2) * m).sum()
+p0 = np.concatenate((np.log(t[-1] / np.array([4, 3])), np.log(np.nanmax(y) / np.array([2, 3]))))
+res = sopt.minimize(loss, p0)
+print("BFGS from his start: loss", res.fun, "success", res.success, "nit", res.nit, "tau", np.exp(res.x[:2]).round(1))
+best = res
+for k in range(30):
+    rng = np.random.default_rng(k)
+    r2 = sopt.minimize(loss, p0 + rng.normal(0, 0.5, 4))
+    if r2.fun < best.fun - 1e-6: best = r2
+print("best of 30 perturbed starts: loss", best.fun, "tau", np.exp(best.x[:2]).round(1))
+a = act[:, names.index("I2R")]
+for lbl, p in (("his-start", res.x), ("best", best.x)):
+    c = y / approx(p); c = c / np.nanmean(c) - 1; c[c > 5] = np.nan
+    both = np.isfinite(a) & np.isfinite(c[: len(a)])
+    print(lbl, "r vs example", np.corrcoef(a[both], c[: len(a)][both])[0, 1].round(6), "sd ratio", (np.std(c[: len(a)][both]) / np.std(a[both])).round(4))

@@ -1,0 +1,27 @@
+"""List every HDF5 group/dataset in an NWB file with shape, dtype, chunking, compression and storage
+size, plus short string attributes. Usage: python -I nwb_tree.py <file.nwb> <out.txt>"""
+import sys
+import h5py
+lines = []
+def attrs(o):
+    out = []
+    for k, v in o.attrs.items():
+        s = v.decode() if isinstance(v, bytes) else str(v)
+        if k in ("namespace", "object_id"):
+            continue
+        out.append(f"{k}={s[:120]}")
+    return "; ".join(out)
+def visit(name, o):
+    if isinstance(o, h5py.Dataset):
+        try:
+            st = o.id.get_storage_size()
+        except Exception:
+            st = -1
+        lines.append(f"D /{name} shape={o.shape} dtype={o.dtype} chunks={o.chunks} comp={o.compression} stored={st} | {attrs(o)}")
+    else:
+        lines.append(f"G /{name} | {attrs(o)}")
+with h5py.File(sys.argv[1], "r") as f:
+    lines.append(f"ROOT | {attrs(f)}")
+    f.visititems(visit)
+open(sys.argv[2], "w").write("\n".join(lines))
+print(len(lines))

@@ -1,0 +1,38 @@
+{
+ "source": "measured_stams.pkl",
+ "source_sha256": "e6562954067ad5b84a2a33a434f92c5d21eece5ae56270bfd5d6fe5f8b17669a",
+ "nodes": [
+  {
+   "path": "measured_stams",
+   "type": "dict",
+   "keys": [
+    "train",
+    "test"
+   ]
+  },
+  {
+   "path": "measured_stams.train",
+   "type": "ndarray",
+   "shape": [
+    154,
+    154
+   ],
+   "dtype": "float64",
+   "nan": 1809,
+   "min": -58.46547625318977,
+   "max": 68.66612847287115
+  },
+  {
+   "path": "measured_stams.test",
+   "type": "ndarray",
+   "shape": [
+    154,
+    154
+   ],
+   "dtype": "float64",
+   "nan": 12588,
+   "min": -40.67291142624379,
+   "max": 31.0825272604684
+  }
+ ]
+}

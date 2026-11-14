@@ -1,0 +1,65 @@
+"""Can stimulated ROIs be recovered from target coordinates? For every stimulation with a
+target_pumpprobe_id, compare the target's pixel (x, y) and depth with the PumpProbe ROI
+centroids, and score nearest-centroid matching (xy only, and xy plus z-rank) against the given
+ID. Also counts, per recording, stimulations without an ID and how far their target lies from the
+nearest ROI. Usage: python -I target_matching.py <nwb_dir> <nwb_summary.json> <out_json>"""
+
+import json
+import os
+import sys
+
+import h5py
+import numpy as np
+
+nwb_dir, summ_path, out_path = sys.argv[1:4]
+summary = json.load(open(summ_path))
+res = {"with_id": 0, "xy_nearest_correct": 0, "xyz_nearest_correct": 0, "depth_vs_z": []}
+no_id_dist, id_dist = [], []
+per_file = []
+for r in summary:
+    with h5py.File(os.path.join(nwb_dir, r["file"]), "r") as f:
+        tps = f["processing/ophys/TargetedImageSegmentation/TargetPlaneSegmentation"]
+        pm = tps["pixel_mask"][()]
+        pmi = tps["pixel_mask_index"][()]
+        depth = tps["depth_in_um"][()]
+        cen = f["processing/ophys/PumpProbeGreenSegmentations/PumpProbeGreenPlaneSegmentation/centroids"][()].astype(float)
+        tgt = f["intervals/OptogeneticStimulusTable/target_pumpprobe_id"][()]
+    starts = np.concatenate(([0], pmi[:-1]))
+    xy = np.array([[pm[s]["x"], pm[s]["y"]] for s in starts], dtype=float)
+    d_xy = np.linalg.norm(cen[None, :, :2] - xy[:, None, :], axis=2)
+    # map depth to the centroid z scale by a per-file least-squares fit on stimulations with IDs
+    have = ~np.isnan(tgt)
+    zfit = None
+    if have.sum() >= 3:
+        zt = cen[tgt[have].astype(int), 2]
+        A = np.stack([depth[have], np.ones(have.sum())], 1)
+        coef, *_ = np.linalg.lstsq(A, zt, rcond=None)
+        zfit = coef
+        res["depth_vs_z"].extend([[float(a), float(b)] for a, b in zip(depth[have], zt)])
+    ok_xy = ok_xyz = 0
+    for k in np.where(have)[0]:
+        m = int(tgt[k])
+        id_dist.append(float(d_xy[k, m]))
+        ok_xy += int(d_xy[k].argmin() == m)
+        if zfit is not None:
+            zk = zfit[0] * depth[k] + zfit[1]
+            d3 = np.sqrt(d_xy[k] ** 2 + (cen[:, 2] - zk) ** 2)
+            ok_xyz += int(d3.argmin() == m)
+    for k in np.where(~have)[0]:
+        no_id_dist.append(float(d_xy[k].min()))
+    res["with_id"] += int(have.sum())
+    res["xy_nearest_correct"] += ok_xy
+    res["xyz_nearest_correct"] += ok_xyz
+    per_file.append({"file": r["file"], "stims": int(len(tgt)), "with_id": int(have.sum()),
+                     "xy_correct": ok_xy, "xyz_correct": ok_xyz})
+q = lambda v: [round(float(x), 2) for x in np.quantile(v, [0, .25, .5, .75, .9, 1])]
+res["xy_distance_of_given_id_quantiles_px"] = q(id_dist)
+res["xy_distance_to_nearest_roi_when_no_id_quantiles_px"] = q(no_id_dist)
+dz = np.array(res.pop("depth_vs_z"))
+res["depth_um_vs_centroid_z_corr"] = float(np.corrcoef(dz[:, 0], dz[:, 1])[0, 1])
+res["depth_um_range"] = [float(dz[:, 0].min()), float(dz[:, 0].max())]
+res["files_with_zero_ids"] = sum(p["with_id"] == 0 for p in per_file)
+res["files_with_id_fraction_below_half"] = sum(p["with_id"] < p["stims"] / 2 for p in per_file)
+res["per_file"] = per_file
+json.dump(res, open(out_path, "w"), indent=1)
+print({k: v for k, v in res.items() if k != "per_file"})

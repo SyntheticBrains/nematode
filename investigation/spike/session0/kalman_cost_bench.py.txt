@@ -1,0 +1,178 @@
+"""Cost microbenchmark (not a fit): one Kalman-filter log-likelihood pass, forward plus backward
+through autograd, PyTorch float64 on CPU, 154-dimensional state.
+
+Modes
+  tv     exact time-varying filter on one real animal's missingness pattern (recorded neurons
+         from the mask; the other 154 - k neurons missing at every frame). Fixed shapes: the
+         innovation covariance is M (P + R) M + (I - M), so missing entries contribute nothing
+         and the log-likelihood is the exact marginal over observed entries.
+  tvb    the same, batched over B animals (each its own mask), as one batched recursion.
+  ss     steady-state gain: the DARE solved by the doubling algorithm (with autograd) for the
+         animal's recorded set observed at every frame, then a fixed-gain pass over the frames.
+Parameters are random and stable (connectome-like sparsity 8.5%, spectral radius 0.97).
+
+Usage: python -I kalman_cost_bench.py <masks.npz> <recording> <mode> <frames> <threads> <batch> <reps>
+Prints one JSON line.
+"""
+
+import json
+import sys
+import time
+
+import numpy as np
+import torch
+
+masks_path, rec, mode, frames, threads, batch, reps = sys.argv[1:8]
+frames, threads, batch, reps = int(frames), int(threads), int(batch), int(reps)
+torch.set_num_threads(threads)
+torch.set_default_dtype(torch.float64)
+N = 154
+
+z = np.load(masks_path)
+names = sorted(k for k in z.files if not k.endswith("__shape"))
+
+
+def animal_mask(name, T):
+    shape = tuple(z[name + "__shape"])
+    nan = np.unpackbits(z[name], axis=0, count=shape[0])[:, : shape[1]].astype(bool)
+    k = shape[1]
+    obs = np.zeros((shape[0], N), dtype=bool)
+    obs[:, :k] = ~nan  # recorded neurons placed in the first k slots; the rest never observed
+    reps_needed = int(np.ceil(T / shape[0]))
+    obs = np.tile(obs, (reps_needed, 1))[:T]
+    return torch.tensor(obs, dtype=torch.float64), int(k)
+
+
+rng = np.random.default_rng(0)
+
+
+def params():
+    mask = rng.random((N, N)) < 0.085
+    np.fill_diagonal(mask, True)
+    A = np.where(mask, rng.normal(0, 0.05, (N, N)), 0.0)
+    np.fill_diagonal(A, 0.8)
+    A *= 0.97 / np.abs(np.linalg.eigvals(A)).max()
+    A = torch.tensor(A, requires_grad=True)
+    logq = torch.tensor(np.log(rng.uniform(0.005, 0.02, N)), requires_grad=True)
+    logr = torch.tensor(np.log(rng.uniform(0.001, 0.005, N)), requires_grad=True)
+    return A, logq, logr
+
+
+def tv_ll(A, Q, R, y, m, x0, P0):
+    """Batched exact filter. y, m: (B, T, N); returns summed log-likelihood."""
+    Bsz, T, n = y.shape
+    I = torch.eye(n).expand(Bsz, n, n)
+    x = x0
+    P = P0
+    ll = y.new_zeros(())
+    for t in range(T):
+        if t > 0:
+            x = x @ A.T
+            P = A @ P @ A.T + Q
+        mt = m[:, t]
+        S = mt[:, :, None] * (P + R) * mt[:, None, :] + torch.diag_embed(1 - mt)
+        L = torch.linalg.cholesky(S)
+        e = mt * (y[:, t] - x)
+        alpha = torch.cholesky_solve(e[:, :, None], L)
+        ll = ll - 0.5 * (2 * torch.log(torch.diagonal(L, dim1=1, dim2=2)).sum()
+                         + (e[:, :, None] * alpha).sum() + mt.sum() * np.log(2 * np.pi))
+        PM = P * mt[:, None, :]
+        K = torch.cholesky_solve(PM.transpose(1, 2), L).transpose(1, 2)
+        x = x + (K @ e[:, :, None])[:, :, 0]
+        P = P - K @ (mt[:, :, None] * P)
+        P = 0.5 * (P + P.transpose(1, 2))
+    return ll
+
+
+def ss_ll(A, Q, R, y, mvec, x0):
+    """Steady state: doubling algorithm for the filter DARE with observed set mvec, then a
+    fixed-gain pass. y: (T, N)."""
+    n = A.shape[0]
+    idx = torch.nonzero(mvec).flatten()
+    C = torch.eye(n)[idx]
+    Ro = R[idx][:, idx]
+    # doubling on the dual (predictive) Riccati equation
+    Ak = A.T
+    Gk = C.T @ torch.linalg.solve(Ro, C)
+    Hk = Q
+    iters = 0
+    for iters in range(1, 101):
+        W = torch.eye(n) + Gk @ Hk
+        Winv_A = torch.linalg.solve(W, Ak)
+        Gn = Gk + Ak @ torch.linalg.solve(torch.eye(n) + Gk @ Hk, Gk) @ Ak.T
+        Hn = Hk + Ak.T @ Hk @ Winv_A
+        An = Ak @ Winv_A
+        rel = (torch.linalg.norm(Hn - Hk) / torch.linalg.norm(Hn)).item()
+        Ak, Gk, Hk = An, Gn, Hn
+        if rel < 1e-12:
+            break
+    Ppred = Hk  # steady predictive covariance
+    S = C @ Ppred @ C.T + Ro
+    L = torch.linalg.cholesky(S)
+    K = torch.cholesky_solve((Ppred @ C.T).T, L).T  # n x k
+    logdet = 2 * torch.log(torch.diagonal(L)).sum()
+    k = len(idx)
+    T = y.shape[0]
+    x = x0
+    ll = y.new_zeros(())
+    yo = y[:, idx]
+    for t in range(T):
+        if t > 0:
+            x = A @ x
+        e = yo[t] - x[idx]
+        a = torch.cholesky_solve(e[:, None], L)[:, 0]
+        ll = ll - 0.5 * (logdet + e @ a + k * np.log(2 * np.pi))
+        x = x + K @ e
+    return ll, iters
+
+
+def run_once():
+    A, logq, logr = params()
+    Q = torch.diag(torch.exp(logq))
+    R = torch.diag(torch.exp(logr))
+    if mode in ("tv", "tvb"):
+        nb = 1 if mode == "tv" else batch
+        chosen = [rec] + [n for n in names if n != rec][: nb - 1]
+        ms, ks = [], []
+        for nm in chosen:
+            m, k = animal_mask(nm, frames)
+            ms.append(m)
+            ks.append(k)
+        m = torch.stack(ms)
+        y = torch.randn(nb, frames, N) * 0.1 * m
+        x0 = torch.zeros(nb, N)
+        P0 = torch.eye(N).expand(nb, N, N).clone()
+        t0 = time.perf_counter()
+        ll = tv_ll(A, Q, R, y, m, x0, P0)
+        t1 = time.perf_counter()
+        ll.backward()
+        t2 = time.perf_counter()
+        return {"fwd_s": t1 - t0, "bwd_s": t2 - t1, "animals": nb, "recorded": ks,
+                "observed_entries_per_frame": float(m.sum() / (nb * frames))}
+    m, k = animal_mask(rec, frames)
+    mvec = (m.sum(0) > 0).double()
+    y = torch.randn(frames, N) * 0.1
+    t0 = time.perf_counter()
+    ll, iters = ss_ll(A, Q, R, y, mvec, torch.zeros(N))
+    t1 = time.perf_counter()
+    ll.backward()
+    t2 = time.perf_counter()
+    return {"fwd_s": t1 - t0, "bwd_s": t2 - t1, "animals": 1, "recorded": [k], "doubling_iters": iters}
+
+
+out = []
+for r in range(reps):
+    out.append(run_once())
+fwd = sorted(o["fwd_s"] for o in out)
+bwd = sorted(o["bwd_s"] for o in out)
+res = {
+    "mode": mode, "recording": rec, "frames": frames, "threads": threads, "batch": out[0]["animals"],
+    "recorded": out[0]["recorded"], "reps": reps,
+    "observed_entries_per_frame": out[0].get("observed_entries_per_frame"),
+    "fwd_s_median": fwd[len(fwd) // 2], "bwd_s_median": bwd[len(bwd) // 2],
+    "per_frame_ms_fwd_bwd": 1000 * (fwd[len(fwd) // 2] + bwd[len(bwd) // 2]) / (frames * out[0]["animals"]),
+    "torch": torch.__version__,
+}
+if "doubling_iters" in out[0]:
+    res["doubling_iters"] = out[0]["doubling_iters"]
+print(json.dumps(res))

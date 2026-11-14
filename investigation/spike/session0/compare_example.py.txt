@@ -1,0 +1,245 @@
+"""Compare Creamer's example_recording (exported npz) with its NWB source, per neuron.
+
+Variants of the NWB green trace for each of the example's recorded neurons:
+  raw        BaseGreenSignal frames [start : start+T] as stored (NaNs kept)
+  dff        raw, 2-tap NaN-aware boxcar, divided by its mean, minus 1
+  full       a re-implementation of loading_utilities.preprocess_data (start_index 120,
+             stimulation-artifact interpolation on the stimulated neuron, 2-tap boxcar,
+             two-exponential photobleach fit with the one-exponential fallback, divide by
+             mean minus 1, values above 5 set to NaN), with inputs built from the NWB
+             stimulation table (frame = first volume whose timestamp >= start_time; target
+             = target_pumpprobe_id, NaN dropped; label via the ROI's NeuroPAL id)
+  full_interp the same, on InterpolatedGreenSignal (no NaN mask)
+Per neuron: Pearson r over frames where both are finite, SD ratio (NWB variant / example),
+and agreement of the NaN pattern. Also: the stimulation events reproduced.
+
+Usage: python -I compare_example.py <exports_dir> <nwb_file> <nwb_summary.json> <names.json> <out_json>
+"""
+
+import json
+import sys
+import warnings
+
+import h5py
+import numpy as np
+import scipy.optimize as sopt
+
+exports, nwb_path, summary_path, names_path, out_path = sys.argv[1:6]
+DELTA = float(sys.argv[6]) if len(sys.argv) > 6 else 0.0
+EXTRA = sys.argv[7].split(',') if len(sys.argv) > 7 else []
+ex = np.load(exports + "/example_recording.npz")
+act = ex["example_recording.activity"]
+inp = ex["example_recording.inputs"]
+names = json.load(open(names_path))
+T, N = act.shape
+summary = [r for r in json.load(open(summary_path)) if nwb_path.endswith(r["file"])][0]
+roi_labels = summary["roi_labels"]
+
+
+def s(x):
+    return x.decode() if isinstance(x, bytes) else str(x)
+
+
+with h5py.File(nwb_path, "r") as f:
+    oph = f["processing/ophys"]
+    base = oph["GreenSignals/BaseGreenSignal/data"][()]
+    interp = oph["GreenSignals/InterpolatedGreenSignal/data"][()]
+    ts = oph["GreenSignals/BaseGreenSignal/timestamps"][()]
+    st = f["intervals/OptogeneticStimulusTable"]
+    st_start = st["start_time"][()]
+    tgt = st["target_pumpprobe_id"][()]
+
+START = 120
+
+
+def nan_convolve(data, filt):
+    data = data.copy()
+    nan_loc = np.isnan(data)
+    data[nan_loc] = 0
+    out = np.convolve(data, filt, mode="valid")
+    cnt = np.convolve(~nan_loc, filt / filt.sum(), mode="valid")
+    cnt[cnt == 0] = 1
+    out = out / cnt
+    pad = np.concatenate((nan_loc, np.zeros(filt.size - 1, bool)))[: out.shape[0]]
+    out[pad] = np.nan
+    return out
+
+
+def photobleach(col, num_exp, fit_offset):
+    x = col.copy()[:, None]
+    if np.all(np.isnan(x)):
+        return col.copy()
+    t = np.arange(x.shape[0])
+    tau_0 = t[-1, None] / np.arange(2 + num_exp, 2, -1)
+    data_max = np.nanmax(x, axis=0)
+    a_0 = np.concatenate([data_max / i for i in np.arange(2, 2 + num_exp)], axis=0)
+    if fit_offset:
+        p_0 = np.concatenate((np.log(tau_0), np.zeros(1), np.log(a_0)))
+        amp_start = num_exp + 1
+    else:
+        p_0 = np.concatenate((np.log(tau_0), np.log(a_0)))
+        amp_start = num_exp
+    mask = ~np.isnan(x)
+    x[~mask] = 0
+
+    def approx(p):
+        tau = np.exp(p[:num_exp])
+        off = p[num_exp:amp_start]
+        amp = np.exp(p[amp_start:])
+        e = np.zeros_like(x)
+        for k in range(num_exp):
+            e = e + amp[k] * np.exp(-t[:, None] / tau[k])
+        if fit_offset:
+            e = e + off
+        return e
+
+    def loss(p):
+        return (((approx(p) - x) ** 2) * mask).sum()
+
+    p_hat = sopt.minimize(loss, p_0).x
+    off = p_hat[num_exp:amp_start]
+    e = approx(p_hat)
+    corr = (x - off) / (e - off) if fit_offset else x / e
+    corr[~mask] = np.nan
+    return corr[:, 0]
+
+
+def preprocess(em, inputs):
+    em = em[START:].copy()
+    inputs = inputs[START:].copy()
+    for c in range(em.shape[1]):
+        for s0 in np.where(inputs[:, c])[0]:
+            dx = np.array((-2, 3)) + s0
+            ix = np.arange(dx[0], dx[1])
+            if dx[1] < em.shape[0] and dx[0] >= 0:
+                em[ix, c] = np.interp(ix, dx, em[dx, c])
+    filt = np.ones(2) / 2
+    emf = np.stack([nan_convolve(em[:, c], filt) for c in range(em.shape[1])], 1)
+    out = np.zeros_like(emf)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for c in range(emf.shape[1]):
+            out[:, c] = photobleach(emf[:, c], 2, False)
+        bad2 = np.where(np.abs(np.nanmean(out, 0) - 1) > 0.1)[0]
+        for c in bad2:
+            out[:, c] = photobleach(emf[:, c], 1, True)
+        bad1 = np.where(np.abs(np.nanmean(out, 0) - 1) > 0.2)[0]
+        out[:, bad1] = np.nan
+        out = out / np.nanmean(out, 0) - 1
+    out[out > 5] = np.nan
+    return out, inputs[: out.shape[0]], {"bad_2exp": bad2.tolist(), "bad_1exp": bad1.tolist()}
+
+
+# stimulation inputs on the NWB ROIs
+frames_raw = np.searchsorted(ts + DELTA, st_start)
+n_roi = base.shape[1]
+inputs_roi = np.zeros((base.shape[0], n_roi))
+stim_rows = []
+for k, (fr, m) in enumerate(zip(frames_raw, tgt)):
+    if np.isnan(m):
+        continue
+    m = int(m)
+    inputs_roi[fr, m] = 1
+    stim_rows.append((int(fr), m, roi_labels[m]))
+
+col_of = {}
+for name in names:
+    js = [j for j, l in enumerate(roi_labels) if l == name]
+    if len(js) == 1:
+        col_of[name] = js[0]
+recorded = [names[j] for j in np.where(~np.all(np.isnan(act), 0))[0]]
+results = {"example_recorded": len(recorded), "nwb_labels_in_154": len(col_of)}
+results["recorded_missing_from_nwb_labels"] = [n for n in recorded if n not in col_of]
+results["nwb_labels_not_recorded_in_example"] = [n for n in col_of if n not in recorded]
+
+# stimulation events: example vs NWB
+ex_events = sorted((int(t), names[j]) for t, j in np.argwhere(inp == 1))
+nwb_events = sorted((fr - START, lab) for fr, m, lab in stim_rows if lab in names and fr - START >= 0 and fr - START < T)
+results["example_stim_events"] = len(ex_events)
+results["nwb_stim_events_in_154_after_cut"] = len(nwb_events)
+results["stim_events_identical"] = ex_events == nwb_events
+results["stim_events_only_in_example"] = sorted(set(ex_events) - set(nwb_events))
+results["stim_events_only_in_nwb"] = sorted(set(nwb_events) - set(ex_events))
+for off in (-2, -1, 1, 2):
+    shifted = sorted((t + off, l) for t, l in nwb_events)
+    results[f"stim_events_match_if_nwb_shifted_{off}"] = len(set(shifted) & set(ex_events))
+
+cols = [col_of[n] for n in recorded if n in col_of]
+rec_in = [n for n in recorded if n in col_of]
+full, full_inputs, fit_info = preprocess(base[:, cols], inputs_roi[:, cols])
+full_i, _, fit_info_i = preprocess(interp[:, cols], inputs_roi[:, cols])
+results["photobleach_fallbacks"] = {"base": fit_info, "interp": fit_info_i}
+raw = base[START:START + T, cols]
+dff = np.stack([nan_convolve(base[START:, c], np.ones(2) / 2)[:T] for c in cols], 1)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    dff = dff / np.nanmean(dff, 0) - 1
+results["full_frames"] = int(full.shape[0])
+results["example_frames"] = int(T)
+
+
+def compare(var):
+    out = {}
+    for i, n in enumerate(rec_in):
+        a = act[:, names.index(n)]
+        b = var[:T, i]
+        both = np.isfinite(a) & np.isfinite(b)
+        if both.sum() < 10:
+            out[n] = None
+            continue
+        r = float(np.corrcoef(a[both], b[both])[0, 1])
+        out[n] = {
+            "r": r,
+            "sd_ratio": float(np.std(b[both]) / np.std(a[both])),
+            "max_abs_diff": float(np.max(np.abs(a[both] - b[both]))),
+            "nan_agree": float(np.mean(np.isnan(a) == np.isnan(b[: len(a)]))),
+            "n": int(both.sum()),
+        }
+    rs = [v["r"] for v in out.values() if v]
+    sd = [v["sd_ratio"] for v in out.values() if v]
+    return out, {
+        "neurons": len(rs),
+        "r_min": min(rs), "r_median": float(np.median(rs)), "r_max": max(rs),
+        "r_ge_0.99": sum(r >= 0.99 for r in rs),
+        "sd_ratio_median": float(np.median(sd)), "sd_ratio_min": min(sd), "sd_ratio_max": max(sd),
+        "nan_agree_median": float(np.median([v["nan_agree"] for v in out.values() if v])),
+        "max_abs_diff_median": float(np.median([v["max_abs_diff"] for v in out.values() if v])),
+    }
+
+
+summary_out = {}
+per_neuron = {}
+for label, var in (("raw", raw), ("dff", dff), ("full", full), ("full_interp", full_i)):
+    per_neuron[label], summary_out[label] = compare(var)
+results["summary"] = summary_out
+# alignment check on the full variant
+align = {}
+for start in (118, 119, 121, 122):
+    START = start
+    f2, _, _ = preprocess(base[:, cols], inputs_roi[:, cols])
+    rs = []
+    for i, n in enumerate(rec_in):
+        L = min(T, f2.shape[0])
+        a = act[:L, names.index(n)]
+        b = f2[:L, i]
+        both = np.isfinite(a) & np.isfinite(b)
+        if both.sum() > 10:
+            rs.append(np.corrcoef(a[both], b[both])[0, 1])
+    align[start] = float(np.median(rs))
+START = 120
+results["full_median_r_by_start_index"] = align
+results["per_neuron"] = per_neuron
+results["delta_s"] = DELTA
+if EXTRA:
+    ecols = [col_of[n] for n in EXTRA]
+    allc = cols + ecols
+    fx, _, finfo = preprocess(base[:, allc], inputs_roi[:, allc])
+    results["extra_neurons"] = {n: {"nan_fraction_after_preprocess": float(np.isnan(fx[:, len(cols) + i]).mean()),
+                                    "raw_nan_fraction": float(np.isnan(base[START:, ecols[i]]).mean())}
+                                for i, n in enumerate(EXTRA)}
+    results["extra_fit_info"] = {k: [allc[j] for j in v] for k, v in finfo.items()}
+    results["extra_cols"] = dict(zip(EXTRA, ecols))
+json.dump(results, open(out_path, "w"), indent=1)
+for k, v in results.items():
+    if k != "per_neuron":
+        print(k, v)

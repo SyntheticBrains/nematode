@@ -1,0 +1,29 @@
+"""Fact check before any reading: the layout of hinge4.json's z (no measured data read)."""
+import json, os, sys
+os.environ.setdefault("OMP_NUM_THREADS", "8")
+import numpy as np, torch
+torch.set_num_threads(8)
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.connectome import encoder as enc
+
+z = json.load(open("docs/experiments/logbooks/supporting/131-c2-clean-start/probes/hinge4.json"))["z"]
+brain = p.encoded_brain((), **p.PROCEDURE_SETTINGS)
+entries = list(brain.topology.encoder.entries)
+names = [e.name for e in entries]
+print("package entries", len(entries), "z", len(z))
+print("tail names", names[-6:])
+base, tau = p._probe_layout()
+print("probe base", len(base), "probe layout length", len(base) + len(enc.POOLS) + 1)
+bnames = [e.name for e in base]
+print("names in package not in probe base:", [n for n in names if n not in bnames])
+print("names in probe base not in package:", [n for n in bnames if n not in names])
+print("first index where order differs:", next((i for i,(a,b) in enumerate(zip(names,bnames)) if a!=b), None))
+try:
+    pv = p.package_vector(z, entries)
+    d = np.abs(pv - np.asarray(z))
+    print("package_vector(z) vs z: max diff", d.max(), "n differing >1e-9", int((d > 1e-9).sum()))
+    for i in np.where(d > 1e-9)[0]:
+        print("  ", i, names[i], round(z[i], 6), "->", round(float(pv[i]), 6))
+except Exception as e:
+    print("package_vector raised", type(e).__name__, e)

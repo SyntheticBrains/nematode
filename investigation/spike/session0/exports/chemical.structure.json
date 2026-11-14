@@ -1,0 +1,18 @@
+{
+ "source": "chemical.pkl",
+ "source_sha256": "75167c45978f4fd1dd8789f74ac8dd748b4c49201c526daf2dd026c8b538313c",
+ "nodes": [
+  {
+   "path": "chemical",
+   "type": "ndarray",
+   "shape": [
+    300,
+    300
+   ],
+   "dtype": "float64",
+   "nan": 0,
+   "min": 0.0,
+   "max": 150.0
+  }
+ ]
+}

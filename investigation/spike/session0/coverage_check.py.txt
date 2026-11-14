@@ -1,0 +1,60 @@
+"""Are the (responder, stimulated) pairs finite in Creamer's measured STAM arrays coverable by the
+NWB stimulation record? Coverage over all 110 recordings (any split) is a superset of what any
+training or test set could give: a pair (i, j) is coverable if some recording has an identified
+stimulation of j (after the 120-frame cut, with a full 15 s before and 30 s after window) while i
+is recorded (any finite frame). Uses the arrays' NaN patterns only.
+
+Usage: python -I coverage_check.py <exports> <nwb_summary.json> <names.json> <nwb_dir> <out_json>
+"""
+
+import json
+import os
+import sys
+
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import creamer_preprocess as cp  # noqa: E402
+
+exports, summ_path, names_path, nwb_dir, out_path = sys.argv[1:6]
+names = json.load(open(names_path))
+idx = {n: i for i, n in enumerate(names)}
+N = len(names)
+eye = np.eye(N, dtype=bool)
+z = np.load(os.path.join(exports, "measured_stams.npz"))
+train = np.isfinite(z["measured_stams.train"]) & ~eye
+test = np.isfinite(z["measured_stams.test"]) & ~eye
+cover = np.zeros((N, N), bool)
+cover_any_stim = np.zeros((N, N), bool)
+stim_count = np.zeros(N, int)
+for r in json.load(open(summ_path)):
+    g, inputs, kept, _info, _ts = cp.load_recording(os.path.join(nwb_dir, r["file"]), r["roi_labels"], names)
+    if not kept:
+        continue
+    g = g[cp.START_INDEX:]
+    inp = inputs[cp.START_INDEX:]
+    T = g.shape[0] - 1
+    rec = np.array([idx[k] for k, c in zip(kept, range(len(kept))) if np.isfinite(g[:, c]).any()])
+    for t, c in np.argwhere(inp == 1):
+        j = idx[kept[c]]
+        cover_any_stim[rec, j] = True
+        if t - 30 >= 0 and t + 60 < T:
+            cover[rec, j] = True
+            stim_count[j] += 1
+cover &= ~eye
+cover_any_stim &= ~eye
+out = {
+    "train_finite_pairs": int(train.sum()),
+    "test_finite_pairs": int(test.sum()),
+    "nwb_coverable_pairs_all_110": int(cover.sum()),
+    "train_pairs_not_coverable": int((train & ~cover).sum()),
+    "test_pairs_not_coverable": int((test & ~cover).sum()),
+    "train_or_test_pairs_not_coverable": int(((train | test) & ~cover).sum()),
+    "train_or_test_pairs_not_coverable_even_without_window_rule": int(((train | test) & ~cover_any_stim).sum()),
+    "coverable_but_nan_in_both": int((cover & ~train & ~test).sum()),
+    "stimulated_neurons_with_uncoverable_train_pairs": sorted(
+        names[j] for j in np.where((train & ~cover).any(0))[0]),
+    "neurons_with_identified_windowed_stims": int((stim_count > 0).sum()),
+}
+json.dump(out, open(out_path, "w"), indent=1)
+print(json.dumps(out, indent=1))

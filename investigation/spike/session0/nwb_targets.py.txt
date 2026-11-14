@@ -1,0 +1,34 @@
+"""Resolve what the stimulation targets point to in one NWB file. Usage: python -I nwb_targets.py <nwb>"""
+import sys
+import h5py
+import numpy as np
+with h5py.File(sys.argv[1], "r") as f:
+    t0 = f["general/OptogeneticStimulusTarget0/targeted_rois"]
+    print("targeted_rois @table ->", f[t0.attrs["table"]].name)
+    st = f["intervals/OptogeneticStimulusTable"]
+    tg = st["targets"][()]
+    names = [f[r].name for r in tg]
+    rows = [int(f[n + "/targeted_rois"][()][0]) for n in names]
+    print("stim k -> target group, targeted row (first 12):", list(zip(range(12), [n.split("/")[-1] for n in names[:12]], rows[:12])))
+    print("all targeted rows == arange:", rows == list(range(len(rows))))
+    tps = f["processing/ophys/TargetedImageSegmentation/TargetPlaneSegmentation"]
+    pm = tps["pixel_mask"][()]
+    pmi = tps["pixel_mask_index"][()]
+    depth = tps["depth_in_um"][()]
+    print("target pixel_mask first 5", pm[:5], "index first 5", pmi[:5], "depth first 5", depth[:5])
+    pp = f["processing/ophys/PumpProbeGreenSegmentations/PumpProbeGreenPlaneSegmentation"]
+    cen = pp["centroids"][()]
+    print("pumpprobe centroids first 5", cen[:5], "range", cen.min(0), cen.max(0))
+    tgt = st["target_pumpprobe_id"][()]
+    nn = ~np.isnan(tgt)
+    print("non-NaN target_pumpprobe_id at stims", np.where(nn)[0], "values", tgt[nn])
+    # nearest ROI to each target pixel (x, y only, and z via depth unknown units)
+    xy = np.array([[p["x"], p["y"]] for p in pm], dtype=float)
+    d = np.linalg.norm(cen[None, :, :2] - xy[:, None, :], axis=2)
+    near = d.argmin(1)
+    print("nearest ROI by xy for stims with manual id:", [(int(k), int(tgt[k]), int(near[k]), round(float(d[k, near[k]]), 2)) for k in np.where(nn)[0]])
+    print("min xy distance quantiles", np.quantile(d.min(1), [0, .25, .5, .75, 1]).round(2))
+    for k in ("reference_images",):
+        g = tps[k]
+        print(k, list(g.keys())[:5])
+    print("stimulus_pattern first", st["stimulus_pattern"][()][:2], "site", st["stimulus_site"][()][:1])

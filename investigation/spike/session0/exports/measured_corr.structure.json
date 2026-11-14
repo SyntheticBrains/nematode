@@ -1,0 +1,38 @@
+{
+ "source": "measured_corr.pkl",
+ "source_sha256": "b1f64846cd8136b43db5c96c33ea650619ad218c7e83551f4a3222268bd1f570",
+ "nodes": [
+  {
+   "path": "measured_corr",
+   "type": "dict",
+   "keys": [
+    "train",
+    "test"
+   ]
+  },
+  {
+   "path": "measured_corr.train",
+   "type": "ndarray",
+   "shape": [
+    154,
+    154
+   ],
+   "dtype": "float64",
+   "nan": 60,
+   "min": -0.5720325314303899,
+   "max": 1.0000000000000002
+  },
+  {
+   "path": "measured_corr.test",
+   "type": "ndarray",
+   "shape": [
+    154,
+    154
+   ],
+   "dtype": "float64",
+   "nan": 5632,
+   "min": -0.7701945482850759,
+   "max": 1.0000000000000002
+  }
+ ]
+}

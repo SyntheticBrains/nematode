@@ -1,0 +1,49 @@
+"""Read the small datasets of one Yemini NWB with h5py (no pynwb), and summarise traces and labels.
+Usage: python -I nwb_small.py <file.nwb or URL> <out.json> [ros3]"""
+import json, sys
+import numpy as np, h5py
+src = sys.argv[1]
+kw = {"driver": "ros3"} if len(sys.argv) > 3 and sys.argv[3] == "ros3" else {}
+def s(x):
+    v = x[()]
+    if isinstance(v, bytes): return v.decode()
+    if isinstance(v, np.ndarray) and v.dtype == object: return [a.decode() if isinstance(a, bytes) else str(a) for a in v.ravel()]
+    if isinstance(v, np.ndarray): return v.tolist()
+    return v if not isinstance(v, np.generic) else v.item()
+o = {}
+with h5py.File(src, "r", **kw) as f:
+    for k in ["identifier", "session_description", "session_start_time", "general/experiment_description",
+              "general/related_publications", "general/lab", "general/institution",
+              "general/subject/subject_id", "general/subject/strain", "general/subject/growth_stage",
+              "general/subject/description", "general/subject/cultivation_temp",
+              "general/optophysiology/CalciumImVol/indicator", "general/optophysiology/CalciumImVol/description",
+              "processing/CalciumActivity/NeuronIDs/description", "acquisition/NeuroPALImageRaw/description",
+              "intervals/chemical_stimuli/start_time", "intervals/chemical_stimuli/stop_time",
+              "intervals/chemical_stimuli/stimulus", "acquisition/CalciumImageSeries/starting_time"]:
+        try: o[k] = s(f[k])
+        except Exception as e: o[k] = f"ERR {e}"
+    o["stimuli_description"] = f["intervals/chemical_stimuli"].attrs.get("description")
+    o["neuropal_neurons_description"] = f["processing/NeuroPAL/NeuroPALSegmentation/NeuroPALNeurons"].attrs.get("description")
+    o["rois_description"] = f["processing/CalciumActivity/SignalRawFluor/SignalCalciumImResponseSeries/rois"].attrs.get("description")
+    ts = f["acquisition/CalciumImageSeries/starting_time"]; o["calcium_rate"] = float(ts.attrs["rate"])
+    labels = s(f["processing/CalciumActivity/NeuronIDs/labels"])
+    o["n_rois"] = len(labels)
+    o["labels"] = labels
+    o["n_labels_nonblank"] = sum(1 for l in labels if l.strip())
+    raw = f["processing/CalciumActivity/SignalRawFluor/SignalCalciumImResponseSeries/data"][()]
+    dn = f["processing/CalciumActivity/SignalRawFluordNMF/dNMFCalciumImResponseSeries/data"][()]
+    for nm, a in [("raw", raw), ("dnmf", dn)]:
+        o[f"{nm}_shape"] = list(a.shape)
+        o[f"{nm}_nan_frac"] = float(np.isnan(a).mean())
+        o[f"{nm}_nan_frames_per_roi_quantiles"] = np.quantile(np.isnan(a).sum(0), [0, .5, .9, 1]).tolist()
+        o[f"{nm}_min_med_max"] = [float(np.nanmin(a)), float(np.nanmedian(a)), float(np.nanmax(a))]
+        o[f"{nm}_zero_rois"] = int((np.nan_to_num(a) == 0).all(0).sum())
+    o["rois_raw_vs_dnmf_corr_median"] = float(np.nanmedian([np.corrcoef(np.nan_to_num(raw[:, k]), np.nan_to_num(dn[:, k]))[0, 1] for k in range(raw.shape[1])]))
+    idl = s(f["processing/NeuroPAL/NeuroPALSegmentation/NeuroPALNeurons/ID_labels"])
+    idx = f["processing/NeuroPAL/NeuroPALSegmentation/NeuroPALNeurons/ID_labels_index"][()]
+    o["neuropal_ID_labels_len"] = len(idl); o["neuropal_ID_labels_first"] = idl[:24]
+    o["neuropal_ID_index_first"] = idx[:8].tolist()
+    np.savez(sys.argv[2].replace(".json", ".npz"), raw=raw, dnmf=dn, labels=np.array(labels))
+json.dump(o, open(sys.argv[2], "w"), indent=1, default=str)
+for k, v in o.items():
+    t = json.dumps(v, default=str); print(k, t if len(t) < 500 else t[:500] + "...")

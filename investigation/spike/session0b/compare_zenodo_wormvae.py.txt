@@ -1,0 +1,48 @@
+"""Compare Zenodo 3906530's Head_Activity_OH16230.mat (MIT) with wormvae's all_traces_Heads_new.mat:
+keys, files, neuron lists, stims, and the 'traces' arrays slot by slot (exact equality and max abs diff).
+Usage: python -I compare_zenodo_wormvae.py <zenodo.mat> <wormvae.mat> <out.json>"""
+import json, sys
+import numpy as np, scipy.io as sio
+a = sio.loadmat(sys.argv[1]); b = sio.loadmat(sys.argv[2])
+o = {"zenodo_keys": sorted(k for k in a if not k.startswith("__")), "wormvae_keys": sorted(k for k in b if not k.startswith("__")),
+     "zenodo_header": str(a["__header__"]), "wormvae_header": str(b["__header__"])}
+fa = [str(np.array(a["files"][i][0]).ravel()[0]) for i in range(a["files"].shape[0])]
+fb = [str(np.array(b["files"][i][0]).ravel()[0]) for i in range(b["files"].shape[0])]
+o["zenodo_files"] = fa; o["stim_times_zenodo"] = np.asarray(a["stim_times"]).tolist(); o["stim_times_wormvae"] = np.asarray(b["stim_times"]).tolist(); o["wormvae_files_basenames_match"] = [x.split("/")[-2] for x in fb] == fa; o["files_equal"] = fa == fb
+na = [str(a["neurons"][i][0][0]) for i in range(a["neurons"].shape[0])]; import re
+nb = [(lambda n: (lambda mm: mm.group(1) + mm.group(2) if mm else n)(re.match(r"^([A-Z]+)0(\d)$", n)))(str(b["neurons"][i][0][0])) for i in range(b["neurons"].shape[0])]
+o_note = "wormvae zero-padded names (DB01) normalised to DB1 before matching"
+o["zenodo_n_classes"] = len(na); o["neurons_equal"] = na == nb
+o["zenodo_classes_not_in_wormvae"] = [x for x in na if x not in nb]; o["wormvae_classes_not_in_zenodo"] = [x for x in nb if x not in na]
+for k in ["fps", "stims", "stim_times", "is_AWCL_OFF", "samples"]:
+    if k in a and k in b:
+        o[f"{k}_equal"] = bool(np.array_equal(np.asarray(a[k], float), np.asarray(b[k], float))) if np.asarray(a[k]).shape == np.asarray(b[k]).shape else f"shapes {np.asarray(a[k]).shape} vs {np.asarray(b[k]).shape}"
+for key in ["traces", "norm_traces"]:
+    if key not in a or key not in b: continue
+    eq = diff = slots = empty_mismatch = 0; maxabs = 0.0
+    for i, cname in enumerate(nb):
+        if cname not in na: continue
+        ca = a[key][na.index(cname)][0]; cb = b[key][i][0]
+        if ca.shape != cb.shape: diff += 1; continue
+        for s in range(cb.shape[1]):
+            x = np.asarray(ca[0][s], float).ravel(); y = np.asarray(cb[0][s], float).ravel(); slots += 1
+            if x.size != y.size: empty_mismatch += 1; continue
+            if np.array_equal(x, y, equal_nan=True): eq += 1
+            else:
+                diff += 1
+                if x.size: maxabs = max(maxabs, float(np.nanmax(np.abs(x - y))))
+    o[f"{key}_slots"] = slots; o[f"{key}_identical_slots"] = eq; o[f"{key}_different"] = diff
+    o[f"{key}_length_mismatch"] = empty_mismatch; o[f"{key}_max_abs_diff"] = maxabs
+# which array did wormvae load? its loader reads 'traces'. Compare wormvae traces with zenodo norm_traces too
+if "norm_traces" in a:
+    eq = 0; n = 0
+    for i, cname in enumerate(nb):
+        if cname not in na: continue
+        ca = a["norm_traces"][na.index(cname)][0]; cb = b["traces"][i][0]
+        for s in range(min(ca.shape[1], cb.shape[1])):
+            x = np.asarray(ca[0][s], float).ravel(); y = np.asarray(cb[0][s], float).ravel()
+            if x.size and x.size == y.size: n += 1; eq += np.array_equal(x, y, equal_nan=True)
+    o["wormvae_traces_equal_zenodo_norm_traces"] = f"{eq} of {n}"
+json.dump(o, open(sys.argv[3], "w"), indent=1)
+for k, v in o.items():
+    t = json.dumps(v); print(k, t if len(t) < 400 else t[:400] + "...")

@@ -1,0 +1,228 @@
+"""Reading M-a for C.2 under Amendment 1 (MA_C2_READING.md). Computed once.
+
+Order: build both brains (hinge4.json's z written as the run wrote it; the box centre 0.5 x 137),
+re-run parity, run both unit tests, and only if both pass load the measured matrices and score.
+"""
+import hashlib, json, os, sys
+for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ[k] = "8"
+import numpy as np, scipy.stats, torch
+torch.set_num_threads(8)
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.brain.arch import connectome_ppo as cp
+from quantumnematode.connectome import encoder as enc
+
+DIR = "investigation/spike/ma_c2"
+TOL = 1e-5
+HINGE4 = "docs/experiments/logbooks/supporting/131-c2-clean-start/probes/hinge4.json"
+STAMS = "investigation/spike/session0/exports/measured_stams.npz"
+NAMES = json.load(open("investigation/spike/session0/creamer_154_names.json"))
+N_PERM, PERM_SEED, PARITY_SEED = 1000, 9731, 9732
+
+
+def nan_corr(y_true, y_hat, alpha=0.05, mean_sub=True):
+    """Ported verbatim from Creamer's metrics.py (bba43302), lines 109-136."""
+    y_true = y_true.reshape(-1)
+    y_hat = y_hat.reshape(-1)
+
+    mask = ~np.isnan(y_true) & ~np.isnan(y_hat)
+    y_true = y_true[mask]
+    y_hat = y_hat[mask]
+
+    if mean_sub:
+        y_true = y_true - np.mean(y_true)
+        y_hat = y_hat - np.mean(y_hat)
+
+    y_true_std = np.std(y_true, ddof=0)
+    y_hat_std = np.std(y_hat, ddof=0)
+
+    corr = np.mean(y_true * y_hat) / y_true_std / y_hat_std
+
+    # now estimate the confidence intervals for the correlation
+    n = y_true.shape[0]
+    z_a = scipy.stats.norm.ppf(1 - alpha / 2)
+    z_r = np.log((1 + corr) / (1 - corr)) / 2
+    l = z_r - (z_a / np.sqrt(n - 3))
+    u = z_r + (z_a / np.sqrt(n - 3))
+    ci_l = (np.exp(2 * l) - 1) / (np.exp(2 * l) + 1)
+    ci_u = (np.exp(2 * u) - 1) / (np.exp(2 * u) + 1)
+    ci = [np.abs(ci_l - corr), ci_u - corr]
+
+    return corr, ci
+
+
+z = json.load(open(HINGE4))["z"]
+assert len(z) == 137
+brain = p.encoded_brain((), **p.PROCEDURE_SETTINGS)
+top = brain.topology
+assert len(top.encoder.entries) == 137
+VECTORS = {"c2": [float(v) for v in z], "box_centre": [0.5] * 137}
+n_mod = brain._n_concentrations + 1
+
+
+def snapshot():
+    e = top.encoder
+    with torch.no_grad():
+        return {"R": (e.chemical() + top.g_gap * e.gap_scale()).numpy().astype(np.float32),
+                "inj": e.injection().numpy().astype(np.float32),
+                "centres": None if e.pool_centres is None else e.pool_centres.detach().numpy().astype(np.float32),
+                "readout": top.readout.detach().numpy().astype(np.float32),
+                "bias": top.readout_bias.detach().numpy().astype(np.float32), "mode": e.readout_mode,
+                "motor": top._motor_flat_indices.numpy(), "slices": list(top._motor_class_slices),
+                "depth": top.forward_pass_depth}
+
+
+def settle(S, h0, held=None):
+    """Spike-local copy of the encoded forward: h <- tanh(h @ R + held), depth times; then readout."""
+    h = np.asarray(h0, np.float32)
+    for _ in range(S["depth"]):
+        pre = h @ S["R"]
+        if held is not None:
+            pre = pre + np.asarray(held, np.float32)
+        h = np.tanh(pre)
+    acts = h[..., S["motor"]]
+    pooled = np.stack([acts[..., a:b].mean(-1) for a, b in S["slices"]], -1)
+    if S["centres"] is not None:
+        pooled = pooled - S["centres"]
+    mean = pooled @ S["readout"].T + S["bias"]
+    if S["mode"] == "soft_cap":
+        mean = cp.READOUT_CAP * np.tanh(mean / cp.READOUT_CAP)
+    return mean, h
+
+
+rng = np.random.default_rng(PARITY_SEED)
+feats = np.column_stack([rng.uniform(0.05, 1.0, 100), rng.uniform(-1, 1, 100),
+                         rng.uniform(-1, 1, 100), rng.uniform(0.05, 1.0, 100)]).astype(np.float32)
+mods = rng.uniform(0.05, 1.0, (100, n_mod)).astype(np.float32)
+idx = [top.neuron_names.index(n) for n in NAMES]
+checks, responses, snaps = {}, {}, {}
+for name, v in VECTORS.items():
+    enc.write_encoder(brain, v)
+    S = snaps[name] = snapshot()
+    with torch.no_grad():
+        m_pkg, h_pkg = top.forward_with_hidden_batched(torch.from_numpy(feats), modulators=torch.zeros(100, n_mod))
+        m_mod, h_mod = top.forward_with_hidden_batched(torch.from_numpy(feats), modulators=torch.from_numpy(mods))
+        held = top.modulator_current(torch.from_numpy(mods)).numpy()
+        held_rest = top.modulator_current(torch.zeros(n_mod)).numpy()
+    drive = feats @ S["inj"]
+    m1, h1 = settle(S, drive)                       # parity, and unit test 1 (starting-state input = drive)
+    m2, h2 = settle(S, drive, held=held)            # unit test 2 (held input = modulators' current)
+    d1 = max(np.abs(m1 - m_pkg.numpy()).max(), np.abs(h1 - h_pkg.numpy()).max())
+    d2 = max(np.abs(m2 - m_mod.numpy()).max(), np.abs(h2 - h_mod.numpy()).max())
+    checks[name] = {"parity_and_unit_test_1_max_abs": float(d1), "unit_test_1_passes": bool(d1 <= TOL),
+                    "unit_test_2_max_abs": float(d2), "unit_test_2_passes": bool(d2 <= TOL),
+                    "unit_test_2_held_current_max_abs": float(np.abs(held).max()),
+                    "sensory_drive_max_abs": float(np.abs(drive).max()),
+                    "held_current_at_rest_max_abs": float(np.abs(held_rest).max()),
+                    "rest_settled_max_abs": float(np.abs(settle(S, np.zeros(302, np.float32))[1]).max())}
+    print(name, checks[name], flush=True)
+if not all(c["unit_test_1_passes"] and c["unit_test_2_passes"] for c in checks.values()):
+    json.dump({"checks": checks, "stopped": "a unit test failed; measured matrices not loaded"}, open(f"{DIR}/result.json", "w"), indent=1)
+    sys.exit("unit test failed")
+
+
+def response(S, amp, form):
+    """[responder, stimulated] over the 154, from rest: amp on neuron s's start (or held at every iteration)."""
+    E = np.zeros((len(idx), 302), np.float32)
+    E[np.arange(len(idx)), idx] = amp
+    _, h = settle(S, E) if form == "start" else settle(S, np.zeros_like(E), held=E)
+    return h[:, idx].T.astype(np.float64)       # rows: stimulated -> transpose to [responder, stimulated]
+
+
+for name in VECTORS:
+    for form in ("start", "held"):
+        for amp in (0.5, 1.0, 2.0):
+            responses[(name, form, amp)] = response(snaps[name], amp, form)
+
+# Only now: the measured matrices.
+raw = open(STAMS, "rb").read()
+data = np.load(STAMS)
+train, test = data["measured_stams.train.npy"].astype(float), data["measured_stams.test.npy"].astype(float)
+eye = np.eye(154, dtype=bool)
+train[eye] = np.nan; test[eye] = np.nan
+
+
+def masked(M):
+    M = M.copy(); M[eye] = np.nan; return M
+
+
+def corr(M, ref):
+    c, ci = nan_corr(masked(M), ref)
+    return {"r": float(c), "ci95": [float(c - ci[0]), float(c + ci[1])]}
+
+
+ceiling = corr(train, test)
+ceiling["n_entries"] = int(np.sum(~np.isnan(train) & ~np.isnan(test)))
+P = np.random.default_rng(PERM_SEED)
+perms = [P.permutation(154) for _ in range(N_PERM)]
+
+
+def null(M, ref):
+    return np.array([nan_corr(masked(M[np.ix_(q, q)]), ref)[0] for q in perms])
+
+
+def pct(x, dist):
+    return float(np.mean(dist < x) * 100)
+
+
+def sign_agreement(M, ref):
+    M = masked(M); ok = ~np.isnan(ref) & ~np.isnan(M)
+    mag = np.abs(ref[ok]); big = mag > np.median(mag)
+    a, b = M[ok][big], ref[ok][big]
+    return {"entries": int(big.sum()), "median_abs_measured": float(np.median(mag)),
+            "agreement": float(np.mean(np.sign(a) == np.sign(b))), "model_zero_entries": int(np.sum(a == 0))}
+
+
+res = {}
+null_c2_test = null(responses[("c2", "start", 1.0)], test)
+null_c2_train = null(responses[("c2", "start", 1.0)], train)
+null_box_test = null(responses[("box_centre", "start", 1.0)], test)
+Q = [2.5, 5, 50, 95, 97.5, 99]
+for name in VECTORS:
+    for form in ("start", "held"):
+        for amp in (0.5, 1.0, 2.0):
+            M = responses[(name, form, amp)]
+            off = M[~eye]
+            res[f"{name}/{form}/{amp:g}"] = {
+                "test": corr(M, test), "train": corr(M, train),
+                "relative_to_ceiling_test": float(nan_corr(masked(M), test)[0] / ceiling["r"]),
+                "sign_agreement_test": sign_agreement(M, test), "sign_agreement_train": sign_agreement(M, train),
+                "off_diagonal": {"max_abs": float(np.abs(off).max()), "mean": float(off.mean()),
+                                 "sd": float(off.std()), "exact_zeros": int(np.sum(off == 0)),
+                                 "positive": int(np.sum(off > 0)), "negative": int(np.sum(off < 0))}}
+
+c2r = res["c2/start/1"]["test"]["r"]; boxr = res["box_centre/start/1"]["test"]["r"]
+p975 = float(np.percentile(null_c2_test, 97.5))
+reading = ("At chance" if not c2r > p975 else
+           "Above chance, not above the floor" if not c2r > boxr else "Above both")
+result = {
+    "registration": "investigation/spike/MA_C2_READING.md with Amendment 1 (d9f928ac)",
+    "named_reading": reading,
+    "primary": {"c2_test_r": c2r, "box_centre_test_r": boxr, "null_97_5th_percentile": p975,
+                "c2_relative_to_ceiling": c2r / ceiling["r"], "box_centre_relative_to_ceiling": boxr / ceiling["r"],
+                "c2_percentile_in_null": pct(c2r, null_c2_test)},
+    "data_ceiling_train_vs_test": ceiling,
+    "null": {"permutations": N_PERM, "seed": PERM_SEED, "rule": "M[q][:, q], one q per draw, rng.permutation(154)",
+             "c2_vs_test_percentiles": dict(zip(map(str, Q), map(float, np.percentile(null_c2_test, Q)))),
+             "c2_vs_test_mean_sd": [float(null_c2_test.mean()), float(null_c2_test.std())],
+             "c2_vs_train_percentiles": dict(zip(map(str, Q), map(float, np.percentile(null_c2_train, Q)))),
+             "c2_train_percentile_in_null": pct(res["c2/start/1"]["train"]["r"], null_c2_train),
+             "box_centre_percentile_in_c2_null": pct(boxr, null_c2_test),
+             "box_centre_own_null_vs_test_percentiles": dict(zip(map(str, Q), map(float, np.percentile(null_box_test, Q)))),
+             "box_centre_percentile_in_own_null": pct(boxr, null_box_test)},
+    "readings": res,
+    "checks": checks,
+    "parity_inputs": "default_rng(9732): 100 rows of food strength U(0.05,1), lateral U(-1,1), dC/dt U(-1,1), contact U(0.05,1); then modulators U(0.05,1) for each of the " + str(n_mod) + " modulator inputs (concentrations and the drive) for unit test 2",
+    "measured_entries": {"test_finite_off_diagonal": int(np.sum(~np.isnan(test))), "train_finite_off_diagonal": int(np.sum(~np.isnan(train)))},
+    "measured_sha256": hashlib.sha256(raw).hexdigest(),
+    "hinge4_sha256": hashlib.sha256(open(HINGE4, "rb").read()).hexdigest(),
+    "neuron_mapping": {n: int(i) for n, i in zip(NAMES, idx)}, "unmatched_names": [],
+    "settling_depth": int(snaps["c2"]["depth"]), "readout_cap": float(cp.READOUT_CAP),
+}
+json.dump(result, open(f"{DIR}/result.json", "w"), indent=1)
+np.savez(f"{DIR}/responses.npz", **{f"{a}_{b}_{c:g}": m for (a, b, c), m in responses.items()}, names=np.array(NAMES))
+print(json.dumps({k: result[k] for k in ("named_reading", "primary", "data_ceiling_train_vs_test")}, indent=1))
+print(json.dumps(result["null"], indent=1))
+for k, v in res.items():
+    print(k, round(v["test"]["r"], 4), round(v["train"]["r"], 4), v["sign_agreement_test"]["agreement"], v["off_diagonal"])

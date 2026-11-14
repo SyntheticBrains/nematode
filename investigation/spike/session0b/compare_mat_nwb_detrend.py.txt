@@ -1,0 +1,45 @@
+"""Is the .mat trace a slowly-varying-baseline transform of the NWB trace? For each matched neuron,
+at lags -2..1: r of first differences; r after removing a 61-frame running median from both; and the
+high-frequency share of log(y+1)-log(x) (a ratio to a slow baseline F0(t) would make it smooth).
+Also: are SignalRawFluor and dNMF bitwise equal.
+Usage: python -I compare_mat_nwb_detrend.py <mat> <worm> <nwb_small.npz> <out.json>"""
+import json, sys
+import numpy as np, scipy.io as sio
+from scipy.ndimage import median_filter
+m = sio.loadmat(sys.argv[1]); w = int(sys.argv[2]); z = np.load(sys.argv[3])
+raw = z["raw"]; dn = z["dnmf"]; labels = [str(x).strip() for x in z["labels"]]
+tr = m["traces"]; cls = [str(m["neurons"][i][0][0]) for i in range(m["neurons"].shape[0])]
+def norm(n):
+    import re
+    mm = re.match(r"^([A-Z]+)0(\d)$", n)
+    return mm.group(1) + mm.group(2) if mm else n
+mt = {}
+for f in range(tr.shape[0]):
+    cell = tr[f][0]
+    slots = (("L", w), ("R", w + 21)) if cell.shape[1] == 42 else (("", w),)
+    for side, s in slots:
+        d = cell[0][s]
+        if d.shape[0] >= 1 and d[0].shape[0] > 0:
+            mt[norm(cls[f]) + side] = d[0].astype(float)
+out = {"raw_equals_dnmf_bitwise": bool(np.array_equal(raw, dn))}
+rows = []
+for k, lab in enumerate(labels):
+    if lab not in mt: continue
+    y = mt[lab]; x = raw[:, k]
+    best = None
+    for lag in (-2, -1, 0, 1):
+        t = np.arange(len(y)); u = t + lag
+        ok = (u >= 0) & (u < len(x)) & ~np.isnan(y)
+        yy, xx = y[ok], x[u[ok]]
+        rd = np.corrcoef(np.diff(yy), np.diff(xx))[0, 1]
+        hy = yy - median_filter(yy, 61, mode="nearest"); hx = xx - median_filter(xx, 61, mode="nearest")
+        rh = np.corrcoef(hy, hx)[0, 1]
+        if best is None or rd > best["r_diff"]:
+            best = {"label": lab, "lag": lag, "r_diff": float(rd), "r_hp": float(rh), "r_plain": float(np.corrcoef(yy, xx)[0, 1])}
+    rows.append(best)
+for key in ("r_diff", "r_hp", "r_plain"):
+    a = np.array([r[key] for r in rows]); out[key + "_quantiles_0_5_25_50_75_100"] = np.round(np.quantile(a, [0, .05, .25, .5, .75, 1]), 4).tolist()
+lags = [r["lag"] for r in rows]; out["lag_counts_by_r_diff"] = {str(l): lags.count(l) for l in sorted(set(lags))}
+out["matched"] = len(rows)
+out["worst_r_diff"] = sorted(rows, key=lambda r: r["r_diff"])[:6]
+json.dump({"summary": out, "rows": rows}, open(sys.argv[4], "w"), indent=1); print(json.dumps(out, indent=1))

@@ -1,0 +1,24 @@
+"""How do the empty placeholders in all_traces_Heads_new.mat load, and what does the loader do with them?
+Usage: python -I mat_empty_check.py <mat> <out.json>"""
+import json, sys
+from collections import Counter
+import numpy as np, scipy.io as sio
+m = sio.loadmat(sys.argv[1]); tr = m["traces"]; samples = m["samples"].ravel()
+shapes = Counter(); inner = Counter(); n_nonempty = 0; nan_in = Counter(); per_class_nonempty = []
+for f in range(tr.shape[0]):
+    cell = tr[f][0]; k = 0
+    for s in range(cell.shape[1]):
+        d = cell[0][s]
+        shapes[str(d.shape)] += 1
+        if d.shape[0] >= 1:
+            inner[str(d[0].shape)] += 1
+            if d[0].shape[0] > 0:
+                n_nonempty += 1; k += 1
+                nn = int(np.isnan(d[0].astype(float)).sum()); nan_in["any" if nn else "none"] += 1
+    per_class_nonempty.append(k)
+o = {"placeholder_outer_shapes": dict(shapes), "inner_shapes_top": dict(inner.most_common(8)),
+     "nonempty_traces": n_nonempty, "samples_sum": int(samples.sum()),
+     "samples_equal_nonempty_per_class": bool(np.array_equal(np.array(per_class_nonempty), samples)),
+     "nonempty_traces_with_nan": dict(nan_in), "total_slots": int(sum(shapes.values())),
+     "scipy": __import__("scipy").__version__}
+json.dump(o, open(sys.argv[2], "w"), indent=1); print(json.dumps(o, indent=1))

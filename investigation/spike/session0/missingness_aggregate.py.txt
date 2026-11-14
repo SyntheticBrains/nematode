@@ -1,0 +1,39 @@
+"""Aggregate missingness_per_animal.json and the per-neuron CSV. Usage: python -I missingness_aggregate.py <dir>"""
+import csv, json, sys
+import statistics as st
+d = sys.argv[1]
+A = json.load(open(d + "/missingness_per_animal.json"))
+def q(xs):
+    xs = sorted(x for x in xs if x is not None); n = len(xs)
+    return [round(xs[0], 4), round(xs[n // 10], 4), round(xs[n // 4], 4), round(st.median(xs), 4), round(xs[(3 * n) // 4], 4), round(xs[(9 * n) // 10], 4), round(xs[-1], 4)] if xs else None
+print("quantiles shown: min, p10, p25, median, p75, p90, max")
+print("animals", len(A), "with >=1 recorded neuron", sum(a["recorded"] > 0 for a in A))
+print("frames after prep", q([a["frames"] for a in A if a["frames"]]), "total", sum(a["frames"] for a in A))
+print("recorded neurons (of 154) per animal", q([a["recorded"] for a in A]))
+print("all-NaN after prep (labelled but no data)", sum(a.get("all_nan_after_prep", 0) for a in A), "photobleach set NaN", sum(a.get("photobleach_set_nan", 0) for a in A), "1-exp fallback", sum(a.get("photobleach_1exp_fallback", 0) for a in A))
+R = [a for a in A if a["recorded"] > 0]
+print("animals with any within-recording missing entry among recorded neurons:", sum(a["recorded_with_any_missing"] > 0 for a in R), "of", len(R))
+print("fraction of recorded neurons with any missing frame, per animal", q([a["recorded_with_any_missing"] / a["recorded"] for a in R]))
+print("entries missing (recorded neurons x frames), per animal", q([a["entries_missing_fraction"] for a in R]))
+print("frames with >=1 recorded neuron missing, per animal", q([a["frames_with_any_missing_fraction"] for a in R]))
+print("distinct missingness patterns (rows) per animal", q([a["distinct_missingness_patterns"] for a in R]))
+print("recorded neurons over half missing, per animal", q([a["recorded_over_half_missing"] for a in R]), "total", sum(a["recorded_over_half_missing"] for a in R))
+print("-- restricted to neurons <= 50% missing --")
+print("animals with any missing among them", sum(a["le_half_with_any_missing"] > 0 for a in R))
+print("entries missing", q([a["le_half_entries_missing_fraction"] for a in R]))
+print("frames with any missing", q([a["le_half_frames_with_any_missing_fraction"] for a in R]))
+for thr in (0.05,):
+    print(f"animals with > {thr:.0%} of frames having any missing entry: {sum(a['frames_with_any_missing_fraction'] > thr for a in R)} of {len(R)};",
+          f"with > {thr:.0%} of entries missing: {sum(a['entries_missing_fraction'] > thr for a in R)}")
+print("timestamp gaps > 0.75 s: animals", sum(a["timestamp_gaps_over_0.75s"] > 0 for a in A), "total gaps", sum(a["timestamp_gaps_over_0.75s"] for a in A), "max gap", max(a["timestamp_max_gap_s"] for a in A))
+print("stims total", sum(a["stims"] for a in A), "identified", sum(a["stims_identified"] for a in A), "on a neuron of the 154", sum(a["stims_on_kept"] for a in A), "after the 120-frame cut", sum(a["stims_on_kept_after_cut"] for a in A))
+rows = list(csv.DictReader(open(d + "/missingness_per_neuron.csv")))
+fr = [float(r["missing_fraction_after_prep"]) for r in rows if float(r["missing_fraction_after_prep"]) < 1]
+print("neuron-recordings (recorded)", len(fr), "missing fraction", q(fr))
+print("  exactly 0 missing:", sum(f == 0 for f in fr), " >0.5:", sum(f > 0.5 for f in fr))
+raw = [float(r["raw_nan_fraction_after_cut"]) for r in rows if float(r["missing_fraction_after_prep"]) < 1]
+print("raw NaN fraction for the same", q(raw))
+ex = [a for a in A if a["name"] == "pumpprobe_20210825_123600"][0]
+print("sub-4 (example):", {k: ex[k] for k in ("frames", "recorded", "recorded_with_any_missing", "entries_missing_fraction", "frames_with_any_missing_fraction", "distinct_missingness_patterns")})
+med = sorted(R, key=lambda a: a["frames"])[len(R) // 2]
+print("median-length animal:", med["name"], {k: med[k] for k in ("frames", "recorded", "recorded_with_any_missing", "entries_missing_fraction", "frames_with_any_missing_fraction", "distinct_missingness_patterns")})

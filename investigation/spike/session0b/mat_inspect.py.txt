@@ -1,0 +1,99 @@
+"""Inspect wormvae's data/worm_activity/all_traces_Heads_new.mat with scipy.io.loadmat (MAT v5; no
+code execution), and re-implement Worm_Data_Loader.__init__ (model/data_loader.py 25-91) to report
+what the model is trained on.
+
+Usage: python -I mat_inspect.py <mat> <connectome_facts.json> <out.json> <out_arrays.npz>
+"""
+import json
+import sys
+
+import numpy as np
+import scipy.io as sio
+
+mat = sio.loadmat(sys.argv[1])
+cf = json.load(open(sys.argv[2]))
+cnames = set(cf["names"])
+o = {}
+o["keys"] = {k: (str(type(v).__name__), list(getattr(v, "shape", ())), str(getattr(v, "dtype", ""))) for k, v in mat.items() if not k.startswith("__")}
+o["header"] = str(mat.get("__header__"))
+for k in ["fps", "stim_names", "stim_times", "stims", "is_AWCL_OFF", "samples"]:
+    if k in mat:
+        v = mat[k]
+        try:
+            o[k] = np.array(v).squeeze().tolist() if v.dtype != object else [str(x) for x in np.array(v).ravel()]
+        except Exception as e:  # noqa
+            o[k] = repr(v)[:500]
+traces = mat["traces"]
+o["traces_shape"] = list(traces.shape)
+neurons = mat["neurons"]
+is_L = mat["is_L"]
+names_cls = [str(neurons[i][0][0]) for i in range(neurons.shape[0])]
+o["n_classes"] = len(names_cls)
+per_class_len = [int(traces[i][0].shape[1]) for i in range(traces.shape[0])]
+o["class_trace_lengths_counts"] = {str(k): per_class_len.count(k) for k in sorted(set(per_class_len))}
+# loader re-implementation
+NW, Ncell, T, Tstart = 21, 189, 960, 160
+act = np.zeros((NW, Ncell, T))
+lens = []
+for w in range(NW):
+    ine = 0
+    for f in range(traces.shape[0]):
+        cell = traces[f][0]
+        sides = [w, w + 21] if cell.shape[1] == 42 else [w]
+        for s in sides:
+            d = cell[0][s]
+            if d.shape[0] < 1:
+                act[w, ine, :] = np.nan
+            else:
+                L = d[0].shape[0]
+                lens.append(L)
+                act[w, ine, :L] = d[0]  # frames beyond L stay 0, not NaN
+            ine += 1
+o["loader_cells_filled"] = ine
+o["raw_trace_lengths"] = {"min": int(min(lens)), "max": int(max(lens)), "unique": sorted(set(int(x) for x in lens))[:20]}
+names = []
+for f in range(traces.shape[0]):
+    if is_L[f][0][0].shape[0] == 42:
+        names += [names_cls[f] + "L", names_cls[f] + "R"]
+    else:
+        names.append(names_cls[f])
+o["loader_names_count"] = len(names)
+o["names_not_in_connectome"] = [n for n in names if n not in cnames]
+o["is_L_lengths_vs_traces_lengths_agree"] = all(
+    (is_L[f][0][0].shape[0] == 42) == (traces[f][0].shape[1] == 42) for f in range(traces.shape[0]))
+a = act[:, :, Tstart:] + 2
+o["used_shape"] = list(a.shape)
+rec = ~np.isnan(a).all(axis=2)
+o["recorded_neurons_per_worm"] = rec.sum(1).tolist()
+o["neurons_recorded_in_any_worm"] = int(rec.any(0).sum())
+o["neurons_recorded_in_all_worms"] = int(rec.all(0).sum())
+o["neurons_never_recorded"] = [names[k] for k in range(len(names)) if not rec[:, k].any()]
+part_nan = np.isnan(a).any(axis=2) & rec
+o["partially_nan_neuron_worm_pairs"] = int(part_nan.sum())
+# zero-filled tails: frames that the loader filled with 0 then +2 -> exactly 2.0
+o["exact_value_2_fraction_of_recorded"] = float(np.mean(a[np.repeat(rec[:, :, None], a.shape[2], 2)] == 2.0))
+o["value_range_recorded"] = [float(np.nanmin(a)), float(np.nanmax(a))]
+o["value_mean_recorded"] = float(np.nanmean(a))
+# pairs for neuron holdout: classes with L and R both present
+pair_classes = [names_cls[f] for f in range(traces.shape[0]) if traces[f][0].shape[1] == 42]
+o["lr_classes"] = len(pair_classes)
+o["single_classes"] = len(names_cls) - len(pair_classes)
+# stimulus encoding as the loader
+step = 0.25
+time = np.arange(0, T * step, step)
+st = mat["stim_times"]; stims = mat["stims"]
+odor = np.zeros((NW, 3, T))
+for w in range(NW):
+    for k in range(st.shape[0]):
+        on = (time > st[k][0]) & (time < st[k][1])
+        odor[w, stims[w][k] - 1, :] = on.astype(int)
+od = odor[:, :, Tstart:]
+o["stim_onframes_after_crop_per_worm_channel"] = od.sum(2).astype(int).tolist()
+o["stim_channel_overwrite_check"] = "a channel given twice keeps only the last pulse"
+o["stims_shape"] = list(stims.shape)
+o["stim_times"] = st.tolist()
+np.savez(sys.argv[4], act=a, odor=od, names=np.array(names))
+json.dump(o, open(sys.argv[3], "w"), indent=1)
+for k, v in o.items():
+    s = json.dumps(v)
+    print(k, s if len(s) < 600 else s[:600] + "...")

@@ -1,0 +1,18 @@
+{
+ "source": "gap.pkl",
+ "source_sha256": "497042b89e8aa68aa1976ca256e01360ad0b5f0b01574b6d57780e97bac648e1",
+ "nodes": [
+  {
+   "path": "gap",
+   "type": "ndarray",
+   "shape": [
+    300,
+    300
+   ],
+   "dtype": "float64",
+   "nan": 0,
+   "min": 0.0,
+   "max": 23.0
+  }
+ ]
+}

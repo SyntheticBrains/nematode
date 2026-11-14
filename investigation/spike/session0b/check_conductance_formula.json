@@ -1,0 +1,7 @@
+{
+ "train_vs_paper_eq3_maxdiff": 0.006946408189833164,
+ "train_vs_postsyn_g_maxdiff": 0.0,
+ "eval_vs_paper_maxdiff": 0.0068528191186487675,
+ "eval_vs_postsyn_g_presyn_driving_maxdiff": 0.0,
+ "train_vs_eval_maxdiff": 0.003001195378601551
+}

@@ -1,0 +1,28 @@
+"""Where are the NaNs in the loader's array? Usage: python -I mat_nan_pattern.py <mat_loader_arrays.npz> <out.json>"""
+import json, sys
+import numpy as np
+from collections import Counter
+z = np.load(sys.argv[1]); a = z["act"]; names = list(z["names"])  # (21,189,800), already cropped at 160 and +2
+nan = np.isnan(a)
+o = {}
+o["nan_fraction_all"] = float(nan.mean())
+o["nan_frames_per_trace_quantiles"] = np.quantile(nan.sum(2), [0, .1, .5, .9, 1]).tolist()
+o["frames_nan_in_all_traces_of_worm0"] = int(nan[0].all(0).sum())
+# is NaN pattern shared across neurons within a worm?
+shared = []
+for w in range(a.shape[0]):
+    rows = nan[w]
+    pats = Counter(map(lambda r: r.tobytes(), rows))
+    shared.append(len(pats))
+o["distinct_nan_patterns_per_worm"] = shared
+fr = nan.mean((0, 1))
+o["frame_nan_rate_first20"] = np.round(fr[:20], 3).tolist()
+o["frame_nan_rate_last20"] = np.round(fr[-20:], 3).tolist()
+o["frames_with_nan_rate_over_0.5"] = int((fr > 0.5).sum())
+const2 = (a == 2.0).all(2)
+o["neuron_worm_slots_constant_2"] = int(const2.sum())
+o["slots_with_trailing_2_but_not_constant"] = int(((a[:, :, -1] == 2.0) & ~const2).sum())
+o["per_worm_constant2_slots"] = const2.sum(1).tolist()
+o["per_worm_real_neurons"] = (189 - const2.sum(1)).tolist()
+np.save(sys.argv[2].replace('.json', '_const2.npy'), const2)
+json.dump(o, open(sys.argv[2], "w"), indent=1); print(json.dumps(o, indent=1))

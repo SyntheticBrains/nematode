@@ -1,0 +1,31 @@
+"""Profile example_recording (from its exported npz) and list NWB files that could be its source.
+Usage: python -I example_profile.py <exports_dir> <nwb_summary.json> <names.json>"""
+import json, sys
+import numpy as np
+ex = np.load(sys.argv[1] + "/example_recording.npz")
+act = ex["example_recording.activity"]; inp = ex["example_recording.inputs"]
+names = json.load(open(sys.argv[3]))
+T, N = act.shape
+recorded = ~np.all(np.isnan(act), 0)
+print("frames", T, "columns", N, "recorded columns", recorded.sum())
+nanfrac = np.isnan(act[:, recorded]).mean(0)
+print("NaN fraction among recorded columns: quantiles", np.quantile(nanfrac, [0, .25, .5, .75, 1]).round(4), "columns with any NaN", (nanfrac > 0).sum(), ">0.5:", (nanfrac > 0.5).sum())
+ev = np.argwhere(inp == 1)
+print("stim events", len(ev), "inputs values", np.unique(inp), "distinct targets", len(set(ev[:, 1])))
+print("stim frames first", ev[:8, 0].tolist(), "targets first", [names[j] for j in ev[:8, 1]])
+print("stim inter-onset frames", np.unique(np.diff(ev[:, 0]))[:10])
+print("targets recorded?", all(recorded[j] for j in ev[:, 1]))
+rec_names = sorted(names[j] for j in np.where(recorded)[0])
+rows = json.load(open(sys.argv[2]))
+cands = []
+for r in rows:
+    lab = set(r["labels_in_list"])
+    overlap = len(set(rec_names) & lab)
+    cands.append((abs(r["frames"] - (T + 121)), -overlap, r["pumpprobe_name"], r["frames"], len(lab), overlap, r["stims"], r["stims_manual_target_id"]))
+cands.sort()
+print("closest by frames (frames-3818), overlap of labels with recorded set:")
+for c in cands[:6]:
+    print("  ", c[2:], "frame diff", c[0])
+best_overlap = sorted(cands, key=lambda c: c[1])[:4]
+print("best by label overlap:", [c[2:] for c in best_overlap])
+json.dump({"recorded": rec_names, "stim_frames": ev[:, 0].tolist(), "stim_targets": [names[j] for j in ev[:, 1]]}, open("example_profile.json", "w"))

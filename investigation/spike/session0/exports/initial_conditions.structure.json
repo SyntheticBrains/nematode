@@ -1,0 +1,49 @@
+{
+ "source": "initial_conditions.pkl",
+ "source_sha256": "2ed6836dc29a67dd3581a1e089a0836839e97f15462fa499fef6f5d5ba82058a",
+ "nodes": [
+  {
+   "path": "initial_conditions",
+   "type": "dict",
+   "keys": [
+    "emissions_offset",
+    "init_mean",
+    "init_cov"
+   ]
+  },
+  {
+   "path": "initial_conditions.emissions_offset",
+   "type": "ndarray",
+   "shape": [
+    154
+   ],
+   "dtype": "float64",
+   "nan": 0,
+   "min": -0.06625470992866969,
+   "max": 0.022080353023646443
+  },
+  {
+   "path": "initial_conditions.init_mean",
+   "type": "ndarray",
+   "shape": [
+    154
+   ],
+   "dtype": "float64",
+   "nan": 0,
+   "min": -3.140735341194321,
+   "max": 8.601059123505564
+  },
+  {
+   "path": "initial_conditions.init_cov",
+   "type": "ndarray",
+   "shape": [
+    154,
+    154
+   ],
+   "dtype": "float64",
+   "nan": 0,
+   "min": -0.19673189080159914,
+   "max": 0.9999963763431656
+  }
+ ]
+}

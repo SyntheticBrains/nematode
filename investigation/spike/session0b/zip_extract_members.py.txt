@@ -1,0 +1,11 @@
+"""Extract named members of a remote zip by HTTP byte ranges into an output dir (flat names).
+Usage: python -I zip_extract_members.py <url> <out_dir> <member> [<member> ...]"""
+import sys, zipfile, fsspec, os, hashlib
+fs = fsspec.filesystem("http")
+with fs.open(sys.argv[1], "rb", block_size=2**22, cache_type="blockcache") as fh:
+    z = zipfile.ZipFile(fh)
+    for m in sys.argv[3:]:
+        data = z.read(m)
+        p = os.path.join(sys.argv[2], os.path.basename(m))
+        open(p, "wb").write(data)
+        print(p, len(data), hashlib.sha256(data).hexdigest())

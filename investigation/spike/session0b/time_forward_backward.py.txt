@@ -1,0 +1,109 @@
+"""Time one forward + ELBO + backward pass of wormvae's WormVAE on CPU, on one real worm-window, built
+exactly as experiment/main.py builds it (device switched to CPU). No optimiser step is taken.
+
+Shims (harness only, the repository is not modified):
+- torch.set_default_tensor_type is made a no-op, because model/train.py calls it with
+  'torch.cuda.FloatTensor' at import time;
+- np.int and np.NaN are restored, because data_loader.py and connectome_preprocess.py use them and
+  NumPy removed them.
+
+Usage: python -I time_forward_backward.py <repo> <model_type> <constraint> <threads> <dtype> <reps> <out.jsonl>
+"""
+import json
+import os
+import sys
+import time
+
+repo, model_type, constraint = sys.argv[1], sys.argv[2], sys.argv[3]
+threads, dtype_name, reps, out = int(sys.argv[4]), sys.argv[5], int(sys.argv[6]), sys.argv[7]
+
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+
+np.int = int
+np.NaN = np.nan
+torch.set_default_tensor_type = lambda *a, **k: None
+torch.set_num_threads(threads)
+dtype = {"float32": torch.float32, "float64": torch.float64}[dtype_name]
+torch.set_default_dtype(dtype)
+torch.manual_seed(0)
+sys.path.insert(0, repo)
+import torch.nn.functional as F  # noqa: E402
+
+from model import data_loader  # noqa: E402
+from model.cnctm_vae import Worm_Inference_Network, Worm_Sensory_Encoder, WormVAE  # noqa: E402
+from model.connectome_preprocess import WhiteConnectomeData  # noqa: E402
+from model.data_loader import Worm_Data_Loader  # noqa: E402
+
+device = "cpu"
+t_setup = time.time()
+worm_data_loader = Worm_Data_Loader(os.path.join(repo, "data/worm_activity/"))
+connectome_data = WhiteConnectomeData(os.path.join(repo, "data/worm_connectivity/"), device)
+stim_channels = worm_data_loader.odor_channels
+acquisition_dt = worm_data_loader.step
+N = connectome_data.N
+upsample_factor = 40
+dt = acquisition_dt / upsample_factor
+window_size = 30
+inference_net_params = {"k1": 11, "k2": 21, "k3": 21, "k4": 41, "k5": 41, "up1_factor": 4, "up2_factor": 10}
+channels_dict = {"conv1": 2 * N, "conv2": 2 * N, "conv3": 2 * N}
+kernel_size_dict = {f"conv{i}": inference_net_params[f"k{i}"] for i in range(1, 6)}
+scale_factor_dict = {"upsample1": 4, "upsample2": 10}
+inference_network = Worm_Inference_Network(neuron_num=N, inputs_channels=2 * N, channels_dict=channels_dict,
+                                           kernel_size_dict=kernel_size_dict, scale_factor_dict=scale_factor_dict,
+                                           nonlinearity=F.relu)
+encoder = Worm_Sensory_Encoder(stim_channels, N)
+initialization = {"neuron_bias": 1e-3 * torch.rand((1, N)), "neuron_tau": 1e-2 * torch.rand((1, N)),
+                  "calcium_bias": 1e-2 * torch.rand((1, N)), "voltage_to_calcium_nonlinearity": F.softplus}
+signs_c = torch.empty(N, N).uniform_(-0.01, 0.01)
+network = WormVAE(connectome=connectome_data, window_size=window_size, initialization=initialization,
+                  upsample_factor=upsample_factor, signs_c=signs_c, encoder=encoder,
+                  inference_network=inference_network, device=device, dt=dt, nonlinearity=F.leaky_relu,
+                  model_type=model_type, constraint=constraint)
+network.to(dtype)
+train_worm = [1]
+up = worm_data_loader.interpolate_odor(worm_data_loader.odor_worms[train_worm], upsample_factor)
+stim_features = torch.from_numpy(up).to(dtype)
+target_raw = torch.from_numpy(worm_data_loader.activity_worms[train_worm]).to(dtype)
+full_target = connectome_data.make_full_connectome_activity(activity_data=target_raw,
+                                                            activity_neuron_list=worm_data_loader.neuron_names,
+                                                            holdout_list=[]).to(dtype)
+target, missing_target = data_loader.generate_target_mask(full_target)
+ds = data_loader.TimeSeriesDataloader(data_param_dict=inference_net_params, data=[stim_features, target, missing_target],
+                                      window_size=[int(window_size * upsample_factor), window_size, window_size])
+loader = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=False, drop_last=False)
+batch = next(iter(loader))
+odor_w, tgt_pad, miss_pad, tgt, miss = [b.to(dtype) for b in batch]
+setup_s = time.time() - t_setup
+n_params = sum(p.numel() for p in network.parameters() if p.requires_grad)
+
+
+def one_pass():
+    network.zero_grad(set_to_none=True)
+    outputs = network.forward(fluorescence_full_target=tgt_pad[:, 0], fluorescence_target=tgt[:, 0],
+                              missing_target_mask=miss_pad[:, 0], odor_input=odor_w[:, 0], is_Training=True)
+    loss, rec, kld = network.loss(fluorescence_trace_target=tgt[:, 0], missing_fluorescence_target=miss[:, 0],
+                                  outputs=outputs, recon_weight=1, KLD_weight=1)
+    loss.backward()
+    return float(loss.detach()), outputs["prior_voltage_mu"].dtype
+
+
+try:
+    import resource
+    one_pass()  # warm-up
+    times = []
+    for _ in range(reps):
+        t = time.perf_counter(); loss, odt = one_pass(); times.append(time.perf_counter() - t)
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2**30  # bytes on macOS
+    rec = {"model_type": model_type, "constraint": constraint, "threads": threads, "dtype": dtype_name,
+           "N": N, "windows_per_epoch": len(ds), "window_frames": window_size, "sim_steps": window_size * upsample_factor,
+           "input_shapes": [list(x.shape) for x in (odor_w, tgt_pad, miss_pad, tgt, miss)],
+           "trainable_params": n_params, "setup_s": round(setup_s, 2), "times_s": [round(x, 4) for x in times],
+           "median_s": round(float(np.median(times)), 4), "loss": loss, "output_dtype": str(odt),
+           "max_rss_GiB": round(rss, 2), "torch": torch.__version__}
+except Exception as e:  # record the failure as a fact
+    rec = {"model_type": model_type, "constraint": constraint, "threads": threads, "dtype": dtype_name,
+           "error": f"{type(e).__name__}: {e}"[:500], "torch": torch.__version__}
+with open(out, "a") as fh:
+    fh.write(json.dumps(rec) + "\n")
+print(json.dumps(rec))

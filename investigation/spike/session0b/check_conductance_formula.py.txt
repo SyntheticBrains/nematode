@@ -1,0 +1,25 @@
+"""Numerically check which formula wormvae's leaky_integrator_conductance computes for chem_in, in
+training mode and in eval mode, on a 4-neuron random example. Usage: python -I check_conductance_formula.py <repo> <out.json>"""
+import json, sys
+import torch, torch.nn.functional as F
+sys.path.insert(0, sys.argv[1])
+from cnctm.nn.leaky_integrator_conductance import leaky_integrator_conductance
+from cnctm.utils.data import ConnectomeConstructor
+torch.manual_seed(0); n, T = 4, 5
+sp = (torch.rand(n, n) > 0.3).float(); mag = torch.rand(n, n) * 3
+c = ConnectomeConstructor({"sparsity_c": sp, "sparsity_e": torch.zeros(n, n), "signs_c": torch.zeros(n, n),
+                           "magnitudes_c": mag, "magnitudes_e": torch.zeros(n, n), "n": n})
+m = leaky_integrator_conductance(c, dt=0.01, nonlinearity=F.leaky_relu, constraint="sparsity")
+h = torch.randn(1, n, T); inp = torch.zeros(1, n, T)
+x = torch.zeros_like(h); x[:, :, 1:] = h[:, :, :-1]
+W = sp * mag * 1e-2; E = m.reversal_potentials.detach()[0]; g = F.leaky_relu
+with torch.no_grad():
+    _, chem_train, _ = m.forward(inp, h, True); _, chem_eval, _ = m.forward(inp, h, False)
+    paper = torch.stack([torch.stack([sum((E[i, j] - x[0, i, t]) * W[i, j] * g(x[0, j, t]) for j in range(n)) for i in range(n)]) for t in range(T)], 1)
+    post_g = torch.stack([torch.stack([g(x[0, i, t]) * sum(W[i, j] * (E[i, j] - x[0, i, t]) for j in range(n)) for i in range(n)]) for t in range(T)], 1)
+    eval_form = torch.stack([torch.stack([g(x[0, i, t]) * sum(W[i, j] * (E[i, j] - x[0, j, t]) for j in range(n)) for i in range(n)]) for t in range(T)], 1)
+f = lambda a, b: float((a.reshape(n, T) - b).abs().max())
+o = {"train_vs_paper_eq3_maxdiff": f(chem_train, paper), "train_vs_postsyn_g_maxdiff": f(chem_train, post_g),
+     "eval_vs_paper_maxdiff": f(chem_eval, paper), "eval_vs_postsyn_g_presyn_driving_maxdiff": f(chem_eval, eval_form),
+     "train_vs_eval_maxdiff": f(chem_train, chem_eval.reshape(n, T))}
+json.dump(o, open(sys.argv[2], "w"), indent=1); print(json.dumps(o, indent=1))

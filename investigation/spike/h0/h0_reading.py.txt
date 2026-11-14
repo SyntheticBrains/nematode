@@ -1,0 +1,192 @@
+"""Reading H0 (H0_READING.md): the box centre on the true wiring against 19 degree-preserving nulls.
+
+Order: build all 20 brains and check each null differs from the true wiring (check 1); score the
+true wiring against the test matrix and stop unless it reproduces M-a's 0.0653 to 1e-4 (check 2);
+only then score the nulls. Stimulation, response, names, nan_corr and masking are M-a's primary
+definition under its amendment 1 (one unit added to neuron s's starting state, from rest).
+"""
+import hashlib, json, os, sys
+for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ[k] = "8"
+import numpy as np, scipy.stats, torch
+torch.set_num_threads(8)
+sys.path.insert(0, "scripts/analysis")
+import c2_encoder_probe as p
+from quantumnematode.connectome import encoder as enc
+
+DIR = "investigation/spike/h0"
+HINGE4 = "docs/experiments/logbooks/supporting/131-c2-clean-start/probes/hinge4.json"
+STAMS = "investigation/spike/session0/exports/measured_stams.npz"
+NAMES = json.load(open("investigation/spike/session0/creamer_154_names.json"))
+MA_BOX, MA_TOL, MA_BOX_OWN_NULL_975 = 0.06527048652383569, 1e-4, 0.02159225789969175
+SEEDS = list(range(9741, 9760))
+assert len(SEEDS) == 19
+
+
+def nan_corr(y_true, y_hat, alpha=0.05, mean_sub=True):
+    """Ported verbatim from Creamer's metrics.py (bba43302), lines 109-136."""
+    y_true = y_true.reshape(-1)
+    y_hat = y_hat.reshape(-1)
+
+    mask = ~np.isnan(y_true) & ~np.isnan(y_hat)
+    y_true = y_true[mask]
+    y_hat = y_hat[mask]
+
+    if mean_sub:
+        y_true = y_true - np.mean(y_true)
+        y_hat = y_hat - np.mean(y_hat)
+
+    y_true_std = np.std(y_true, ddof=0)
+    y_hat_std = np.std(y_hat, ddof=0)
+
+    corr = np.mean(y_true * y_hat) / y_true_std / y_hat_std
+
+    # now estimate the confidence intervals for the correlation
+    n = y_true.shape[0]
+    z_a = scipy.stats.norm.ppf(1 - alpha / 2)
+    z_r = np.log((1 + corr) / (1 - corr)) / 2
+    l = z_r - (z_a / np.sqrt(n - 3))
+    u = z_r + (z_a / np.sqrt(n - 3))
+    ci_l = (np.exp(2 * l) - 1) / (np.exp(2 * l) + 1)
+    ci_u = (np.exp(2 * u) - 1) / (np.exp(2 * u) + 1)
+    ci = [np.abs(ci_l - corr), ci_u - corr]
+
+    return corr, ci
+
+
+def settle_from_start(brain, h0):
+    """M-a's spike-local settling copy, starting-state form: h <- tanh(h @ R), depth times."""
+    top = brain.topology
+    with torch.no_grad():
+        R = (top.encoder.chemical() + top.g_gap * top.encoder.gap_scale()).numpy().astype(np.float32)
+    h = np.asarray(h0, np.float32)
+    for _ in range(top.forward_pass_depth):
+        h = np.tanh(h @ R)
+    return h
+
+
+def response(brain, z):
+    """[responder, stimulated] over the 154 names: one unit on neuron s's starting state."""
+    enc.write_encoder(brain, z)
+    names = brain.topology.neuron_names
+    idx = [names.index(n) for n in NAMES]
+    E = np.zeros((len(idx), len(names)), np.float32)
+    E[np.arange(len(idx)), idx] = 1.0
+    return settle_from_start(brain, E)[:, idx].T.astype(np.float64)
+
+
+def edges(brain):
+    """The built brain's chemical edges (directed, from its mask) and gap pairs (from its gap matrix)."""
+    top = brain.topology
+    chem = top.m_chem.to(torch.bool).numpy().copy()
+    gap = (top.g_gap.detach().numpy() != 0)
+    gap = np.triu(gap | gap.T, 1)
+    return chem, gap
+
+
+def package_forward_check(brain, z):
+    """Parity of the settling copy against the package forward on this wiring (100 inputs, rng 9732)."""
+    enc.write_encoder(brain, z)
+    top = brain.topology
+    rng = np.random.default_rng(9732)
+    feats = np.column_stack([rng.uniform(0.05, 1.0, 100), rng.uniform(-1, 1, 100),
+                             rng.uniform(-1, 1, 100), rng.uniform(0.05, 1.0, 100)]).astype(np.float32)
+    with torch.no_grad():
+        _, h_pkg = top.forward_with_hidden_batched(torch.from_numpy(feats), modulators=torch.zeros(100, brain._n_concentrations + 1))
+        drive = (torch.from_numpy(feats) @ top.encoder.injection()).numpy()
+    return float(np.abs(settle_from_start(brain, drive) - h_pkg.numpy()).max())
+
+
+Z_C2 = [float(v) for v in json.load(open(HINGE4))["z"]]
+BOX = [0.5] * 137
+true_brain = p.encoded_brain((), **p.PROCEDURE_SETTINGS, wiring="wild_type")
+true_names = [e.name for e in true_brain.topology.encoder.entries]
+assert len(true_names) == 137
+chem0, gap0 = edges(true_brain)
+true_chem_n, true_gap_n = int(chem0.sum()), int(gap0.sum())
+
+# Check 1: every null brain builds, and its wiring differs from the true one.
+check1, R_box, R_c2, moved = {}, {}, {}, {}
+for s in SEEDS:
+    try:
+        b = p.encoded_brain((), **p.PROCEDURE_SETTINGS, wiring="rewired_degree_preserving", rewire_seed=s)
+    except Exception as e:  # noqa: BLE001
+        check1[s] = {"builds": False, "error": f"{type(e).__name__}: {e}"}
+        continue
+    chem, gap = edges(b)
+    same_names = [e.name for e in b.topology.encoder.entries] == true_names
+    differs = bool((chem != chem0).any() or (gap != gap0).any())
+    moved[s] = {"chemical_edges": int(chem.sum()), "chemical_fraction_moved": float(1 - (chem & chem0).sum() / true_chem_n),
+                "gap_pairs": int(gap.sum()), "gap_fraction_moved": float(1 - (gap & gap0).sum() / true_gap_n),
+                "in_degree_preserved": bool((chem.sum(0) == chem0.sum(0)).all()), "out_degree_preserved": bool((chem.sum(1) == chem0.sum(1)).all())}
+    R_box[s] = response(b, BOX)
+    R_c2[s] = response(b, Z_C2)
+    check1[s] = {"builds": True, "differs_from_true": differs, "same_137_entry_names": same_names,
+                 "parity_box_centre_max_abs": package_forward_check(b, BOX), "parity_c2_max_abs": package_forward_check(b, Z_C2)}
+    print(s, check1[s], moved[s], flush=True)
+check1_ok = all(c.get("builds") and c["differs_from_true"] and c["same_137_entry_names"]
+                and c["parity_box_centre_max_abs"] <= 1e-5 and c["parity_c2_max_abs"] <= 1e-5 for c in check1.values())
+record = {"registration": "investigation/spike/H0_READING.md (edfafa94)", "check1": {"passes": check1_ok, "per_seed": check1},
+          "true_wiring": {"chemical_edges": true_chem_n, "gap_pairs": true_gap_n,
+                          "parity_box_centre_max_abs": package_forward_check(true_brain, BOX),
+                          "parity_c2_max_abs": package_forward_check(true_brain, Z_C2)}}
+if not check1_ok:
+    record["stopped"] = "check 1 failed; nothing scored"
+    json.dump(record, open(f"{DIR}/result.json", "w"), indent=1); sys.exit("check 1 failed")
+
+# Check 2: the positive control, read against the test matrix before any null is scored.
+raw = open(STAMS, "rb").read()
+data = np.load(STAMS)
+train, test = data["measured_stams.train.npy"].astype(float), data["measured_stams.test.npy"].astype(float)
+eye = np.eye(154, dtype=bool)
+train[eye] = np.nan; test[eye] = np.nan
+
+
+def r(M, ref):
+    M = M.copy(); M[eye] = np.nan
+    return float(nan_corr(M, ref)[0])
+
+
+Rt_box, Rt_c2 = response(true_brain, BOX), response(true_brain, Z_C2)
+r_true = r(Rt_box, test)
+check2 = {"r_true": r_true, "ma_box_centre": MA_BOX, "abs_difference": abs(r_true - MA_BOX), "passes": abs(r_true - MA_BOX) <= MA_TOL}
+record["check2"] = check2
+record["measured_sha256"] = hashlib.sha256(raw).hexdigest()
+print("check 2", check2, flush=True)
+if not check2["passes"]:
+    record["stopped"] = "check 2 failed; nulls not scored"
+    json.dump(record, open(f"{DIR}/result.json", "w"), indent=1); sys.exit("check 2 failed")
+
+# The reading.
+null = {s: r(R_box[s], test) for s in SEEDS}
+vals = np.array([null[s] for s in SEEDS])
+m0 = 0.25 * (r_true - MA_BOX_OWN_NULL_975)
+med = float(np.median(vals))
+above_all = bool(np.all(r_true > vals))
+reading = ("FAIL" if not above_all else "PASS" if r_true - med >= m0 else "SMALL")
+c2_true_test = r(Rt_c2, test)
+c2_null_test = {s: r(R_c2[s], test) for s in SEEDS}
+c2_vals = np.array(list(c2_null_test.values()))
+train_null = np.array([r(R_box[s], train) for s in SEEDS])
+c2_null_train = np.array([r(R_c2[s], train) for s in SEEDS])
+r_true_train, c2_true_train = r(Rt_box, train), r(Rt_c2, train)
+record.update({
+    "named_reading": reading,
+    "primary": {"r_true": r_true, "null_values_by_seed": {str(s): null[s] for s in SEEDS}, "null_sorted": sorted(map(float, vals)),
+                "null_median": med, "null_min": float(vals.min()), "null_max": float(vals.max()),
+                "m0": m0, "m0_rule": "0.25 * (r_true - 0.02159225789969175)", "r_true_minus_null_median": r_true - med,
+                "r_true_exceeds_all_19": above_all, "rank_of_true_among_20": int(1 + np.sum(vals > r_true))},
+    "description": {
+        "c2_z_on_wirings_test": {"true": c2_true_test, "nulls_by_seed": {str(s): v for s, v in c2_null_test.items()},
+                                 "null_median": float(np.median(c2_vals)), "null_min": float(c2_vals.min()), "null_max": float(c2_vals.max()),
+                                 "rank_of_true_among_20": int(1 + np.sum(c2_vals > c2_true_test))},
+        "train_box_centre": {"true": r_true_train, "null_sorted": sorted(map(float, train_null)), "null_median": float(np.median(train_null)),
+                             "rank_of_true_among_20": int(1 + np.sum(train_null > r_true_train))},
+        "train_c2_z": {"true": c2_true_train, "null_sorted": sorted(map(float, c2_null_train)), "null_median": float(np.median(c2_null_train)),
+                       "rank_of_true_among_20": int(1 + np.sum(c2_null_train > c2_true_train))},
+        "edges_moved_by_seed": {str(s): v for s, v in moved.items()},
+    },
+})
+json.dump(record, open(f"{DIR}/result.json", "w"), indent=1)
+print(json.dumps({k: record[k] for k in ("named_reading", "primary")}, indent=1))
+print(json.dumps(record["description"], indent=1)[:4000])
