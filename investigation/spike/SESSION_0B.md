@@ -1,5 +1,7 @@
 # Session 0b: fact-finding for the Mi et al. 2022 target
 
+*Note, added for the merge: the bulk JSON, CSV and TSV outputs this report cites (37 files across sessions 0 and 0b, each over 300 lines) are not on `main`. They are kept at the git tag `fit-first-investigation-notes`. The scripts, the exported parameter arrays and their manifest, and `creamer_154_names.json` remain here.*
+
 Run on 2026-11-14, 11:50 to about 12:12 AEDT, under decision A27: fact-finding only. No training or
 fitting was run. The only model code executed was one forward and backward pass per timing
 (task E), and one 4-neuron numerical check of a synapse module, each after reading every module it

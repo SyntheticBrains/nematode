@@ -1,5 +1,7 @@
 # Session 0: fact-finding for the spike
 
+*Note, added for the merge: the bulk JSON, CSV and TSV outputs this report cites (37 files across sessions 0 and 0b, each over 300 lines) are not on `main`. They are kept at the git tag `fit-first-investigation-notes`. The scripts, the exported parameter arrays and their manifest, and `creamer_154_names.json` remain here.*
+
 Run on 2026-11-14, 11:07 to about 11:45 AEDT, under decision A24: no fits, no test animals read, no
 correlations computed against Creamer's test arrays. Every script is in `investigation/spike/session0/`
 and every download in `investigation/spike/_downloads/` (gitignored). Confidence words: **confirmed**
