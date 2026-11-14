@@ -21,6 +21,9 @@ diffs line by line. The script refuses a tree whose tracked files have uncommitt
 the commit it records would not describe what it exported; ``--allow-dirty`` exports anyway and
 records that the tree was dirty.
 
+``scripts/export_wormturn.py`` imports the git check, the input records, the neuron and gap-junction
+records and the renderer from this script.
+
 Usage::
 
     uv run python scripts/export_wormlight.py --out connectome.v1.json
@@ -34,7 +37,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from quantumnematode.connectome.loader import (
     EMMONS_2024_HERMAPHRODITE_PATH,
@@ -45,23 +48,28 @@ from quantumnematode.connectome.muscles import BODY_WALL_MUSCLES
 from quantumnematode.connectome.neurons import NEURON_CO_TRANSMITTERS
 from quantumnematode.connectome.neurotransmitters import ATLAS_PATH, sign_for
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from quantumnematode.connectome.model import Connectome
+
 SCHEMA = "wormlight.connectome/1"
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NEURON_TABLE_PATH = (
     REPO_ROOT / "packages" / "quantum-nematode" / "quantumnematode" / "connectome" / "neurons.py"
 )
 
-# Top-level keys, in the order they are written. Everything after the provenance is a list written
-# one record per line.
+# The top-level keys after the schema and the provenance, in the order they are written: each is a
+# list written one record per line.
 _RECORD_LISTS = ("neurons", "muscles", "chemical", "gap", "neuromuscular")
-_KEYS = ("schema", "provenance", *_RECORD_LISTS)
 
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _input(path: Path, role: str) -> dict[str, str]:
+def input_entry(path: Path, role: str) -> dict[str, str]:
+    """Return an input's provenance entry: its path from the repository root, SHA256 and role."""
     return {
         "file": path.resolve().relative_to(REPO_ROOT).as_posix(),
         "sha256": _sha256(path),
@@ -89,11 +97,9 @@ def git_state(repo: Path = REPO_ROOT) -> tuple[str, bool]:
     return commit, dirty
 
 
-def build_export(*, commit: str, dirty: bool) -> dict[str, Any]:
-    """Build the export from the Emmons 2024 connectome and the neuron table."""
-    connectome = load_emmons_2024_hermaphrodite()
-    neuromuscular = load_emmons_2024_neuromuscular()
-    neurons = [
+def neuron_records(connectome: Connectome) -> list[dict[str, Any]]:
+    """Return each neuron's name, class, release identities (primary first) and rule sign."""
+    return [
         {
             "name": neuron.name,
             "class": neuron.cell_class,
@@ -105,6 +111,20 @@ def build_export(*, commit: str, dirty: bool) -> dict[str, Any]:
         }
         for neuron in connectome.neurons.values()
     ]
+
+
+def gap_records(connectome: Connectome) -> list[dict[str, Any]]:
+    """Return each gap-junction pair once, ``a < b``, with its section count."""
+    return [
+        {"a": junction.neuron_a, "b": junction.neuron_b, "sections": junction.weight}
+        for junction in connectome.gap_junctions
+    ]
+
+
+def build_export(*, commit: str, dirty: bool) -> dict[str, Any]:
+    """Build the export from the Emmons 2024 connectome and the neuron table."""
+    connectome = load_emmons_2024_hermaphrodite()
+    neuromuscular = load_emmons_2024_neuromuscular()
     return {
         "schema": SCHEMA,
         "provenance": {
@@ -112,32 +132,29 @@ def build_export(*, commit: str, dirty: bool) -> dict[str, Any]:
             "nematodeCommit": commit,
             "nematodeDirty": dirty,
             "inputs": [
-                _input(
+                input_entry(
                     EMMONS_2024_HERMAPHRODITE_PATH,
                     "chemical synapses, gap junctions and neuromuscular connections: Cook et al. "
                     "2019 as released in Emmons 2024, PLoS Biology 22:e3002939, S1 File (CC BY 4.0)",
                 ),
-                _input(
+                input_entry(
                     NEURON_TABLE_PATH,
                     "neuron classes, and release identities as committed values generated from "
                     "the atlas below",
                 ),
-                _input(
+                input_entry(
                     ATLAS_PATH,
                     "release identities: Wang et al. 2024, eLife 13:RP95402, Supplementary File 2",
                 ),
             ],
         },
-        "neurons": neurons,
+        "neurons": neuron_records(connectome),
         "muscles": list(BODY_WALL_MUSCLES),
         "chemical": [
             {"pre": synapse.pre, "post": synapse.post, "sections": synapse.weight}
             for synapse in connectome.chemical_synapses
         ],
-        "gap": [
-            {"a": junction.neuron_a, "b": junction.neuron_b, "sections": junction.weight}
-            for junction in connectome.gap_junctions
-        ],
+        "gap": gap_records(connectome),
         "neuromuscular": [
             {"pre": junction.pre, "muscle": junction.muscle, "sections": junction.weight}
             for junction in neuromuscular
@@ -145,21 +162,26 @@ def build_export(*, commit: str, dirty: bool) -> dict[str, Any]:
     }
 
 
-def render(export: dict[str, Any]) -> str:
-    """Serialise ``export`` deterministically, one record per line."""
-    if tuple(export) != _KEYS:
-        msg = f"export keys are {list(export)}, expected {list(_KEYS)} in that order"
+def render(export: dict[str, Any], record_lists: Sequence[str] = _RECORD_LISTS) -> str:
+    """Serialise ``export`` deterministically, one record per line.
+
+    ``export`` holds ``schema``, then ``provenance``, then the lists named by ``record_lists``, in
+    that order and nothing else.
+    """
+    keys = ("schema", "provenance", *record_lists)
+    if tuple(export) != keys:
+        msg = f"export keys are {list(export)}, expected {list(keys)} in that order"
         raise ValueError(msg)
     provenance = json.dumps(export["provenance"], indent=2).replace("\n", "\n  ")
     lines = ["{", f'  "schema": {json.dumps(export["schema"])},', f'  "provenance": {provenance},']
-    for index, key in enumerate(_RECORD_LISTS):
+    for index, key in enumerate(record_lists):
         records = export[key]
         lines.append(f'  "{key}": [')
         lines.extend(
             f"    {json.dumps(record)}{',' if position < len(records) - 1 else ''}"
             for position, record in enumerate(records)
         )
-        lines.append("  ]," if index < len(_RECORD_LISTS) - 1 else "  ]")
+        lines.append("  ]," if index < len(record_lists) - 1 else "  ]")
     lines.append("}")
     return "\n".join(lines) + "\n"
 

@@ -31,6 +31,8 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ### Added
 
+- **A Wormturn export**: `scripts/export_wormturn.py` writes `wormturn.connectome/1`, the Emmons 2024 wiring with each chemical connection's per-connection sign, the step that gave it (67 physiology, 1,676 expression, 1,433 rule, 533 none) and the citation behind a physiology sign, together with the neuromodulator layer and the receptor couplings as their files hold them. No muscles. The Wormlight exporter's helpers are shared, and its output is byte-identical.
+
 - **An on-food reversal speed that follows the run speed** ([Logbook 132](docs/experiments/logbooks/132-speed-following-reversals.md)): `continuous.on_food_reversal_speed: follows_run_speed` makes a reversal that starts on a lawn back at a speed interpolated between measured knots at v, the worm's mean run speed over its last 3 s of runs (0.0484 mm/s for a still worm to 0.0961 for the fastest), as real on-lawn reversals follow the speed before them. The values come from Scheer's held-out cohorts (`scripts/analysis/reversal_speed_coupling.py`, a new `measured` entry in `data/locomotion/primitives.json`). Unset means `pooled`, the one on-food speed as before, byte-identical. Both runners give each reversal the same speed. Under the option, Logbook 131's refit answer passes the wild type and every mutant in 10 of 10 fresh populations.
 
 - **C.2's fitting procedure in the encoder** ([Logbook 130](docs/experiments/logbooks/130-c2-encoder-procedure.md)), each option off by default and byte-identical:
