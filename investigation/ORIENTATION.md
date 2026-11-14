@@ -318,8 +318,10 @@ machine time covers the readiness pilot, F.0b-ii and the registered C.2 fit (lau
 about 117 hours at measured rates), C.1's refit and C.3 (neither costed), and W.
 
 **W at its registered size.** W.1 names five null families, and the tracker's sizing takes 8 to 16
-draws per arm (its later cost line counts 6 arms). The arithmetic: (1 + 5 × 8) = 41 fits to 6 × 16 =
-96 fits, at about 30 hours a fit (launch 133), is about 1,200 to 2,900 machine hours. The tracker says
+draws per arm (its later cost line counts 6 arms). The tracker counts fits two ways. Its sizing formula,
+1 + 5 null arms × 8 to 16 draws, gives 41 to 81 fits. Its later cost line, 6 arms × 8 to 16 draws,
+gives 48 to 96. At about 30 hours a fit (launch 133), that is 1,230 to 2,430 h on the first count
+and 1,440 to 2,880 h on the second, so about 1,200 to 2,900 machine hours across both. The tracker says
 W at this size is "beyond what it can run as planned" and names three cuts: a stopping rule on the
 draws, fewer draws, or a cheaper fit.
 

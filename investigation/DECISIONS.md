@@ -395,13 +395,13 @@ as written, or staying without running H0.
 
 ### A33. The merge, and the handover
 
-The merge contains everything except the raw agent notes, which stay on a tagged branch:
+The merge contains everything except the raw agent notes, which stay at a git tag:
 
 - the conclusions and the Part A documents;
 - the spike's records;
 - a logbook entry;
 - the provenance correction;
-- the seed-table entries.
+- one seed-table row.
 
 A handover brief for the Phase 10 session is added as a file and also sent to that session. Both
 notes to authors are deferred. Considered instead: merging everything, or the conclusions only;
@@ -415,3 +415,26 @@ here on, and the verbatim original stays in git history at dd0c5b92.
 
 The raw agent notes (`investigation/notes/`) are left out of the merge, as A33 says. They stay at
 the annotated tag `fit-first-investigation-notes`.
+
+### A35. The merge request trimmed, and its review applied (2026-11-14)
+
+The maintainer chose to trim the merge request before opening it. 37 JSON, CSV and TSV outputs from
+sessions 0 and 0b, each over 300 lines, were removed from the tree and kept at the tag
+`fit-first-investigation-notes`, with the raw notes. The reports, registrations, result files,
+scripts, exported arrays and Logbook 134's data stayed. The merge request then fell from about 64,000
+added lines to about 13,700.
+
+The automated review skipped the merge request for its size, so a fresh agent reviewed it instead.
+The maintainer chose to apply every finding:
+
+- the exports' provenance line was corrected, and the vendored exports are recorded in
+  `data/connectome/PROVENANCE.md`;
+- the failed M-a unit test is recorded beside amendment 1, in the logbook and in the result;
+- the C.2 comparison is worded as no detectable gain, without a paired test;
+- dated status lines were added to the documents written before H0;
+- the Mi panel's cost was corrected from wall-clock to machine-hours;
+- the effort ledger was completed;
+- a CHANGELOG line was added;
+- smaller wording and count fixes were made.
+
+Considered instead: the must-fix findings only, or posting the review as a comment.

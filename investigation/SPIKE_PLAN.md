@@ -1,5 +1,9 @@
 # Spike plan: reproduce one connectome-constrained fit, then bridge it to the closed loop
 
+*Status, added 2026-11-14 at merge: superseded. The plan was never registered. It ran only as
+fact-finding sessions 0 and 0b, and the spike stopped there (A30; SPIKE_REPORT.md). The answer
+vector named below as `best` is in fact `z`; `best` holds the per-generation scores.*
+
 Written 2026-11-14 and revised the same day after the review of Part A (REVIEW_PART_A.md § 3) and
 the maintainer's seven decisions (DECISIONS.md A15 to A21). **Proposed, not run.** Part B runs it
 after approval. Once approved, this file is the spike's registration: its bars and rules are not

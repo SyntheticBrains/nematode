@@ -9,8 +9,9 @@ leaves for Phase 10 to decide. Nothing here changes a registered rule or verdict
 
 1. **W's sizing is about 1,200 to 2,900 machine-hours at its registered size.**
 
-   - **The arithmetic:** 41 to 96 fits (5 null families, 8 to 16 draws, plus the wild type; the
-     tracker's own cost line counts 6 arms) at about 30 h a fit, launch 133's measured rate. The
+   - **The arithmetic:** the tracker counts fits two ways. Its sizing formula (1 + 5 null arms × 8 to
+     16 draws) gives 41 to 81 fits; its later cost line (6 arms × 8 to 16 draws) gives 48 to 96. At
+     about 30 h a fit, launch 133's measured rate, that is 1,230 to 2,430 h or 1,440 to 2,880 h. The
      tracker's 232 to 815 h assumed 4.8-h fits.
    - **The tracker already says** W at this size is "beyond what it can run as planned". Its three
      cuts are a stopping rule on draws, fewer draws, or a cheaper fit.
@@ -18,13 +19,15 @@ leaves for Phase 10 to decide. Nothing here changes a registered rule or verdict
    - **Phase 10's close:** 12 to 27 weeks from now with W at its registered size; 7 to 14 weeks if W
      is cut to a quarter of it (ORIENTATION.md § 5.4).
 
-2. **A neural readout now exists, and it separates wirings** (Logbook 134). It scores a connectome
+2. **A neural readout now exists. It separates the true wiring from its degree-preserving
+   rewirings, though not C.2's fitted answer from its unfitted wiring** (Logbook 134). It scores a connectome
    model's in-silico single-neuron stimulation responses against Creamer et al.'s measured responses
    (MIT).
 
    - **The unfitted encoder:** at the box centre, on the true wiring, it scores r 0.065, against a
      median of 0.005 for 19 degree-preserving rewirings.
-   - **C.2's Logbook 131 answer** scores 0.053, not distinguishable from unfitted.
+   - **C.2's Logbook 131 answer** scores 0.053, with no detectable gain over unfitted: the intervals
+     overlap, and no paired test was run.
    - **It costs minutes per model** and needs no simulation.
 
 3. **The investigation recommends three uses** (RECOMMENDATION.md, H1). All are description beside
@@ -47,7 +50,7 @@ leaves for Phase 10 to decide. Nothing here changes a registered rule or verdict
    - it covers 125 of his 154 neurons, because 29 have no NemaNode partner.
 
 5. **The Randi atlas is CC-BY on DANDI 001075.** The provenance record now says so (this merge), and
-   notes that the deposit names only half its stimulation targets.
+   notes that the deposit names the target of only half its stimulations.
 
 ## What is left for the Phase 10 session
 

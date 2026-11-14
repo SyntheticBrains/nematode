@@ -2,6 +2,11 @@
 
 Written 2026-11-14. Three routes are compared against the brief's five milestones.
 
+*Status, added at merge: written before H0, which found that the unfitted network on the true wiring
+beats all 19 degree-preserving rewirings on the measured responses (Logbook 134). The hybrid's
+milestones are therefore as finalised in RECOMMENDATION.md (A32): the readout is floored by that null,
+and a neural fit needs a causal bar.*
+
 ## The routes
 
 - **Stay:** the current roadmap. Phase 10 fits controllers to behaviour statistics and grades them
@@ -26,7 +31,8 @@ Written 2026-11-14. Three routes are compared against the brief's five milestone
   - every target hid a problem found only by reading its code or data;
   - a controlled panel at the Randi scale costs about 1,000 to 2,500 machine-hours on this machine
     (a float64 GPU would cost an unmeasured $100 to $1,000);
-  - a panel at Mi's scale costs about 9 to 20 machine-hours.
+  - a 20-run panel at Mi's scale costs about 23 to 30 machine-hours, or about 9 h of wall-clock on 8
+    processes.
 - **Times are at part-time pace and include amendment rounds.** They are judgement on that basis,
   not measurement, and the negative-rate prior applies to every route equally. The hybrid's
   estimates are the neural track's own, on top of whatever Phase 10 takes.
@@ -35,7 +41,7 @@ Written 2026-11-14. Three routes are compared against the brief's five milestone
 
 | | Stay | Fit-first | Hybrid |
 |---|---|---|---|
-| Time | Not on the roadmap, so never reached by it. Adding the readout costs about one session, since it now exists. | 6 to 12 weeks if the atlas authors supply complete licensed metadata. Without it, blocked: only half the stimulations name their target. | The same as fit-first for the fit, plus about one session for the standing readout, which can come first. |
+| Time | Not on the roadmap, so never reached by it. Adding the readout costs about two sessions, since it now exists in probe form. | 6 to 12 weeks if the atlas authors supply complete licensed metadata. Without it, blocked: only half the stimulations name their target. | The same as fit-first for the fit, plus about one session for the standing readout, which can come first. |
 | Fidelity | Measured: C.2 at 31% of the data ceiling, not above its unfitted wiring (38%). | Up to Creamer's published 82% of the ceiling (absolute r 0.14 against 0.17). Whether that survives a degree-preserving null is untested. | As fit-first for the head; the closed-loop model's readout tracks how much of it carries over. |
 | Main risks | Neural fidelity is never measured as the model changes. | Licence and metadata; a reproduction that misses; a connectome effect that turns out to be degree statistics. | As fit-first, but nothing else waits on it. |
 | Compute | None. | About 1,000 to 2,500 machine-hours for a controlled panel here, or a rented float64 GPU. | As fit-first, run on rented capacity so that Phase 10 keeps the machine. |
@@ -89,8 +95,8 @@ Written 2026-11-14. Three routes are compared against the brief's five milestone
 ## Summary
 
 - **Stay** reaches M-d, and M-c's held-out counterpart, inside Phase 10, in 7 to 27 weeks depending
-  on W. It never measures neural fidelity. The spike's one reading shows behaviour fitting does not
-  supply it.
+  on W. It never measures neural fidelity. The spike's reading of C.2 found no gain from behaviour
+  fitting over the unfitted wiring (overlapping intervals; no paired test was run).
 - **Fit-first** has a direct path only to M-a and M-b. M-a is blocked on licensed data today, and a
   fair control panel costs about as much as W. Both published fits fail a reproduction check on
   licensed materials. M-c and M-d are far, and switching would set aside Phase 10's working machinery

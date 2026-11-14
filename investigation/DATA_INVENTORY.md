@@ -21,7 +21,9 @@ licence, which in law means all rights reserved.
   It did not check DANDI 001075, which is CC-BY-4.0 (version 0.240930.1859, 113 subjects, 223 NWB
   files, 4.07 TB). Whether the extracted traces sit in the 110 segmentation files (1.9 to 42.1 MB,
   median 15.9 MB; three sessions have none) or only inside the 113 imaging files (4.4 to 60.5 GB,
-  median 39.4 GB) is not yet known. 110 matches Creamer's animal count; whether that is why is
+  median 39.4 GB) is not yet known. *(Settled later on 2026-11-14: the segmentation files hold the
+  traces, labels and stimulation table; see `spike/SESSION_0.md` and the dated entry in
+  `data/connectome/PROVENANCE.md`.)* 110 matches Creamer's animal count; whether that is why is
   unverified.
 - **Silencing and mutant data with whole-brain readout** exist from the Zimmer lab (HisCl silencing of
   AVA, hub neurons, SMD, RIS, motor neurons; npr-1, daf-2), the Flavell lab (tdc-1, flp-13) and the

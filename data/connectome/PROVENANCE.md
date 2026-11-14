@@ -290,6 +290,14 @@ A licence such as CC BY on the two OSF deposits would remove the obstacle to ven
   - the labels do not reproduce the 154-neuron set Creamer et al. used.
 - So the deposit is licensed but cannot replace the OSF exports for an exact reproduction. The
   evidence is in `investigation/spike/SESSION_0.md`, on the fit-first investigation's record.
+- **Numeric exports of Creamer's pickles are vendored by that investigation,** in
+  `investigation/spike/session0/exports/`: every numeric array of his released models and data
+  pickles, as `.npz`, with his MIT licence file and SHA-256 checksums. They were loaded under an
+  allow-list unpickler, so none of his code ran. His measured response arrays derive from a
+  stimulation record fuller than DANDI 001075's, probably the OSF exports. They are accepted
+  because his repository releases them under MIT; the project declines only the unlicensed raw
+  exports themselves. This is the one place the pickles' contents are vendored. The connectome brain
+  still reads only the CSV above.
 
 ## Verification
 

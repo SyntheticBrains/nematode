@@ -25,8 +25,10 @@ registration that mapped each outcome to a recommendation.
 So the readout's signal is the specific wiring, not the degree sequence. Under H0's registered map,
 that is a PASS: the slimmed hybrid. Two further points:
 
-- **Behaviour fitting does not add to it.** C.2's fitted answer scores 0.0534 on the true wiring,
-  against 0.0653 unfitted. The intervals overlap, so it neither helps nor detectably hurts.
+- **Behaviour fitting does not detectably add to it.** C.2's fitted answer scores 0.0534 on the true wiring,
+  against 0.0653 unfitted. The intervals overlap, but they treat the matrix's entries as
+  independent and both networks are scored on the same matrix, and no paired test was run. So
+  there is no detectable gain, which is not the same as evidence of none.
 - **The absolute level is modest.** The true wiring reaches 38% of the data's own ceiling of 0.173,
   where Creamer's fitted model reaches 82%.
 
@@ -34,14 +36,14 @@ that is a PASS: the slimmed hybrid. Two further points:
 
 - **Not a switch.**
   - Fit-first's direct reach is M-a and M-b, and M-a is blocked on licensed data today: the CC-BY
-    atlas names only half its stimulation targets.
+    atlas names the target of only half its stimulations.
   - A fair control panel at that scale costs about as much machine time as W.
   - Neither published connectome-constrained fit can be reproduced as specified on licensed
     materials. One has a wiring bug, and neither had been tested against a degree-preserving null.
   - M-c and M-d sit close to the machinery Phase 10 already has.
 - **Not stay.**
   - H0 shows the connectome's specific wiring predicts measured neural responses, with no fitting.
-  - Behaviour fitting neither adds to that nor is graded on it.
+  - Behaviour fitting shows no detectable gain on it, and is not graded on it.
   - A readout that costs minutes per model, and grades the connectome's contribution on neural data
     the controllers never saw, answers part of Phase 10's own question: what the connectome
     contributes to fidelity.
@@ -64,7 +66,7 @@ machine time per model).**
   across the next three models it reads, it is retired. That spread is measured from the 19 draws.
 
 **H2. A connectome-constrained neural fit, with a causal bar (about 5 to 8 sessions, hard stop at 8;
-about 10 to 20 machine-hours).**
+about 40 to 50 machine-hours, about 15 h of wall-clock on 8 processes).**
 
 - **What:** Mi et al.'s latent-voltage model, rewritten from the paper in PyTorch (their code has no
   licence). It is fitted to their training traces, which are MIT-licensed on Zenodo 3906530.
@@ -73,6 +75,10 @@ about 10 to 20 machine-hours).**
   - Mi's mis-parsed one;
   - 8 degree-preserving nulls;
   - a dense model.
+- **The compute, as an assumption:** 11 arms with one held-out-neuron run per arm for each of 3
+  held-out folds, so 33 runs. Session 0b measured one run at 1.2 to 1.5 h, so this is about 40 to 50
+  machine-hours, or about 15 h of wall-clock with 8 runs at a time (3.5 h per run when 8 share the
+  machine).
 - **Two bars, both registered in advance with a synthetic-data oracle and a fresh review:**
   - **imputation:** withheld neurons, beating the nulls by the registered minimum;
   - **causal:** the fitted model's in-silico stimulation responses must beat the same responses

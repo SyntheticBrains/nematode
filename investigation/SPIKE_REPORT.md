@@ -1,10 +1,15 @@
 # Spike report
 
+*Status, added 2026-11-14 at merge: written before H0. A second registered reading, H0, followed:
+the unfitted network on the true wiring beats all 19 degree-preserving rewirings on the same
+measured responses (`spike/H0_RESULT.md`, Logbook 134). The final recommendation is
+RECOMMENDATION.md (A32). The effort table below is brought up to date with the ledger.*
+
 Written 2026-11-14. **The spike stopped at fact-finding, under the brief's stop rule.** Neither
 published connectome-constrained fit to worm neural data can be reproduced as specified on licensed
 materials within a spike's budget. No fit was run, so no bar was read. One registered reading was
-made: the project's current model, C.2, scored against measured responses to single-neuron
-stimulation. The evidence is in `spike/SESSION_0.md`, `spike/SESSION_0B.md` and
+made before this report: the project's current model, C.2, scored against measured responses to
+single-neuron stimulation. A second, H0, followed it (see the status line above). The evidence is in `spike/SESSION_0.md`, `spike/SESSION_0B.md` and
 `spike/MA_C2_RESULT.md`. The decisions are A24 to A31 in DECISIONS.md.
 
 ## 1. What was attempted
@@ -42,9 +47,9 @@ first. Two fact-finding sessions followed, one for each target.
 | Its parser stores polyadic sends (`Sp`, 1,625 rows) backwards. The line tests `'SP'` (`model/connectome_preprocess.py` line 100), so 1,270 of the 3,464 chemical entries are reversed copies, and true reciprocal pairs rise from about 233 to 1,503. The paper's "3464 chemical synapses" is this count. | session 0b, A; I read the line and the file's type counts myself | Mi's headline (the connectome predicts withheld neurons at r 0.32, against 0.08 without it) was obtained on partly wrong wiring. |
 | No scoring code exists, in the current code or its history. The held-out worms, the scored frames and the seeds are not recorded. Only 5 of the 9 variants exist in the code, and it departs from the paper in its nonlinearity, its synapse formula and its handling of unrecorded neurons. | session 0b, A and C | A reproduction cannot be checked against the published numbers. |
 | Mi's training traces are bitwise the MIT-licensed Zenodo 3906530 head-activity file. DANDI 000541's CC-BY traces are a different extraction, matching it at a median r of only 0.69. | session 0b, B | Licensed data exist for a re-implementation. |
-| One held-out-neuron run takes about 1.5 h on CPU, and a 20-run panel about 9 machine-hours. | session 0b, E; measured | Cheap enough to run, if the model is rewritten. |
+| One held-out-neuron run takes about 1.5 h on CPU, and a 20-run panel about 23 to 30 machine-hours, or about 9 h of wall-clock on 8 processes. | session 0b, E; measured | Cheap enough to run, if the model is rewritten. |
 
-## 4. The one reading made: C.2 against measured neural responses
+## 4. The reading made before this report: C.2 against measured neural responses
 
 Registered before computing (`spike/MA_C2_READING.md`). Amendment 1 corrected two rules before any
 measured data were read. The reading was made once, and I recomputed its headline numbers
@@ -61,11 +66,13 @@ independently.
 **The registered reading:** above chance, not above the floor.
 
 - The connectome's structure alone carries some signal about who responds to whom.
-- Fitting to behaviour did not move C.2's head responses toward the measured ones.
+- Fitting to behaviour showed no detectable gain in C.2's head responses over the unfitted wiring
+  (the intervals overlap; no paired test was run).
 - On the strongest measured responses, the sign agrees only about half the time, which is chance.
 
 The limits stated before reading still apply: this is a probe's answer, the network has no slow
-dynamics, and the measured arrays come from the fuller, unlicensed record.
+dynamics, and the measured arrays come from a fuller record, probably the OSF exports, which state
+no licence.
 
 ## 5. The bridge
 
@@ -91,8 +98,9 @@ From `spike/LEDGER.md`:
 | Plan drafts | 3 |
 | Independent reviews of the plan | 3, about 40 minutes of reviewer time. Each found problems the last missed; the third found three blockers in a plan the second had called nearly ready. |
 | Fact-finding | 2 sessions, about 1 h of agent wall-clock, including about 0.75 h of data ingestion |
-| The C.2 reading | about 11 minutes of agent time, plus one amendment of my registration's errors before any data were read |
-| Maintainer decision rounds | 6 (A15 to A21, A24 to A26, A27 to A29, A30 and A31, the C.2 amendment, the stop) |
+| The C.2 reading (M-a) | about 11 minutes of agent time over two runs. Its registered added-input unit test failed on the first run, which exposed one of two errors in my registration; one amendment corrected both before any data were read. |
+| H0 | about 2 minutes of agent time; no gate failed |
+| Maintainer decision rounds | 8, counted once each (listed in the ledger) |
 
 **What the ledger says.** The engineering per step was fast. What took the effort was checking
 published work and specifying a fair test. Every target and every plan draft hid a problem that only
@@ -117,8 +125,8 @@ long-run goal *faster and more reliably* than the current approach.
 - **Speed: not as a switch.** A fair control panel on the perturbation data costs about as much
   machine time as W, before any closed-loop work. The closed loop needs an interface that neither
   model provides.
-- **But behaviour fitting does not buy neural fidelity either.** C.2's fitted head is no closer to
-  the measured responses than its unfitted wiring. If neural fidelity is part of the long-run goal,
+- **But behaviour fitting showed no detectable gain in neural fidelity either.** C.2's fitted head
+  scored 0.053 against its unfitted wiring's 0.065, with overlapping intervals and no paired test. If neural fidelity is part of the long-run goal,
   neural data have to supply it.
 
 ## 8. What stays unknown

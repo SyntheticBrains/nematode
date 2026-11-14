@@ -1,11 +1,12 @@
-# 134: The Connectome's Specific Wiring Predicts Measured Neural Responses Unfitted, and Behaviour Fitting Adds Nothing to It (Phase 10 / the fit-first investigation)
+# 134: The Connectome's Specific Wiring Predicts Measured Neural Responses Unfitted, and Behaviour Fitting Does Not Detectably Add to It (Phase 10 / the fit-first investigation)
 
 **Status**: `completed`. **H0 passes; M-a is above chance, not above its unfitted floor.**
 Established on Creamer et al.'s measured responses to single-neuron stimulation:
 
 - C.2's encoder at the box's centre, on the true wiring, beats all 19 degree-preserving rewirings by
   about 5.5 times the registered minimum;
-- C.2's behaviour-fitted answer is not distinguishable from that unfitted network.
+- C.2's behaviour-fitted answer shows no detectable gain over that unfitted network: their
+  intervals overlap, and no paired test was run.
 
 Unresolved:
 
@@ -63,8 +64,9 @@ All 154 measured neurons match by name. The network has no biases, so rest is ze
 **The stimulation.** One unit added to neuron s's starting state for the settling, the way C.2's
 senses enter. The response of neuron j is its settled activity after the forward's four
 iterations. A spike-local settling copy matched the package's forward at 100 random nonzero inputs
-(worst output difference 4.8 × 10⁻⁷, against a tolerance of 10⁻⁵), and both input paths passed
-their unit tests. All of this ran before any measured matrix was loaded.
+(worst output difference 3.6 × 10⁻⁷ for C.2's answer and 0 for the box centre, against a tolerance
+of 10⁻⁵), and both input paths, as amended, passed their unit tests (the held-input test's worst
+difference was 4.8 × 10⁻⁷). All of this ran before any measured matrix was loaded.
 
 **M-a's null.** 1,000 joint relabellings of the model's response matrix, rows and columns together
 (`default_rng(9731)`).
@@ -107,7 +109,9 @@ junctions are rewired with their counts.
 | Relabelling null, 97.5th percentile | 0.022 | |
 
 C.2 sits above all 1,000 relabellings, but below the box centre, and the two intervals overlap
-widely. The ordering holds at inputs of 0.5 and 2, under a held input, and against the training
+widely. They are Creamer's Fisher intervals, which treat the matrix's entries as independent, and
+both networks are scored against the same matrix, so the overlap is not a test of their difference:
+no paired test was run. The ordering holds at inputs of 0.5 and 2, under a held input, and against the training
 matrix. Sign agreement on the test entries whose measured size is above the median is 0.47 for C.2
 and 0.48 for the box centre, which is chance.
 
@@ -141,6 +145,13 @@ measured data were read. Amendment 1 (d9f928ac) corrected them:
   definition became the starting state, and the held form became description. The held form gives
   the same ordering (C.2 0.044, box centre 0.069 to 0.071).
 
+The stimulation error did not come from reading the code alone. The first run also ran the
+registered added-input unit test, and that test failed: `ma_c2/parity.json` records
+`unit_test_passes: false`, with a largest hidden-activity difference of about 1.57 against the
+tolerance of 10⁻⁵. That failure exposed the error. Amendment 1's text and its commit message said only
+that parity passed; a dated note added to the registration now records the failed test. The verdict
+is unaffected, since the held form gives the same ordering.
+
 A third error, in the investigation's text rather than a registration: before the reading, the
 spike plan named `best` as the answer vector. It is the list of per-generation scores, and the
 answer is `z`.
@@ -149,10 +160,11 @@ answer is `z`.
 
 **Establishes.**
 
-- The connectome's specific wiring predicts measured whole-brain responses to single-neuron
+- The connectome's specific wiring predicts measured responses of 154 head neurons to single-neuron
   stimulation with no fitting at all. It reaches about 38% of the data's own ceiling, against
   essentially nothing for 19 degree-preserving rewirings of it.
-- Behaviour fitting, at Logbook 131's answer, neither adds to that nor detectably removes it.
+- Behaviour fitting, at Logbook 131's answer, shows no detectable gain over it. Their
+  independent-entry intervals overlap, and no paired test was run.
 - Unlike the two earlier wiring effects in this project, this one is not degree statistics.
 
 **Leaves unresolved.**
@@ -161,8 +173,8 @@ answer is `z`.
 - Whether a model fitted to neural data would raise the score toward Creamer's published 82% of
   the ceiling.
 - Whether the result holds on a licensed, complete stimulation record. The measured arrays were
-  built from the fuller, unlicensed record, while the CC-BY deposit on DANDI names only half its
-  stimulation targets.
+  built from a fuller record, probably the OSF exports, which state no licence. The CC-BY deposit
+  on DANDI names the target of only half its stimulations.
 
 **Does not establish.**
 
@@ -180,9 +192,11 @@ answer is `z`.
 - **H1's adoption into Phase 10** (the readout beside C.2's registered answer, C.1, and W's arms):
   deferred-with-destination. It goes to the Phase 10 session, through
   [investigation/HANDOVER_PHASE10.md](../../../investigation/HANDOVER_PHASE10.md), for the tracker and
-  the roadmap.
+  the roadmap. This change does not write those entries: the tracker has open edits on
+  `feat/fit-c2`, so the Phase 10 session adds them, to avoid a conflict.
 - **M-a's reading on C.2's registered answer:** deferred-with-destination, to C.2's registered fit
-  (launch record 133), once it exists.
+  (launch record 133), once it exists. Its tracker and roadmap entries are likewise left to the Phase
+  10 session, named in the handover.
 
 ## Artefacts
 

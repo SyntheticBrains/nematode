@@ -71,7 +71,8 @@ The strongest argument is that the neural track's chain of reasoning, H2 then H3
 ## My response (separate from the answer above)
 
 I think the argument is right on its two strongest points, and I would change the recommendation
-if the maintainer agrees. I have not changed it unilaterally.
+if the maintainer agrees. I have not changed it unilaterally. *(Later the same day: the maintainer
+agreed, H0 was run and passed, and A32 revised RECOMMENDATION.md accordingly.)*
 
 - **H2's link to H3 is weak.** Imputing withheld neurons from their partners shows that partners
   covary, not that a fitted coupling is causal. A pass on H2 alone should not open H3.

@@ -85,3 +85,11 @@ correction can be informed by the outcome.
      those modulators. Both to 10⁻⁵.
      Everything else (metric, null, seeds, named readings) is unchanged and applies to the primary
      definition.
+
+**Note added 2026-11-14 for the record.** The paragraph above says only that the parity check
+passed. The first run also ran the registered unit test for the added-input path, and that test
+failed: `ma_c2/parity.json` records `unit_test_passes: false`, with a largest hidden-activity
+difference of about 1.57 against the tolerance of 10⁻⁵. That failure is what exposed the second error
+above: the registered stimulation was held at every iteration, while the package's senses enter
+only as the settling's starting state. The verdict is unaffected, because the held form, run as
+description, gives the same ordering. The amendment's text is otherwise unchanged.

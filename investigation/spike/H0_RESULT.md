@@ -77,7 +77,8 @@ The edges moved per draw:
 
 - These are the M-a reading's limits:
   - The network is static: it settles in one step with no slow dynamics.
-  - Creamer's arrays come from a fuller, unlicensed stimulation record.
+  - Creamer's arrays come from a fuller stimulation record, probably the OSF exports, which state no
+    licence.
 - The package's null rewires the chemical and gap graphs separately. It does not preserve the
   overlap of the two graphs, or reciprocity.
 
