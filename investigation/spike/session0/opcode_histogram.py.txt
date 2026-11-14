@@ -1,0 +1,10 @@
+"""Opcode histogram per pickle (pickletools only). Usage: python -I opcode_histogram.py <pkl>..."""
+import collections
+import pickletools
+import sys
+
+for p in sys.argv[1:]:
+    with open(p, "rb") as fh:
+        c = collections.Counter(op.name for op, _a, _p in pickletools.genops(fh.read()))
+    risky = {k: v for k, v in c.items() if k in ("EXT1", "EXT2", "EXT4", "PERSID", "BINPERSID", "INST", "OBJ", "GLOBAL")}
+    print(p.split("/")[-1], "risky:", risky, "| reduce:", c.get("REDUCE", 0), "newobj:", c.get("NEWOBJ", 0), "build:", c.get("BUILD", 0))

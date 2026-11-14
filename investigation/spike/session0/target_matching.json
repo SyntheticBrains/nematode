@@ -1,0 +1,800 @@
+{
+ "with_id": 2815,
+ "xy_nearest_correct": 1577,
+ "xyz_nearest_correct": 1822,
+ "xy_distance_of_given_id_quantiles_px": [
+  0.0,
+  2.0,
+  3.61,
+  7.21,
+  14.42,
+  100.44
+ ],
+ "xy_distance_to_nearest_roi_when_no_id_quantiles_px": [
+  0.0,
+  2.0,
+  2.83,
+  5.66,
+  8.56,
+  350.66
+ ],
+ "depth_um_vs_centroid_z_corr": -0.053718056567170186,
+ "depth_um_range": [
+  -0.747,
+  0.748
+ ],
+ "files_with_zero_ids": 2,
+ "files_with_id_fraction_below_half": 52,
+ "per_file": [
+  {
+   "file": "sub-0_ses-20210824-104000_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 4,
+   "xy_correct": 3,
+   "xyz_correct": 4
+  },
+  {
+   "file": "sub-100_ses-20230317-124858_desc-segmentation_ophys+ogen.nwb",
+   "stims": 43,
+   "with_id": 38,
+   "xy_correct": 36,
+   "xyz_correct": 37
+  },
+  {
+   "file": "sub-101_ses-20230317-174524_desc-segmentation_ophys+ogen.nwb",
+   "stims": 41,
+   "with_id": 35,
+   "xy_correct": 27,
+   "xyz_correct": 31
+  },
+  {
+   "file": "sub-102_ses-20230321-112506_desc-segmentation_ophys+ogen.nwb",
+   "stims": 53,
+   "with_id": 39,
+   "xy_correct": 35,
+   "xyz_correct": 36
+  },
+  {
+   "file": "sub-103_ses-20230321-140421_desc-segmentation_ophys+ogen.nwb",
+   "stims": 8,
+   "with_id": 7,
+   "xy_correct": 2,
+   "xyz_correct": 3
+  },
+  {
+   "file": "sub-104_ses-20230321-154619_desc-segmentation_ophys+ogen.nwb",
+   "stims": 46,
+   "with_id": 38,
+   "xy_correct": 26,
+   "xyz_correct": 30
+  },
+  {
+   "file": "sub-105_ses-20230323-112405_desc-segmentation_ophys+ogen.nwb",
+   "stims": 55,
+   "with_id": 45,
+   "xy_correct": 24,
+   "xyz_correct": 30
+  },
+  {
+   "file": "sub-106_ses-20230323-123647_desc-segmentation_ophys+ogen.nwb",
+   "stims": 33,
+   "with_id": 27,
+   "xy_correct": 24,
+   "xyz_correct": 24
+  },
+  {
+   "file": "sub-107_ses-20230324-153349_desc-segmentation_ophys+ogen.nwb",
+   "stims": 54,
+   "with_id": 46,
+   "xy_correct": 29,
+   "xyz_correct": 36
+  },
+  {
+   "file": "sub-108_ses-20230401-190627_desc-segmentation_ophys+ogen.nwb",
+   "stims": 53,
+   "with_id": 48,
+   "xy_correct": 15,
+   "xyz_correct": 22
+  },
+  {
+   "file": "sub-109_ses-20211128-112504_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 35,
+   "xy_correct": 6,
+   "xyz_correct": 7
+  },
+  {
+   "file": "sub-10_ses-20210830-144155_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 52,
+   "xy_correct": 37,
+   "xyz_correct": 44
+  },
+  {
+   "file": "sub-110_ses-20220128-140323_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 43,
+   "xy_correct": 32,
+   "xyz_correct": 37
+  },
+  {
+   "file": "sub-111_ses-20220203-165151_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 37,
+   "xy_correct": 13,
+   "xyz_correct": 16
+  },
+  {
+   "file": "sub-112_ses-20220208-150446_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 43,
+   "xy_correct": 35,
+   "xyz_correct": 37
+  },
+  {
+   "file": "sub-11_ses-20210830-161543_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 55,
+   "xy_correct": 44,
+   "xyz_correct": 47
+  },
+  {
+   "file": "sub-12_ses-20210902-115146_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 51,
+   "xy_correct": 40,
+   "xyz_correct": 46
+  },
+  {
+   "file": "sub-13_ses-20210903-153005_desc-segmentation_ophys+ogen.nwb",
+   "stims": 65,
+   "with_id": 21,
+   "xy_correct": 1,
+   "xyz_correct": 2
+  },
+  {
+   "file": "sub-14_ses-20210907-110334_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 58,
+   "xy_correct": 6,
+   "xyz_correct": 7
+  },
+  {
+   "file": "sub-15_ses-20210907-141336_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 48,
+   "xy_correct": 1,
+   "xyz_correct": 2
+  },
+  {
+   "file": "sub-16_ses-20210909-102637_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 53,
+   "xy_correct": 39,
+   "xyz_correct": 48
+  },
+  {
+   "file": "sub-17_ses-20210913-105324_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 53,
+   "xy_correct": 31,
+   "xyz_correct": 32
+  },
+  {
+   "file": "sub-18_ses-20210913-161934_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 61,
+   "xy_correct": 52,
+   "xyz_correct": 52
+  },
+  {
+   "file": "sub-19_ses-20210917-104948_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 61,
+   "xy_correct": 47,
+   "xyz_correct": 49
+  },
+  {
+   "file": "sub-1_ses-20210824-114940_desc-segmentation_ophys+ogen.nwb",
+   "stims": 85,
+   "with_id": 11,
+   "xy_correct": 7,
+   "xyz_correct": 7
+  },
+  {
+   "file": "sub-21_ses-20210928-105933_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 63,
+   "xy_correct": 19,
+   "xyz_correct": 29
+  },
+  {
+   "file": "sub-22_ses-20210928-134411_desc-segmentation_ophys+ogen.nwb",
+   "stims": 75,
+   "with_id": 57,
+   "xy_correct": 42,
+   "xyz_correct": 47
+  },
+  {
+   "file": "sub-24_ses-20211102-101248_desc-segmentation_ophys+ogen.nwb",
+   "stims": 3,
+   "with_id": 0,
+   "xy_correct": 0,
+   "xyz_correct": 0
+  },
+  {
+   "file": "sub-25_ses-20211102-152524_desc-segmentation_ophys+ogen.nwb",
+   "stims": 3,
+   "with_id": 3,
+   "xy_correct": 3,
+   "xyz_correct": 3
+  },
+  {
+   "file": "sub-26_ses-20211104-163944_desc-segmentation_ophys+ogen.nwb",
+   "stims": 73,
+   "with_id": 16,
+   "xy_correct": 10,
+   "xyz_correct": 11
+  },
+  {
+   "file": "sub-27_ses-20220113-153037_desc-segmentation_ophys+ogen.nwb",
+   "stims": 65,
+   "with_id": 10,
+   "xy_correct": 0,
+   "xyz_correct": 0
+  },
+  {
+   "file": "sub-28_ses-20220120-135951_desc-segmentation_ophys+ogen.nwb",
+   "stims": 43,
+   "with_id": 2,
+   "xy_correct": 1,
+   "xyz_correct": 0
+  },
+  {
+   "file": "sub-29_ses-20220120-150453_desc-segmentation_ophys+ogen.nwb",
+   "stims": 5,
+   "with_id": 0,
+   "xy_correct": 0,
+   "xyz_correct": 0
+  },
+  {
+   "file": "sub-2_ses-20210824-144628_desc-segmentation_ophys+ogen.nwb",
+   "stims": 61,
+   "with_id": 22,
+   "xy_correct": 7,
+   "xyz_correct": 6
+  },
+  {
+   "file": "sub-30_ses-20220120-151357_desc-segmentation_ophys+ogen.nwb",
+   "stims": 65,
+   "with_id": 12,
+   "xy_correct": 2,
+   "xyz_correct": 2
+  },
+  {
+   "file": "sub-31_ses-20211022-140822_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 61,
+   "xy_correct": 35,
+   "xyz_correct": 38
+  },
+  {
+   "file": "sub-32_ses-20220126-153426_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 47,
+   "xy_correct": 31,
+   "xyz_correct": 37
+  },
+  {
+   "file": "sub-34_ses-20220330-123606_desc-segmentation_ophys+ogen.nwb",
+   "stims": 64,
+   "with_id": 17,
+   "xy_correct": 11,
+   "xyz_correct": 12
+  },
+  {
+   "file": "sub-35_ses-20220330-164449_desc-segmentation_ophys+ogen.nwb",
+   "stims": 69,
+   "with_id": 14,
+   "xy_correct": 4,
+   "xyz_correct": 4
+  },
+  {
+   "file": "sub-36_ses-20220331-114306_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 3,
+   "xy_correct": 3,
+   "xyz_correct": 3
+  },
+  {
+   "file": "sub-37_ses-20220331-142924_desc-segmentation_ophys+ogen.nwb",
+   "stims": 69,
+   "with_id": 14,
+   "xy_correct": 6,
+   "xyz_correct": 9
+  },
+  {
+   "file": "sub-38_ses-20220331-153103_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 16,
+   "xy_correct": 5,
+   "xyz_correct": 5
+  },
+  {
+   "file": "sub-39_ses-20220405-100245_desc-segmentation_ophys+ogen.nwb",
+   "stims": 65,
+   "with_id": 13,
+   "xy_correct": 1,
+   "xyz_correct": 2
+  },
+  {
+   "file": "sub-3_ses-20210824-161919_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 39,
+   "xy_correct": 3,
+   "xyz_correct": 3
+  },
+  {
+   "file": "sub-40_ses-20220405-110704_desc-segmentation_ophys+ogen.nwb",
+   "stims": 65,
+   "with_id": 25,
+   "xy_correct": 14,
+   "xyz_correct": 17
+  },
+  {
+   "file": "sub-41_ses-20220405-125435_desc-segmentation_ophys+ogen.nwb",
+   "stims": 65,
+   "with_id": 8,
+   "xy_correct": 2,
+   "xyz_correct": 4
+  },
+  {
+   "file": "sub-42_ses-20220405-143326_desc-segmentation_ophys+ogen.nwb",
+   "stims": 50,
+   "with_id": 17,
+   "xy_correct": 0,
+   "xyz_correct": 0
+  },
+  {
+   "file": "sub-43_ses-20211128-101826_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 46,
+   "xy_correct": 22,
+   "xyz_correct": 25
+  },
+  {
+   "file": "sub-44_ses-20211128-133449_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 28,
+   "xy_correct": 14,
+   "xyz_correct": 17
+  },
+  {
+   "file": "sub-45_ses-20211128-154756_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 25,
+   "xy_correct": 10,
+   "xyz_correct": 11
+  },
+  {
+   "file": "sub-46_ses-20211128-165637_desc-segmentation_ophys+ogen.nwb",
+   "stims": 92,
+   "with_id": 23,
+   "xy_correct": 6,
+   "xyz_correct": 10
+  },
+  {
+   "file": "sub-47_ses-20211130-151402_desc-segmentation_ophys+ogen.nwb",
+   "stims": 80,
+   "with_id": 30,
+   "xy_correct": 18,
+   "xyz_correct": 20
+  },
+  {
+   "file": "sub-48_ses-20211203-164020_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 15,
+   "xy_correct": 14,
+   "xyz_correct": 15
+  },
+  {
+   "file": "sub-49_ses-20211206-110909_desc-segmentation_ophys+ogen.nwb",
+   "stims": 75,
+   "with_id": 13,
+   "xy_correct": 9,
+   "xyz_correct": 9
+  },
+  {
+   "file": "sub-4_ses-20210825-123600_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 54,
+   "xy_correct": 48,
+   "xyz_correct": 50
+  },
+  {
+   "file": "sub-50_ses-20220120-104715_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 12,
+   "xy_correct": 0,
+   "xyz_correct": 0
+  },
+  {
+   "file": "sub-51_ses-20220208-171724_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 14,
+   "xy_correct": 1,
+   "xyz_correct": 1
+  },
+  {
+   "file": "sub-52_ses-20220929-143243_desc-segmentation_ophys+ogen.nwb",
+   "stims": 7,
+   "with_id": 7,
+   "xy_correct": 3,
+   "xyz_correct": 3
+  },
+  {
+   "file": "sub-53_ses-20220929-151408_desc-segmentation_ophys+ogen.nwb",
+   "stims": 13,
+   "with_id": 13,
+   "xy_correct": 12,
+   "xyz_correct": 11
+  },
+  {
+   "file": "sub-54_ses-20221011-151353_desc-segmentation_ophys+ogen.nwb",
+   "stims": 6,
+   "with_id": 6,
+   "xy_correct": 5,
+   "xyz_correct": 5
+  },
+  {
+   "file": "sub-55_ses-20221011-163802_desc-segmentation_ophys+ogen.nwb",
+   "stims": 8,
+   "with_id": 8,
+   "xy_correct": 8,
+   "xyz_correct": 8
+  },
+  {
+   "file": "sub-56_ses-20221010-165439_desc-segmentation_ophys+ogen.nwb",
+   "stims": 4,
+   "with_id": 4,
+   "xy_correct": 3,
+   "xyz_correct": 4
+  },
+  {
+   "file": "sub-57_ses-20221010-173036_desc-segmentation_ophys+ogen.nwb",
+   "stims": 5,
+   "with_id": 5,
+   "xy_correct": 5,
+   "xyz_correct": 5
+  },
+  {
+   "file": "sub-58_ses-20230117-152438_desc-segmentation_ophys+ogen.nwb",
+   "stims": 11,
+   "with_id": 11,
+   "xy_correct": 3,
+   "xyz_correct": 5
+  },
+  {
+   "file": "sub-59_ses-20221219-150841_desc-segmentation_ophys+ogen.nwb",
+   "stims": 4,
+   "with_id": 4,
+   "xy_correct": 4,
+   "xyz_correct": 4
+  },
+  {
+   "file": "sub-5_ses-20210825-150349_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 49,
+   "xy_correct": 41,
+   "xyz_correct": 44
+  },
+  {
+   "file": "sub-60_ses-20230125-114648_desc-segmentation_ophys+ogen.nwb",
+   "stims": 13,
+   "with_id": 9,
+   "xy_correct": 7,
+   "xyz_correct": 9
+  },
+  {
+   "file": "sub-61_ses-20230215-150553_desc-segmentation_ophys+ogen.nwb",
+   "stims": 20,
+   "with_id": 20,
+   "xy_correct": 19,
+   "xyz_correct": 20
+  },
+  {
+   "file": "sub-62_ses-20230222-165630_desc-segmentation_ophys+ogen.nwb",
+   "stims": 6,
+   "with_id": 6,
+   "xy_correct": 5,
+   "xyz_correct": 5
+  },
+  {
+   "file": "sub-63_ses-20211206-165435_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 12,
+   "xy_correct": 11,
+   "xyz_correct": 11
+  },
+  {
+   "file": "sub-64_ses-20220124-163157_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 15,
+   "xy_correct": 9,
+   "xyz_correct": 12
+  },
+  {
+   "file": "sub-65_ses-20220322-101222_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 52,
+   "xy_correct": 14,
+   "xyz_correct": 15
+  },
+  {
+   "file": "sub-66_ses-20230304-102932_desc-segmentation_ophys+ogen.nwb",
+   "stims": 28,
+   "with_id": 8,
+   "xy_correct": 5,
+   "xyz_correct": 8
+  },
+  {
+   "file": "sub-67_ses-20230304-112842_desc-segmentation_ophys+ogen.nwb",
+   "stims": 45,
+   "with_id": 16,
+   "xy_correct": 13,
+   "xyz_correct": 13
+  },
+  {
+   "file": "sub-68_ses-20230304-133215_desc-segmentation_ophys+ogen.nwb",
+   "stims": 41,
+   "with_id": 10,
+   "xy_correct": 3,
+   "xyz_correct": 5
+  },
+  {
+   "file": "sub-69_ses-20230304-144313_desc-segmentation_ophys+ogen.nwb",
+   "stims": 45,
+   "with_id": 17,
+   "xy_correct": 10,
+   "xyz_correct": 13
+  },
+  {
+   "file": "sub-6_ses-20210827-104408_desc-segmentation_ophys+ogen.nwb",
+   "stims": 85,
+   "with_id": 26,
+   "xy_correct": 17,
+   "xyz_correct": 18
+  },
+  {
+   "file": "sub-70_ses-20230309-112206_desc-segmentation_ophys+ogen.nwb",
+   "stims": 48,
+   "with_id": 14,
+   "xy_correct": 6,
+   "xyz_correct": 8
+  },
+  {
+   "file": "sub-71_ses-20230309-122120_desc-segmentation_ophys+ogen.nwb",
+   "stims": 45,
+   "with_id": 15,
+   "xy_correct": 4,
+   "xyz_correct": 6
+  },
+  {
+   "file": "sub-72_ses-20230309-143050_desc-segmentation_ophys+ogen.nwb",
+   "stims": 49,
+   "with_id": 24,
+   "xy_correct": 6,
+   "xyz_correct": 6
+  },
+  {
+   "file": "sub-73_ses-20230309-153504_desc-segmentation_ophys+ogen.nwb",
+   "stims": 51,
+   "with_id": 22,
+   "xy_correct": 8,
+   "xyz_correct": 10
+  },
+  {
+   "file": "sub-74_ses-20230309-180300_desc-segmentation_ophys+ogen.nwb",
+   "stims": 36,
+   "with_id": 18,
+   "xy_correct": 8,
+   "xyz_correct": 12
+  },
+  {
+   "file": "sub-75_ses-20230314-104728_desc-segmentation_ophys+ogen.nwb",
+   "stims": 38,
+   "with_id": 20,
+   "xy_correct": 17,
+   "xyz_correct": 20
+  },
+  {
+   "file": "sub-76_ses-20230314-115358_desc-segmentation_ophys+ogen.nwb",
+   "stims": 42,
+   "with_id": 15,
+   "xy_correct": 12,
+   "xyz_correct": 15
+  },
+  {
+   "file": "sub-77_ses-20230314-132310_desc-segmentation_ophys+ogen.nwb",
+   "stims": 21,
+   "with_id": 12,
+   "xy_correct": 10,
+   "xyz_correct": 11
+  },
+  {
+   "file": "sub-78_ses-20230314-142850_desc-segmentation_ophys+ogen.nwb",
+   "stims": 49,
+   "with_id": 19,
+   "xy_correct": 13,
+   "xyz_correct": 19
+  },
+  {
+   "file": "sub-79_ses-20230314-154307_desc-segmentation_ophys+ogen.nwb",
+   "stims": 45,
+   "with_id": 29,
+   "xy_correct": 13,
+   "xyz_correct": 14
+  },
+  {
+   "file": "sub-7_ses-20210827-115857_desc-segmentation_ophys+ogen.nwb",
+   "stims": 78,
+   "with_id": 16,
+   "xy_correct": 11,
+   "xyz_correct": 13
+  },
+  {
+   "file": "sub-80_ses-20230314-164209_desc-segmentation_ophys+ogen.nwb",
+   "stims": 47,
+   "with_id": 23,
+   "xy_correct": 14,
+   "xyz_correct": 17
+  },
+  {
+   "file": "sub-81_ses-20230315-105655_desc-segmentation_ophys+ogen.nwb",
+   "stims": 46,
+   "with_id": 18,
+   "xy_correct": 17,
+   "xyz_correct": 18
+  },
+  {
+   "file": "sub-82_ses-20230315-122224_desc-segmentation_ophys+ogen.nwb",
+   "stims": 40,
+   "with_id": 19,
+   "xy_correct": 12,
+   "xyz_correct": 17
+  },
+  {
+   "file": "sub-83_ses-20230315-132059_desc-segmentation_ophys+ogen.nwb",
+   "stims": 45,
+   "with_id": 23,
+   "xy_correct": 18,
+   "xyz_correct": 21
+  },
+  {
+   "file": "sub-84_ses-20230315-141835_desc-segmentation_ophys+ogen.nwb",
+   "stims": 45,
+   "with_id": 16,
+   "xy_correct": 7,
+   "xyz_correct": 10
+  },
+  {
+   "file": "sub-85_ses-20230318-115913_desc-segmentation_ophys+ogen.nwb",
+   "stims": 49,
+   "with_id": 27,
+   "xy_correct": 12,
+   "xyz_correct": 13
+  },
+  {
+   "file": "sub-86_ses-20230318-132720_desc-segmentation_ophys+ogen.nwb",
+   "stims": 46,
+   "with_id": 16,
+   "xy_correct": 7,
+   "xyz_correct": 8
+  },
+  {
+   "file": "sub-87_ses-20230318-144657_desc-segmentation_ophys+ogen.nwb",
+   "stims": 48,
+   "with_id": 15,
+   "xy_correct": 6,
+   "xyz_correct": 8
+  },
+  {
+   "file": "sub-88_ses-20230318-155217_desc-segmentation_ophys+ogen.nwb",
+   "stims": 48,
+   "with_id": 21,
+   "xy_correct": 4,
+   "xyz_correct": 7
+  },
+  {
+   "file": "sub-89_ses-20230318-165159_desc-segmentation_ophys+ogen.nwb",
+   "stims": 40,
+   "with_id": 19,
+   "xy_correct": 5,
+   "xyz_correct": 6
+  },
+  {
+   "file": "sub-8_ses-20210827-142226_desc-segmentation_ophys+ogen.nwb",
+   "stims": 70,
+   "with_id": 22,
+   "xy_correct": 14,
+   "xyz_correct": 17
+  },
+  {
+   "file": "sub-90_ses-20230319-091815_desc-segmentation_ophys+ogen.nwb",
+   "stims": 55,
+   "with_id": 22,
+   "xy_correct": 15,
+   "xyz_correct": 19
+  },
+  {
+   "file": "sub-91_ses-20230319-102409_desc-segmentation_ophys+ogen.nwb",
+   "stims": 52,
+   "with_id": 26,
+   "xy_correct": 8,
+   "xyz_correct": 8
+  },
+  {
+   "file": "sub-92_ses-20230319-114117_desc-segmentation_ophys+ogen.nwb",
+   "stims": 50,
+   "with_id": 30,
+   "xy_correct": 5,
+   "xyz_correct": 6
+  },
+  {
+   "file": "sub-93_ses-20230319-131328_desc-segmentation_ophys+ogen.nwb",
+   "stims": 50,
+   "with_id": 28,
+   "xy_correct": 10,
+   "xyz_correct": 11
+  },
+  {
+   "file": "sub-94_ses-20230319-141756_desc-segmentation_ophys+ogen.nwb",
+   "stims": 59,
+   "with_id": 20,
+   "xy_correct": 12,
+   "xyz_correct": 16
+  },
+  {
+   "file": "sub-95_ses-20230228-110846_desc-segmentation_ophys+ogen.nwb",
+   "stims": 20,
+   "with_id": 19,
+   "xy_correct": 15,
+   "xyz_correct": 18
+  },
+  {
+   "file": "sub-96_ses-20230228-151210_desc-segmentation_ophys+ogen.nwb",
+   "stims": 41,
+   "with_id": 38,
+   "xy_correct": 27,
+   "xyz_correct": 31
+  },
+  {
+   "file": "sub-97_ses-20230302-112654_desc-segmentation_ophys+ogen.nwb",
+   "stims": 37,
+   "with_id": 34,
+   "xy_correct": 29,
+   "xyz_correct": 33
+  },
+  {
+   "file": "sub-98_ses-20230302-151318_desc-segmentation_ophys+ogen.nwb",
+   "stims": 56,
+   "with_id": 49,
+   "xy_correct": 31,
+   "xyz_correct": 39
+  },
+  {
+   "file": "sub-99_ses-20230302-172145_desc-segmentation_ophys+ogen.nwb",
+   "stims": 54,
+   "with_id": 45,
+   "xy_correct": 21,
+   "xyz_correct": 34
+  },
+  {
+   "file": "sub-9_ses-20210830-111646_desc-segmentation_ophys+ogen.nwb",
+   "stims": 60,
+   "with_id": 55,
+   "xy_correct": 30,
+   "xyz_correct": 37
+  }
+ ]
+}

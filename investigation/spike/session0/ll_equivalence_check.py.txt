@@ -1,0 +1,70 @@
+"""Small numerical check (own transcription, his code is not executed): Creamer's lgssm_filter
+log-likelihood (ssm_classes.py lines 316-412 at bba43302: missing entries get R_ii = epsilon,
+y_i = 0, and the n log 2 pi term counts every dimension) against the exact marginal likelihood
+over observed entries. Predicted relation: his = exact - 0.5 (log 2 pi + log epsilon) x (number
+of missing entries), up to O(1/epsilon). Usage: python -I ll_equivalence_check.py"""
+
+import numpy as np
+
+rng = np.random.default_rng(1)
+EPS = 1e8
+
+
+def his_filter(y, A, Q, R, bu, m0, P0):
+    T, n = y.shape
+    ll = 0.0
+    fm, fc = None, None
+    for t in range(T):
+        yt = y[t]
+        nan = np.isnan(yt)
+        yt = np.where(nan, 0, yt)
+        Rt = np.where(np.diag(nan), EPS, R)
+        CtRinv = np.linalg.solve(Rt, np.eye(n)).T
+        if t == 0:
+            pm, pc = m0.copy(), P0.copy()
+        else:
+            pm = A @ fm + bu[t]
+            pc = A @ fc @ A.T + Q
+        S = pc + Rt
+        d = yt - pm
+        ll += -0.5 * (n * np.log(2 * np.pi) + np.linalg.slogdet(S)[1] + d @ np.linalg.solve(S, d))
+        fc = np.linalg.inv(np.linalg.inv(pc) + CtRinv)
+        fm = fc @ (CtRinv @ yt + np.linalg.solve(pc, pm))
+    return ll
+
+
+def exact_filter(y, A, Q, R, bu, m0, P0):
+    T, n = y.shape
+    ll = 0.0
+    x, P = m0.copy(), P0.copy()
+    for t in range(T):
+        if t > 0:
+            x = A @ x + bu[t]
+            P = A @ P @ A.T + Q
+        o = ~np.isnan(y[t])
+        if o.any():
+            S = P[np.ix_(o, o)] + R[np.ix_(o, o)]
+            d = y[t, o] - x[o]
+            ll += -0.5 * (o.sum() * np.log(2 * np.pi) + np.linalg.slogdet(S)[1] + d @ np.linalg.solve(S, d))
+            K = P[:, o] @ np.linalg.inv(S)
+            x = x + K @ d
+            P = P - K @ P[o, :]
+    return ll
+
+
+for trial in range(3):
+    n, T = 6, 80
+    A = 0.8 * np.eye(n) + 0.05 * rng.standard_normal((n, n))
+    Q = np.diag(rng.uniform(0.01, 0.05, n))
+    R = np.diag(rng.uniform(0.002, 0.01, n))
+    bu = 0.1 * rng.standard_normal((T, n))
+    y = rng.standard_normal((T, n)) * 0.3
+    miss = rng.random((T, n)) < 0.3
+    miss[:, 0] = True  # one neuron never recorded
+    y[miss] = np.nan
+    m0, P0 = np.zeros(n), np.eye(n)
+    h = his_filter(y, A, Q, R, bu, m0, P0)
+    e = exact_filter(y, A, Q, R, bu, m0, P0)
+    k = miss.sum()
+    pred = e - 0.5 * (np.log(2 * np.pi) + np.log(EPS)) * k
+    print(f"trial {trial}: his {h:.6f} exact {e:.6f} missing {k} predicted his {pred:.6f} residual {h - pred:.2e}")

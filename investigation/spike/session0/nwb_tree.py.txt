@@ -1,0 +1,46 @@
+"""Print the HDF5 tree of one NWB file: groups, datasets (shape, dtype), attributes, and small
+string/scalar values. Usage: python -I nwb_tree.py <file.nwb> [max_attr_len]"""
+
+import sys
+
+import h5py
+import numpy as np
+
+path = sys.argv[1]
+max_len = int(sys.argv[2]) if len(sys.argv) > 2 else 300
+
+
+def fmt_attr(v):
+    if isinstance(v, bytes):
+        v = v.decode("utf-8", "replace")
+    if isinstance(v, np.ndarray) and v.size > 8:
+        return f"array{v.shape} {v.dtype}"
+    s = str(v)
+    return s if len(s) <= max_len else s[:max_len] + "..."
+
+
+def visit(name, obj):
+    depth = name.count("/")
+    pad = "  " * depth
+    if isinstance(obj, h5py.Dataset):
+        extra = ""
+        if obj.dtype.kind in "OSU" and obj.size <= 4:
+            try:
+                extra = " = " + fmt_attr(obj[()])
+            except Exception as e:  # noqa: BLE001
+                extra = f" (unreadable: {e})"
+        elif obj.size == 1:
+            extra = " = " + fmt_attr(obj[()])
+        print(f"{pad}{name.split('/')[-1]}  [dataset {obj.shape} {obj.dtype}]{extra}")
+    else:
+        print(f"{pad}{name.split('/')[-1]}/")
+    for k, v in obj.attrs.items():
+        if k in ("namespace", "object_id"):
+            continue
+        print(f"{pad}  @{k} = {fmt_attr(v)}")
+
+
+with h5py.File(path, "r") as f:
+    for k, v in f.attrs.items():
+        print(f"@{k} = {fmt_attr(v)}")
+    f.visititems(visit)

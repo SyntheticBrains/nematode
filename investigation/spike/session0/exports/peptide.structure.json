@@ -1,0 +1,18 @@
+{
+ "source": "peptide.pkl",
+ "source_sha256": "4a4fb5fe9ac14d760ae0c51b1742217358a206ff10ca06560a6be337b68df1c5",
+ "nodes": [
+  {
+   "path": "peptide",
+   "type": "ndarray",
+   "shape": [
+    300,
+    300
+   ],
+   "dtype": "float64",
+   "nan": 0,
+   "min": 0.0,
+   "max": 35.0
+  }
+ ]
+}

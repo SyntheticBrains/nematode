@@ -1,0 +1,29 @@
+"""Measured frequency (fraction of the 110 recordings with the label on a ROI with <=50% missing
+after the cut) of Creamer's 154 versus every other label. Usage: python -I label_threshold.py <nwb_dir> <summary> <names>"""
+import collections, json, os, sys
+import h5py, numpy as np
+nwb_dir, summ, names_p = sys.argv[1:4]
+names = set(json.load(open(names_p)))
+rows = json.load(open(summ))
+meas, lab_any = collections.Counter(), collections.Counter()
+for r in rows:
+    with h5py.File(os.path.join(nwb_dir, r["file"]), "r") as f:
+        frac = np.isnan(f["processing/ophys/GreenSignals/BaseGreenSignal/data"][()][120:]).mean(0)
+    seen = set()
+    for j, l in enumerate(r["roi_labels"]):
+        if l and l not in seen:
+            seen.add(l); lab_any[l] += 1
+            if frac[j] <= 0.5: meas[l] += 1
+f154 = sorted((meas[n] / 110, n) for n in names)
+other = sorted(((meas[l] / 110, l) for l in lab_any if l not in names), reverse=True)
+print("154: lowest measured freq", f154[:12])
+print("154: count with freq < 0.1:", sum(x < 0.1 for x, _ in f154), "; labelled in fewer than 11 recordings at all:", sum(lab_any[n] < 11 for n in names))
+print("others: highest measured freq", other[:20])
+print("other labels total", len(other))
+print("--- hypothesis: the rule counted every labelled recording (no within-trace NaN) ---")
+any154 = sorted((lab_any[n] / 110, n) for n in names)
+print("154: lowest labelled freq", any154[:8])
+canon = lambda l: l[-1] in "LR" or l in {"ALA","AQR","AVG","AVL","AVM","DVA","DVB","DVC","I3","I4","I5","I6","M1","M4","M5","MI","PVR","PVT","RID","RIH","RIR","RIS","RMED","RMEV","RIFL"} or l[:2] in ("DA","DB","DD","VA","VB","VC","VD","AS")
+oth = sorted(((lab_any[l] / 110, l) for l in lab_any if l not in names), reverse=True)
+print("others: highest labelled freq", oth[:15])
+print("others canonical-looking with labelled freq >= 0.1:", [(round(f,3), l) for f, l in oth if f >= 0.1 and canon(l)])

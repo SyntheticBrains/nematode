@@ -1,0 +1,307 @@
+[
+ {
+  "path": "_downloads/creamer_repo/repo/models/connectome_constrained.pkl",
+  "bytes": 20103437,
+  "sha256": "1d2dbb1966794b2e3108de2dfaaad099d1e1989fcc432d65c7f669f3610f302d",
+  "protocol": 4,
+  "opcodes": 6717,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "scalar",
+    "count": 1
+   },
+   {
+    "module": "ssm_classes",
+    "name": "Lgssm",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/models/fully_connected.pkl",
+  "bytes": 20103431,
+  "sha256": "34c85c16317fc9105abe89575ed1a2660faae4e29ebfebbd6fbd9cd99012be3f",
+  "protocol": 4,
+  "opcodes": 6716,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "scalar",
+    "count": 1
+   },
+   {
+    "module": "ssm_classes",
+    "name": "Lgssm",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/models/shuffled_constrained.pkl",
+  "bytes": 20103481,
+  "sha256": "d59cdacc120b79c59ceffa8d14bbba4038c641cd50b2dea4867a3bb7003ee1c0",
+  "protocol": 4,
+  "opcodes": 6737,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy._core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   },
+   {
+    "module": "numpy._core.multiarray",
+    "name": "scalar",
+    "count": 1
+   },
+   {
+    "module": "ssm_classes",
+    "name": "Lgssm",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/data/example_recording.pkl",
+  "bytes": 9118164,
+  "sha256": "0e7df772dddb5935f9d2b94553eb15107dbdc60973d6aee6d82f2d967b31dc68",
+  "protocol": 4,
+  "opcodes": 4417,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy._core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   },
+   {
+    "module": "numpy._core.multiarray",
+    "name": "scalar",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/data/initial_conditions.pkl",
+  "bytes": 192500,
+  "sha256": "2ed6836dc29a67dd3581a1e089a0836839e97f15462fa499fef6f5d5ba82058a",
+  "protocol": 4,
+  "opcodes": 137,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy._core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/data/measured_corr.pkl",
+  "bytes": 379715,
+  "sha256": "b1f64846cd8136b43db5c96c33ea650619ad218c7e83551f4a3222268bd1f570",
+  "protocol": 4,
+  "opcodes": 115,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy._core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/data/measured_stams.pkl",
+  "bytes": 379681,
+  "sha256": "e6562954067ad5b84a2a33a434f92c5d21eece5ae56270bfd5d6fe5f8b17669a",
+  "protocol": 4,
+  "opcodes": 95,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy._core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/anatomical_data/cell_ids.pkl",
+  "bytes": 16239,
+  "sha256": "dccf18e6a41caa4704cadb946f2ed620f23a665c420ff2528e1cc4244e64af55",
+  "protocol": 4,
+  "opcodes": 8366,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "scalar",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/anatomical_data/chemical.pkl",
+  "bytes": 720163,
+  "sha256": "75167c45978f4fd1dd8789f74ac8dd748b4c49201c526daf2dd026c8b538313c",
+  "protocol": 4,
+  "opcodes": 63,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/anatomical_data/gap.pkl",
+  "bytes": 720163,
+  "sha256": "497042b89e8aa68aa1976ca256e01360ad0b5f0b01574b6d57780e97bac648e1",
+  "protocol": 4,
+  "opcodes": 63,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ },
+ {
+  "path": "_downloads/creamer_repo/repo/anatomical_data/peptide.pkl",
+  "bytes": 720163,
+  "sha256": "4a4fb5fe9ac14d760ae0c51b1742217358a206ff10ca06560a6be337b68df1c5",
+  "protocol": 4,
+  "opcodes": 63,
+  "globals": [
+   {
+    "module": "numpy",
+    "name": "dtype",
+    "count": 1
+   },
+   {
+    "module": "numpy",
+    "name": "ndarray",
+    "count": 1
+   },
+   {
+    "module": "numpy.core.multiarray",
+    "name": "_reconstruct",
+    "count": 1
+   }
+  ],
+  "unresolved_stack_globals": 0
+ }
+]

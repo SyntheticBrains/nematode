@@ -1,0 +1,57 @@
+"""Aggregate nwb_summary.json. Usage: python -I nwb_aggregate.py <nwb_summary.json> <held_out_names...>"""
+
+import collections
+import json
+import statistics as st
+import sys
+
+rows = json.load(open(sys.argv[1]))
+held = sys.argv[2:]
+
+
+def q(xs):
+    xs = sorted(xs)
+    n = len(xs)
+    return [xs[0], xs[n // 4], st.median(xs), xs[(3 * n) // 4], xs[-1]]
+
+
+print("files", len(rows), "ok", sum(r["ok"] for r in rows))
+print("genotype", collections.Counter(r["genotype"] for r in rows))
+print("strain", collections.Counter(r["strain"] for r in rows))
+print("growth_stage", collections.Counter(r["growth_stage"] for r in rows))
+print("frames min/q1/med/q3/max", q([r["frames"] for r in rows]), "total", sum(r["frames"] for r in rows))
+print("rois", q([r["rois"] for r in rows]))
+print("dt median over files", q([r["dt_median_s"] for r in rows]))
+print("dt min/max over files", min(r["dt_min_s"] for r in rows), max(r["dt_max_s"] for r in rows))
+print("t0", q([r["t0_s"] for r in rows]))
+print("nan_fraction", q([r["nan_fraction"] for r in rows]))
+print("frames where all ROIs NaN", q([r["frames_all_rois_nan"] for r in rows]))
+print("rois all-NaN", q([r["rois_all_nan"] for r in rows]))
+print("rois any NaN / rois", q([r["rois_any_nan"] / r["rois"] for r in rows]))
+print("interp equal where finite: all", all(r["interp_equals_base_where_finite"] for r in rows), "interp nan max", max(r["interp_nan_fraction"] for r in rows))
+print("matched to neuropal", q([r["rois_matched_to_neuropal"] for r in rows]))
+print("nonblank label", q([r["rois_nonblank_label"] for r in rows]))
+print("label in 154 (ROIs)", q([r["rois_label_in_list"] for r in rows]))
+print("distinct labels in 154", q([r["distinct_labels_in_list"] for r in rows]))
+print("files with duplicated in-154 labels", sum(bool(r["duplicated_labels_in_list"]) for r in rows),
+      collections.Counter(l for r in rows for l in r["duplicated_labels_in_list"]).most_common(8))
+nn = collections.Counter()
+for r in rows:
+    for k, v in r.get("neuropal_ids_nonnumeric", {}).items():
+        nn[k] += v
+print("non-numeric neuropal_ids", nn, "files", sum(bool(r.get("neuropal_ids_nonnumeric")) for r in rows))
+print("stims", q([r["stims"] for r in rows]), "total", sum(r["stims"] for r in rows))
+print("stims with manual target id", q([r["stims_manual_target_id"] for r in rows]), "total", sum(r["stims_manual_target_id"] for r in rows))
+print("stim durations", collections.Counter(tuple(r["stim_duration_s"]) for r in rows))
+print("stim power", collections.Counter(tuple(r["stim_power_W"]) for r in rows))
+print("stim interval median", q([r["stim_interval_median_s"] for r in rows]))
+print("first stim after t0", q([r["first_stim_after_t0_s"] for r in rows]))
+names = [r["pumpprobe_name"] for r in rows]
+print("unique names", len(set(names)), "example", names[:3])
+for h in held:
+    print("held-out name", h, "present" if h in names else "ABSENT")
+all_labels = collections.Counter(l for r in rows for l in set(r["labels_in_list"]))
+print("neurons of the 154 seen in >=1 file:", len(all_labels))
+print("neurons of the 154 never labelled:", sorted(set(json.load(open(sys.argv[1].replace('nwb_summary.json','creamer_154_names.json')))) - set(all_labels)))
+nonlist = collections.Counter(l for r in rows for l in r["nonlist_labels_sample"])
+print("labels outside the 154 (top 40 by files):", nonlist.most_common(40))

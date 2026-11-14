@@ -1,0 +1,55 @@
+"""Summarise a DANDI asset listing (JSON pages) and write the segmentation download list.
+
+Usage: python -I dandi_listing.py <out_tsv> <page.json> [<page.json> ...]
+"""
+
+import json
+import statistics
+import sys
+from collections import Counter
+
+out_tsv = sys.argv[1]
+assets = []
+for p in sys.argv[2:]:
+    with open(p) as fh:
+        d = json.load(fh)
+    assets.extend(d["results"])
+print("assets", len(assets))
+kinds = Counter()
+for a in assets:
+    path = a["path"]
+    if "desc-segmentation" in path:
+        kinds["segmentation"] += 1
+    elif "desc-imaging" in path:
+        kinds["imaging"] += 1
+    else:
+        kinds["other"] += 1
+print(kinds)
+seg = [a for a in assets if "desc-segmentation" in a["path"]]
+img = [a for a in assets if "desc-imaging" in a["path"]]
+for name, group in (("segmentation", seg), ("imaging", img)):
+    sizes = [a["size"] for a in group]
+    if sizes:
+        print(
+            name,
+            "n",
+            len(sizes),
+            "min MB %.1f median MB %.1f max MB %.1f total GB %.2f"
+            % (
+                min(sizes) / 1e6,
+                statistics.median(sizes) / 1e6,
+                max(sizes) / 1e6,
+                sum(sizes) / 1e9,
+            ),
+        )
+subj_seg = {a["path"].split("/")[0] for a in seg}
+subj_img = {a["path"].split("/")[0] for a in img}
+print("subjects with imaging but no segmentation:", sorted(subj_img - subj_seg))
+print("subjects with segmentation but no imaging:", sorted(subj_seg - subj_img))
+others = [a["path"] for a in assets if "desc-" not in a["path"]]
+print("other paths:", others)
+with open(out_tsv, "w") as fh:
+    fh.write("asset_id\tpath\tsize\n")
+    for a in sorted(seg, key=lambda a: a["path"]):
+        fh.write(f"{a['asset_id']}\t{a['path']}\t{a['size']}\n")
+print("wrote", out_tsv)

@@ -1,0 +1,515 @@
+# Session 0: fact-finding for the spike
+
+Run on 2026-11-14, 11:07 to about 11:45 AEDT, under decision A24: no fits, no test animals read, no
+correlations computed against Creamer's test arrays. Every script is in `investigation/spike/session0/`
+and every download in `investigation/spike/_downloads/` (gitignored). Confidence words: **confirmed**
+(checked directly, evidence given), **likely** (strong indirect evidence), **unknown** (with what
+would settle it).
+
+Pinned sources:
+
+- Creamer's repository, `Nondairy-Creamer/Creamer_LDS_2026`, commit
+  `bba43302d50a4947804d98b01779856e648237cc` (2026-05-11), the same commit the fresh review saw
+  through fetch summaries. Cloned to `_downloads/creamer_repo/repo`. Line numbers below are at this commit.
+- DANDI 001075, version 0.240930.1859 (CC-BY-4.0). 110 segmentation NWB files, 1.70 GB, sizes
+  verified against the API listing.
+- DANDI 000776, version 0.241009.1509 (CC-BY-4.0), metadata only.
+
+## Facts that change the plan
+
+Each item is either a fact the plan or the review assumed differently, or a blocker.
+
+01. **Blocker for an exact reproduction: the NWB files hold only part of the stimulation
+    record.** The stimulated ROI is identified (`target_pumpprobe_id`) for 2,815 of 5,614
+    stimulations (50%). In 52 of 110 recordings fewer than half are identified, and in 2 none are.
+    The other stimulations have only a target pixel and depth, and matching those to the static ROI
+    centroids recovers the identities that are given in only 56% (xy) to 65% (xy plus fitted depth)
+    of cases. Creamer's own arrays show his record was fuller:
+
+    - 2,373 (responder, stimulated) pairs that are finite in his measured STAM arrays (2,237 of 21,754
+      in train, 314 of 11,010 in test) cannot arise from the NWB's identified stimulations under
+      any split;
+    - four neurons with fitted input filters (MCR, RIPL, RIS, SMBVR) are never an identified target in
+      any NWB file.
+
+    G0 as worded passes (108 files have at least one identified target), but G1's pooled STAM check,
+    the split inference and the meaning of "Creamer's data" are all affected. Whether the gap comes
+    from missing target IDs, from different labels, or from both is **unknown** (C.3, C.4).
+
+02. **The NWB labels are not Creamer's labels.** His neuron rule (at most 50% missing in at least 10%
+    of training animals, minus AWC) applied to the NWB labels gives 125 to 131 neurons, never his 154.
+    Over all 110 recordings, the first 80 and the last 80 it misses 42, 41 and 35 of his neurons and
+    admits non-standard labels (`RIG`, `AMso`, `AWCON`, `target`). No contiguous block of 30 held out
+    brings it closer than 38 names. 42 of his 154 are at most half missing in fewer than 10% of
+    NWB recordings, and ALA in none. On the example animal the labels agree for 44 of 46 neurons
+    (C.4). Fixing the 154 by name (review M4) is therefore necessary, and some of the 154 will be thin in
+    NWB-derived data.
+
+03. **The processing stage matches (the review's M5 concern does not arise for the one animal
+    checkable).** The NWB `BaseGreenSignal` is the stage his loader starts from. A re-implementation
+    of his preparation on it reproduces `example_recording.pkl` (sub-4): median per-neuron r of
+    1.0000000, 43 of 44 neurons at r of at least 0.99, and the worst (I2R) at 0.980. A G1 rule of
+    "r of at least 0.99 for every neuron" would fail on I2R; a median or pooled rule would pass (D).
+
+04. **A stimulation-frame rule has to be inferred and registered.** His stimulation frame is the
+    first NWB timestamp at or after `start_time - delta`, with delta in (0.1006, 0.1007\] s. That is
+    fitted on one animal, where it reproduces all 25 of his stimulation events; it is not in his code (C.3).
+
+05. **Missing values are per neuron and per frame in every animal, so the steady-state filter never
+    applies.** All 109 animals with recorded neurons have missing values within the recording. In the
+    median animal, 100% of frames have at least one recorded neuron missing, with 3,245 distinct
+    missingness patterns. His loader keeps 2,256 of 6,498 neuron-recordings that are more than half
+    missing. The plan's re-costing trigger (over 5% of frames in over 10% of animals) is met by 108 of
+    109 animals (E).
+
+06. **Cost: about 15 to 75 times the plan's 2 to 3 h per fit.** The exact filter, forward plus
+    backward in PyTorch float64, costs 0.72 to 0.77 ms per animal-frame in one process. Eight threads
+    give nothing at n = 154, and eight concurrent processes give 3.0 times the throughput, not 8 times.
+    With the checkpointing that memory forces (about 320 GB otherwise), one gradient step over 80
+    animals takes 79 to 111 s on 8 processes. A fit at 2,000 to 5,000 steps then takes 44 to 154 h on 8
+    processes, or 125 to 441 h in one. The 21 planned fits would need about 1,000 to 2,500 machine-hours
+    on 8 processes each (F).
+
+07. **No ridge and no pruning.** All three released models have `ridge_lambda = None`. Their masks are
+    exactly the unpruned NemaNode union (connectome and shuffled) and fully dense (dense). So
+    "Creamer's own ridge penalty and pruning step" means none (A.2). His `prune_model` scores on
+    `data_test`, but no released model was pruned.
+
+08. **The mask differs from the plan's numbers.**
+
+    - It has 2,011 off-diagonal entries (8.53% of off-diagonal pairs, not 9.4%), plus 154 diagonal
+      entries, 2,165 in all.
+    - 29 of the 154 neurons have no connectome partner at all, because the four NemaNode files cover
+      the nerve ring only: pharyngeal neurons, the ventral-cord DA1, DB1, DB2, DD1, VA1, VB1 and VB2,
+      AVG, SABD and SABVR. The degree-preserving null therefore has 29 isolated nodes.
+    - 1,104 off-diagonal entries are reciprocal (A.2, A.4).
+
+09. **The paper's relabelled control is reproducible exactly.** `shuffled_constrained`'s mask is the
+    connectome mask with rows and columns permuted by `numpy.random.default_rng(0).permutation(154)`,
+    which is `random_seed: 0` in `run_inference.fit_experimental` lines 155-164. The plan's 9710 draw
+    would be a different relabelling (B).
+
+10. **His EM answer is not converged, so it is not an optimum.**
+
+    - In all three models the log-likelihood was still changing by 5.7e-4 to 8.8e-4 (relative) over
+      the last 100 of 200 EM steps, against the plan's rule of 1e-7.
+    - The relative change is understated, because his total is dominated by a parameter-free constant
+      (item 11).
+
+    R1a's premise, that gradient descent should reach EM's optimum, needs restating (B, review X1).
+
+11. **His likelihood is not the exact marginal likelihood.** A missing entry gets noise variance
+    1e8, and the 2π term counts all 154 dimensions. On a transcription of his filter, his value equals
+    the exact marginal over observed entries minus 0.5 (log 2π + log 1e8) = 10.1293 per missing entry,
+    to 1e-7. His first filter step also ignores the input at t = 0. A likelihood-equivalence gate (X1)
+    must include both (A.10).
+
+12. **No list of the paper's held-out animals exists in the repository, but the selection rule is a
+    contiguous block.**
+
+    - The 80-animal config has `held_out_data: []`. The 10 names in `exp_test.yml` belong to a
+      10-animal test config (10 EM steps, the `not_synaptic` mask), and the run configs themselves
+      were gitignored.
+    - At this commit the loader holds out the first 30 recordings in sorted order (which is
+      chronological). Before 2026-05-05 it held out the last 30.
+    - One clue favours the current rule: DB1 is the only neuron without a fitted filter and is
+      stimulated in only one recording, at position 15.
+    - The other clues are confounded by item 1. The split is **unknown** (A.1).
+
+13. **The data-side STAM definition is not in the repository.** Only the model-side STAM is defined.
+    No code in the repo or its history produces `measured_stams.pkl`, which holds two 154 x 154
+    matrices and no event counts. G1's checks therefore need an inferred data-STAM rule, and its
+    "weighted by event counts where his files give them" has no counts to use (A.8, B).
+
+14. **His scoring script prints nothing and needs `mpi4py`.** `predict_stams.py` only plots. It loads
+    the models with `pickle.load`, which imports `ssm_classes`, then `inference_utilities`, then
+    `mpi4py` (an MPI runtime, or a stub module, since nothing on that path calls MPI). G2 must read
+    `model_score` from the script's namespace (A.9).
+
+15. **Three recordings have timestamp gaps of up to 8.4 s.** His frames assume uniform 2 Hz.
+    Three recordings have almost no labels in the 154 (0, 1 and 3), and one of them is in
+    `exp_test.yml`'s list (C).
+
+16. **DANDI 000776 is 1,011.7 GB in 38 files of 26.3 to 27.0 GB.** S3 serves byte ranges, so partial
+    reads are likely possible. Where the traces and labels sit inside the files is unknown until an
+    HDF5 header is read (G).
+
+## A. Creamer's repository
+
+Commit `bba43302d50a4947804d98b01779856e648237cc`, 35 commits from 2024-09-21 to 2026-05-11. The
+code was read, not run.
+
+### A.1 Held-out animals
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| `load_data` first moves every recording named in `held_out_data` to the test set. It then holds out a contiguous block of `num_test = min(len(remaining) - num_data_sets, num_data_sets)` recordings starting at `int(hold_out_start * len(remaining))`, wrapping. | `loading_utilities.py` 290-307 | confirmed |
+| `hold_out_start` defaults to 0.9 in the function signature, but `get_run_params` sets it to 0 when the config omits it, and `fit_experimental` passes the config's value. | `loading_utilities.py` 20-21, 248; `run_inference.py` 131-137 | confirmed |
+| Recordings are ordered by `sorted(data_path.rglob('funcon_preprocessed_data.pkl'))`, by full path. With `pumpprobe_YYYYMMDD_HHMMSS` folder names under one parent, that order is chronological. | `loading_utilities.py` 260; the 110 NWB names sort chronologically (`session0/nwb_summary.json`) | likely (the OSF folder layout is not seen) |
+| At this commit, with the 80-animal config (`slurm_example.yml`: `num_data_sets: 80`, `held_out_data: []`, no `hold_out_start`), the test set is the first 30 recordings and the training set the last 80. | rules above | confirmed for the code; whether the released models used it is unknown |
+| Before commit 905e0be (2026-05-05) the test set was the recordings after the first `num_data_sets`, i.e. the last 30. The released models were committed on 2026-05-11 (8c77b83); when they were trained is not recorded. | `git show 905e0be -- loading_utilities.py`; `git log -- models` | confirmed |
+| The paper's split is not recorded anywhere. `slurm_example.yml` has `held_out_data: []`. `exp_test.yml` lists 10 names, but it is a 10-animal, 10-step test with `dynamics_weights: 'not_synaptic'`, the mask's complement. `submission_params/.gitignore` ignores every config except `syn_test.yml` (since f2e78b7, "so that submission params are not tracked"). The model pickles hold no run parameters, split or seed. | `submission_params/*`; `session0/exports/*.structure.json` | confirmed |
+| All three released models were fitted to the same training data: their first logged EM log-likelihood is identical (-273,705,272.1377). Under the known initial parameters that value is a deterministic function of the training data. | `session0/exports/*.structure.json`, `log_likelihood[0]` | confirmed |
+| Split clue: DB1 has no fitted input filter in any model (B), and the NWB has one identified DB1 stimulation, in `pumpprobe_20210907_141336`, at position 15 of 110. If his stimulations equal the NWB's, that recording is a test animal, which fits "first 30 held out" and contradicts "last 30 held out". | `session0/stams_structure.json` | likely only, because of item 1 above |
+| The other clue, stimulated neurons whose training-STAM column is finite, is confounded. Under "first 30 held out", DA1, NSMR and VA1 have finite training columns but no identified NWB stimulation in the training block. MCR, RIPL, RIS and SMBVR have none in any recording. | `session0/stams_structure.json` | confirmed; the reading is unknown |
+| The example recording sits at position 4 (a test animal under the current rule). The 10 `exp_test.yml` names sit at positions 5, 7, 34, 40, 49, 53, 57, 66, 73 and 92. | `session0/nwb_summary.json` | confirmed |
+
+What would settle the split: the authors' list; or his per-recording stimulation and label arrays
+(Randi's OSF export, excluded by A20); or an exact re-derivation of his training data, which item 2
+makes unlikely.
+
+### A.2 Ridge and pruning
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| Ridge penalty: when `ridge_lambda` is not None, each row's penalty is `10**ridge_lambda * diag(Q)`, added to the masked least-squares system. When it is None there is no penalty. The constructor default is 0, but the configs pass `Null`. | `ssm_classes.py` 612-615; `inference_utilities.py` 109-133; `ssm_classes.py` 16 | confirmed |
+| All three released models have `ridge_lambda = None`. | exports, `ridge_lambda` | confirmed |
+| No released model was pruned. The connectome model's mask equals `(chem + gap + eye) > 0` recomputed from the four NemaNode files on its 154 names, with `or` combination, exactly. The dense mask is all 23,716 entries. Every masked weight is nonzero, and every weight outside the mask is zero. | `session0/check_models.py.txt`, `session0/model_facts.json` | confirmed |
+| Final densities: connectome 2,011 off-diagonal entries (8.53% of 23,562 off-diagonal pairs); shuffled the same count; dense 100%. | `model_facts.json` | confirmed |
+| `prune_model` removes the weights with the smallest effective IRMs and refits until `nan_corr(data_test IRMs, model IRMs)` falls below 0.9 of its start, so it chooses the mask on **test** data. `main.py` reaches it only with 5 arguments. Its `cont` branch calls it without `prune_frac` and would raise. | `run_inference.py` 336-491; `main.py` 87-92 | confirmed |
+| EM ran 200 steps for each model: 19,709 s, 19,317 s and 18,344 s of recorded train time (92 to 99 s per step). The CPU count is not recorded. | exports, `train_time` | confirmed |
+
+### A.3 Missing values
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| Per animal, a neuron counts as measured if at most 50% of its frames are NaN. A neuron is kept if it is measured in at least `neuron_freq` of the **training** animals (0.1 in every config). Within an animal, columns with over 50% NaN stay in the data unchanged. | `loading_utilities.py` 356-369 | confirmed |
+| No interpolation: `interpolate_nans: False` restores the NaN frames from `nan_mask`, because Randi's traces are interpolated. The one interpolation is over each stimulated neuron's own frames s-1 to s+2 around each of its stimulations. | `create_data_set.yml` 12; 905e0be^:`create_data_set.py` 26-30; `loading_utilities.py` 177-185 | confirmed |
+| The filter handles a missing entry by setting y to 0 and its noise variance to `epsilon = 1e8`, every frame. The docstring says "missing the entire time trace", but the code is per frame. | `ssm_classes.py` 341-344, 377-380, 16 | confirmed |
+| Preparation also sets values above 5 to NaN, and sets a whole neuron to NaN if its photobleach fit fails twice. | `loading_utilities.py` 208-222 | confirmed |
+| In EM, missing entries are imputed by the smoothed means for the offset and R updates. | `ssm_classes.py` 663-667, 742-743 | confirmed |
+
+### A.4 The neuron set
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| The set is the union of labels over the training animals (blank removed), minus a blacklist, then filtered by A.3's rule, so it depends on the training split. | `loading_utilities.py` 274-280, 346-363, 417-421 | confirmed |
+| The blacklist defaults to `['AWCL', 'AWCR']`, and `fit_experimental` does not override it, so AWC is excluded by default. | `loading_utilities.py` 248, 274-280 | confirmed |
+| The released models have 154 neurons, with identical names in all three, sorted. The list is in `session0/creamer_154_names.json`. | exports, `cell_ids` | confirmed |
+| Of the bridge's neurons, present: AWAL, AWAR, CEPDL, CEPDR, CEPVL, CEPVR, ADEL, ADER, AVAL, AVAR, AVEL, AVER, RIML, RIMR, AVBL, AVBR, RIBL, RIBR, SMDDL, SMDDR, SMDVL and SMDVR. Absent: AWCL, AWCR, AIBL, AIBR, AIAL and AIAR. | exports | confirmed |
+| 29 of the 154 have no off-diagonal mask entry: AVG, DA1, DB1, DB2, DD1, I1L, I1R, I2L, I2R, I3, I4, I6, M1, M2L, M2R, M3L, M3R, M4, M5, MCL, MCR, MI, NSML, NSMR, SABD, SABVR, VA1, VB1 and VB2. None of them appears in the NemaNode files, which list 215 to 222 nerve-ring names each. The project's vendored weights CSV covers exactly the other 125, and matches the released connectome model to 5e-7 (six-decimal rounding). | `model_facts.json`; `anatomical_data/worm_connectomes/*.csv` | confirmed |
+| In the NWB, AWC is labelled `AWCON`, `AWCOFF` or `AWC`, never `AWCL` or `AWCR`, so on NWB labels the blacklist would not trigger, but no AWC name is among the 154 either. | `session0/nwb_aggregate.py.txt` output | confirmed |
+
+### A.5 Preprocessing and its inputs
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| The loader reads one `funcon_preprocessed_data.pkl` per recording folder, a dict with `emissions`, `inputs`, `cell_ids` and `sample_rate`. | `loading_utilities.py` 251-284 | confirmed |
+| At this commit `create_data_set.py` only converts Randi's pipeline output (`francesco_green.npy`, `nan_mask.npy`, `labels.npy`, `stim_recording_cell_inds.npy`, `stim_volumes_inds.npy`) to text files. The code that writes the `.pkl` is commented out (lines 57-95). The full pipeline is that step followed by the version before 905e0be, which reads those text files, builds the inputs, calls `preprocess_data` and writes the `.pkl`. | `create_data_set.py` 24-53, 57-95; `git show 905e0be^:create_data_set.py` 21-73 | confirmed |
+| The README points the data at OSF qxhjd, which is unlicensed and excluded by A20. | `README.md` | confirmed |
+| `preprocess_data` cuts the first 120 frames (1 min), interpolates each stimulated neuron's own trace from s-2 to s+3, applies a NaN-aware 2-tap boxcar (losing one frame) and divides by a two-exponential photobleach fit. The fit has a shared tau and per-neuron amplitude, refits with one exponential plus an offset when the mean is off by more than 0.1, and sets the neuron to NaN when off by more than 0.2. It then divides by the mean and subtracts 1, and sets values above 5 to NaN. | `loading_utilities.py` 83-244; config `create_data_set.yml` | confirmed |
+| `francesco_green` with `nan_mask` is the same processing stage as the NWB's `BaseGreenSignal`: raw volume-averaged green fluorescence per ROI, with NaN frames. | D: re-implemented preparation on `BaseGreenSignal` reproduces his example at median r 1.0000000 | confirmed for sub-4; likely elsewhere |
+
+### A.6 Inputs, filter and lags
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| Input: an impulse of amplitude 1 at the stimulation frame, on the stimulated neuron's input channel. Negative target codes (-1, -2, -3) are dropped. Each stimulation lasts 0.5 s, so one frame. | 905e0be^:`create_data_set.py` 40-44; NWB `stop_time - start_time` = 0.5 s in all 110 files | confirmed |
+| `dynamics_input_lags: 45` (22.5 s), with a diagonal filter per lag: each neuron's input drives only its own latent. `dynamics_lags: 1`. Emission inputs: 1 lag, fixed at zero. | `slurm_example.yml` 15-17; exports `B_offdiag_max_abs = 0`, `D_all_zero` | confirmed |
+| The lag order: block k of `dynamics_input_weights` multiplies u at time t-k, so block 0 is lag 0. | `ssm_classes.get_lagged_data` 833-851 | confirmed |
+| Fitted filters: 153 of 154 neurons have one, every neuron but DB1. Median peak at lag 18 (9 s), median lag-0 tap 0.012, median sum of taps 2.26 (connectome model). | `model_facts.json` | confirmed |
+| Model: x_t = A x\_{t-1} + sum over k of B_k u\_{t-k} + w_t, y_t = x_t + d + v_t, with C fixed to the identity, Q and R diagonal, and d a per-animal, per-neuron offset. | `run_inference.py` 106-114; `model_facts.json` | confirmed |
+
+### A.7 Initial state
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| Starts: initial mean 0, initial covariance I, per animal; offset is each neuron's nanmean (0 if unrecorded). After every EM step each animal's initial mean and covariance are reset to its first smoothed state and covariance, so they are estimated, and the offsets are refitted in the M-step. | `ssm_classes.py` 809-830, 700-703; `inference_utilities.py` 181-185 | confirmed |
+| For posteriors (train or test), offset, initial mean and initial covariance are iterated to convergence on the first 1,000 frames (`time_lim`; up to 50 iterations, tolerance 1e-2) before the full smoother. | `run_inference.py` 528-538; `inference_utilities.py` 255-294 | confirmed |
+| The filter's first step uses `init_mean` and `init_cov` and does not add `inputs[0]`, whereas `sample` does. | `ssm_classes.py` 349-367, 258 | confirmed |
+
+### A.8 The STAM definition in the scoring script
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| Model STAM: for each neuron s, a unit impulse on s at frame 0 of a noiseless simulation from the zero state, run for 30 s (60 frames); the 154 emissions summed over those frames and divided by the 2 Hz sample rate. That is the response integrated over 0 to 30 s, giving a 154 x 154 matrix [responder, stimulated]. It depends on A and B only. | `lgssm_utilities.py` 163-187, 270-275 | confirmed |
+| Window `[15, 30]` s; the 15 s before is zero padding and adds nothing. The diagonal of the model, train and test matrices is set to NaN before scoring. | `predict_stams.py` 17, 39-52 | confirmed |
+| `nan_corr`: one Pearson correlation over every entry finite in both matrices, mean-subtracted, population SD, with a Fisher-z 95% interval. | `metrics.py` 109-136 | confirmed |
+| Outputs: `model_score[type]` = nan_corr(model, test), `train_test[type]` = nan_corr(train, test), and the relative correlation = model_score / train_test, for STAMs and for correlations. The model's correlation matrix comes from 100 iterations of the Lyapunov recursion. Nothing is printed. | `predict_stams.py` 54-100; `lgssm_utilities.py` 343-354 | confirmed |
+| The data-side STAM (how `measured_stams.pkl` was made: window, baseline, event threshold) is not in the repository or its history. `analyze_model.py` has a different, older definition (the mean of the last 15 frames of the baseline-subtracted average, with a `num_stim_cutoff`) and needs an `analysis_params/` directory that is absent. `get_impulse_response_functions` (baseline = mean of the 15 s before) is the likely building block. | `git grep` over all commits; `analyze_model.py` 8, 58-72; `lgssm_utilities.py` 116-160 | confirmed absent; definition unknown |
+
+### A.9 The scoring script's dependencies
+
+`predict_stams.py` imports `lgssm_utilities`, `metrics`, NumPy and Matplotlib. `lgssm_utilities`
+imports `analysis_utilities`, which imports SciPy. Unpickling the models imports `ssm_classes`, which
+imports `inference_utilities`, whose line 2 is `from mpi4py import MPI`. So `mpi4py` and an MPI runtime
+are needed, or a stub `mpi4py` module, since nothing on the scoring path calls MPI. **confirmed**
+(`grep "^import\|^from" *.py`; `ssm_classes.py` 3; `inference_utilities.py` 1-3).
+
+### A.10 The likelihood function
+
+`Lgssm.lgssm_filter(self, emissions, inputs, emissions_offset, init_mean, init_cov, memmap_cpu_id=None)` returns `(ll, filtered_means, filtered_covs)` (`ssm_classes.py` 316-412).
+`Lgssm.get_ll(emissions, inputs, emissions_offset, init_mean, init_cov)` sums it over animals given as
+lists (489-496); `inference_utilities.parallel_get_ll(model, data)` does the same over MPI (395-433).
+It uses the information-form update `inv(inv(P) + C^T R^-1 C)`. **confirmed.**
+
+His value equals the exact marginal likelihood over observed entries minus 10.1293 (0.5 (log 2π +
+log 1e8)) per missing entry, to 1e-7, on three random 6-dimensional systems with 30% missing values.
+This was checked against my transcription of his filter, not his code. **confirmed** for the
+transcription (`session0/ll_equivalence_check.py.txt`).
+
+## B. The pickles
+
+Every `.pkl` in the repository: 3 models, 4 data files and 4 anatomy files. Listed with
+`pickletools.genops`, simulating the memo to resolve `STACK_GLOBAL`. All are protocol 4 and every
+global was resolved. There are no `EXT*`, `PERSID`, `BINPERSID`, `INST`, `OBJ` or `GLOBAL` opcodes, and
+the models have one `NEWOBJ` each (`session0/pickle_globals.json`, `session0/opcode_histogram.py.txt`).
+
+| File | Globals | Decision |
+|---|---|---|
+| `models/connectome_constrained.pkl`, `models/fully_connected.pkl` | `numpy.dtype`, `numpy.ndarray`, `numpy.core.multiarray._reconstruct`, `numpy.core.multiarray.scalar`, `ssm_classes.Lgssm` | loaded |
+| `models/shuffled_constrained.pkl` | the same, with `numpy._core.multiarray` | loaded |
+| `data/example_recording.pkl` | `numpy.dtype`, `numpy.ndarray`, `numpy._core.multiarray._reconstruct`, `numpy._core.multiarray.scalar` | loaded |
+| `data/initial_conditions.pkl`, `data/measured_corr.pkl`, `data/measured_stams.pkl` | `numpy.dtype`, `numpy.ndarray`, `numpy._core.multiarray._reconstruct` | loaded |
+| `anatomical_data/cell_ids.pkl` | `numpy.dtype`, `numpy.core.multiarray.scalar` | loaded |
+| `anatomical_data/chemical.pkl`, `gap.pkl`, `peptide.pkl` | `numpy.dtype`, `numpy.ndarray`, `numpy.core.multiarray._reconstruct` | loaded |
+
+Every global is NumPy array, dtype or scalar reconstruction, or `ssm_classes.Lgssm`, whose source was
+read, so all eleven are on the allow-list. They were loaded by `session0/load_pickles.py.txt`, from an
+empty directory with `python -I`. The unpickler refuses anything else, and it maps `ssm_classes.Lgssm`
+to an inert local stub, so none of his modules was imported. Exports with SHA-256 values are in
+`session0/exports/` (`MANIFEST.txt`), beside his MIT notice (`LICENSE-Creamer_LDS_2026.txt`).
+
+**The models** (`*.structure.json`; per-model facts in `session0/model_facts.json`):
+
+| Attribute | Shape, dtype | Notes |
+|---|---|---|
+| `dynamics_weights` (A) | 154 x 154 float64 | connectome: 2,011 off-diagonal nonzeros, diagonal median 0.816, spectral radius 0.9966. dense: 23,562 off-diagonal, radius 0.9972. shuffled: radius 0.9979 |
+| `dynamics_input_weights` (B) | 154 x 6,930 float64 | 45 lags x 154, diagonal per lag, zero for DB1 |
+| `dynamics_cov` (Q), `emissions_cov` (R) | 154 x 154 float64, diagonal | connectome median Q 0.0107, R 0.00253 |
+| `emissions_weights` (C) | 154 x 154 | identity |
+| `emissions_input_weights` (D) | 154 x 154 | zero |
+| `*_init` | as above | A_init 0.9 I, Q_init and R_init I, B_init 0 |
+| `param_props` | dict | update: A, B, Q, R true, C, D false. shape: A `synaptic` (connectome, shuffled) or `full` (dense). masks as in A.2 |
+| `cell_ids` | list of 154 str | identical in all three |
+| `log_likelihood`, `train_time` | lists of 200 | first value -273,705,272.1377 in all three. last value -247,556,774 (connectome), -247,050,699 (dense), -247,590,745 (shuffled) |
+| scalars | | `ridge_lambda` None, `epsilon` 1e8, `sample_rate` 2, `dynamics_lags` 1, `dynamics_input_lags` 45, `emissions_input_lags` 1 |
+
+No held-out list, neuron-selection parameters or random seeds are saved. The relabelling seed is
+recovered from the mask (fact 9), and the training data are fixed only through `log_likelihood[0]`.
+**confirmed.**
+
+**The data pickles:**
+
+- `example_recording.pkl`: a dict with `cell_ids` (the 154), `activity` (3,697 x 154 float64, of which
+  44 columns are recorded and 110 all NaN) and `inputs` (3,697 x 154, 0 or 1, 25 events on 20 targets).
+  It is **`pumpprobe_20210825_123600`, DANDI sub-4**: 3,818 raw frames = 3,697 + 120 + 1, all 44
+  recorded names among sub-4's 46 labels in the 154, and the traces match (D). **confirmed.**
+
+- `initial_conditions.pkl`: `emissions_offset` (154), `init_mean` (154) and `init_cov` (154 x 154) for
+  the example recording, used by `infer_missing_neuron.py`. Whether they come from a train or a test
+  posterior is unknown.
+
+- `measured_stams.pkl`: `{'train', 'test'}`, each 154 x 154 float64, oriented \[responder,
+  stimulated\] (likely, from `get_impulse_response_functions`' transpose). Both have finite diagonals
+  (153 and 118), which `predict_stams.py` masks.
+
+  - Train: 21,754 finite off-diagonal entries; one all-NaN column (DB1); no all-NaN row.
+  - Test: 11,010 finite off-diagonal entries; 36 all-NaN columns; 6 all-NaN rows.
+  - Both finite off the diagonal: 10,693; test finite where train is not: 317.
+  - Neither pattern is symmetric, and there are no event counts.
+
+  **confirmed** (`session0/stams_structure.json`). No correlation against the test array was
+  computed.
+
+- `measured_corr.pkl`: `{'train', 'test'}`, symmetric, with 23,502 and 17,936 finite off-diagonal
+  entries.
+
+- `anatomical_data/*.pkl`: a 300-name list and 300 x 300 chemical, gap and peptide matrices. The model
+  code does not use them; the mask comes from the NemaNode CSVs.
+
+## C. DANDI 001075 segmentation files
+
+Listing: `https://api.dandiarchive.org/api/dandisets/001075/versions/0.240930.1859/assets/?page_size=1000`
+(one page, 223 assets). It holds 110 segmentation files (1.9 to 42.1 MB, median 15.9 MB, 1.70 GB in
+all) and 113 imaging files (4.07 TB). sub-20, sub-23 and sub-33 have no segmentation file. All 110
+were downloaded and every size matched; **no file failed to open** (`session0/nwb_summary.json`).
+
+### C.1 Contents
+
+| Item | Location and form | Confidence |
+|---|---|---|
+| Traces | `processing/ophys/GreenSignals/BaseGreenSignal/data`, frames x ROIs float64, unit "n.a.". The description: "Average baseline fluorescence for the 'Green' optical channel extracted from the raw imaging and averaged over a volume ... includes NaNs for certain frame values that could not be inferred". `InterpolatedGreenSignal` fills the NaNs and equals the base wherever the base is finite (all 110 files). The red channel is the same. | confirmed |
+| Processing stage | raw per-ROI fluorescence, before photobleach correction or ΔF/F; values about 10 to 4,500 in sub-0 | confirmed |
+| Labels | `NeuroPALSegmentations/NeuroPALPlaneSegmentation`: `labels`, `labels_confidences` (-1 and 0.5 to 1) and `labels_comments`. They are linked to the trace ROIs by `PumpProbeGreenPlaneSegmentation/neuropal_ids`, a string per ROI (blank if unmatched; `merge` 732 times in 63 files; `check`, `I4` and `RIAR` once each). Labels include non-canonical entries such as `RIG`, `AMso`, `target`, `AWCON`, `IL2V` and `smthng else`. | confirmed |
+| Stimulation | `intervals/OptogeneticStimulusTable`: `start_time`, `stop_time` (0.5 s in all files), `power` (0.0012 W in all) and `target_pumpprobe_id` (a ROI index as float, NaN when absent, described as "Manually targeted ID"). `targets` points to a row of `TargetedImageSegmentation/TargetPlaneSegmentation`, which holds the target pixel (x, y) and `depth_in_um`. | confirmed |
+| Sampling | median interval 0.50112 s (1.9955 Hz) in every file; minimum 0.28 s and maximum 8.41 s. 3 recordings have 5 gaps over 0.75 s. Timestamps start 17 to 268 s into the session. | confirmed |
+| Lengths | 393 to 5,848 raw frames, median 3,800, 381,906 in all. After his preparation: 272 to 5,727, median 3,683, 365,826 in all. | confirmed |
+| ROIs per file | 80 to 281, median 125. Matched to a NeuroPAL ID: 59 to 125, median 94.5. With a label in the 154: 0 to 95, median 59. 107 files have at least 10, and 3 have fewer than 5 (sub-76 0, sub-64 1, sub-77 3). One label is duplicated (AVJL, one file). | confirmed |
+| Subjects | all genotype WT; strain AML462 (108) or `none` (2); L4 (63) or YA (47) | confirmed |
+| Stimulations | 3 to 92 per file, 5,614 in all. With a target ID: 2,815, of which 1,790 land on a neuron of the 154 and 1,743 do so after the 120-frame cut. Median interval 30.8 s (up to 75 s). | confirmed |
+
+### C.2 Mapping to Creamer's recording names
+
+`pumpprobe_YYYYMMDD_HHMMSS` is the NWB `session_start_time` (local time). All 110 names are unique, and all
+10 names in `exp_test.yml` exist. The example recording matches sub-4 on length, labels, traces and
+stimulations. **confirmed** for the rule on those 11 names; likely for the rest.
+
+### C.3 Stimulation frames and targets against his example
+
+On sub-4, his 25 input events are exactly the NWB stimulations with a target ID whose label is among
+the 154, at frame = first timestamp of at least `start_time - delta`, with delta in (0.1006, 0.1007\].
+The four events whose start falls at most 0.1006 s after a timestamp go to that earlier frame; those at
+0.1007 s or more go to the next. With delta = 0 four events are one frame late. One NWB event (OLLR,
+frame 3,185) is absent from his inputs, as is OLLR's trace (`session0/stim_gap_table.py.txt`,
+`session0/example_comparison_final.json`). **confirmed** on sub-4; whether delta holds on other
+recordings is unknown (only sub-4 is available for comparison).
+
+Coordinates do not restore the missing IDs. Where an ID is given, the nearest static ROI centroid in
+xy is that ROI in 1,577 of 2,815 cases (56%), and 1,822 (65%) with a per-file depth fit. `depth_in_um`
+does not track centroid z (r = -0.05). **confirmed** (`session0/target_matching.json`).
+Per-volume tracked positions, probably only in the imaging files, or Randi's own target indices, would
+settle it.
+
+### C.4 Labels against his
+
+On sub-4, 44 of the 46 NWB labels in the 154 are his recorded neurons. ADAR (confidence 0.8, 1.5%
+missing) is a stimulation target in his inputs but has an all-NaN trace in his recording. OLLR
+(confidence 0.8) is absent from both. Confidence 0.5 and 0.6 labels are kept, so it is not a
+confidence threshold.
+
+Across all 110 recordings his rule does not reproduce his 154 from NWB labels on any training set
+(A.4, fact 2; `session0/neuron_set_rule.json`). Counting every labelled recording instead of the 50%
+rule comes closer: his 154 all have labelled frequency of at least 0.073, and the only canonical-looking
+labels outside the 154 at 0.1 or more are the glia AMSoL and AMSoR. But many non-canonical labels
+(`RIG` 0.28, `AMso` 0.21, `target` 0.19, `AWCOFF` 0.19) would also pass. So his label vocabulary was
+cleaned, and possibly his NaN masks differ, in ways the NWB does not show. **confirmed** that they
+differ; how is unknown.
+
+## D. The example recording against its NWB source
+
+Sub-4's 44 recorded neurons. NWB trace variants against `example_recording.pkl`, per neuron over frames
+where both are finite (`session0/compare_example.py.txt` with delta 0.10065 s;
+`session0/example_comparison_final.json`):
+
+| Variant | r min | r median | neurons r of at least 0.99 | SD ratio median (min to max) | NaN pattern agreement, median |
+|---|---|---|---|---|---|
+| raw `BaseGreenSignal`, frames 120 onwards | 0.763 | 0.981 | 12 | 52.1 (10.9 to 146.8) | 1.000 |
+| 2-tap boxcar, divided by mean, minus 1 | 0.764 | 0.994 | 25 | 1.010 (0.999 to 1.261) | 1.000 |
+| his full preparation on `BaseGreenSignal` | 0.980 | 1.0000000 | 43 | 1.000 (0.966 to 1.000) | 1.000 |
+| the same on `InterpolatedGreenSignal` | 0.983 | 0.99952 | 43 | 1.000 (0.968 to 1.016) | 0.912 |
+
+On the full preparation:
+
+- 42 of 44 neurons agree to r = 1.000000, and the median maximum absolute difference is 6e-8;
+- AVDR is at 0.99996;
+- I2R is at 0.9796, with an SD ratio of 0.966 and 49% of its raw frames missing. Its photobleach fit is
+  ill-conditioned: BFGS reports no convergence and one time constant runs to infinity
+  (`session0/i2r_check.py.txt`). So the residual is likely the optimiser's endpoint, which depends on
+  numerics;
+- a start index of 119 or 121 drops the median r to 0.982, which confirms 120.
+
+The interpolated variant's lower NaN agreement shows that he used the NaN mask. **confirmed.**
+
+## E. Missing values per neuron and frame
+
+His preparation was re-implemented (`session0/creamer_preprocess.py.txt`) and run on all 110 recordings,
+for the ROIs labelled with one of his 154 names (`session0/missingness.py.txt`, 18 s on 6 workers).
+Outputs: `session0/missingness/missingness_per_animal.json`, `missingness_per_neuron.csv`, and the
+bit-packed masks. Quantiles are given as min, p10, p25, median, p75, p90 and max.
+
+| Quantity (per animal unless stated) | Value |
+|---|---|
+| Animals with at least one recorded neuron of the 154 | 109 of 110 (sub-76 has none) |
+| Recorded neurons of the 154 | 0, 33, 43, 59, 78, 87, 95 |
+| Animals with any within-recording missing entry among recorded neurons | **109 of 109** |
+| Share of recorded neurons with any missing frame | 0.84, 0.98, 0.99, 1.00, 1.00, 1.00, 1.00 |
+| Entries missing (recorded neurons x frames) | 0.008, 0.18, 0.26, 0.37, 0.46, 0.50, 0.59 |
+| Frames with at least one recorded neuron missing | 0.008, 0.9996, 1.00, 1.00, 1.00, 1.00, 1.00 |
+| Distinct missingness patterns over frames | 2, 591, 2,579, 3,245, 3,990, 4,719, 5,641 |
+| Neurons over half missing (kept by his loader) | median 16 per animal; 2,256 of 6,498 neuron-recordings |
+| The same for neurons at most half missing: entries missing / frames with any missing | median 0.17 / 0.995 |
+| Animals with over 5% of frames having a missing entry | 108 of 109 (the plan's trigger: over 10% of animals) |
+| Per neuron-recording missing fraction, all 6,498 | 0, 0.021, 0.087, 0.31, 0.65, 0.88, 0.999; exactly 0 in 47 |
+| Labelled but all-NaN after preparation | 13 neuron-recordings (5 by photobleach failure); 18 one-exponential fallbacks |
+
+Preparation barely changes the raw NWB NaN fraction: it differs by more than 0.001 for 202 of
+6,511 neuron-recordings and by more than 0.01 for 18 (99th percentile 0.0017). The large changes are
+neurons set entirely to NaN by a failed photobleach fit or the above-5 rule. On his
+own pickle (`example_recording.pkl`): 44 recorded neurons, all with missing frames, 17.7% of entries,
+99.97% of frames with a missing entry, 3,363 distinct patterns, and 6 neurons over half missing.
+**confirmed.**
+
+## F. Cost microbenchmark
+
+`session0/kalman_cost_bench.py.txt` (`kalman_bench_results.jsonl`, `kalman_bench_concurrency.jsonl`,
+`cost_extrapolation.json`). The setup:
+
+- PyTorch 2.8.0, float64, CPU, on this machine (Apple M5 Max, 18 cores); no C.2 or campaign process was running (`pgrep`
+  printed nothing).
+- Random stable parameters: 8.5% sparsity and spectral radius 0.97.
+- The missingness pattern of the median-length animal (`pumpprobe_20210830_144155`, 27 recorded
+  neurons, about 20 observed per frame); batches add the next animals' masks.
+- The exact filter uses fixed shapes: the innovation covariance is M(P + R)M + (I - M), so missing
+  entries add nothing. Forward pass, then `backward()`.
+
+Total benchmark compute was under 2 minutes.
+
+| Mode | Threads | Animals in batch | Frames | ms per animal-frame, forward plus backward |
+|---|---|---|---|---|
+| exact, one animal | 1 | 1 | 300 | 1.044 |
+| exact, one animal | 8 | 1 | 300 | 1.112 |
+| exact, one animal | 8 | 1 | 1,000 | 1.149 |
+| exact, batched | 1 | 8 | 300 | 0.767 |
+| exact, batched | 8 | 8 | 300 | 0.748 |
+| exact, batched | 8 | 16 | 300 | 0.719 |
+| steady-state gain (doubling, 9 iterations, then a fixed-gain pass) | 1 | 1 | 3,683 | 0.071 |
+| steady-state gain | 8 | 1 | 3,683 | 0.072 |
+
+Eight threads give no speed-up at n = 154. Running concurrent single-thread processes (batch 8, 300
+frames) gives a per-process cost of 0.785, 1.150, 1.265 and 2.084 ms for 1, 2, 4 and 8 processes, so 8
+processes give 3.0 times one process's throughput (0.26 ms per animal-frame in aggregate). Autograd
+memory is about 1.2 MB per animal-frame (5.8 GB peak for 16 x 300), so a full step over 80 animals
+needs checkpointing. Recomputing the forward pass multiplies the cost by 1.34 (the forward share,
+measured).
+
+**Extrapolation to one gradient step over 80 animals** (frames after preparation; checkpointing
+included):
+
+| Training set | Animal-frames | 1 process: s per step | 8 processes: s per step | 8 processes: h per fit at 2,000 / 5,000 steps |
+|---|---|---|---|---|
+| last 80 in sorted order (the current loader's block) | 241,057 | 240 | 84 | 47 / 117 |
+| first 80 | 275,764 | 275 | 96 | 53 / 134 |
+| 80 shortest to 80 longest | 226,038 to 318,770 | 225 to 318 | 79 to 111 | 44 to 62 / 109 to 154 |
+
+In one process a fit takes 125 to 177 h at 2,000 steps and 313 to 441 h at 5,000. The steady-state pass
+would cost 16 to 23 s per step in one process, but no animal's missingness allows it (E). The
+consequences:
+
+- **Against the plan:** its 2 to 3 h per fit on 8 threads is low by a factor of about 15 to 75.
+- **The planned fits:** 21 at the 8-process rate need about 1,000 h (2,000 steps) to 2,500 h (5,000
+  steps).
+- **Against EM:** his 200 steps took 5.1 to 5.5 h of recorded time on an unknown number of CPUs.
+  2,000 to 5,000 gradient steps are 10 to 25 times as many passes.
+
+Not measured, and likely to matter: a sparse A, an update that solves only on the observed block, a
+square-root or parallel-scan form, float32, and a float64 GPU.
+
+## G. DANDI 000776 (Atanas et al. 2023)
+
+API: `https://api.dandiarchive.org/api/dandisets/000776/`, then version 0.241009.1509 (the most
+recent published; earlier versions 0.240625.0015 and 0.240625.0022 have the same 38 assets and
+size), then its `assets/` and each asset's metadata. Nothing was downloaded.
+
+| Fact | Evidence | Confidence |
+|---|---|---|
+| 38 files, one per subject, 1,011.7 GB in all, 26.28 to 26.97 GB each (median 26.65), CC-BY-4.0. Names follow `sub-<date>-<n>-SWF702_ses-<date>_behavior+image+ophys.nwb`. Strain SWF702 in all. | asset listing | confirmed |
+| Each file holds `ProcessingModule`, `PlaneSegmentation`, `BehavioralTimeSeries` and `BehavioralEvents` (the API's `variableMeasured`; the same set for all 38). The approaches are cell population imaging and behaviour. The name and size show raw imaging is inside. | per-asset metadata | confirmed |
+| 19 of 38 session descriptions mention heat stimulation (mostly at t about 801), and several are labelled baseline datasets. | `wasGeneratedBy` descriptions | confirmed |
+| S3 serves byte ranges (`Accept-Ranges: bytes` on a HEAD request), so HDF5 datasets can in principle be read remotely (h5py with a ranged file object) without downloading whole files. | `curl -I` on one blob URL | confirmed for range support |
+| Whether the traces, NeuroPAL labels and behaviour sit in small datasets separate from the imaging, and their chunk layout (which decides the cost of a remote read), is not known. A ranged read of one file's HDF5 metadata (a few MB) would settle it. | none | unknown |
+| Whether SWF702 is the NeuroPAL strain, as M-b's "NeuroPAL-identified recordings only" needs, is not stated in the API metadata. The files' subject metadata or the paper's key resources table would settle it. | none | unknown |
+
+## What could not be done, and why
+
+- **The split** was not recovered (A.1). Session 1's inference faces fact 1: no split of the NWB data
+  reproduces his train array's coverage.
+- **No correlation was computed against his test arrays**, including model against test and train
+  against test, to keep session 0 free of test readings. The paper's 0.14, 0.17 and 0.82 are therefore
+  not reproduced here; that is G2's job.
+- **His code was not run**, by the rules. The likelihood relation was checked on a transcription.
+- **The data-side STAM definition is unknown** (A.8).
+- **The cause of the label and stimulation gaps** (C.3, C.4) needs data not available under A20 (Randi's
+  OSF arrays), the imaging files (4 TB), or the authors.
+
+The session-0 scripts are kept as `.py.txt`, following the project's convention for probe scripts in logbook folders, so the repository's linters do not check throwaway code. They ran as `.py`.

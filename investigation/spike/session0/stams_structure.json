@@ -1,0 +1,118 @@
+{
+ "measured_stams.train": {
+  "shape": [
+   154,
+   154
+  ],
+  "finite_total": 21907,
+  "finite_offdiag": 21754,
+  "finite_diag": 153,
+  "columns_all_nan": 1,
+  "rows_all_nan": 0,
+  "symmetric_nan_pattern": false,
+  "symmetric_values": false
+ },
+ "measured_stams.test": {
+  "shape": [
+   154,
+   154
+  ],
+  "finite_total": 11128,
+  "finite_offdiag": 11010,
+  "finite_diag": 118,
+  "columns_all_nan": 36,
+  "rows_all_nan": 6,
+  "symmetric_nan_pattern": false,
+  "symmetric_values": false
+ },
+ "measured_stams.overlap": {
+  "both_finite_offdiag": 10693,
+  "test_finite_not_train": 317
+ },
+ "measured_corr.train": {
+  "shape": [
+   154,
+   154
+  ],
+  "finite_total": 23656,
+  "finite_offdiag": 23502,
+  "finite_diag": 154,
+  "columns_all_nan": 0,
+  "rows_all_nan": 0,
+  "symmetric_nan_pattern": true,
+  "symmetric_values": true
+ },
+ "measured_corr.test": {
+  "shape": [
+   154,
+   154
+  ],
+  "finite_total": 18084,
+  "finite_offdiag": 17936,
+  "finite_diag": 148,
+  "columns_all_nan": 6,
+  "rows_all_nan": 6,
+  "symmetric_nan_pattern": true,
+  "symmetric_values": true
+ },
+ "measured_corr.overlap": {
+  "both_finite_offdiag": 17920,
+  "test_finite_not_train": 16
+ },
+ "stams_train_columns_all_nan": [
+  "DB1"
+ ],
+ "stams_test_columns_all_nan_count": 36,
+ "recordings_with_db1_stim": [
+  "pumpprobe_20210907_141336"
+ ],
+ "db1_stim_positions_in_sorted_order": [
+  15
+ ],
+ "first_80_train": {
+  "neurons_stimulated_in_train": 137,
+  "db1_stimulated_in_train": true,
+  "train_all_nan_columns_but_stimulated": [
+   "DB1"
+  ],
+  "stimulated_never_but_train_column_finite": [
+   "AFDL",
+   "AFDR",
+   "AINL",
+   "ALA",
+   "ASJL",
+   "AUAL",
+   "M2L",
+   "MCR",
+   "RIBR",
+   "RICL",
+   "RIPL",
+   "RIS",
+   "RMFR",
+   "RMGL",
+   "SMBDL",
+   "SMBVR",
+   "URAVR"
+  ]
+ },
+ "last_80_train": {
+  "neurons_stimulated_in_train": 146,
+  "db1_stimulated_in_train": false,
+  "train_all_nan_columns_but_stimulated": [],
+  "stimulated_never_but_train_column_finite": [
+   "DA1",
+   "MCR",
+   "NSMR",
+   "RIPL",
+   "RIS",
+   "SMBVR",
+   "VA1"
+  ]
+ },
+ "neurons_never_stimulated_in_any_nwb_recording": [
+  "MCR",
+  "RIPL",
+  "RIS",
+  "SMBVR"
+ ]
+}

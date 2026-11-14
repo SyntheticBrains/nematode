@@ -1,0 +1,128 @@
+"""Summarise every DANDI 001075 segmentation NWB file (h5py, read-only).
+
+Per file: subject, session time and the pumpprobe_YYYYMMDD_HHMMSS name it maps to, genotype,
+strain; frames, ROIs, sampling interval; missing values in BaseGreenSignal; NeuroPAL labels of
+matched ROIs and how many fall in a given neuron list; stimulation count, manual target IDs,
+duration, power. Files that fail to open are recorded with the error.
+
+Usage: python -I nwb_summary.py <nwb_dir> <neuron_list.json> <out_json>
+"""
+
+import collections
+import json
+import os
+import sys
+
+import h5py
+import numpy as np
+
+nwb_dir, names_json, out_json = sys.argv[1:4]
+with open(names_json) as fh:
+    keep_names = set(json.load(fh))
+
+
+def s(x):
+    return x.decode() if isinstance(x, bytes) else str(x)
+
+
+rows = []
+for fn in sorted(os.listdir(nwb_dir)):
+    if not fn.endswith(".nwb"):
+        continue
+    rec = {"file": fn}
+    try:
+        with h5py.File(os.path.join(nwb_dir, fn), "r") as f:
+            subj = f["general/subject"]
+            rec["subject_id"] = s(subj["subject_id"][()])
+            rec["genotype"] = s(subj["genotype"][()])
+            rec["strain"] = s(subj["strain"][()])
+            rec["growth_stage"] = s(subj["growth_stage"][()])
+            start = s(f["session_start_time"][()])
+            rec["session_start_time"] = start
+            date, time = start[:10].replace("-", ""), start[11:19].replace(":", "")
+            rec["pumpprobe_name"] = f"pumpprobe_{date}_{time}"
+            oph = f["processing/ophys"]
+            g = oph["GreenSignals/BaseGreenSignal/data"][()]
+            ts = oph["GreenSignals/BaseGreenSignal/timestamps"][()]
+            T, n_roi = g.shape
+            rec["frames"] = int(T)
+            rec["rois"] = int(n_roi)
+            dt = np.diff(ts)
+            rec["dt_median_s"] = float(np.median(dt))
+            rec["dt_min_s"] = float(dt.min())
+            rec["dt_max_s"] = float(dt.max())
+            rec["t0_s"] = float(ts[0])
+            nan = np.isnan(g)
+            rec["nan_fraction"] = float(nan.mean())
+            full_nan_frames = nan.all(1)
+            rec["frames_all_rois_nan"] = int(full_nan_frames.sum())
+            per_roi = nan.mean(0)
+            rec["rois_all_nan"] = int((per_roi == 1).sum())
+            rec["rois_any_nan"] = int((per_roi > 0).sum())
+            rec["roi_nan_fraction_quantiles"] = [float(q) for q in np.quantile(per_roi, [0, 0.25, 0.5, 0.75, 1])]
+            gi = oph["GreenSignals/InterpolatedGreenSignal/data"][()]
+            rec["interp_shape_equal"] = gi.shape == g.shape
+            rec["interp_nan_fraction"] = float(np.isnan(gi).mean())
+            fin = ~nan
+            rec["interp_equals_base_where_finite"] = bool(np.allclose(g[fin], gi[fin], equal_nan=False))
+            pp = oph["PumpProbeGreenSegmentations/PumpProbeGreenPlaneSegmentation"]
+            npids = [s(x) for x in pp["neuropal_ids"][()]]
+            npal = oph["NeuroPALSegmentations/NeuroPALPlaneSegmentation"]
+            id_to_label = {int(i): s(l) for i, l in zip(npal["id"][()], npal["labels"][()])}
+            id_to_conf = {int(i): float(c) for i, c in zip(npal["id"][()], npal["labels_confidences"][()])}
+            labels = []
+            confs = []
+            nonnumeric = collections.Counter()
+            for x in npids:
+                x = x.strip()
+                try:
+                    float(x)
+                    numeric = x not in ("", "nan")
+                except ValueError:
+                    numeric = False
+                    if x:
+                        nonnumeric[x] += 1
+                if not numeric:
+                    labels.append("")
+                    confs.append(np.nan)
+                else:
+                    labels.append(id_to_label.get(int(float(x)), "").strip())
+                    confs.append(id_to_conf.get(int(float(x)), np.nan))
+            rec["neuropal_ids_nonnumeric"] = dict(nonnumeric)
+            rec["rois_matched_to_neuropal"] = int(sum(1 for l, c in zip(labels, confs) if not np.isnan(c)))
+            rec["rois_nonblank_label"] = int(sum(1 for l in labels if l))
+            in_keep = [l for l in labels if l in keep_names]
+            cnt = collections.Counter(in_keep)
+            rec["rois_label_in_list"] = len(in_keep)
+            rec["distinct_labels_in_list"] = len(cnt)
+            rec["duplicated_labels_in_list"] = sorted(k for k, v in cnt.items() if v > 1)
+            rec["labels_in_list"] = sorted(cnt)
+            rec["roi_labels"] = labels
+            rec["roi_label_confidence"] = [None if np.isnan(c) else c for c in confs]
+            rec["nonlist_labels_sample"] = sorted({l for l in labels if l and l not in keep_names})[:40]
+            per_label_nan = {}
+            for j, l in enumerate(labels):
+                if l in keep_names:
+                    per_label_nan.setdefault(l, []).append(float(per_roi[j]))
+            rec["label_roi_nan_fraction"] = per_label_nan
+            st = f["intervals/OptogeneticStimulusTable"]
+            st_start = st["start_time"][()]
+            st_stop = st["stop_time"][()]
+            tgt = st["target_pumpprobe_id"][()]
+            rec["stims"] = int(len(st_start))
+            rec["stims_manual_target_id"] = int((~np.isnan(tgt)).sum())
+            rec["stim_duration_s"] = sorted({round(float(x), 3) for x in st_stop - st_start})
+            rec["stim_power_W"] = sorted({float(x) for x in st["power"][()]})
+            rec["stim_interval_median_s"] = float(np.median(np.diff(st_start))) if len(st_start) > 1 else None
+            rec["stim_start_s"] = [float(x) for x in st_start]
+            rec["stim_manual_target_id"] = [None if np.isnan(x) else int(x) for x in tgt]
+            rec["first_stim_after_t0_s"] = float(st_start[0] - ts[0]) if len(st_start) else None
+            rec["ok"] = True
+    except Exception as e:  # noqa: BLE001
+        rec["ok"] = False
+        rec["error"] = f"{type(e).__name__}: {e}"
+    rows.append(rec)
+    print(fn, "ok" if rec["ok"] else rec["error"])
+with open(out_json, "w") as fh:
+    json.dump(rows, fh)
+print("files", len(rows), "ok", sum(r["ok"] for r in rows))

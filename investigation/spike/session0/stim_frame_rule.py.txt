@@ -1,0 +1,33 @@
+"""Which stimulation-frame rule reproduces example_recording's input events, and do ADAR/OLLR
+survive the preprocessing? Usage: python -I stim_frame_rule.py <exports> <nwb> <summary.json> <names.json>"""
+import json, sys, importlib.util
+import h5py, numpy as np
+spec = importlib.util.spec_from_file_location("ce", sys.argv[0].replace("stim_frame_rule.py", "compare_example_lib.py"))
+exports, nwb, summ, names_p = sys.argv[1:5]
+ex = np.load(exports + "/example_recording.npz")
+inp = ex["example_recording.inputs"]; act = ex["example_recording.activity"]
+names = json.load(open(names_p))
+s = [r for r in json.load(open(summ)) if nwb.endswith(r["file"])][0]
+lab = s["roi_labels"]
+with h5py.File(nwb, "r") as f:
+    ts = f["processing/ophys/GreenSignals/BaseGreenSignal/timestamps"][()]
+    st = f["intervals/OptogeneticStimulusTable"]
+    start = st["start_time"][()]; stop = st["stop_time"][()]; tgt = st["target_pumpprobe_id"][()]
+ex_ev = sorted((int(t), names[j]) for t, j in np.argwhere(inp == 1))
+rules = {
+    "first_ts_ge_start": np.searchsorted(ts, start, side="left"),
+    "last_ts_le_start": np.searchsorted(ts, start, side="right") - 1,
+    "nearest_ts_to_start": np.abs(ts[None, :] - start[:, None]).argmin(1),
+    "nearest_ts_to_mid": np.abs(ts[None, :] - ((start + stop) / 2)[:, None]).argmin(1),
+    "first_ts_ge_stop": np.searchsorted(ts, stop, side="left"),
+}
+T = inp.shape[0]
+for name, fr in rules.items():
+    ev = sorted((int(x) - 120, lab[int(m)]) for x, m in zip(fr, tgt) if not np.isnan(m) and lab[int(m)] in names and 0 <= int(x) - 120 < T and lab[int(m)] not in ("OLLR",))
+    print(f"{name:22s} matches {len(set(ev) & set(ex_ev))}/{len(ex_ev)}  extra {sorted(set(ev) - set(ex_ev))}")
+dts = ts[1:] - ts[:-1]
+for x, m in zip(start, tgt):
+    if np.isnan(m): continue
+    k = np.searchsorted(ts, x)
+    if lab[int(m)] in ("URAVL", "IL1DL", "AVJL", "URBR", "I2R", "VB2"):
+        print(lab[int(m)], "start", round(x, 3), "ts[k-1]", round(ts[k-1], 3), "ts[k]", round(ts[k], 3), "frac into interval", round((x - ts[k-1]) / (ts[k] - ts[k-1]), 3))
