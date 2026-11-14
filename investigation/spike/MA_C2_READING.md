@@ -60,3 +60,28 @@ inputs 0.5 and 2.
 - Creamer's arrays were built from a fuller stimulation record than the licensed deposit holds
   (SESSION_0.md). They are used as published in his MIT repository.
 - This is a probe's answer, not C.2's registered fit. When that fit exists, it is the proper row.
+
+## Amendment 1 (2026-11-14, before any measured matrix was loaded)
+
+The parity check ran and passed (`ma_c2/parity.json`): the spike-local settling copy matches the
+package's forward to 4.8 × 10⁻⁷ at most, and all 154 names match. No measured matrix was loaded and
+no reading was computed. Two rules above were wrong about the code, and are corrected here. Neither
+correction can be informed by the outcome.
+
+1. **The vector.** `hinge4.json`'s `z` is already in the package's layout. Logbook 131's run wrote
+   it directly with `encoder.write_encoder(brain, z)` on the brain built with the probe module's
+   `PROCEDURE_SETTINGS`. `package_vector` converts an older probe layout: applied to this `z`, it
+   would move 9 of the 137 entries and score a brain that was never fitted. The rule becomes: `z` is
+   written exactly as the run wrote it. The box centre is `[0.5] × 137` in the same layout.
+2. **The stimulation.** In the package's encoded forward, sensory drive enters only as the settling's
+   starting state (`h0 = features @ injection`), and each iteration is `h = tanh(h @ R + held)`,
+   where `held` is the modulators' current. An input added at every iteration therefore does not
+   correspond to how the network receives drive.
+   - **Primary:** the stimulation enters as the starting state, the way C.2's senses do. One unit is
+     added to neuron s's starting state, with every other entry at rest.
+   - **Description:** the stimulation is held at every iteration, as the modulators' current is.
+   - **Unit tests:** a starting-state input equal to a sensory drive must reproduce the sensory
+     forward, and a held input equal to the modulators' current must reproduce the forward with
+     those modulators. Both to 10⁻⁵.
+     Everything else (metric, null, seeds, named readings) is unchanged and applies to the primary
+     definition.
