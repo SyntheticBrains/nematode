@@ -164,3 +164,54 @@ them:
   of the reviewer's two options.
 - **R1a without the split.** It compares against a fit warm-started from Creamer's parameters,
   because his parameters, fitted to a different 80 animals, would be too easy to beat.
+
+## 7. Fresh review of the final spike plan
+
+At the maintainer's request, a reviewer who had seen neither the earlier reviews nor my reasoning
+read SPIKE_PLAN.md at 8a82a11c. It also fetched Creamer's repository at commit bba43302, which it
+saw only through fetch summaries, so session 0 must confirm each fact taken from it. **Verdict: not
+ready to approve as the registration.** The structure is sound, but three bars can mislead, and the
+compute estimate probably rests on a filter that Creamer's handling of missing values rules out.
+
+**What I re-checked myself.** Every claim it made about this repository holds:
+
+- in `hinge4.json`, `best` is the list of 50 per-generation scores and the answer is `z` (137
+  entries), so my plan named the wrong field;
+- `c2_encoder_probe.py reproduce` is hard-wired to Logbook 129's answer;
+- `REPRODUCE_TOLERANCE` is 10⁻⁵;
+- `v_max` is 0.2 mm/s, so 0.15·exp(z̄) clips at z̄ = 0.29.
+
+Its compute estimate (M1) also holds in order of magnitude on my own arithmetic. The exact filter
+for a 154-dimensional state costs about 10 to 25 Mflop a frame. Over about 380,000 training frames
+that is about 10 Tflop a pass, and about three times that with gradients, against the plan's
+assumption of a cheap steady-state pass.
+
+| # | Finding | Severity |
+|---|---|---|
+| X1 | R1a can certify a fitter optimising the wrong objective. Beating his parameters is one-sided on re-derived data, and a bug in the spike's own likelihood code would pass both R1a and G3. Fix: a likelihood-equivalence gate against his `lgssm_filter`, and R1a as a gain fraction against a warm start in both branches. | blocker |
+| X2 | R4 leaks: zeroing a held-out stimulation's input leaves the driven responses in the training data. Fix: mask every neuron's emissions over each held-out stimulation's window, and register the fold rule. | blocker |
+| X3 | The wiring bars have no oracle, and m is measured from a zero floor. A main-effects floor would show how much of the STAM correlation the null keeps by construction. "Below m" is filed with "absent", and "reversed" needs no minimum. Fix: a synthetic wiring oracle (one extra fit), m measured from a main-effects floor, and separate rows. | blocker |
+| M1 | Missing values are per neuron and frame (his loader keeps neurons with up to 50% missing), so the exact filter is needed and fits may cost 10 to 50 times the plan's figure. Fix: choose now between his NaN handling and a registered imputation, and add cost tiers, with a cloud float64 GPU. | major |
+| M2 | His test configuration's ridge is `Null`, and his pruning loop chooses the mask from data, possibly test data. Fix: no pruning unless the released models were pruned; ridge values stated in absolute terms. | major |
+| M3 | The split-inference rule (10⁻⁶) cannot be met. His loader holds out by named list or contiguous block, which makes recovery easier. Fix: search blocks first, match the pair pattern exactly. | major |
+| M4 | His neuron set depends on the training split, and AWC is blacklisted by default. Fix: fix the 154 by name; AWC's absence is a fact. | major |
+| M5 | G0 checks that data exist, not that they match. His runnable preprocessing may start from a processed file that is not in the repository. Fix: per-neuron comparison in session 0, and a named branch for a different processing stage. | major |
+| M6 | Several readings touch test animals outside the guard (G1's pooled check, S_C, R5 "as fits finish"). Fix: list every registered test reading, and commit every arm's weights before R2 to R5. | major |
+| M7 | Verdict-map gaps and misnamed rows. | major |
+| M8 | G3 is under-specified: no held-out rule, no floor on c_T, a margin-free must-fail, and one fit missing from the budget. | major |
+| M9 | Two arbitrary constants decide B3 (speed clips on spontaneous activity; level-coded food contact sits far outside the fitted range), and several bridge details are still open. | major |
+| M10 | M-d cannot speak to a state switch and uses the wrong comparison; say so before running. | major |
+| M11 | M-a's facts were wrong (see above), and its parity tolerance was tighter than the project's own. | major |
+| M12 | M-b's ingestion is unbudgeted: DANDI 000776 is about 1 TB, and resampling GCaMP7f to 2 Hz manufactures predictability. | major |
+| M13 | No order for cutting scope, and the bridge, which the brief requires, sits after the optional readings. Paused fits have no calendar bound. | major |
+| M14 | Two departures from the brief's "if reproduction fails, record why and stop" need the maintainer's approval: continuing after an R1b failure in the unrecovered branch, and running M-a after any R1 failure. | major |
+| M15 | Many rules depend on facts only session 0 produces (ridge, pruning, NaN handling, split, neuron set, processing stage), and the plan's amendment rule forbids changing rules. Fix: approve session 0 as fact-finding only, then register §§ 4 to 6. | major |
+
+Its minor findings cover R1b's margin, the single relabelling draw, convergence on a near-zero NLL,
+a cap on the doubling algorithm, seed hygiene, pinning W's minimum to a commit, and C.2's
+reference-row body. They are recorded in full in the session's transcript, and the next revision
+addresses them.
+
+**Its recommendation:** approve session 0 now as fact-finding only (no fits, no test reads), then
+re-present one revision that applies X1 to X3, M1 to M9 and M13 to M14. The decision is the
+maintainer's.
