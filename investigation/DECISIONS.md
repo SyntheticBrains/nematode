@@ -327,3 +327,36 @@ spike's fits cost 10 to 50 times the estimate, I bring the measured cost and a f
 and the maintainer chooses between renting and pausing C.2. W is not registered until Part B
 recommends switch, hybrid or stay. Considered instead: pausing Phase 10 now, or keeping it going
 fully with no hold on W.
+
+## After session 0 (2026-11-14)
+
+### A27. The Creamer target stops; the spike switches to Mi on Yemini
+
+Session 0 (SESSION_0.md) found that an exact reproduction of Creamer et al. cannot run on licensed
+data within the spike's budget:
+
+- the CC-BY DANDI deposit names the stimulated neuron for only 2,815 of 5,614 stimulations, which I
+  re-checked independently;
+- its labels do not reproduce his 154 neurons;
+- missing values everywhere make the exact filter necessary, at 44 to 154 h per fit here, or about
+  1,000 to 2,500 machine-hours for the planned panel.
+
+The maintainer chose A20's fallback: Mi et al. 2022 on Yemini 2021 (DANDI 000541), held-out neurons
+only, with a degree-preserving null that Mi did not run. It starts with fact-finding (session 0b).
+The Creamer route is recorded as stopped, with its reasons, and those reasons are themselves
+evidence for Part B. Considered instead:
+
+- stopping and going to Part B;
+- Creamer on DANDI's identified half with a rented GPU;
+- Creamer on the unlicensed OSF arrays.
+
+### A28. C.2 is scored against Creamer's measured responses now, as its own step
+
+The reading is described in `investigation/spike/MA_C2_READING.md`, whose rules were committed before
+it was computed. It uses the measured STAM arrays in Creamer's MIT repository and needs no
+reproduction (A25). Considered instead: keeping it inside the spike, or dropping it.
+
+### A29. A note to the data's authors, drafted for the maintainer to send
+
+The note asks whether the missing target identities, or a licence for the OSF exports, could be
+provided. The maintainer decides whether to send it. Considered instead: leaving the data as they are.
