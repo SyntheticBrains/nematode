@@ -14,3 +14,13 @@ amendment.
 - code: clean at HEAD
 - read: S's finite-entry pattern only (no values): the entry sets of all three splits and the pattern for the oracles' S_syn
 
+## section3, 2026-11-16T06:41:51+11:00
+
+- quantity: `section3`
+- time: 2026-11-16T06:41:51+11:00
+- HEAD: `13b4e0baee472cb1fec02e061a56f4fdaffd4b1c`
+- registration: `docs/experiments/logbooks/supporting/135-neural-readout-ceiling/launch.md` at commit `ac3e535ee88ac31f4f237cc963ae0bcac7533f6b`, blob `0f8fcdf2964977ed9d8aa78e419cc1923aee23f1`
+- amendment: none
+- code: clean at HEAD
+- read: section 3's summaries on the overlap of T and S: Var(T), Var(S), Cov(T, S), r(T, S) and the ceiling's class-bootstrap interval
+
