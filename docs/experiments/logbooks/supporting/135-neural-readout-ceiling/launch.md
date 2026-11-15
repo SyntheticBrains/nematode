@@ -8,8 +8,8 @@ independent review:
 - the second review found four text-level gaps: a vacuous negative oracle, the held-out-worm
   split's selection, the outcome map and the budget. All four are fixed here.
 
-**Not yet registered.** It registers when the maintainer approves it, and it is committed before any
-fit is scored. A registered verdict is never re-read under a different rule.
+**Registered 2026-11-15, on the maintainer's approval,** before any code was written, any fit was
+run or S was read. It changes only by committed amendment before any score, never after. A registered verdict is never re-read under a different rule.
 Anything else is reported beside it as description.
 
 ## 1. What this asks, and what it cannot answer
