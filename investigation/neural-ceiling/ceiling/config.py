@@ -1,8 +1,9 @@
 """Every constant of launch record 135, and every reading of an ambiguity as a named constant.
 
-Registered values carry their section. Constants under "Readings of ambiguities" are the literal
-reading of text that does not settle a choice; each is listed in the build report and changes only
-by committed amendment.
+Registered values carry their section. Constants under "Readings of ambiguities" were the literal
+reading of text that does not settle a choice; amendment 1 registers them as the rules (its item
+13, with IMPLEMENTATION_NOTES.md), and changes some (items 1, 2, 5, 6, 7, 11, 12, marked below).
+Each changes only by committed amendment.
 """
 
 from __future__ import annotations
@@ -61,6 +62,14 @@ LAMBDA_GRID = (1e-4, 1e-3, 1e-2, 1e-1, 1.0)
 N_INNER = 3
 MAX_ITER = 500
 MAX_ITER_K = 2000
+# Amendment 1, item 2: the preflight fits masked on held-out-stimulation fold 0 at lambda 1e-2 for
+# 500 and for 2,000 iterations; if the visible loss at 500 exceeds the loss at 2,000 by more than 1%
+# (relative), every sparse-support and tied fit (real and oracle data alike) gets a cap of 2,000.
+CONVERGENCE_LAMBDA = 1e-2
+CONVERGENCE_SHORT = MAX_ITER
+CONVERGENCE_LONG = 2000
+CONVERGENCE_RELATIVE = 0.01
+LONG_CAP_FAMILIES = ("masked", "null-D", "null-R", "sparse-ER", "masked-prior", "tied")
 LBFGS_HISTORY = 20
 LOSS_CHANGE_TOL = 1e-10
 SELECTION_NULL_D = (9741, 9742, 9743, 9744)
@@ -85,6 +94,19 @@ WORKERS = 8
 BUDGET_HOURS = 6.0
 BUSY_PATTERN = r"c2_fit|c2_encoder_probe|run_campaign|benchmark_grade"
 
+# ---- The guarded scorer (amendment 1, items 11 and 12) -----------------------------------------
+# The scorer refuses while this spike's code has uncommitted changes.
+CODE_DIR = HERE / "ceiling"
+# A named amendment must change the registration or add a file whose name starts with this, in
+# the registration's folder.
+AMENDMENT_FILE_PREFIX = "amendment"
+# READS.md is committed after every read, alone, with this message.
+READS_COMMIT_MESSAGE = ("Launch record 135: log the {quantity} read of S in READS.md\n\n"
+                        "Committed by the guarded scorer after the read.\n\n"
+                        "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>")
+# Products of a read in a run directory; a read is refused if READS.md is missing while any exists.
+READ_PRODUCTS = ("entry_sets.npz", "entry_sets.json", "section3.json", "results.json")
+
 # ---- Readings of ambiguities (each a named constant; see the build report) --------------------
 # Section 4: classes are listed in sorted name order before default_rng(9771).permutation.
 CLASS_ORDER_BEFORE_PERMUTATION = "sorted"
@@ -94,12 +116,14 @@ INNER_CLASS_FOLDS = "round_robin_in_outer_order"
 # Section 6: held-out-worm inner folds: default_rng(9770).permutation of T's finite off-diagonal
 # entries (row-major order), entry at permuted position p in inner fold p % 3.
 WORMS_INNER_FOLDS = "permutation_mod_3"
-# Section 5: floor-T is defined "in the held-out splits" only, so on held-out worms floor-C is
-# a + b*floor-ME and the calibrated arms drop their floor-T term.
+# Amendment 1, item 9 (registered as built): floor-T does not exist on held-out worms, so there
+# floor-C is a + b*floor-ME and the calibrated arms drop their floor-T term.
 FLOOR_T_ON_HELD_OUT_WORMS = False
-# Section 4: the held-out-neuron entry set excludes only columns with no finite T entry; it does
-# not also require the transpose floor to be defined (the stimulation split does).
-NEURON_SPLIT_REQUIRES_TRANSPOSE = False
+# Amendment 1, item 5: the held-out-neuron entry set requires every reference defined, as the
+# primary split does: floor-T (T[j, i] visible and finite) and floor-ME (column j has a finite entry
+# in a visible row; hidden rows do not count). Every arm is then scored on the same entries, and
+# each arm's count of defined entries is asserted equal to the set's size on every split.
+NEURON_SPLIT_REQUIRES_TRANSPOSE = True
 # Section 6: the ridge is lambda times the mean of the squared penalised parameters, taken jointly
 # over every penalised tensor of the arm.
 RIDGE_MEAN = "joint"
@@ -130,14 +154,17 @@ NULL_R_EXTENSION_ROUND = 1
 # Section 5: sparse-ER draws its entries by rng.choice over the 302*301 off-diagonal positions
 # (row-major), without replacement.
 ER_DRAW = "choice_without_replacement"
-# Section 7: K fits masked at a fixed lambda, the grid's smallest (the budget's "about 20, masked
-# only" leaves no room for selection), and calls a visible loss near zero below this value, in
-# standardised units (a fraction of the visible variance).
+# Amendment 1, item 8 (registered as built): K fits masked at a fixed lambda of 1e-4 with no
+# selection, and calls a visible loss near zero below this value, in standardised units.
 K_LAMBDA = LAMBDA_GRID[0]
 K_NEAR_ZERO_LOSS = 1e-3
 # Section 7: the noise and calibration patterns: K's T_syn and S_syn are M* on T's and S's
 # finite-entry patterns, as P's are.
 K_ON_PATTERNS = True
+# Amendment 1, item 1: every oracle data set (K, P, N), in every fold unit and inner fold, is
+# standardised with its truth fit's own (mean, SD), saved with the data set; the truth fits
+# themselves are standardised as the real run is (by their visible entries).
+ORACLE_STANDARDISATION = "truth_constants"
 # Section 7: a column block for target column j is one source column drawn uniformly from the
 # columns with a finite residual; entries the source has are copied by responder, and the rest are
 # drawn with replacement from the source column's finite residuals.
@@ -148,14 +175,19 @@ NOISE_SCALE_RULE = "exact_quadratic"
 # Section 3/7: an estimate outside (0, 1) is replaced by its own count-model value; the other is
 # kept.
 CALIBRATION_FALLBACK = "per_estimate"
-# Section 7: N keeps the real run's selection set, the generating draw included; the generating
-# draw is left out of the rank only.
+# Amendment 1, item 10 (registered as built): N's lambda selection keeps the fixed selection set,
+# its generating draw included; the generating draw is left out of the rank only.
 N_SELECTION_INCLUDES_GENERATING = True
-# Section 7 and 9: K and P both gate R-A, R-B and R-D on their split; K failing on held-out
-# stimulations also leaves the held-out-neuron split unread ("only the held-out-worm split is
-# read"). R-0 is always reported.
-GATED_READINGS = ("R-A", "R-B", "R-D")
+# Amendment 1, item 6: the gates of each reading. "P-worms" is P's held-out-worm line. R-0 is
+# reported on every split whatever the gates say; a split whose masked fit is unreadable is
+# reported unreadable, not refused. K failing on held-out stimulations also leaves the
+# held-out-neuron split unread (section 9: "only the held-out-worm split is read").
+GATES = {"R-A": ("K",), "R-B": ("K", "P", "N"), "R-D": ("K", "P"),
+         "R-C": ("P-worms",), "denoising": ("P-worms",)}
 K_STIM_FAIL_BLOCKS_NEURONS = True
+# Amendment 1, item 7: R-C's sparse-ER contrast needs at least 4 of the 5 draws readable, and its
+# tied contrast a readable tied; otherwise that contrast is unreadable (never "fails").
+ER_READABLE_MIN = 4
 # Section 8: the 2,000 resamples are drawn once from default_rng(9772) as integers(0, 74, (2000,
 # 74)) over the classes in sorted order and reused for every pair, split and the ceiling interval;
 # intervals are the 2.5th and 97.5th percentiles.

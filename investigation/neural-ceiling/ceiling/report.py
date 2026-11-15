@@ -40,31 +40,36 @@ def _strip(scores: dict) -> dict:
     return out
 
 
+UNREAD = {"readable": False}
+
+
 def split_readings(scores: dict, split: str, plan: dict, references: tuple[str, ...],
                    r_att: float | None = None) -> dict:
-    """m and every registered contrast on one split (whichever arms are present)."""
+    """m and every registered contrast on one split. An arm that is missing or unreadable gives an
+    unreadable (None) contrast; nothing here refuses (amendment 1, item 6)."""
     m = minimum_effect(scores, references)
+    masked = scores.get("masked", UNREAD)
     out: dict = {"m": m["m"], "r_ref": m["r_ref"], "ref_arm": m["ref_arm"],
-                 "masked_readable": bool(scores.get("masked", {}).get("readable"))}
+                 "masked_readable": bool(masked.get("readable"))}
     ref = scores.get(m["ref_arm"]) if m["ref_arm"] else None
     out["R-0"] = {"C.2 - H0": contrast(scores["C.2"], scores["H0"])
                   if "C.2" in scores and "H0" in scores else None}
     if split in C.HELD_OUT_SPLITS:
-        out["R-A"] = {arm: (contrast(scores[arm], ref) if ref and arm in scores else None)
+        out["R-A"] = {arm: (contrast(scores.get(arm, UNREAD), ref) if ref else None)
                       for arm in ("masked", "tied")}
-        out["R-B"] = {"null-D": family(scores, "masked", [a for a in plan["null-D"] if a in scores]),
-                      "null-R": family(scores, "masked", [a for a in plan["null-R"] if a in scores])}
-        if r_att is not None and math.isfinite(r_att) and "masked" in scores:
-            out["R-D"] = contrast(scores["masked"], r_att) | {"r_att": r_att}
-        else:
-            out["R-D"] = None
+        out["R-B"] = {"null-D": family(scores, "masked", list(plan["null-D"])),
+                      "null-R": family(scores, "masked", list(plan["null-R"]))}
+        rd = contrast(masked, r_att) if r_att is not None and math.isfinite(r_att) else None
+        out["R-D"] = None if rd is None else rd | {"r_att": r_att}
     else:
-        er = family(scores, "masked", [a for a in plan["sparse-ER"] if a in scores])
+        er = family(scores, "masked", list(plan["sparse-ER"]))
+        er_ok = "diff" in er and er["readable_draws"] >= C.ER_READABLE_MIN
         out["R-C"] = {
-            "tied": contrast(scores["masked"], scores["tied"]) if "tied" in scores else None,
-            "sparse-ER": ({"diff": er["diff"], "ci": er["ci"], "median": er["median"]}
-                          if "diff" in er else None),
-            "denoising": contrast(scores["masked"], scores["T"]) if "T" in scores else None,
+            "tied": contrast(masked, scores.get("tied", UNREAD)),
+            "sparse-ER": ({"diff": er["diff"], "ci": er["ci"], "median": er["median"],
+                           "readable_draws": er["readable_draws"]} if er_ok else None),
+            "sparse-ER_readable_draws": er["readable_draws"],
+            "denoising": contrast(masked, scores.get("T", UNREAD)),
         }
     return out
 

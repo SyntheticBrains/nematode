@@ -86,12 +86,13 @@ def test_k_failing_on_neurons_only():
     assert out["stimulations"]["R-B"] == R.RB_TABLE[(True, True)]
 
 
-def test_p_failing_makes_the_split_unreadable():
+def test_p_failing_gates_r_b_and_r_d_but_not_r_a():
+    """Amendment 1, item 6: R-A is gated by K only; R-B by K, P and N; R-D by K and P."""
     r = base()
     r["oracles"]["P"]["stimulations"] = False
     out = stim(r)
-    assert out["R-B"] == R.UNREADABLE
-    assert out["R-A"]["masked"] == R.GATE_P and out["R-D"] == R.GATE_P
+    assert out["R-B"] == R.UNREADABLE and out["R-D"] == R.GATE_P
+    assert out["R-A"] == {"masked": R.RA_ABOVE, "tied": R.RA_ABOVE}
 
 
 def test_gates_need_no_split_data():
@@ -176,9 +177,9 @@ def test_rb_reversal_needs_the_whole_interval_below_minus_m():
 def test_rb_one_family_unreadable_is_read_alone():
     r = base()
     r["splits"]["stimulations"]["R-B"]["null-R"] = fam(readable=16)
-    assert stim(r)["R-B"] == "null-R unreadable; null-D read alone: passes"
+    assert stim(r)["R-B"] == "null-D read alone: passes"
     r["splits"]["stimulations"]["R-B"]["null-D"] = fam(readable=17, rank=2)
-    assert stim(r)["R-B"] == "null-R unreadable; null-D read alone: fails"
+    assert stim(r)["R-B"] == "null-D read alone: fails"
 
 
 def test_rb_unreadable_family_is_not_checked_for_reversal():

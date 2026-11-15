@@ -126,15 +126,56 @@ def test_within_fold_pairs_are_excluded():
 
 
 def test_neuron_entry_set_rules():
-    """S finite in a hidden row; stimulated neuron outside the fold; columns with no finite T out."""
+    """Amendment 1, item 5: S finite in a hidden row; stimulated neuron outside the fold; floor-ME
+    defined from visible rows only; floor-T (T[j, i] visible and finite) defined."""
     layout, t, s = toy(seed=2)
     t[:, 4] = False  # a DB1-like column
     for f in range(C.N_FOLDS):
         fold = layout.in_fold(f)
         got = splits.entry_set_neurons(t, s, fold)
         assert not got[:, 4].any()
-        want = s & fold[:, None] & ~fold[None, :] & t.any(axis=0)[None, :] & splits.off_diagonal(10)
-        assert np.array_equal(got, want)
+        for i in range(10):
+            for j in range(10):
+                me = (t[:, j] & ~fold & (np.arange(10) != j)).any()
+                want = s[i, j] and i != j and fold[i] and not fold[j] and me and t[j, i]
+                assert got[i, j] == want
+
+
+def test_neuron_floor_me_ignores_hidden_rows():
+    """A column whose only finite entries lie in the hidden rows has no floor-ME there."""
+    layout, t, s = toy(seed=4)
+    fold = layout.in_fold(0)
+    j = int(np.flatnonzero(~fold)[0])
+    t[:, j] = False
+    t[np.flatnonzero(fold), j] = True  # finite only in the fold's (hidden) rows
+    t[j, j] = False
+    assert not splits.entry_set_neurons(t, s, fold)[:, j].any()
+
+
+def test_every_reference_is_defined_on_every_split_entry_set():
+    """On a T-like pattern (an all-NaN column, scattered gaps), each reference is defined on every
+    entry of each split's set, so every arm is scored on the same entries."""
+    from ceiling import stages
+
+    K = C.N_MEASURED
+    rng = np.random.default_rng(3)
+    layout = splits.make_layout([f"c{k % 74:02d}" for k in range(K)])
+    T = rng.normal(size=(K, K))
+    T[rng.random((K, K)) < 0.07] = np.nan
+    T[:, 58] = np.nan
+    np.fill_diagonal(T, np.nan)
+    s_fin = rng.random((K, K)) < 0.47
+    np.fill_diagonal(s_fin, False)
+    sets = splits.entry_sets(np.isfinite(T), s_fin, layout)
+    mech = {"H0": rng.normal(size=(K, K)), "C.2": rng.normal(size=(K, K))}
+    refs, _ = stages.reference_pool(T, layout, [u for sp in C.SPLITS for u in
+                                                ([(sp, None)] if sp == "worms" else [(sp, f) for f in range(5)])],
+                                    mech)
+    for split in C.SPLITS:
+        entries = np.any(np.stack(sets[split]), axis=0)
+        assert entries.sum() > 0
+        for name, pred in refs[split].items():
+            assert np.isfinite(pred[entries]).all(), (split, name)
 
 
 def test_worm_entry_set_and_report():

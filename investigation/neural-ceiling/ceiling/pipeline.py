@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import functools
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -32,10 +33,20 @@ def save_supports(run_dir: Path, supports: dict[str, Support], measured: np.ndar
     np.savez_compressed(Path(run_dir) / "supports.npz", **arrays)
 
 
-def save_dataset(run_dir: Path, name: str, T: np.ndarray) -> None:
+def save_dataset(run_dir: Path, name: str, T: np.ndarray,
+                 constants: tuple[float, float] | None = None) -> None:
+    """A data set's training matrix; an oracle's also carries its truth fit's (mean, SD), which
+    every fit on it standardises with (amendment 1, item 1)."""
     path = Path(run_dir) / "datasets" / f"{name}.npz"
     path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(path, T=T)
+    extra = {} if constants is None else {"mu": np.float64(constants[0]), "sigma": np.float64(constants[1])}
+    np.savez_compressed(path, T=T, **extra)
+
+
+def load_dataset(run_dir: Path, name: str) -> tuple[np.ndarray, tuple[float, float] | None]:
+    archive = np.load(Path(run_dir) / "datasets" / f"{name}.npz")
+    constants = (float(archive["mu"]), float(archive["sigma"])) if "mu" in archive.files else None
+    return archive["T"], constants
 
 
 @functools.cache
@@ -56,8 +67,8 @@ def _context(run_dir: str) -> dict:
 
 
 @functools.cache
-def _dataset(run_dir: str, name: str) -> np.ndarray:
-    return np.load(Path(run_dir) / "datasets" / f"{name}.npz")["T"]
+def _dataset(run_dir: str, name: str) -> tuple[np.ndarray, tuple[float, float] | None]:
+    return load_dataset(Path(run_dir), name)
 
 
 def builder(arm: str, ctx: dict):
@@ -95,7 +106,7 @@ def unit_masks(T: np.ndarray, layout, split: str, fold: int | None) -> dict:
 def execute(run_dir: str, task: dict) -> dict:
     """Fit one task; return its summary, its validation loss or its held-out prediction."""
     ctx = _context(run_dir)
-    T = _dataset(run_dir, task["dataset"])
+    T, constants = _dataset(run_dir, task["dataset"])
     layout = ctx["layout"]
     masks = unit_masks(T, layout, task["split"], task["fold"])
     if task["inner"] is not None:
@@ -104,7 +115,7 @@ def execute(run_dir: str, task: dict) -> dict:
     else:
         train, validation = masks["visible"], None
     result = fitting.fit(builder(task["arm"], ctx), T, train, task["lam"], task["next_lam"],
-                         task["max_iter"])
+                         task["max_iter"], constants=constants)
     out = {"id": task["id"], "summary": result.summary()}
     if validation is not None:
         out["val_loss"] = fitting.validation_mse(result.pred, T, validation, masks["unit_var"])
@@ -123,21 +134,22 @@ def _unit_key(unit) -> str:
 
 def _task(prefix: str, dataset: str, unit, arm: str, lam: float, grid: list[float], inner,
           max_iter: int) -> dict:
+    """A fit's identity includes its iteration cap, so no fit is reused across a change of cap."""
     split, fold = unit
     tag = "final" if inner is None else f"inner{inner}"
-    return {"id": f"{prefix}/{_unit_key(unit)}/{arm}/{lam:.0e}/{tag}", "dataset": dataset,
+    return {"id": f"{prefix}/{_unit_key(unit)}/{arm}/{lam:.0e}/it{max_iter}/{tag}", "dataset": dataset,
             "split": split, "fold": fold, "inner": inner, "arm": arm, "lam": lam,
             "next_lam": fitting.next_lambda(lam, grid), "max_iter": max_iter}
 
 
-def _selection_tasks(prefix, dataset, unit, group, lams, grid, selection) -> list[dict]:
-    return [_task(prefix, dataset, unit, arm, lam, grid, inner, C.MAX_ITER)
+def _selection_tasks(prefix, dataset, unit, group, lams, grid, selection, caps) -> list[dict]:
+    return [_task(prefix, dataset, unit, arm, lam, grid, inner, P.cap_of(arm, caps))
             for arm in selection for lam in lams for inner in range(C.N_INNER)]
 
 
 def select_lambdas(run_dir: Path, prefix: str, dataset: str, arms_by_unit: dict, execute_fn=execute,
                    workers: int = C.WORKERS, selection_override: dict | None = None,
-                   check_busy: bool = True) -> dict:
+                   check_busy: bool = True, caps: dict | None = None) -> dict:
     """Inner-CV lambda per unit and group, with one edge extension; returns the record."""
     grid = list(C.LAMBDA_GRID)
     choice: dict[str, dict] = {}
@@ -145,36 +157,37 @@ def select_lambdas(run_dir: Path, prefix: str, dataset: str, arms_by_unit: dict,
     sel = {g: (selection_override or {}).get(g, P.selection_arms(g))
            for gs in groups.values() for g in gs}
     tasks = [t for u, gs in groups.items() for g in gs
-             for t in _selection_tasks(prefix, dataset, u, g, grid, grid, sel[g])]
+             for t in _selection_tasks(prefix, dataset, u, g, grid, grid, sel[g], caps)]
     ck = run_tasks(tasks, run_dir, prefix, execute_fn, workers, check_busy=check_busy)
     extensions = []
     for u, gs in groups.items():
         for g in gs:
-            losses = _summed(ck, prefix, dataset, u, sel[g], grid, grid)
+            losses = _summed(ck, prefix, dataset, u, sel[g], grid, grid, caps)
             lam = fitting.choose(losses)
             ext = None if lam is None else fitting.edge_extension(lam, grid)
             choice[f"{_unit_key(u)}|{g}"] = {"unit": list(u), "group": g, "losses": losses,
                                              "lambda": lam, "extension": ext}
             if ext is not None:
-                extensions += _selection_tasks(prefix, dataset, u, g, [ext], sorted(grid + [ext]), sel[g])
+                extensions += _selection_tasks(prefix, dataset, u, g, [ext], sorted(grid + [ext]),
+                                               sel[g], caps)
     ck = run_tasks(extensions, run_dir, prefix, execute_fn, workers, check_busy=check_busy)
     for rec in choice.values():
         if rec["extension"] is None:
             continue
         u, g, ext = tuple(rec["unit"]), rec["group"], rec["extension"]
         full = sorted(grid + [ext])
-        rec["losses"] = _summed(ck, prefix, dataset, u, sel[g], full, full)
+        rec["losses"] = _summed(ck, prefix, dataset, u, sel[g], full, full, caps)
         rec["lambda"] = fitting.choose(rec["losses"])
     return choice
 
 
-def _summed(ck, prefix, dataset, unit, selection, lams, grid) -> dict[float, float]:
+def _summed(ck, prefix, dataset, unit, selection, lams, grid, caps) -> dict[float, float]:
     out = {}
     for lam in lams:
         total = 0.0
         for arm in selection:
             for inner in range(C.N_INNER):
-                tid = _task(prefix, dataset, unit, arm, lam, grid, inner, C.MAX_ITER)["id"]
+                tid = _task(prefix, dataset, unit, arm, lam, grid, inner, P.cap_of(arm, caps))["id"]
                 total += ck.done[tid]["val_loss"]
         out[lam] = total
     return out
@@ -182,11 +195,14 @@ def _summed(ck, prefix, dataset, unit, selection, lams, grid) -> dict[float, flo
 
 def final_fits(run_dir: Path, prefix: str, dataset: str, arms_by_unit: dict, choice: dict,
                execute_fn=execute, workers: int = C.WORKERS, max_iter: int | None = None,
-               fixed_lambda: float | None = None, check_busy: bool = True):
-    max_iter = C.MAX_ITER if max_iter is None else max_iter
+               fixed_lambda: float | None = None, check_busy: bool = True, caps: dict | None = None):
+    """The final fit of every arm at its chosen lambda. `max_iter`, if given, caps every arm (K);
+    otherwise each arm's cap comes from `caps`. An arm with no usable lambda (every inner fit
+    unreadable) is kept as a skipped task, so pooling reports it unreadable."""
     tasks = []
     for u, arms in arms_by_unit.items():
         for arm in arms:
+            cap = max_iter if max_iter is not None else P.cap_of(arm, caps)
             if fixed_lambda is not None:
                 lam, grid = fixed_lambda, list(C.LAMBDA_GRID)
             else:
@@ -194,9 +210,13 @@ def final_fits(run_dir: Path, prefix: str, dataset: str, arms_by_unit: dict, cho
                 lam = rec["lambda"]
                 grid = sorted(set(C.LAMBDA_GRID) | ({rec["extension"]} if rec["extension"] else set()))
             if lam is None:
-                continue  # every lambda's inner fits unreadable: the arm is unreadable here
-            tasks.append(_task(prefix, dataset, u, arm, lam, grid, None, max_iter))
-    ck = run_tasks(tasks, run_dir, prefix, execute_fn, workers, check_busy=check_busy)
+                skipped = _task(prefix, dataset, u, arm, math.nan, list(C.LAMBDA_GRID), None, cap)
+                skipped.update(id=skipped["id"].replace("/nan/", "/no-lambda/"), skipped=True)
+                tasks.append(skipped)
+                continue
+            tasks.append(_task(prefix, dataset, u, arm, lam, grid, None, cap))
+    ck = run_tasks([t for t in tasks if not t.get("skipped")], run_dir, prefix, execute_fn, workers,
+                   check_busy=check_busy)
     return ck, {t["id"]: t for t in tasks}
 
 
@@ -214,6 +234,9 @@ def pool(run_dir: Path, ck, tasks: dict, T: np.ndarray, layout) -> dict[str, dic
         matrix = np.full((C.N_MEASURED, C.N_MEASURED), np.nan)
         ok = len(ts) == expected
         for t in ts:
+            if t.get("skipped"):
+                ok = False
+                continue
             record = ck.done[t["id"]]
             pred = ck.prediction(t["id"])
             if not record["summary"]["readable"] or pred is None:
@@ -227,22 +250,49 @@ def pool(run_dir: Path, ck, tasks: dict, T: np.ndarray, layout) -> dict[str, dic
 def fit_summaries(ck, tasks: dict) -> list[dict]:
     rows = []
     for tid, t in tasks.items():
+        base = {"id": tid, "split": t["split"], "fold": t["fold"], "arm": t["arm"], "max_iter": t["max_iter"]}
+        if t.get("skipped"):
+            rows.append({**base, "readable": False, "skipped": "no lambda with a readable inner fit"})
+            continue
         s = ck.done[tid]["summary"]
-        rows.append({"id": tid, "split": t["split"], "fold": t["fold"], "arm": t["arm"],
-                     **{k: s[k] for k in ("lam_requested", "lam", "readable", "refit", "at_cap",
-                                          "n_iter", "loss", "data_loss", "n_params", "seconds",
-                                          "moved", "shares")}})
+        rows.append({**base, **{k: s[k] for k in ("lam_requested", "lam", "readable", "refit", "at_cap",
+                                                  "n_iter", "loss", "data_loss", "n_params", "seconds",
+                                                  "moved", "shares")}})
     return rows
 
 
+def cap_hits(run_dir: Path) -> dict:
+    """Every fit's cap-hit, from every checkpoint: per stage and arm family, fits and cap-hits."""
+    out: dict[str, dict] = {}
+    for path in sorted((Path(run_dir) / "checkpoints").rglob("*.jsonl")):
+        stage = str(path.relative_to(Path(run_dir) / "checkpoints").with_suffix(""))
+        for line in path.read_text().splitlines():
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            summary = record.get("summary", {})
+            if "at_cap" not in summary:
+                continue
+            arm = record["id"].split("/")[-4]  # .../<arm>/<lambda>/it<cap>/<tag>
+            key = f"{stage}|{P.family_of(arm)}"
+            cell = out.setdefault(key, {"fits": 0, "at_cap": 0, "at_cap_ids": []})
+            cell["fits"] += 1
+            if summary["at_cap"]:
+                cell["at_cap"] += 1
+                cell["at_cap_ids"].append(record["id"])
+    return out
+
+
 def run_dataset(run_dir: Path, prefix: str, dataset: str, arms_by_unit: dict, layout,
-                execute_fn=execute, workers: int = C.WORKERS, check_busy: bool = True) -> dict:
+                execute_fn=execute, workers: int = C.WORKERS, check_busy: bool = True,
+                caps: dict | None = None) -> dict:
     """Selection, finals and pooling for one data set; resumable from its checkpoint."""
     choice = select_lambdas(run_dir, prefix, dataset, arms_by_unit, execute_fn, workers,
-                            check_busy=check_busy)
+                            check_busy=check_busy, caps=caps)
     ck, tasks = final_fits(run_dir, prefix, dataset, arms_by_unit, choice, execute_fn, workers,
-                           check_busy=check_busy)
-    T = np.load(Path(run_dir) / "datasets" / f"{dataset}.npz")["T"]
+                           check_busy=check_busy, caps=caps)
+    T, _ = load_dataset(Path(run_dir), dataset)
     return {"choice": choice, "pooled": pool(run_dir, ck, tasks, T, layout),
             "fits": fit_summaries(ck, tasks)}
 

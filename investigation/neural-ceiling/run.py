@@ -9,7 +9,10 @@
     .venv/bin/python investigation/neural-ceiling/run.py plan      (fit counts only; no data)
 
 preflight reads S's finite pattern and oracles reads section 3's summaries, both through the
-guarded scorer; score makes the registered reading. Every stage that fits refuses to start, and
+guarded scorer; score makes the registered reading. Each read refuses while the code under
+ceiling/ has an uncommitted change, is logged in READS.md before S is decoded, and commits
+READS.md (alone) after it. preflight also runs amendment 1's convergence check, which may raise
+the cap of sparse-support and tied fits to 2,000 for every later stage. Every stage that fits refuses to start, and
 stops before a batch, while a process matching c2_fit, c2_encoder_probe, run_campaign or
 benchmark_grade is running. Fits are checkpointed in the run directory, so a stopped stage resumes
 where it stopped.

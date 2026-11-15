@@ -49,6 +49,13 @@ def standardise(T: np.ndarray, mask: np.ndarray) -> tuple[np.ndarray, float, flo
     return (T - mu) / sigma, mu, sigma
 
 
+def with_constants(T: np.ndarray, mu: float, sigma: float) -> tuple[np.ndarray, float, float]:
+    """Standardise by given constants (an oracle's truth fit's mean and SD)."""
+    if not sigma > 0:
+        raise ValueError("the standardisation SD must be positive")
+    return (T - mu) / sigma, float(mu), float(sigma)
+
+
 def _fit_once(model: SeriesModel, y: np.ndarray, mask: np.ndarray, lam: float,
               max_iter: int) -> tuple[float, float, int]:
     flat = torch.as_tensor(np.flatnonzero(mask), dtype=torch.long)
@@ -79,9 +86,14 @@ def _fit_once(model: SeriesModel, y: np.ndarray, mask: np.ndarray, lam: float,
 
 
 def fit(build: Callable[[], SeriesModel], T: np.ndarray, mask: np.ndarray, lam: float,
-        next_lam: float, max_iter: int = C.MAX_ITER) -> FitResult:
-    """Fit once at lam; a non-finite loss is refit once at next_lam; still non-finite, unreadable."""
-    y, mu, sigma = standardise(T, mask)
+        next_lam: float, max_iter: int = C.MAX_ITER,
+        constants: tuple[float, float] | None = None) -> FitResult:
+    """Fit once at lam; a non-finite loss is refit once at next_lam; still non-finite, unreadable.
+
+    T is standardised by the fit's visible entries, or, given `constants`, by that (mean, SD): an
+    oracle data set uses its truth fit's own constants (amendment 1, item 1), since re-standardising
+    a truth by its own spread moves it outside the model class."""
+    y, mu, sigma = standardise(T, mask) if constants is None else with_constants(T, *constants)
     start = time.perf_counter()
     attempts = 0
     for lam_used in (lam, next_lam):

@@ -147,12 +147,14 @@ def entry_set_stimulations(t_finite: np.ndarray, s_finite: np.ndarray, in_fold: 
 
 
 def entry_set_neurons(t_finite: np.ndarray, s_finite: np.ndarray, in_fold: np.ndarray) -> np.ndarray:
-    """S finite in the fold's rows, stimulated neuron outside the fold, column with a finite T."""
+    """S finite in the fold's rows, stimulated neuron outside the fold, and every reference
+    defined (amendment 1, item 5): floor-ME needs a finite entry of column j in a visible row
+    (hidden rows do not count), and floor-T needs T[j, i] visible and finite."""
     off = off_diagonal(len(t_finite))
-    column_has_t = (t_finite & off).any(axis=0)[None, :]
-    entries = s_finite & off & in_fold[:, None] & ~in_fold[None, :] & column_has_t
+    visible = t_finite & off & ~in_fold[:, None]
+    me_defined = visible.any(axis=0)[None, :]
+    entries = s_finite & off & in_fold[:, None] & ~in_fold[None, :] & me_defined
     if C.NEURON_SPLIT_REQUIRES_TRANSPOSE:
-        visible = t_finite & off & ~in_fold[:, None]
         entries &= visible.T
     return entries
 

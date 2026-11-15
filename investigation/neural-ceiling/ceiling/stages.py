@@ -126,53 +126,92 @@ def preflight(run_dir: Path, confirm: bool, workers: int = C.WORKERS) -> dict:
         widths[split] = {"diff": c["diff"], "ci": c["ci"], "width": c["ci"][1] - c["ci"][0],
                          "entries": int(entries.sum())}
     timings = timed_fits(run_dir, T, layout)
+    refuse_if_busy()  # the convergence check runs with no C.2 process (amendment 1, item 2)
+    convergence = convergence_check(run_dir, T, layout)
+    long_cap = C.CONVERGENCE_LONG if convergence["triggered"] else C.MAX_ITER
+    if convergence["triggered"]:  # re-time the long-cap kinds at their new cap, then re-project
+        timings.update(timed_fits(run_dir, T, layout, kinds=P.long_cap_kinds(), max_iter=long_cap))
     seconds = {k: v["seconds"] for k, v in timings.items()}
     cuts = P.cut_order(seconds)
     out = {"entry_sets": _load(run_dir / "entry_sets.json")["report"],
-           "c2_minus_h0_against_T": widths, "timings": timings, "projection": cuts,
-           "cuts": cuts["cuts"], "cut_order_registered": list(C.CUTS)}
+           "c2_minus_h0_against_T": widths, "timings": timings, "convergence": convergence,
+           "caps": P.caps(long_cap), "projection": cuts, "cuts": cuts["cuts"],
+           "cut_order_registered": list(C.CUTS)}
     _json(run_dir / "preflight.json", out)
     return out
 
 
-def timed_fits(run_dir: Path, T: np.ndarray, layout) -> dict:
-    """One fit of each kind on held-out-stimulation fold 0, at the preflight lambda."""
+def convergence_check(run_dir: Path, T: np.ndarray, layout) -> dict:
+    """Amendment 1, item 2: masked on held-out-stimulation fold 0 at lambda 1e-2, for 500 and for
+    2,000 iterations; the long cap applies if the visible loss at 500 is more than 1% (relative)
+    above the loss at 2,000."""
     ctx = pipeline._context(str(run_dir))
     masks = pipeline.unit_masks(T, layout, "stimulations", 0)
-    kinds = {"sparse": "masked", "sparse_nullD": "nullD:9741", "prior": "prior:masked",
+    lam = C.CONVERGENCE_LAMBDA
+    losses = {}
+    for cap in (C.CONVERGENCE_SHORT, C.CONVERGENCE_LONG):
+        start = time.perf_counter()
+        r = fitting.fit(pipeline.builder("masked", ctx), T, masks["visible"], lam,
+                        fitting.next_lambda(lam, list(C.LAMBDA_GRID)), cap)
+        losses[cap] = {"visible_loss": r.data_loss, "n_iter": r.n_iter, "at_cap": r.at_cap,
+                       "readable": r.readable, "seconds": time.perf_counter() - start}
+    short, long = losses[C.CONVERGENCE_SHORT]["visible_loss"], losses[C.CONVERGENCE_LONG]["visible_loss"]
+    relative = (short - long) / long if long > 0 else float("inf")
+    return {"lambda": lam, "fits": {str(k): v for k, v in losses.items()}, "relative": relative,
+            "threshold": C.CONVERGENCE_RELATIVE, "triggered": bool(relative > C.CONVERGENCE_RELATIVE),
+            "long_cap_families": list(C.LONG_CAP_FAMILIES)}
+
+
+def caps_of(run_dir: Path) -> dict:
+    return _load(Path(run_dir) / "preflight.json")["caps"]
+
+
+def timed_fits(run_dir: Path, T: np.ndarray, layout, kinds: tuple[str, ...] | None = None,
+               max_iter: int | None = None) -> dict:
+    """One fit of each kind on held-out-stimulation fold 0, at the preflight lambda (K at its own
+    lambda and cap; `max_iter` re-times the given kinds at another cap)."""
+    ctx = pipeline._context(str(run_dir))
+    masks = pipeline.unit_masks(T, layout, "stimulations", 0)
+    every = {"sparse": "masked", "sparse_nullD": "nullD:9741", "prior": "prior:masked",
              P.TIED: P.TIED, P.DENSE: P.DENSE, P.UNTIED: P.UNTIED,
              **{a: a for a in P.SWEEP}, "K": "masked"}
     out = {}
-    for kind, arm in kinds.items():
-        max_iter = C.MAX_ITER_K if kind == "K" else C.MAX_ITER
+    for kind, arm in every.items():
+        if kinds is not None and kind not in kinds:
+            continue
+        cap = max_iter if max_iter is not None else (C.MAX_ITER_K if kind == "K" else C.MAX_ITER)
         lam = C.K_LAMBDA if kind == "K" else C.PREFLIGHT_LAMBDA
         start = time.perf_counter()
         r = fitting.fit(pipeline.builder(arm, ctx), T, masks["visible"], lam,
-                        fitting.next_lambda(lam, list(C.LAMBDA_GRID)), max_iter)
-        out[kind] = {"arm": arm, "seconds": time.perf_counter() - start, "n_iter": r.n_iter,
-                     "at_cap": r.at_cap, "readable": r.readable, "moved": r.moved,
+                        fitting.next_lambda(lam, list(C.LAMBDA_GRID)), cap)
+        out[kind] = {"arm": arm, "max_iter": cap, "seconds": time.perf_counter() - start,
+                     "n_iter": r.n_iter, "at_cap": r.at_cap, "readable": r.readable, "moved": r.moved,
                      "n_params": r.n_params}
-    tied = out[P.TIED]
-    tied["both_move"] = bool(len(tied["moved"]) == 2 and all(m > 0 for m in tied["moved"]))
+    if P.TIED in out:
+        tied = out[P.TIED]
+        tied["both_move"] = bool(len(tied["moved"]) == 2 and all(m > 0 for m in tied["moved"]))
     return out
 
 
 # ---- oracles ----------------------------------------------------------------------------------------
 
 
-def _truth(run_dir: Path, arm: str, workers: int) -> np.ndarray:
-    """An arm fitted to all of T at the lambda of its own inner CV on T (random entries)."""
+def _truth(run_dir: Path, arm: str, workers: int, caps: dict) -> tuple[np.ndarray, tuple[float, float]]:
+    """An arm fitted to all of T at the lambda of its own inner CV on T (random entries),
+    standardised as the real run is; returns M (raw units) and the fit's (mean, SD), which every
+    oracle data set built on it standardises with (amendment 1, item 1)."""
     unit = {("worms", None): [arm]}
     prefix = f"truth/{arm}"
     choice = pipeline.select_lambdas(run_dir, prefix, "real", unit, workers=workers,
-                                     selection_override={"sparse": [arm]})
-    ck, tasks = pipeline.final_fits(run_dir, prefix, "real", unit, choice, workers=workers)
+                                     selection_override={"sparse": [arm]}, caps=caps)
+    ck, tasks = pipeline.final_fits(run_dir, prefix, "real", unit, choice, workers=workers, caps=caps)
     (tid,) = tasks
-    if not ck.done[tid]["summary"]["readable"]:
+    if tasks[tid].get("skipped") or not ck.done[tid]["summary"]["readable"]:
         raise RuntimeError(f"the truth {arm} is unreadable")
+    summary = ck.done[tid]["summary"]
     M = np.full((C.N_MEASURED, C.N_MEASURED), np.nan)
     M[splits.off_diagonal()] = ck.prediction(tid)
-    return M
+    return M, (float(summary["mu"]), float(summary["sigma"]))
 
 
 def oracles_stage(run_dir: Path, confirm: bool, workers: int = C.WORKERS) -> dict:
@@ -193,22 +232,26 @@ def oracles_stage(run_dir: Path, confirm: bool, workers: int = C.WORKERS) -> dic
     plan = P.datasets(cuts)
     held = P.oracle_splits(cuts)
 
-    m_star = _truth(run_dir, "masked", workers)
+    caps = caps_of(run_dir)
+    if C.ORACLE_STANDARDISATION != "truth_constants":
+        raise NotImplementedError(C.ORACLE_STANDARDISATION)
+    m_star, star_constants = _truth(run_dir, "masked", workers, caps)
     targets: dict[str, np.ndarray] = {}
-    reports: dict[str, dict] = {}
+    reports: dict[str, dict] = {"truth_constants": {"masked": star_constants}}
     t_syn, s_syn = oracles.known_answer(m_star, t_pat, s_pat)
-    pipeline.save_dataset(run_dir, "K", t_syn)
+    pipeline.save_dataset(run_dir, "K", t_syn, star_constants)
     targets["K"] = s_syn
     for seed in C.SEEDS_P:
         t_syn, s_syn, rep = oracles.synthetic_pair(m_star, T - m_star, t_pat, s_pat, cal["rel_T"],
                                                    cal["rel_S"], np.random.default_rng(seed))
-        pipeline.save_dataset(run_dir, f"P{seed}", t_syn)
+        pipeline.save_dataset(run_dir, f"P{seed}", t_syn, star_constants)
         targets[f"P{seed}"], reports[f"P{seed}"] = s_syn, rep
     for truth_seed, noise_seed in zip(P.n_truths(cuts), C.SEEDS_N_NOISE):
-        m_d = _truth(run_dir, f"nullD:{truth_seed}", workers)
+        m_d, d_constants = _truth(run_dir, f"nullD:{truth_seed}", workers, caps)
+        reports["truth_constants"][f"nullD:{truth_seed}"] = d_constants
         t_syn, s_syn, rep = oracles.synthetic_pair(m_d, T - m_d, t_pat, s_pat, cal["rel_T"],
                                                    cal["rel_S"], np.random.default_rng(noise_seed))
-        pipeline.save_dataset(run_dir, f"N{truth_seed}", t_syn)
+        pipeline.save_dataset(run_dir, f"N{truth_seed}", t_syn, d_constants)
         targets[f"N{truth_seed}"], reports[f"N{truth_seed}"] = s_syn, rep
     np.savez_compressed(run_dir / "oracle_targets.npz", **targets)
 
@@ -220,10 +263,13 @@ def oracles_stage(run_dir: Path, confirm: bool, workers: int = C.WORKERS) -> dic
     for name in plan:
         if name in ("real", "K"):
             continue
-        results[name] = pipeline.run_dataset(run_dir, name, name, plan[name], layout, workers=workers)
+        results[name] = pipeline.run_dataset(run_dir, name, name, plan[name], layout, workers=workers,
+                                             caps=caps)
     out = evaluate_oracles(run_dir, results, targets, layout, entry, held, cuts)
-    out.update({"calibration": cal, "noise": reports, "cuts": list(cuts)})
+    out.update({"calibration": cal, "noise": reports, "cuts": list(cuts), "caps": caps,
+                "fits": {name: r["fits"] for name, r in results.items()}})
     _json(run_dir / "oracles.json", out)
+    _json(run_dir / "cap_hits.json", pipeline.cap_hits(run_dir))
     return out
 
 
@@ -327,20 +373,31 @@ def real_stage(run_dir: Path, workers: int = C.WORKERS) -> dict:
     cuts = tuple(pre["cuts"])
     T = np.load(run_dir / "datasets/real.npz")["T"]
     layout = layout_of(run_dir)
-    arms = P.datasets(cuts)["real"]
+    planned = P.datasets(cuts)["real"]
+    arms = planned
+    not_run: list[str] = []
     if not orc["gates"]["K"]["stimulations"]:
-        arms = {u: a for u, a in arms.items() if u[0] == "worms"}  # stop rule: only held-out worms
-    result = pipeline.run_dataset(run_dir, "real", "real", arms, layout, workers=workers)
-    present = tuple(sorted({u[0] for u in arms}))
-    refs, coefs = reference_pool(T, layout, P.units(present), mechanistic_of(run_dir))
-    pooled = {s: {**result["pooled"].get(s, {}), **refs.get(s, {})} for s in present}
+        # stop rule: the learned arms are fitted on held-out worms only; the references are still
+        # built on every split, since R-0 is reported on every split (amendment 1, item 6)
+        arms = {u: a for u, a in planned.items() if u[0] == "worms"}
+        not_run = sorted({f"{u[0]}|{a}" for u, a_list in planned.items() if u[0] != "worms"
+                          for a in a_list})
+    result = pipeline.run_dataset(run_dir, "real", "real", arms, layout, workers=workers,
+                                  caps=caps_of(run_dir))
+    refs, coefs = reference_pool(T, layout, P.units(C.SPLITS), mechanistic_of(run_dir))
+    pooled = {s: {**result["pooled"].get(s, {}), **refs.get(s, {})} for s in C.SPLITS}
+    for key in not_run:
+        split, arm = key.split("|", 1)
+        pooled[split].setdefault(arm, None)
     arrays = {f"{s}|{a}": m for s, d in pooled.items() for a, m in d.items() if m is not None}
     unreadable = [f"{s}|{a}" for s, d in pooled.items() for a, m in d.items() if m is None]
     np.savez_compressed(run_dir / "pooled_real.npz", **arrays)
     _json(run_dir / "real_fits.json", {"choice": result["choice"], "fits": result["fits"],
                                        "calibration_coefficients": coefs, "unreadable": unreadable,
-                                       "splits": list(present)})
-    return {"splits": list(present), "unreadable": unreadable}
+                                       "not_run": not_run, "splits": list(C.SPLITS),
+                                       "caps": caps_of(run_dir)})
+    _json(run_dir / "cap_hits.json", pipeline.cap_hits(run_dir))
+    return {"splits": list(C.SPLITS), "unreadable": unreadable, "not_run": not_run}
 
 
 def load_pooled(run_dir: Path) -> dict:

@@ -44,6 +44,23 @@ def selection_arms(group: str) -> list[str]:
     return list(SELECTION_SET) if group == "sparse" else [group]
 
 
+def caps(long_cap: int) -> dict[str, int]:
+    """Iteration caps: the long cap for sparse-support and tied fits, the registered 500 for the
+    rest (amendment 1, item 2; long_cap is 500 unless the preflight's convergence check raises it)."""
+    return {"default": C.MAX_ITER, "long": long_cap}
+
+
+def cap_of(arm: str, caps: dict[str, int] | None) -> int:
+    if caps is None:
+        return C.MAX_ITER
+    return caps["long"] if family_of(arm) in C.LONG_CAP_FAMILIES else caps["default"]
+
+
+def long_cap_kinds() -> tuple[str, ...]:
+    """The timing kinds whose fits take the long cap."""
+    return ("sparse", "sparse_nullD", "prior", TIED)
+
+
 def kind_of(arm: str) -> str:
     """The timing kind of an arm's fit."""
     fam = family_of(arm)

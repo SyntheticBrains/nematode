@@ -387,3 +387,109 @@ They enter the phase's seed table with the logbook.
 - every registered reading, with its branch;
 - one paragraph on what the result implies for the neural track and for W's neural readings;
 - a dated note on Logbook 134 that 0.173 was a reference, not a ceiling.
+
+## Amendment 1 (2026-11-15, before any fit to real data and before any read of S)
+
+The code was built from this record and tested on synthetic data only (commit e771846a, 115 tests).
+An independent review followed, with mutation tests. Between them they found:
+
+- points where this record was wrong or would misread;
+- 22 points where it was ambiguous;
+- gaps in the code's guard and tests.
+
+No arm has been fitted to the real T, and S has not been read. Nothing below can be informed by an
+outcome.
+
+01. **Oracle standardisation.**
+
+    - **The rule:** every oracle data set (K, P and N) is standardised, in every fold unit and inner
+      fold, with its truth fit's own mean and standard deviation, not with its own visible entries.
+      The truth fits themselves are standardised as the real run is.
+    - **Why:** the series has no free scale and no intercept. Re-standardising a truth by its own
+      spread moves it outside the model class.
+    - **Evidence:** on synthetic problems, own-constant standardisation left K's fits at a visible
+      loss of 0.16 to 0.23, with held-out r of −0.21 to 0.38. The truth's constants gave about 10⁻³,
+      with r of 0.59 to 0.74. K would have failed for a spurious reason.
+
+02. **Convergence.** In the synthetic timings, every 500-iteration fit ended at the cap.
+
+    - **The check:** with no C.2 process running, the preflight fits **masked** on held-out-stimulation
+      fold 0 at λ = 10⁻² to 2,000 iterations, and records the visible loss at 500 and at 2,000.
+    - **The rule:** if the loss at 500 exceeds the loss at 2,000 by more than 1% (relative), every
+      sparse-support and **tied** fit gets a cap of 2,000. This applies alike to real and oracle data.
+      The cost is then re-projected, and § 10's order of cuts applies.
+    - **Reporting:** every fit's iteration cap is part of its identity in the checkpoint, so no fit is
+      reused across a change of cap. Every fit's cap-hit is reported.
+    - **Local minima:** fits from W = 0 stalled on 3 of 8 synthetic 20-node truths. No restarts are
+      added. K's "the optimiser stopped" branch, and oracles P and N, show their effect.
+
+03. **The family's rationale.** Linearising H0's settling from its starting state gives W⁴ alone, not
+    the sum. M = W + W² + W³ + W⁴ is kept as a truncated linear response over all paths of up to four
+    synapses. The claim in § 5 that it "matches H0's four settling iterations" is withdrawn.
+
+04. **null-D's supports** hold 5,719 to 5,754 entries (median 5,744), not 5,729 to 5,749.
+
+05. **Entry sets.** On the held-out-neuron split, the scored set also requires every reference to be
+    defined, as on the primary split, so every arm is scored on the same entries. That means floor-T
+    is defined, and floor-ME has a visible entry in the column. On every split, each arm's count of
+    defined entries is asserted equal to the set's size.
+
+06. **Gates for each reading,** resolving § 7 against § 9:
+
+    - R-A is gated by K only;
+    - R-B by K, P and N;
+    - R-D by K and P;
+    - the denoising reading by P's held-out-worm line.
+
+    **R-0 is always reported,** on every split, whatever the gates say. **A split whose masked fit is
+    unreadable** is reported as unreadable, not refused.
+
+07. **R-C's comparators.** An unreadable **tied**, or fewer than 4 of 5 readable **sparse-ER** draws,
+    makes that R-C contrast unreadable. It is not read as "fails".
+
+08. **Oracle K's λ** is fixed at 10⁻⁴, with no selection. This replaces § 7's "same selection" for K
+    only, because a noise-free truth needs no regularisation choice.
+
+09. **floor-T on held-out worms** does not exist: copying the transpose is not a held-out prediction
+    there. On that split floor-C is a + b·floor-ME, and H0-cal and C.2-cal drop their floor-T term.
+
+10. **Oracle N's λ selection** includes its generating draw, which is one of the fixed selection set.
+    "Left out" applies to the rank only.
+
+11. **S's accesses,** each through the guarded scorer:
+
+    - the preflight reads S's finite pattern only, to build the entry sets;
+    - the oracle stage reads the § 3 summaries;
+    - the scoring stage reads the values.
+
+    Each access is logged in `READS.md` before the data are decoded, and `READS.md` is committed
+    after every read.
+
+12. **The once-only rule, tightened.** A repeat read of any quantity is refused unless all three
+    hold:
+
+    - it names a committed amendment that is not an ancestor of the commit logged at the earlier
+      read;
+    - that amendment changes this record or adds an amendment file;
+    - the registration's blob matches the one logged at the first read, or the named amendment
+      accounts for the difference.
+
+    A read is also refused if `READS.md` is missing while the run directory already holds products
+    of an earlier read.
+
+13. **The other literal readings of ambiguous rules** are registered as implemented. They are listed
+    in `investigation/neural-ceiling/IMPLEMENTATION_NOTES.md` and named in
+    `investigation/neural-ceiling/ceiling/config.py`.
+
+**Tests added with this amendment.** Each mutation the review found missed now has a test that fails
+under it:
+
+- final fits or floors trained on all of T;
+- the bootstrap unit not being the class;
+- m without its floor;
+- rank ties counted for **masked**;
+- the nulls' median fixed across resamples;
+- unpaired contrasts;
+- r_ref taken as the worst reference.
+
+The review's leak check becomes a test.

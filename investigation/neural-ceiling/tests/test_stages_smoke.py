@@ -10,9 +10,7 @@ import pytest
 from ceiling import config as C
 from ceiling import inputs, pipeline, stages, supports
 from ceiling import plan as P
-from ceiling.scorer import Scorer
-
-from test_guard import REL, repo, write_stams  # noqa: F401 - the fixture
+from test_guard import REL, repo, scorer_for, write_stams  # noqa: F401 - the fixture
 
 N = 160
 
@@ -32,9 +30,8 @@ def world(tmp_path, monkeypatch, repo):  # noqa: F811
         monkeypatch.setattr(C, name, value)
     stams = tmp_path / "stams.npz"
     sha = write_stams(stams)
-    monkeypatch.setattr(stages, "make_scorer", lambda confirm, amendment=None: Scorer(
-        confirm, amendment, repo=repo, registration=repo / REL, reads=repo / REL.parent / "READS.md",
-        stams=stams, stams_sha256=sha))
+    monkeypatch.setattr(stages, "make_scorer", lambda confirm, amendment=None: scorer_for(
+        repo, stams, sha, confirm, amendment))
     run = tmp_path / "run"
     run.mkdir()
     classes = [f"c{k % 74:02d}" for k in range(C.N_MEASURED)]
@@ -60,13 +57,30 @@ def test_every_stage_in_order(world):
     assert pre["projection"]["action"] == "proceed" and pre["cuts"] == []
     assert pre["timings"]["tied"]["both_move"] in (True, False)
     assert set(pre["c2_minus_h0_against_T"]) == set(C.SPLITS)
+    conv = pre["convergence"]
+    assert set(conv["fits"]) == {str(C.CONVERGENCE_SHORT), str(C.CONVERGENCE_LONG)}
+    assert pre["caps"]["long"] == (C.CONVERGENCE_LONG if conv["triggered"] else C.MAX_ITER)
     orc = stages.oracles_stage(run, True, workers=0)
     assert set(orc["gates"]) == {"K", "P", "N"}
     assert set(orc["r_att"]) == set(C.HELD_OUT_SPLITS)
+    # every oracle data set carries its truth fit's own (mean, SD) (amendment 1, item 1)
+    star = orc["noise"]["truth_constants"]["masked"]
+    for name in ("K", "P9773"):
+        _, constants = pipeline.load_dataset(run, name)
+        assert constants == pytest.approx(tuple(star))
+    _, d_constants = pipeline.load_dataset(run, "N9741")
+    assert d_constants == pytest.approx(tuple(orc["noise"]["truth_constants"]["nullD:9741"]))
+    assert pipeline.load_dataset(run, "real")[1] is None
+    k_fit = next(iter(orc["fits"]["K"]))
+    assert k_fit["max_iter"] == C.MAX_ITER_K and "/it2/" in k_fit["id"]  # the cap is in the identity
     real = stages.real_stage(run, workers=0)
     assert set(real["splits"]) <= set(C.SPLITS)
     results = stages.score_stage(run, True)
     assert set(results["branches"]) >= {"stimulations", "neurons", "worms", "governing"}
+    for split in C.SPLITS:  # R-0 on every split
+        assert results["scores"][split]["floor-C"]["readable"] and "R-0" in results["splits"][split]
+    hits = json.loads((run / "cap_hits.json").read_text())
+    assert hits and all(v["fits"] >= v["at_cap"] for v in hits.values())
     assert (run / "results.json").exists() and (run / "results_per_arm.csv").exists()
     log = (repo_dir / REL.parent / "READS.md").read_text()
     assert [line for line in log.splitlines() if line.startswith("- quantity: ")] == [

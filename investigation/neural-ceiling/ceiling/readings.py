@@ -22,7 +22,8 @@ def score_split(target: np.ndarray, preds: dict[str, np.ndarray | None], entries
                 split: str, layout: Layout, counts: np.ndarray,
                 fold_entries: list[np.ndarray] | None = None) -> dict[str, dict]:
     """Every arm's point r (nan_corr over the entry set), its resampled r and per-fold r.
-    An arm whose prediction is None is unreadable on the split."""
+    An arm whose prediction is None is unreadable on the split. A readable arm must be defined on
+    every entry of the set, so every arm is scored on the same entries (amendment 1, item 5)."""
     rows, cols = np.nonzero(entries)
     y = target[rows, cols]
     unit = unit_class(split, layout, rows, cols)
@@ -32,6 +33,9 @@ def score_split(target: np.ndarray, preds: dict[str, np.ndarray | None], entries
             out[arm] = {"readable": False}
             continue
         vec = pred[rows, cols]
+        defined = int(np.isfinite(vec).sum())
+        if defined != len(vec):
+            raise AssertionError(f"{split}: {arm} is defined on {defined} of the {len(vec)} entries")
         per_fold = [r_point(target[f], pred[f]) for f in (fold_entries or [])]
         out[arm] = {"readable": True, "r": r_point(y, vec), "n": int(np.isfinite(vec).sum()),
                     "boot": resampled_r(y, vec, unit, counts), "per_fold": per_fold}
@@ -53,7 +57,7 @@ def family(scores: dict[str, dict], masked: str, draws: list[str]) -> dict:
     """masked against a family: readable draws, rank, and masked - median, paired."""
     readable = [d for d in draws if scores.get(d, {}).get("readable")]
     out = {"draws": len(draws), "readable_draws": len(readable)}
-    if not readable or not scores[masked].get("readable"):
+    if not readable or not scores.get(masked, {}).get("readable"):
         return out
     rs = np.array([scores[d]["r"] for d in readable])
     r_masked = scores[masked]["r"]
@@ -106,20 +110,24 @@ RC_TABLE = {
     (False, False): "Neither the constraint nor sparsity helps here.",
 }
 DENOISES = "denoises beyond copying the training matrix"
-NOT_DENOISES = "unregistered: does not denoise beyond copying the training matrix"
+NOT_DENOISES = "does not denoise beyond copying"  # amendment 1 item 13, IMPLEMENTATION_NOTES 21
 RD_ABOVE = "Above the attainable level"
 RD_DATA = "Data-limited"
 RD_MODEL = "Model- or truth-limited"
 RD_UNRESOLVED = "Unresolved"
-RD_GAP = "unregistered: above r_att by more than m, interval includes 0"
+RD_GAP = "above, unresolved"  # amendment 1 item 13, IMPLEMENTATION_NOTES 21
 DESCRIPTION = "description only (the split's oracles were cut)"
 NOT_READ_K_STIM = "not read: oracle K failed on held-out stimulations, so only held-out worms is read"
 GATE_P = f"{UNREADABLE}: oracle P failed on the split"
+ARM_UNREADABLE = f"{UNREADABLE}: the arm is unreadable"
+M_UNDEFINED = f"{UNREADABLE}: m is undefined while masked is unreadable"
 
 
 def _ra(cell: dict | None, m: float) -> str:
     if cell is None:
-        return f"{UNREADABLE}: the arm is unreadable"
+        return ARM_UNREADABLE
+    if not m == m:  # m needs masked's r
+        return M_UNDEFINED
     lo, hi = cell["ci"]
     if hi < 0:
         return RA_BELOW
@@ -128,8 +136,9 @@ def _ra(cell: dict | None, m: float) -> str:
     return RA_ABOVE if cell["diff"] >= m else RA_ABOVE_UNDER_M
 
 
-def _rb(split: dict, m: float, k_ok: bool, p_ok: bool, n_biased: bool) -> str:
-    if not split["masked_readable"] or not k_ok or not p_ok:
+def _rb(split: dict, m: float, n_biased: bool) -> str:
+    """R-B after its K and P gates: unreadable masked, then N, then readability, reversal, table."""
+    if not split["masked_readable"]:
         return UNREADABLE
     if n_biased:
         return BIASED
@@ -141,10 +150,8 @@ def _rb(split: dict, m: float, k_ok: bool, p_ok: bool, n_biased: bool) -> str:
     if any(fams[f]["ci"][1] < -m for f in live):
         return REVERSED
     passes = {f: family_passes(fams[f], m) for f in live}
-    if len(live) == 1:
-        other = "null-R" if live[0] == "null-D" else "null-D"
-        verdict = "passes" if passes[live[0]] else "fails"
-        return f"{other} unreadable; {live[0]} read alone: {verdict}"
+    if len(live) == 1:  # amendment 1 item 13, IMPLEMENTATION_NOTES 21
+        return f"{live[0]} read alone: {'passes' if passes[live[0]] else 'fails'}"
     return RB_TABLE[(passes["null-D"], passes["null-R"])]
 
 
@@ -152,19 +159,26 @@ def _won(cell: dict | None, m: float) -> bool:
     return cell is not None and cell["diff"] >= m and cell["ci"][0] > 0
 
 
-def _rc(split: dict, m: float, p_worm_ok: bool) -> str:
-    if not p_worm_ok or not split["masked_readable"]:
+def _rc(split: dict, m: float) -> str:
+    """R-C after its gate. An unreadable comparator makes its contrast unreadable, never "fails"
+    (amendment 1, item 7): tied unreadable, or fewer than 4 of 5 sparse-ER draws readable."""
+    if not split["masked_readable"]:
         return UNREADABLE
     cells = split["R-C"]
-    tied, er = cells.get("tied"), cells.get("sparse-ER")
-    if any(c is not None and c["ci"][1] < -m for c in (tied, er)):
+    live = {name: cells.get(name) for name in ("tied", "sparse-ER") if cells.get(name) is not None}
+    if not live:
+        return f"{UNREADABLE}: both contrasts unreadable"
+    if any(c["ci"][1] < -m for c in live.values()):
         return REVERSED
-    return RC_TABLE[(_won(tied, m), _won(er, m))]
+    if len(live) == 1:
+        (name, cell), = live.items()
+        return f"{name} read alone: {'wins' if _won(cell, m) else 'fails'}"
+    return RC_TABLE[(_won(live["tied"], m), _won(live["sparse-ER"], m))]
 
 
 def _rd(cell: dict | None, m: float) -> str:
     if cell is None:
-        return f"{UNREADABLE}: the arm is unreadable"
+        return ARM_UNREADABLE
     d, (lo, hi) = cell["diff"], cell["ci"]
     if abs(d) <= m:
         return RD_DATA
@@ -175,8 +189,25 @@ def _rd(cell: dict | None, m: float) -> str:
     return RD_UNRESOLVED
 
 
+def _gate(reading: str, name: str, oracles: dict) -> str | None:
+    """The first of a reading's gates that fails on the split, as its registered label."""
+    for gate in C.GATES[reading]:
+        if gate == "K":
+            if not oracles["K"][name]:
+                return GATE_K
+            if name != "stimulations" and not oracles["K"]["stimulations"] and C.K_STIM_FAIL_BLOCKS_NEURONS:
+                return NOT_READ_K_STIM
+        elif gate == "P" and not oracles["P"][name]:
+            return UNREADABLE if reading == "R-B" else GATE_P
+        elif gate == "P-worms" and not oracles["P"]["worms"]:
+            return UNREADABLE
+    return None
+
+
 def map_branches(result: dict) -> dict:
-    """Section 9's registered branch for every reading, with its precedence.
+    """Section 9's registered branch for every reading, with its precedence and amendment 1's gates
+    (item 6): R-A by K; R-B by K, P and N; R-D by K and P; R-C and denoising by P's held-out-worm
+    line. A split whose masked fit is unreadable reads as unreadable.
 
     `result` holds "oracles" (K and P per split, P's held-out-worm line, N's bias per split),
     optional "description_only" splits, and per split its m, masked readability and the
@@ -184,47 +215,47 @@ def map_branches(result: dict) -> dict:
     """
     oracles, splits = result["oracles"], result["splits"]
     description_only = set(result.get("description_only", ()))
-    k_stim_ok = bool(oracles["K"]["stimulations"])
     out: dict = {}
-    read: set[str] = set()  # held-out splits whose readings were made (not gated, not description)
+    read: dict[str, set[str]] = {}  # the readings each held-out split actually made
     for name in C.HELD_OUT_SPLITS:
-        split = splits.get(name)
         if name in description_only:
             out[name] = {"R-A": DESCRIPTION, "R-B": DESCRIPTION, "R-D": DESCRIPTION}
             continue
-        gate = None
-        if not oracles["K"][name]:
-            gate = GATE_K
-        elif name != "stimulations" and not k_stim_ok and C.K_STIM_FAIL_BLOCKS_NEURONS:
-            gate = NOT_READ_K_STIM
-        elif not oracles["P"][name]:
-            gate = GATE_P
-        if gate is not None:
-            out[name] = {"R-A": {"masked": gate, "tied": gate},
-                         "R-B": UNREADABLE if gate == GATE_P else gate, "R-D": gate}
-            continue
-        if split is None:
-            raise ValueError(f"no readings for {name}, and no gate explains why")
-        m = split["m"]
-        read.add(name)
-        out[name] = {
-            "R-A": {arm: _ra(split["R-A"].get(arm), m) for arm in ("masked", "tied")},
-            "R-B": _rb(split, m, True, True, bool(oracles["N"][name])),
-            "R-D": _rd(split.get("R-D"), m),
-        }
+        split = splits.get(name)
+        cells, made = {}, set()
+        for reading in ("R-A", "R-B", "R-D"):
+            gate = _gate(reading, name, oracles)
+            if gate is not None:
+                cells[reading] = {"masked": gate, "tied": gate} if reading == "R-A" else gate
+                continue
+            if split is None:
+                raise ValueError(f"no readings for {name}, and no gate explains why")
+            m = split["m"]
+            if reading == "R-A":
+                cells[reading] = {arm: _ra(split["R-A"].get(arm), m) for arm in ("masked", "tied")}
+            elif reading == "R-B":
+                cells[reading] = _rb(split, m, bool(oracles["N"][name]))
+            else:
+                cells[reading] = _rd(split.get("R-D"), m)
+            made.add(reading)
+        out[name], read[name] = cells, made
     worms = splits["worms"]
-    p_worm = bool(oracles["P"]["worms"])
+    gate_rc, gate_dn = _gate("R-C", "worms", oracles), _gate("denoising", "worms", oracles)
     denoise = worms["R-C"].get("denoising")
     out["worms"] = {
-        "R-C": _rc(worms, worms["m"], p_worm),
-        "denoising": (UNREADABLE if not p_worm or not worms["masked_readable"]
-                      else DENOISES if _won(denoise, worms["m"]) else NOT_DENOISES),
+        "R-C": gate_rc or _rc(worms, worms["m"]),
+        "denoising": gate_dn or (UNREADABLE if not worms["masked_readable"] or denoise is None
+                                 else DENOISES if _won(denoise, worms["m"]) else NOT_DENOISES),
     }
     out["governing"] = "stimulations"
-    out["disagreements"] = []
-    if read == set(C.HELD_OUT_SPLITS):  # named, not resolved; only between two read splits
-        stim, neur = out["stimulations"], out["neurons"]
-        out["disagreements"] = ([k for k in ("R-B", "R-D") if neur[k] != stim[k]]
-                                + [f"R-A/{a}" for a in ("masked", "tied") if neur["R-A"][a] != stim["R-A"][a]])
+    out["disagreements"] = []  # named, not resolved; only where both held-out splits made the reading
+    both = read.get("stimulations", set()) & read.get("neurons", set())
+    stim, neur = out.get("stimulations", {}), out.get("neurons", {})
+    for reading in ("R-A", "R-B", "R-D"):
+        if reading not in both:
+            continue
+        if reading == "R-A":
+            out["disagreements"] += [f"R-A/{a}" for a in ("masked", "tied") if neur["R-A"][a] != stim["R-A"][a]]
+        elif neur[reading] != stim[reading]:
+            out["disagreements"].append(reading)
     return out
-
