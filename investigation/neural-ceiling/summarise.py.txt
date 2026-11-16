@@ -1,0 +1,275 @@
+#!/usr/bin/env python
+"""Write Logbook 135's supporting data from a finished run directory. It reads no S: only the
+run's own outputs (the registered reading's results.json among them) and the committed READS.md.
+
+    .venv/bin/python investigation/neural-ceiling/summarise.py --run-dir <dir> --out <folder>
+
+Writes into <folder>: registered_reading.json and real_per_arm.csv (the score stage's outputs,
+verbatim), section3.json and preflight.json (verbatim), oracle_per_arm.csv, and analysis.json
+(every derived figure the logbook states that is not in those files).
+"""
+
+from __future__ import annotations
+
+import argparse
+import collections
+import csv
+import json
+import os
+import re
+import shutil
+import sys
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from ceiling import config as C  # noqa: E402
+from ceiling import plan as P  # noqa: E402
+from ceiling import readings  # noqa: E402
+
+DATASETS = ("K", "P9773", "P9775", "P9776", "N9741", "N9742", "N9743", "real")
+NAMED = ("masked", "dense", "untied:17", "tied", "tied:2", "tied:5", "tied:10", "tied:20", "tied:40",
+         "prior:masked", "floor-ME", "floor-T", "floor-C", "H0", "H0-cal", "C.2", "C.2-cal", "T")
+
+
+def _load(path: Path):
+    return json.loads(Path(path).read_text())
+
+
+def _records(run_dir: Path, dataset: str):
+    with open(run_dir / "checkpoints" / f"{dataset}.jsonl") as handle:
+        for line in handle:
+            yield json.loads(line)
+
+
+def _parts(task_id: str) -> dict:
+    """dataset/split/[fold/]arm/lambda/cap/kind, as the pipeline names its tasks."""
+    p = task_id.split("/")
+    if p[1] == "worms":
+        return {"dataset": p[0], "split": p[1], "fold": None, "arm": p[2], "lam": p[3], "kind": p[-1]}
+    return {"dataset": p[0], "split": p[1], "fold": int(p[2]), "arm": p[3], "lam": p[4], "kind": p[-1]}
+
+
+def _group(arm: str) -> str:
+    if arm.startswith(("nullD:", "nullR:", "er:")):
+        return arm.split(":")[0]
+    if arm.startswith("prior:"):
+        return "prior:" + _group(arm[len("prior:"):])
+    return arm
+
+
+def collapse_audit(run_dir: Path) -> dict:
+    """Every final fit whose held-out prediction is constant (amendment 2's test), by data set."""
+    out = {}
+    for ds in DATASETS:
+        hits, finals = collections.Counter(), 0
+        for rec in _records(run_dir, ds):
+            t = _parts(rec["id"])
+            if t["kind"] != "final":
+                continue
+            finals += 1
+            pred = np.load(run_dir / "preds" / rec["pred_file"])
+            if readings.is_constant(pred[np.isfinite(pred)]):
+                hits[f"{t['split']}|{_group(t['arm'])}"] += 1
+        out[ds] = {"final_fits": finals, "collapsed_finals": dict(sorted(hits.items()))}
+    return out
+
+
+def inner_losses(run_dir: Path, dataset: str, arm: str) -> dict:
+    """Summed inner-CV validation loss by lambda, per split, for one arm."""
+    out: dict = collections.defaultdict(lambda: collections.defaultdict(float))
+    for rec in _records(run_dir, dataset):
+        t = _parts(rec["id"])
+        if t["arm"] == arm and "val_loss" in rec:
+            out[t["split"]][t["lam"]] += rec["val_loss"]
+    return {s: dict(sorted(v.items(), key=lambda kv: float(kv[0]))) for s, v in out.items()}
+
+
+def lambda_choices(run_dir: Path, dataset: str) -> dict:
+    """The lambda each arm's final fits used, per split, with the count of folds at each."""
+    out: dict = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
+    for rec in _records(run_dir, dataset):
+        t = _parts(rec["id"])
+        if t["kind"] == "final":
+            out[t["split"]][_group(t["arm"])][rec["summary"]["lam"]] += 1
+    return {s: {g: {repr(k): v for k, v in sorted(c.items())} for g, c in sorted(d.items())}
+            for s, d in out.items()}
+
+
+def stage_times(run_dir: Path) -> dict:
+    out = {}
+    for ds in DATASETS:
+        st = os.stat(run_dir / "checkpoints" / f"{ds}.jsonl")
+        born = getattr(st, "st_birthtime", st.st_mtime)
+        out[ds] = {"first_record_file_created": datetime.fromtimestamp(born).isoformat(timespec="seconds"),
+                   "last_record_written": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds"),
+                   "records": sum(1 for _ in open(run_dir / "checkpoints" / f"{ds}.jsonl"))}
+    return out
+
+
+def family_summary(scores: dict) -> dict:
+    out = {}
+    for prefix in ("nullD", "nullR", "er", "prior:nullD", "prior:nullR"):
+        arms = [a for a in scores if a.startswith(prefix + ":")]
+        if not arms:
+            continue
+        vals = [scores[a]["r"] for a in arms if scores[a].get("readable")]
+        out[prefix] = {"draws": len(arms), "readable": len(vals), "median": float(np.median(vals)),
+                       "min": float(min(vals)), "max": float(max(vals)),
+                       "unreadable": sorted(a for a in arms if not scores[a].get("readable"))}
+    return out
+
+
+def prior_ranks(scores: dict) -> dict:
+    """masked-prior's rank among the prior nulls of each family (1 = above every draw)."""
+    p = scores.get("prior:masked", {})
+    if not p.get("readable"):
+        return {}
+    out = {"r": p["r"], "ci": p["ci"]}
+    for fam in ("nullD", "nullR"):
+        vals = [s["r"] for a, s in scores.items() if a.startswith(f"prior:{fam}:") and s.get("readable")]
+        out[fam] = {"rank": 1 + sum(v >= p["r"] for v in vals), "n_ranked": 1 + len(vals),
+                    "median": float(np.median(vals)), "diff_from_median": p["r"] - float(np.median(vals))}
+    return out
+
+
+def oracle_rows(oracles: dict, collapsed: dict) -> list[list]:
+    rows = []
+    for name, per in oracles["detail"]["P"].items():
+        if name.startswith("gate/"):
+            continue
+        for split in ("stimulations", "neurons", "worms"):
+            for arm, s in per[split]["scores"].items():
+                hit = f"{split}|{_group(arm)}" in collapsed.get(name, {}).get("collapsed_finals", {})
+                rows.append(_row(name, split, arm, s, hit))
+    return rows
+
+
+def _row(name, split, arm, s, collapsed):
+    folds = s.get("per_fold", []) if s.get("readable") else []
+    row = [name, split, arm, P.family_of(arm), int(bool(s.get("readable"))), int(collapsed)]
+    if s.get("readable"):
+        row += [repr(s["r"]), repr(s["ci"][0]), repr(s["ci"][1]), s["n"]]
+    else:
+        row += ["", "", "", ""]
+    return row + [repr(v) for v in folds] + [""] * (C.N_FOLDS - len(folds))
+
+
+def reads_logged(reads_md: Path) -> list[dict]:
+    out = []
+    for block in reads_md.read_text().split("\n## ")[1:]:
+        head = block.splitlines()[0]
+        quantity = re.match(r"(\S+), ", head)
+        fields = dict(re.findall(r"^- (\w+): (.*)$", block, re.M))
+        out.append({"quantity": quantity.group(1) if quantity else head, "time": fields.get("time"),
+                    "HEAD": fields.get("HEAD", "").strip("`"), "amendment": fields.get("amendment"),
+                    "read": fields.get("read")})
+    return out
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--run-dir", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args()
+    run, out = args.run_dir, args.out
+    out.mkdir(parents=True, exist_ok=True)
+
+    shutil.copyfile(run / "results.json", out / "registered_reading.json")
+    shutil.copyfile(run / "results_per_arm.csv", out / "real_per_arm.csv")
+    shutil.copyfile(run / "section3.json", out / "section3.json")
+    shutil.copyfile(run / "preflight.json", out / "preflight.json")
+
+    results, section3 = _load(run / "results.json"), _load(run / "section3.json")
+    oracles, preflight, real_fits = _load(run / "oracles.json"), _load(run / "preflight.json"), _load(run / "real_fits.json")
+    collapsed = collapse_audit(run)
+
+    with open(out / "oracle_per_arm.csv", "w", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(["dataset", "split", "arm", "family", "readable_as_recorded", "collapsed",
+                         "r", "ci_low", "ci_high", "n"] + [f"fold_{f}" for f in range(C.N_FOLDS)])
+        writer.writerows(oracle_rows(oracles, collapsed))
+
+    ceiling = section3["ceiling"]
+    scores = results["scores"]
+    # Logbook 134's committed readings, re-expressed against the reliability ceiling; Creamer's
+    # published held-out r (0.14, against his own train-test reference of 0.17) beside them
+    ma = _load(C.REPO / "docs/experiments/logbooks/supporting/134-fit-first-neural-readings/ma_c2_analysis.json")
+    earlier = {"reference_r_TS": ma["data_ceiling_train_vs_test"]["r"],
+               "reference_over_ceiling": ma["data_ceiling_train_vs_test"]["r"] / ceiling,
+               "box_centre_r": ma["primary"]["box_centre_test_r"],
+               "box_centre_over_ceiling": ma["primary"]["box_centre_test_r"] / ceiling,
+               "c2_r": ma["primary"]["c2_test_r"], "c2_over_ceiling": ma["primary"]["c2_test_r"] / ceiling,
+               "creamer_published_r": 0.14, "creamer_published_over_ceiling": 0.14 / ceiling}
+    named = {split: {a: {"r": s["r"], "ci": s["ci"]} if s.get("readable") else {"readable": False, "why": s.get("why")}
+                     for a, s in sc.items() if a in NAMED}
+             for split, sc in scores.items()}
+    shares = {split: {a: v["r"] / ceiling for a, v in d.items() if "r" in v} for split, d in named.items()}
+
+    p_detail = {}
+    for name, per in oracles["detail"]["P"].items():
+        if name.startswith("gate/"):
+            continue
+        entry = {"synthetic_ceiling": per["synthetic_ceiling"]}
+        for split in ("stimulations", "neurons", "worms"):
+            rd, sc = per[split]["readings"], per[split]["scores"]
+            e = {"m": rd["m"], "r_ref": rd["r_ref"], "ref_arm": rd["ref_arm"],
+                 "r": {a: sc[a]["r"] for a in ("masked", "floor-ME", "floor-T", "floor-C", "T") if a in sc}}
+            if split == "worms":
+                e["R-C"] = {k: v for k, v in rd["R-C"].items() if k != "tied"}
+                e["R-C"]["tied"] = "unreadable under amendment 2: the selected fit predicts a constant"
+            else:
+                e["R-A_masked"] = rd["R-A"]["masked"]
+                e["R-B"] = {f: {k: v for k, v in rd["R-B"][f].items() if k != "values"} for f in ("null-D", "null-R")}
+                e["fold_heterogeneity"] = per[split]["fold_heterogeneity"]
+            entry[split] = e
+        p_detail[name] = entry
+
+    analysis = {
+        "about": "Derived figures for Logbook 135. Verbatim run outputs sit beside this file.",
+        "reads_of_S": reads_logged(C.READS_LOG),
+        "registered_read": results["read"],
+        "ceiling": {k: v for k, v in section3.items() if k != "read"},
+        "share_of_ceiling": shares,
+        "logbook_134_against_this_ceiling": earlier,
+        "preflight": {k: preflight[k] for k in ("entry_sets", "c2_minus_h0_against_T", "convergence", "caps", "cuts")}
+                     | {"projection": {k: preflight["projection"]["steps"][-1][k] for k in ("fits", "serial_hours", "hours_on_workers", "workers")}},
+        "oracles": {
+            "gates": oracles["gates"], "r_att": oracles["r_att"], "noise": oracles["noise"],
+            "calibration": oracles["calibration"], "cuts": oracles["cuts"], "caps": oracles["caps"],
+            "K": oracles["detail"]["K"],
+            "P": p_detail,
+            "P_gate_by_draw": {k[len("gate/"):]: v for k, v in oracles["detail"]["P"].items() if k.startswith("gate/")},
+            "N": oracles["detail"]["N"],
+        },
+        "registered": {"branches": results["branches"],
+                       "splits": {s: {k: v for k, v in rd.items() if k != "R-B"} | {
+                           "R-B": {f: {k: v for k, v in rd["R-B"][f].items() if k != "values"} for f in ("null-D", "null-R")}}
+                           if "R-B" in rd else rd for s, rd in results["splits"].items()}},
+        "description": {
+            "named_arms": named,
+            "families": {split: family_summary(sc) for split, sc in scores.items()},
+            "masked_prior": {split: prior_ranks(sc) for split, sc in scores.items()},
+            "tied_inner_losses": {"real": inner_losses(run, "real", "tied"),
+                                  **{d: inner_losses(run, d, "tied") for d in ("P9773", "P9775", "P9776")}},
+            "masked_inner_losses_real": inner_losses(run, "real", "masked"),
+            "collapse_audit": collapsed,
+            "lambda_choices": {"real": lambda_choices(run, "real"),
+                               **{d: lambda_choices(run, d) for d in ("P9773", "P9775", "P9776", "N9741", "N9742", "N9743")}},
+            "cap_hits": {k: {"fits": v["fits"], "at_cap": v["at_cap"]}
+                         for k, v in _load(run / "cap_hits.json").items()},
+            "calibration_coefficients_real": real_fits["calibration_coefficients"],
+            "stage_times": stage_times(run),
+            "truth_fits": {p.stem: sum(1 for _ in open(p)) for p in sorted((run / "checkpoints" / "truth").glob("*.jsonl"))},
+        },
+    }
+    (out / "analysis.json").write_text(json.dumps(analysis, indent=1, default=float) + "\n")
+    print(f"wrote {sorted(p.name for p in out.iterdir())}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,32 @@
+{
+ "n_overlap": 10693,
+ "var_T": 6.148264345749068,
+ "var_S": 5.79179357549156,
+ "cov_TS": 1.0349214118546606,
+ "rel_S": 0.17868755133712183,
+ "rel_T": 0.16832740976243304,
+ "r_TS": 0.1734301377309304,
+ "ceiling": 0.42271450334371286,
+ "ceiling_ci": [
+  0.36869803185397865,
+  0.47106508786244583
+ ],
+ "ceiling_resamples_undefined": 0,
+ "count_model": {
+  "rel_S": 0.11601834105139608,
+  "rel_T": 0.2592522216814404,
+  "ceiling": 0.3406146518448613,
+  "bracket": [
+   0.1734301377309304,
+   0.41644944198657585
+  ]
+ },
+ "read": {
+  "head": "13b4e0baee472cb1fec02e061a56f4fdaffd4b1c",
+  "registration": "docs/experiments/logbooks/supporting/135-neural-readout-ceiling/launch.md",
+  "registration_commit": "ac3e535ee88ac31f4f237cc963ae0bcac7533f6b",
+  "registration_blob": "0f8fcdf2964977ed9d8aa78e419cc1923aee23f1",
+  "code": "clean at HEAD",
+  "amendment": null
+ }
+}

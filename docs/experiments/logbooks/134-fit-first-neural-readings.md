@@ -6,7 +6,7 @@ Established on Creamer et al.'s measured responses to single-neuron stimulation:
 - C.2's encoder at the box's centre, on the true wiring, beats all 19 degree-preserving rewirings by
   about 5.5 times the registered minimum;
 - C.2's behaviour-fitted answer shows no detectable gain over that unfitted network: their
-  intervals overlap, and no paired test was run.
+  intervals overlap, and no paired test was run. *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)*
 
 Unresolved:
 
@@ -103,15 +103,17 @@ junctions are rewired with their counts.
 
 | Network | r against the test matrix (95% CI) | Share of the ceiling |
 |---|---|---|
-| Data ceiling, training against test | 0.173 (0.155 to 0.192) | 100% |
+| Data ceiling, training against test *(a reference, not the ceiling: see the note below)* | 0.173 (0.155 to 0.192) | 100% |
 | Box centre, unfitted | 0.065 | 38% |
 | C.2, Logbook 131's answer | 0.053 (0.035 to 0.072) | 31% |
 | Relabelling null, 97.5th percentile | 0.022 | |
 
+*(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): 0.173 is r(training, test), a reference, not the ceiling. The reliability ceiling is 0.423, against which the box centre is at 15% and C.2 at 13%.)*
+
 C.2 sits above all 1,000 relabellings, but below the box centre, and the two intervals overlap
 widely. They are Creamer's Fisher intervals, which treat the matrix's entries as independent, and
 both networks are scored against the same matrix, so the overlap is not a test of their difference:
-no paired test was run. The ordering holds at inputs of 0.5 and 2, under a held input, and against the training
+no paired test was run *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions)*. The ordering holds at inputs of 0.5 and 2, under a held input, and against the training
 matrix. Sign agreement on the test entries whose measured size is above the median is 0.47 for C.2
 and 0.48 for the box centre, which is chance.
 
@@ -161,17 +163,18 @@ answer is `z`.
 **Establishes.**
 
 - The connectome's specific wiring predicts measured responses of 154 head neurons to single-neuron
-  stimulation with no fitting at all. It reaches about 38% of the data's own ceiling, against
+  stimulation with no fitting at all. It reaches about 38% of the data's own ceiling *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): of r(training, test), a reference; about 15% of the reliability ceiling of 0.423)*, against
   essentially nothing for 19 degree-preserving rewirings of it.
 - Behaviour fitting, at Logbook 131's answer, shows no detectable gain over it. Their
-  independent-entry intervals overlap, and no paired test was run.
+  independent-entry intervals overlap, and no paired test was run. *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)*
 - Unlike the two earlier wiring effects in this project, this one is not degree statistics.
 
 **Leaves unresolved.**
 
 - Whether C.2's registered fit, as opposed to a probe's answer, behaves the same.
 - Whether a model fitted to neural data would raise the score toward Creamer's published 82% of
-  the ceiling.
+  the ceiling *(2026-11-16: 82% of r(training, test); about a third of the reliability ceiling,
+  [Logbook 135](135-neural-readout-ceiling.md))*.
 - Whether the result holds on a licensed, complete stimulation record. The measured arrays were
   built from a fuller record, probably the OSF exports, which state no licence. The CC-BY deposit
   on DANDI names the target of only half its stimulations.
@@ -180,7 +183,7 @@ answer is `z`.
 
 - **Fidelity in signs or dynamics.** Sign agreement is at chance, and the networks settle within one
   step against responses integrated over 30 s.
-- **That behaviour fitting harms neural fidelity:** the intervals overlap.
+- **That behaviour fitting harms neural fidelity:** the intervals overlap. *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)*
 - **Anything about closed-loop behaviour.**
 
 ## Registered consequences
