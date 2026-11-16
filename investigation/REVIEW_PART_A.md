@@ -94,7 +94,7 @@ and found tilts both ways elsewhere:
   - ORIENTATION frames decisive negatives as low yield, where the protocol counts them as the
     product;
   - it reads the benchmark's revisions only as under-determination, though the same objection fits
-    neural data (ceiling 0.17, dense no worse than masked);
+    neural data (ceiling 0.17, dense no worse than masked) *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): 0.17 is a reference; the reliability ceiling is 0.423)*;
   - it applies its negative-rate prior to the current approach only.
 - **For Part B:** M-c is unreachable by construction for any fitted controller, so Part B needs a
   matching held-out test for the current approach. The hybrid gets no numbers from the spike.

@@ -10,18 +10,20 @@ on Creamer et al.'s two measured response matrices:
   it; on held-out neurons it is below it;
 - on held-out worms, the anatomical support beats random supports of the same size by 0.106, but the
   learned model does not improve on copying the training matrix;
-- C.2's behaviour-fitted answer is below its unfitted network, paired, by about 0.012 on all three
-  splits, with the interval below 0 on two.
+- paired, C.2's behaviour-fitted answer is not above its unfitted network on any split: C.2 − H0 is
+  −0.012 to −0.013, with the interval including 0 on the governing split and just below 0 on the
+  other two.
 
 Unresolved: whether anatomy helps a learned model beyond degree- and reciprocity-matched rewirings.
-The positive oracle showed that this test cannot detect a true anatomical model at the data's
-reliability, so R-B is unreadable, not null. **Condition on an earlier result:** Logbook 134's
+The positive oracle showed that this test, as registered (every ridge selection at the grid's
+extended edge), cannot detect a true anatomical model at the data's reliability, so R-B is
+unreadable, not null. **Condition on an earlier result:** Logbook 134's
 "data ceiling" of 0.173 was r(training, test), a reference, not a ceiling; its shares of the
-ceiling become about 15% and 13%, and its "no detectable gain" from behaviour fitting is now a
-small, paired loss.
+ceiling become about 15% and 13%, and its "no detectable gain" from behaviour fitting holds
+paired.
 
-**Date**: 2026-11-16. Registered 2026-11-15, amended twice before S's values were read (see
-[Corrections](#corrections-made-in-the-open)).
+**Date**: 2026-11-16. Registered 2026-11-15, amended twice before the registered reading (see
+[Corrections](#corrections-made-in-the-open)). Before it, S's values entered only § 3's summaries.
 
 **OpenSpec change**: none. A side spike of the fit-first investigation, local to
 [investigation/neural-ceiling/](../../../investigation/neural-ceiling/). No package code changed.
@@ -72,8 +74,8 @@ The launch record holds the full design; in brief:
   extended once by a decade at an edge, one λ shared by every sparse-support arm.
 - **Oracles, before any real score.** K (a known masked model, no noise), P (a masked fit to T plus
   noise at the estimated reliabilities, 3 draws) and N (null-D fits to T as truths, 3 truths). They
-  gate the readings: R-A by K; R-B by K, P and N; R-D by K and P; the denoising reading by P's
-  held-out-worm line.
+  gate the readings: R-A by K; R-B by K, P and N; R-D by K and P; R-C and the denoising reading by
+  P's held-out-worm line.
 - **Readings.** R-A: masked and tied against the best reference. R-B: masked against each null
   family (first of 20, at least m above the median, interval above 0). R-C (held-out worms): masked
   against tied and against sparse-ER's median, with the denoising reading (masked against
@@ -81,15 +83,16 @@ The launch record holds the full design; in brief:
   is m = max(0.25 × (r_masked − r_ref), 0.0109); intervals are paired class bootstraps
   (`default_rng(9772)`).
 - **Compute.** 16,326 fits on 8 single-thread workers: 6,705 for P, 5,430 for N, 10 for K, 76 truth
-  fits and 4,105 real. The oracle stage ran 06:44 to 10:48 on 2026-11-16 and the real stage 10:51 to
-  11:49; the reading was made at 11:55.
+  fits and 4,105 real. The oracle stage ran from its § 3 read at 06:41 to 10:48 on 2026-11-16 (its 76 truth
+  fits first, then K, P and N from 06:44), and the real stage 10:51 to 11:49; the reading was made
+  at 11:55.
 
 ## Results
 
 ### Preflight
 
-- **Convergence.** At λ = 10⁻², masked's visible loss fell 2.7% from 500 to 2,000 iterations, above
-  the 1% bar, so every sparse-support and tied fit ran to a cap of 2,000.
+- **Convergence.** At λ = 10⁻², masked's visible loss at 500 iterations exceeded its loss at 2,000
+  by 2.7% of the latter, above the 1% bar, so every sparse-support and tied fit ran to a cap of 2,000.
 - **Projection.** 14,145 fits, 3.8 h on 8 workers, inside the 6-h budget: no cut.
 - **C.2 − H0 against T** (preflight's resolution check, not a reading): about −0.021 on every split,
   interval width 0.029 to 0.042.
@@ -161,12 +164,12 @@ their medians.
 | tied | unreadable | unreadable | unreadable |
 | floor-ME | 0.035 | 0.039 | 0.067 |
 | floor-T | 0.120 (0.080 to 0.166), 28% | 0.123 (0.085 to 0.164), 29% | |
-| floor-C | 0.120, 28% | 0.106, 25% | 0.067 |
+| floor-C | 0.119, 28% | 0.106, 25% | 0.067 |
 | H0, unfitted | 0.072 (0.038 to 0.105), 17% | 0.072, 17% | 0.069, 16% |
 | **H0-cal** | **0.132 (0.088 to 0.176), 31%** | **0.120 (0.081 to 0.158), 28%** | 0.092, 22% |
-| C.2, behaviour-fitted | 0.059 (0.027 to 0.093), 14% | 0.060, 14% | 0.056, 13% |
+| C.2, behaviour-fitted | 0.059 (0.026 to 0.093), 14% | 0.060, 14% | 0.056, 13% |
 | C.2-cal | 0.128, 30% | 0.116, 27% | 0.084, 20% |
-| r(T, S), copying T | | | 0.173 (0.133 to 0.215), 41% |
+| r(T, S), copying T | | | 0.173 (0.133 to 0.214), 41% |
 | masked-prior (description) | 0.063, 15% | 0.063, 15% | 0.123, 29% |
 | dense (description) | 0.012 | 0.013 | 0.173, 41% |
 | untied rank 17; tied rank 40 (description) | | | 0.159; 0.163 |
@@ -181,7 +184,8 @@ their medians.
   masked-prior is likewise first of 20 against its prior nulls on every split.
 - **λ sat at the extended edge.** Every sparse-support arm (masked, both null families,
   sparse-ER, masked-prior) chose λ = 10, the one-time extension, in every fold of every split, on
-  real data and in every oracle. The inner loss was still falling there. On held-out stimulations,
+  real data and in every P and N oracle (K's λ is fixed at 10⁻⁴). The inner loss was still falling
+  there. On held-out stimulations,
   masked's summed inner loss at λ = 10 was 14.59, against 14.31 for predicting the fold's mean, so
   the learned sparse models are as shrunk as the registered grid allows.
 - **tied collapsed.** On every split of the real data, and on held-out worms in all three P draws,
@@ -198,9 +202,11 @@ their medians.
 
 - **Amendment 2: a constant prediction is unreadable.** After the oracles, P's tied fits on held-out
   worms were found to predict the training mean exactly, and Creamer's `nan_corr` returned −∞, +∞
-  and −0.094 for them. The code would have read those values as R-C "fails" and as R-A "above the
-  reference" or "above, under the minimum". The maintainer chose, before S's values were read, to
-  make such an arm unreadable. When the real fits to T then showed tied collapsing fold by fold (five
+  and −0.094 for them. In those draws the infinite values would have read R-C's contrast against
+  tied as "fails", and the finite rounding noise as a spurious win of about +0.47; amendment 2's
+  text names only the first. On real data, an infinite tied score would have read R-A's tied cell
+  as "above the reference" or "above, under the minimum". The maintainer chose, before the
+  registered reading, to make such an arm unreadable. When the real fits to T then showed tied collapsing fold by fold (five
   folds, five different constants, which the first rule missed), the maintainer extended the rule to
   any collapsed fold, again before the read. Those real fits were seen before the extension was
   chosen; they are fits to T and carry nothing of S. No gate depends on the rule: no masked, null or
@@ -211,9 +217,12 @@ their medians.
   16,326 fits in about 5 h, inside the 6-h budget, so no cut applied. The registration's own
   estimate before the build (0.5 to 1.5 h) assumed 1 to 3 s a fit; at the 2,000 cap a sparse fit
   takes about 8 s.
-- **Oracle P's tied values.** The oracle stage recorded tied's held-out-worm r as ±∞ before
-  amendment 2. `oracle_per_arm.csv` keeps the recorded values and flags those rows `collapsed`;
+- **Oracle P's tied values.** The oracle stage recorded tied's held-out-worm r as −∞, +∞ and the
+  finite −0.094 before amendment 2, because it ran on the earlier scoring code. `oracle_per_arm.csv` keeps the recorded values and flags those rows `collapsed`;
   `analysis.json` labels them unreadable. Neither enters a gate.
+- **Amendment 2's tests are weaker than they look.** One documents `nan_corr`'s behaviour with an
+  assertion any nonzero r passes, and none pins the threshold's relative form: an absolute
+  threshold of 10⁻¹⁰ passes them all. The code uses the relative form, as registered.
 - **The governing split disagrees with the secondary one on R-A** (not above, against below). The
   registration names a disagreement and does not resolve it; held-out stimulations governs.
 
@@ -223,17 +232,18 @@ their medians.
 
 - Under the reliability model, the measured test matrix can be predicted at up to about r 0.42
   (0.37 to 0.47). Every model here reaches at most 31% of that on unseen stimulations.
-- On unseen stimulations, the best predictors are mechanistic: the unfitted network calibrated with
-  the floors (H0-cal, 0.132) and C.2-cal (0.128), close to the transpose floor (0.120). A linear
-  response learned on the anatomical support, under this fitting, is not above them; on unseen
-  responders it is well below.
+- On unseen stimulations, a linear response learned on the anatomical support, under this fitting,
+  is not above the best reference, the unfitted network calibrated with the floors (H0-cal); on
+  unseen responders it is below it. As description, the highest point estimates are H0-cal (0.132),
+  C.2-cal (0.128) and the transpose floor (0.120), which no registered contrast separates; H0-cal
+  itself contains the floors.
 - On held-out worms, the anatomical support beats random supports of the same size by 0.106, so it
-  is not just sparsity. But the learned model does not denoise: copying T (0.173) does better than it
-  (0.140), and a dense model does as well as copying.
-- Behaviour fitting costs a little neural fidelity: C.2's answer is below its unfitted network by
-  about 0.012, paired, on every split, with the interval below 0 on held-out neurons and worms.
-- The pipeline recovers a known model (K), and shows no structural bias toward the anatomical
-  support when the truth is a rewiring (N).
+  is not just sparsity. But the learned model does not denoise: it is not above copying T (0.140
+  against 0.173, difference −0.033, −0.074 to 0.007), and a dense model does as well as copying.
+- Paired, behaviour fitting shows no neural gain: C.2's answer is not above its unfitted network on
+  any split (C.2 − H0 is −0.012 to −0.013).
+- The pipeline recovers a known model (K), and passes the negative oracle (N): when the truth is a
+  rewiring, masked was favoured in 1 of 6 truth-and-split cells, under the gate's 2-of-3 rule.
 
 **Leaves unresolved.**
 
@@ -242,6 +252,9 @@ their medians.
   R-B is unreadable. On the real data, masked is first of 20 against both families on held-out
   stimulations, by margins larger than P's; that is description the gate does not license.
 - **Whether the limit is the data or the model class** (R-D unreadable for the same reason).
+- **Whether behaviour fitting costs neural fidelity.** C.2 − H0's interval lies just below 0 on
+  held-out neurons and worms but includes 0 on the governing split, and the three splits score the
+  same two fixed predictions against overlapping entries of one S, so they are not replications.
 - **Whether a matched-size unconstrained model would do as well as the anatomy.** tied collapsed
   under the registered grid, so that comparison was not made.
 - **Whether a larger ridge would change the sparse arms.** Every selection sat at the extended
@@ -259,13 +272,13 @@ their medians.
 The standing readout has more room than Logbook 134 implied: its ceiling is about 0.42, not 0.17,
 and the best model reaches about a third of it. That room is not cheaply taken by a learned model on
 these targets. With only two aggregated matrices, a learned linear model's held-out score is
-dominated by shrinkage (every selection at the grid's edge), and the positive control shows that
-such a model cannot tell a true anatomical support from rewirings at this reliability. So W's neural
+dominated by shrinkage (every selection at the grid's edge), and the positive control shows that,
+so fitted, such a model cannot tell a true anatomical support from rewirings at this reliability. So W's neural
 readings should keep using the unfitted network's score against H0's degree-preserving null, as in
 Logbook 134, which does separate the true wiring from its rewirings, and should report the
-calibrated network (H0-cal) as the reference to beat. C.2's small paired loss against its unfitted
-wiring is the first measured cost of behaviour fitting to neural fidelity, and W's arms can be read
-for the same cost. A learned test of anatomy would need more independent data than two aggregated
+calibrated network (H0-cal) as the reference to beat. Paired, C.2 shows no neural gain over its
+unfitted wiring, and its small deficit is below 0 on two splits but not on the governing one; W's
+arms can be read for the same paired difference. A learned test of anatomy would need more independent data than two aggregated
 matrices; [DATA_CHECK.md](../../../investigation/neural-ceiling/DATA_CHECK.md) lists the datasets that
 pair controlled inputs with neural activity and behaviour, without building anything.
 
@@ -275,13 +288,15 @@ pair controlled inputs with neural activity and behaviour, without building anyt
   implications paragraph): met, above.
 - **The dated note on Logbook 134** that 0.173 was a reference, not a ceiling: met, in this change,
   at every site that cites it as the ceiling (Logbook 134, its index row, and the investigation's
-  RECOMMENDATION.md, SPIKE_REPORT.md, COMPARISON.md, IDENTIFIABILITY.md and
-  spike/MA_C2_RESULT.md). The same note records R-0's paired answer to 134's open point.
+  RECOMMENDATION.md, SPIKE_REPORT.md, COMPARISON.md, IDENTIFIABILITY.md, RECONCILE.md,
+  REVIEW_PART_A.md and spike/MA_C2_RESULT.md). The same note records R-0's paired answer to 134's
+  open point wherever 134 says no paired test was run.
 - **The seeds enter the phase's seed table:** met, in this change.
 - **The data check:** met, as desk work
   ([DATA_CHECK.md](../../../investigation/neural-ceiling/DATA_CHECK.md)); nothing was built.
-- **R-B, anatomy in a learned model:** unreachable-with-reason. The positive oracle shows the test
-  cannot detect a true anatomical model at the data's reliability; it needs more independent data.
+- **R-B, anatomy in a learned model:** unreachable-with-reason. The positive oracle shows the test,
+  as registered, cannot detect a true anatomical model at the data's reliability; it would need
+  more independent data, or a fitting that is not held at the ridge grid's edge.
 - **R-D, data against model class:** unreachable-with-reason, for the same oracle.
 - **R-C against tied:** unreachable-with-reason. tied collapses under the registered grid on every
   split.
@@ -297,7 +312,8 @@ pair controlled inputs with neural activity and behaviour, without building anyt
 Under [supporting/135-neural-readout-ceiling/](supporting/135-neural-readout-ceiling/):
 
 - `launch.md`: the registration and both amendments.
-- `READS.md`: every access to S, logged before it was decoded and committed after it.
+- `READS.md`: every access to S, logged before it was decoded and committed after it (the
+  end-of-file hook later removed its trailing blank line).
 - `registered_reading.json` and `real_per_arm.csv`: the score stage's outputs, verbatim (the JSON
   files here gain only the final newline the repository's end-of-file hook adds). Every real
   arm's r, interval, entry count and per-fold r on each split; every registered contrast; the
@@ -312,5 +328,8 @@ Under [supporting/135-neural-readout-ceiling/](supporting/135-neural-readout-cei
 
 Drivers: `investigation/neural-ceiling/run.py.txt` (setup, preflight, oracles, real, score), its
 package `ceiling/` and tests (176), and `summarise.py.txt`, which wrote the supporting data from the
-run directory. They are kept as `.py.txt`, identical to what ran at 869c5659 except that the end-of-file hook
-removed one trailing blank line from `pipeline.py.txt`; the folder's README says how to run them. The run directory itself (fits, predictions, checkpoints) is not committed.
+run directory. They are kept as `.py.txt`. The score stage ran at 869c5659; the oracle and real
+stages ran at 15aa524f, whose fitting code is the same, while amendment 2 changed only the scoring
+(`readings`, `config`, `report`), so the oracle stage's per-draw readings were scored by the
+earlier code. Apart from one trailing blank line the end-of-file hook removed from
+`pipeline.py.txt`, the files are identical to 869c5659. The folder's README says how to run them. The run directory itself (fits, predictions, checkpoints) is not committed.

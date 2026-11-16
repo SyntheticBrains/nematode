@@ -13,7 +13,7 @@ myself today.
 
 - **Part A has about twenty items your list lacks.** The ones that weigh most: the Randi atlas is
   CC-BY-4.0 on DANDI; a second stimulate-and-record dataset exists (Dunn 2025); Creamer's absolute
-  agreement is 0.14 against a ceiling of 0.17; flyvis was task-trained, not fitted to recordings; theory
+  agreement is 0.14 against a ceiling of 0.17 *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): 0.17 is r(training, test), a reference; the reliability ceiling is 0.423, of which 0.14 is about a third)*; flyvis was task-trained, not fitted to recordings; theory
   says predictions become identifiable before parameters do (in a setting where the weights are
   known); and the project's own record (LB 126 to 129) bears directly on your claims.
 
@@ -64,7 +64,7 @@ In order of weight for the decision. References are to Part A's documents.
     (`data/connectome/PROVENANCE.md`) says it cannot be vendored. DATA_INVENTORY.md.
 02. **A second stimulate-and-record dataset:** Dunn et al. 2025 (Kato lab; AWA, SMD, RIV, RIA
     stimulation; DANDI 001623, CC-BY-4.0). DATA_INVENTORY.md § 1.
-03. **Creamer's ceiling and revision:** absolute r = 0.14 against 0.17, 82% in v4 against 92% in v3, and
+03. **Creamer's ceiling and revision:** absolute r = 0.14 against 0.17 *(a reference, not the ceiling: see the note above)*, 82% in v4 against 92% in v3, and
     a fully connected model no worse. LANDSCAPE.md § 1.1.
 04. **Lappalainen is task-first** (your source, my reading).
 05. **Identifiability theory:** predictions become identifiable before parameters, which are "never

@@ -83,11 +83,13 @@ changes a registered rule or verdict; the tracker and roadmap entries stay with 
 - **The reference to beat is the calibrated unfitted network.** On held-out stimulations, H0-cal
   (the box centre, calibrated with the row/column-mean and transpose floors on visible entries)
   scores 0.132. A linear model learned on the anatomical support scores 0.099 and is not above it.
-- **A learned model cannot test anatomy on these targets.** The positive oracle showed that, at this
-  reliability, the test cannot tell a true anatomical model from rewirings. The unfitted network
+- **As registered, a learned model could not test anatomy on these targets.** The positive oracle
+  showed that, at this reliability and with every ridge selection at the grid's extended edge, the
+  test cannot tell a true anatomical model from rewirings. The unfitted network
   against H0's degree-preserving null (Logbook 134) remains the readout's valid floor for W's arms.
-- **C.2's behaviour fitting has a measured neural cost.** Paired, C.2's Logbook 131 answer is below
-  its unfitted network by about 0.012 on every split, with the interval below 0 on two of three. If
-  the readout is adopted, W's arms can be read for the same paired difference.
+- **Paired, C.2's behaviour fitting shows no neural gain.** C.2 − H0 is −0.012 to −0.013 on each
+  split; the interval includes 0 on the governing split (held-out stimulations) and lies just below
+  0 on the other two, which score the same two predictions. If the readout is adopted, W's arms can
+  be read for the same paired difference.
 - **The spike's code** is `investigation/neural-ceiling/` (kept as `.py.txt`). It used 8 workers for
-  about 5 h on 2026-11-16, after the machine was quiet, and ran nothing while a C.2 run was active.
+  about 5 h on 2026-11-16.

@@ -128,7 +128,7 @@ long-run goal *faster and more reliably* than the current approach.
   machine time as W, before any closed-loop work. The closed loop needs an interface that neither
   model provides.
 - **But behaviour fitting showed no detectable gain in neural fidelity either.** C.2's fitted head
-  scored 0.053 against its unfitted wiring's 0.065, with overlapping intervals and no paired test. *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): paired, C.2 is below the unfitted network by about 0.012 on every split, with the interval below 0 on two of three.)* If neural fidelity is part of the long-run goal,
+  scored 0.053 against its unfitted wiring's 0.065, with overlapping intervals and no paired test. *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)* If neural fidelity is part of the long-run goal,
   neural data have to supply it.
 
 ## 8. What stays unknown
