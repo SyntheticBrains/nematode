@@ -1,0 +1,355 @@
+{
+ "entry_sets": {
+  "stimulations": {
+   "size": 8588,
+   "folds": [
+    {
+     "s_finite_hidden": 2233,
+     "within_fold_excluded": 453,
+     "other_rules_excluded": 78,
+     "size": 1702
+    },
+    {
+     "s_finite_hidden": 1623,
+     "within_fold_excluded": 253,
+     "other_rules_excluded": 36,
+     "size": 1334
+    },
+    {
+     "s_finite_hidden": 2626,
+     "within_fold_excluded": 572,
+     "other_rules_excluded": 52,
+     "size": 2002
+    },
+    {
+     "s_finite_hidden": 2278,
+     "within_fold_excluded": 444,
+     "other_rules_excluded": 57,
+     "size": 1777
+    },
+    {
+     "s_finite_hidden": 2250,
+     "within_fold_excluded": 404,
+     "other_rules_excluded": 73,
+     "size": 1773
+    }
+   ]
+  },
+  "neurons": {
+   "size": 8541,
+   "folds": [
+    {
+     "s_finite_hidden": 2316,
+     "within_fold_excluded": 453,
+     "other_rules_excluded": 71,
+     "size": 1792
+    },
+    {
+     "s_finite_hidden": 1823,
+     "within_fold_excluded": 253,
+     "other_rules_excluded": 59,
+     "size": 1511
+    },
+    {
+     "s_finite_hidden": 2503,
+     "within_fold_excluded": 572,
+     "other_rules_excluded": 99,
+     "size": 1832
+    },
+    {
+     "s_finite_hidden": 2283,
+     "within_fold_excluded": 444,
+     "other_rules_excluded": 67,
+     "size": 1772
+    },
+    {
+     "s_finite_hidden": 2085,
+     "within_fold_excluded": 404,
+     "other_rules_excluded": 47,
+     "size": 1634
+    }
+   ]
+  },
+  "worms": {
+   "size": 10693,
+   "s_finite": 11010,
+   "t_not_finite_excluded": 317
+  }
+ },
+ "c2_minus_h0_against_T": {
+  "stimulations": {
+   "diff": -0.020562374912102374,
+   "ci": [
+    -0.04311019060516509,
+    -0.0015235502917561503
+   ],
+   "width": 0.04158664031340894,
+   "entries": 8397
+  },
+  "neurons": {
+   "diff": -0.020562374912102374,
+   "ci": [
+    -0.034350928565315596,
+    -0.0052922877844694734
+   ],
+   "width": 0.02905864078084612,
+   "entries": 8397
+  },
+  "worms": {
+   "diff": -0.02023760330082544,
+   "ci": [
+    -0.0385395191080426,
+    -0.004225094627678534
+   ],
+   "width": 0.034314424480364064,
+   "entries": 10693
+  }
+ },
+ "timings": {
+  "sparse": {
+   "arm": "masked",
+   "max_iter": 2000,
+   "seconds": 7.919316875282675,
+   "n_iter": 2000,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    12.081747767383316
+   ],
+   "n_params": 5103
+  },
+  "sparse_nullD": {
+   "arm": "nullD:9741",
+   "max_iter": 2000,
+   "seconds": 9.117310374975204,
+   "n_iter": 2000,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    15.622201036052168
+   ],
+   "n_params": 5749
+  },
+  "prior": {
+   "arm": "prior:masked",
+   "max_iter": 2000,
+   "seconds": 8.533181249629706,
+   "n_iter": 2000,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    0.10732596831198365,
+    5.857027134677428
+   ],
+   "n_params": 5105
+  },
+  "tied": {
+   "arm": "tied",
+   "max_iter": 2000,
+   "seconds": 1.27041529212147,
+   "n_iter": 2000,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    1.0130263846447145,
+    0.5453241809411038
+   ],
+   "n_params": 5096,
+   "both_move": true
+  },
+  "dense": {
+   "arm": "dense",
+   "max_iter": 500,
+   "seconds": 0.5241762921214104,
+   "n_iter": 500,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    3.7390502021048313
+   ],
+   "n_params": 23562
+  },
+  "untied:17": {
+   "arm": "untied:17",
+   "max_iter": 500,
+   "seconds": 0.3065998749807477,
+   "n_iter": 500,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    1.7950394588219245,
+    1.390229775148738
+   ],
+   "n_params": 5236
+  },
+  "tied:2": {
+   "arm": "tied:2",
+   "max_iter": 500,
+   "seconds": 0.006301291286945343,
+   "n_iter": 8,
+   "at_cap": false,
+   "readable": true,
+   "moved": [
+    0.03448357769221118,
+    0.012802037427904358
+   ],
+   "n_params": 312
+  },
+  "tied:5": {
+   "arm": "tied:5",
+   "max_iter": 500,
+   "seconds": 0.27149779070168734,
+   "n_iter": 500,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    1.5613124667245935,
+    0.8250333356670949
+   ],
+   "n_params": 795
+  },
+  "tied:10": {
+   "arm": "tied:10",
+   "max_iter": 500,
+   "seconds": 0.2981342081911862,
+   "n_iter": 500,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    1.402707432122603,
+    0.9372786929578919
+   ],
+   "n_params": 1640
+  },
+  "tied:20": {
+   "arm": "tied:20",
+   "max_iter": 500,
+   "seconds": 0.317071917001158,
+   "n_iter": 500,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    0.962005218190075,
+    0.7344218389556725
+   ],
+   "n_params": 3480
+  },
+  "tied:40": {
+   "arm": "tied:40",
+   "max_iter": 500,
+   "seconds": 0.3577149170450866,
+   "n_iter": 500,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    0.7176456040419131,
+    0.5011504264203749
+   ],
+   "n_params": 7760
+  },
+  "K": {
+   "arm": "masked",
+   "max_iter": 2000,
+   "seconds": 7.900227959267795,
+   "n_iter": 2000,
+   "at_cap": true,
+   "readable": true,
+   "moved": [
+    14.465126496230768
+   ],
+   "n_params": 5103
+  }
+ },
+ "convergence": {
+  "lambda": 0.01,
+  "fits": {
+   "500": {
+    "visible_loss": 0.5245306133504614,
+    "n_iter": 500,
+    "at_cap": true,
+    "readable": true,
+    "seconds": 2.0176398754119873
+   },
+   "2000": {
+    "visible_loss": 0.5106923586732417,
+    "n_iter": 2000,
+    "at_cap": true,
+    "readable": true,
+    "seconds": 7.885350333061069
+   }
+  },
+  "relative": 0.02709704667046692,
+  "threshold": 0.01,
+  "triggered": true,
+  "long_cap_families": [
+   "masked",
+   "null-D",
+   "null-R",
+   "sparse-ER",
+   "masked-prior",
+   "tied"
+  ]
+ },
+ "caps": {
+  "default": 500,
+  "long": 2000
+ },
+ "projection": {
+  "cuts": [],
+  "steps": [
+   {
+    "cuts": [],
+    "per_dataset": {
+     "real": {
+      "fits": 3646,
+      "serial_s": 20835.806493445765
+     },
+     "P9773": {
+      "fits": 1935,
+      "serial_s": 16258.552079574205
+     },
+     "P9775": {
+      "fits": 1935,
+      "serial_s": 16258.552079574205
+     },
+     "P9776": {
+      "fits": 1935,
+      "serial_s": 16258.552079574205
+     },
+     "N9741": {
+      "fits": 1540,
+      "serial_s": 13130.182917695493
+     },
+     "N9742": {
+      "fits": 1540,
+      "serial_s": 13130.182917695493
+     },
+     "N9743": {
+      "fits": 1540,
+      "serial_s": 13130.182917695493
+     },
+     "K": {
+      "fits": 10,
+      "serial_s": 79.00227959267795
+     },
+     "truths": {
+      "fits": 64,
+      "serial_s": 564.3399680033326
+     }
+    },
+    "fits": 14145,
+    "serial_hours": 30.457042703569687,
+    "hours_on_workers": 3.807130337946211,
+    "workers": 8
+   }
+  ],
+  "within_budget": true,
+  "action": "proceed"
+ },
+ "cuts": [],
+ "cut_order_registered": [
+  "description_arms",
+  "neuron_split_oracles",
+  "n_two_truths"
+ ]
+}

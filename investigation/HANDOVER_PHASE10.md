@@ -71,3 +71,26 @@ leaves for Phase 10 to decide. Nothing here changes a registered rule or verdict
 The investigation used no Phase 10 compute, and ran nothing while a C.2 run was active. Its worktree
 (`.claude/worktrees/fit-first-investigation`) holds about 3.5 GB of gitignored downloads and a 1.1 GB
 `.venv`. Both can be deleted after the merge.
+
+## Addendum, 2026-11-16: the readout's ceiling (Logbook 135)
+
+A registered spike, run after the merge, measured what the neural readout can reach. It is closed:
+nothing further is planned on these matrices. Nothing here
+changes a registered rule or verdict; the tracker and roadmap entries stay with the Phase 10 session.
+
+- **The readout's ceiling is about 0.42, not 0.17.** √(Cov(T, S)/Var(S)) is 0.423 (0.369 to 0.471).
+  The 0.173 that Logbook 134 called the ceiling is r(training, test), a reference. On unseen
+  stimulations, no model so far reaches more than 31% of the ceiling.
+- **The reference to beat is the calibrated unfitted network.** On held-out stimulations, H0-cal
+  (the box centre, calibrated with the row/column-mean and transpose floors on visible entries)
+  scores 0.132. A linear model learned on the anatomical support scores 0.099 and is not above it.
+- **As registered, a learned model could not test anatomy on these targets.** The positive oracle
+  showed that, at this reliability and with every ridge selection at the grid's extended edge, the
+  test cannot tell a true anatomical model from rewirings. The unfitted network
+  against H0's degree-preserving null (Logbook 134) remains the readout's valid floor for W's arms.
+- **Paired, C.2's behaviour fitting shows no neural gain.** C.2 − H0 is −0.012 to −0.013 on each
+  split; the interval includes 0 on the governing split (held-out stimulations) and lies just below
+  0 on the other two, which score the same two predictions. If the readout is adopted, W's arms can
+  be read for the same paired difference.
+- **The spike's code** is `investigation/neural-ceiling/` (kept as `.py.txt`). It used 8 workers for
+  about 5 h on 2026-11-16.
