@@ -883,6 +883,21 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     launch record 133. Whether W's arms carry it is decided with W's design. At registered size
     W is about 1,200–2,900 machine-hours at about 30 h a fit (the fit-first investigation's handover),
     so W registers only after one of its cuts is chosen.
+  - *(2026-11-16, Part A amended a fourth time before any registered run.)* **The fourth pilot kept
+    its third start,** which passed 2a's bar at 1.85, and **failed its go rule:** the wild type in 0
+    of 5 populations, every mutant in 5 of 5 (36.6 h). Its 2b, carrying 2a's search state, moved the
+    mutants and never local search or chemotaxis. On discarded seeds, a fresh isotropic 2b at σ₀ 0.05
+    moved local search with and without the mutants, by a rule fixed before it ran. **2b now starts
+    its own search at 2a's answer,** with the mutants as before, and the final stage still carries
+    2b's state. The pilot runs a fifth time on new seeds. About 120 h at the fourth pilot's measured
+    rates, with every first start kept. Stated, not remedied: the flip fraction, the weathervane
+    slope, pre-exit enrichment and the on-lawn onset rate did not pass in the screen's 60
+    generations. **For W:** every arm's 2b starts its own search.
+  - *(2026-11-16.)* **The neural reading follows Logbook 135:** the answer's share is of the
+    readout's measured ceiling (0.423, not 0.173), the paired test resamples the stimulated
+    neurons' classes, with the neuron resample beside it, on generators clear of Logbook 135's, and
+    Logbook 135's calibrated references are quoted. A calibrated reading is left to W, as Logbook
+    135 recommends.
   - **Held out:** Scheer's held-out dates, read beside W's minimum and band-cohort populations.
   - **Slow noise's positive control** (owed since Logbook 123) passes on Logbook 131's answer: the
     speed output responds, and the roaming 90th percentile rises 4.90 band scales at a 30-s

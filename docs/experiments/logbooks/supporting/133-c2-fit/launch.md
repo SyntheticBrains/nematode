@@ -14,6 +14,14 @@
 
 Everything seen before it is listed under *Disclosures*. No registered simulation had run, and no verdict, gate or bar after the first half changes.
 
+**Part A amended a fourth time 2026-11-16,** the maintainer's decision, before any registered run. The fourth readiness pilot kept its third start, which passed all three of 2a's readings (D_fit 1.85 at 2a's end). It then failed its go rule: the wild type passed in 0 of 5 populations, and every mutant in 5 of 5. Its 2b, which carried 2a's search state, never moved local search or chemotaxis. A two-arm screen on discarded seeds, its rule fixed before it ran, found that a new isotropic search at 2a's answer moves local search with the mutants in the objective. The amendment does three things:
+
+- 2b starts a new isotropic search at 2a's answer, σ₀ 0.05, with the mutants at half as before (*The procedure*). The final stage still carries 2b's search state.
+- The pilot moves to new seeds (*Seeds*).
+- The neural reading states its share against the readout's measured ceiling, 0.423, and its paired test resamples neuron classes, on new generators (*The neural reading*).
+
+Everything seen before it is listed under *Disclosures*. No registered simulation had run, and no verdict, gate or bar changes.
+
 ## Part A: the rules
 
 ### The controller and its arm
@@ -56,11 +64,11 @@ sep-CMA (`CMA_diagonal`), bounds [0, 1]. Each stage's answer is its mean (`xfavo
 |---|---|---|---|---|---|---|
 | **1** | the 77 parameters of the wiring, sensory, readout and noise blocks with the pool centres; the other 60 at 0.5 | D_fit's four | none | the graded box's centre, 0.5 everywhere; σ₀ 0.2; 64 animals a candidate, population 24 | 150 | the start's first |
 | **2a** | all 137 | D_fit's four | none | stage 1's answer, the speed noise's timescale set to 1 s; σ₀ 0.1 | 300 | the start's second |
-| **2b** | all 137 | all six | the run's, at half | 2a's search state | 200 | third |
+| **2b** | all 137 | all six | the run's, at half | 2a's answer; a new isotropic search, σ₀ 0.05 (amended 2026-11-16; until then 2a's search state) | 200 | third |
 | **noise** | none: 2b's answer on 30 populations | all six | the run's | | | |
 | **final** | all 137 | all six | the run's, at half, plus the failure probability | 2b's search state | 50 | fourth |
 
-- **The search state passes** from 2a to 2b and from 2b to the final stage: a new strategy at the previous answer, with the previous σ and per-parameter steps (`CMA_stds` = stds/σ).
+- **The search state passes** from 2b to the final stage: a new strategy at 2b's answer, with 2b's σ and per-parameter steps (`CMA_stds` = stds/σ). *(Amended 2026-11-16: it passed from 2a to 2b too until then.)*
 - **Fixed budgets:** every stage runs its count. The plateau rule (`cma_recovery.plateau_reached`) is read on the final stage and reported, never a stop.
 
 ### The first half's starts
@@ -218,18 +226,25 @@ Handed to C.2 by the fit-first investigation ([Logbook 134](../../134-fit-first-
 
 - **Reported:**
 
-  - the answer's r, with its Fisher interval and its share of the data's ceiling (training against test animals, 0.173);
+  - the answer's r, with its Fisher interval and its share of the readout's reliability ceiling: √rel_S = **0.423** (0.369 to 0.471), with rel_S = Cov(T, S) / Var(S) over the entries finite in both the training matrix T and the test matrix S ([Logbook 135](../../135-neural-readout-ceiling.md)). The ceiling assumes the two matrices measure one truth with independent noise. Beside it, r(T, S) = 0.173, the score of copying the training animals. *(Amended 2026-11-16: until then Part A called 0.173 the data's ceiling, which Logbook 135 showed is a reference, not a ceiling.)*;
   - **the unfitted floor:** the box centre's r, recomputed (0.0653 in Logbook 134);
   - **chance:** the 97.5th percentile of 1,000 joint relabellings of the answer's matrix, rows and columns together (`default_rng(9731)`, as M-a);
-  - **the paired test** against the box centre: d = r(answer) − r(box centre), with a 95% percentile interval from 10,000 resamples of the 154 stimulated neurons with replacement (`default_rng(9781)`). Each resample keeps the same drawn columns for both networks and the measured matrix, and r is computed over the drawn columns' entries, repeats kept. Named in advance: **fitting raised it** if the interval lies above 0, **lowered it** if it lies below 0, and **no detectable change** otherwise;
+  - **the paired test** against the box centre: d = r(answer) − r(box centre), with a 95% percentile interval from 10,000 resamples of the stimulated neurons' classes with replacement (`default_rng(9811)`).
+    - **The classes** are each stimulated neuron's class among the 302 neurons' (`quantumnematode.connectome.neuron_classes`), 74 among the 154, as Logbook 135's. A drawn class brings every stimulated neuron in it, and a class drawn c times counts c times.
+    - Each resample keeps the same drawn columns for both networks and the measured matrix, and r is computed over the drawn columns' entries, repeats kept.
+    - Named in advance, on the class interval: **fitting raised it** if the interval lies above 0, **lowered it** if it lies below 0, and **no detectable change** otherwise.
+    - **Beside it, as description:** the same interval from 10,000 resamples of the 154 stimulated neurons themselves (`default_rng(9812)`).
+    - *(Amended 2026-11-16: until then the neuron resample was the named one, on `default_rng(9781)`, which Logbook 135's null rewirings use. A class's left and right neurons respond alike, so resampling neurons counts one class as two independent draws and narrows the interval. Logbook 135 resampled classes for every interval. Its paired difference for Logbook 131's answer, which has been read, is a reason to read the two the same way, not the reason for the unit.)*;
   - **the wiring-only control:** the connectome's own contacts, with no network. C[j, s] is the count of chemical synapses from s to j plus gap junctions between s and j, from the wiring the encoded brain is built on, unsigned. It is scored by the same metric, with C·C (two-contact paths) beside it. Named in advance: if either reaches the box centre's r, the reading grades the wiring more than the network, and both networks' r are read that way;
-  - sign agreement on the test entries whose measured size is above the median, as M-a.
+  - sign agreement on the test entries whose measured size is above the median, as M-a;
+  - **references, quoted from Logbook 135 and not computed here** (added 2026-11-16): on its held-out-worm split, the nearest to a reading of the whole test matrix (it scores the entries finite in both matrices), the unfitted network calibrated with the row/column-mean floor scored 0.092 (H0-cal), and Logbook 131's answer calibrated likewise 0.084 (C.2-cal). On that split the transpose floor does not exist, so both calibrations drop it. Logbook 135's 0.132 for H0-cal is on held-out stimulations and does not compare with this reading. A calibrated reading of the registered answer is left to W's registration, where Logbook 135 places it.
 
 - **Its limits, stated in advance:**
 
   - the measured arrays come from a fuller record than the CC-BY deposit;
   - the network settles within one step, against responses integrated over 30 s;
-  - one answer, so it says nothing about fitting in general.
+  - one answer, so it says nothing about fitting in general;
+  - the ceiling and both references come from Logbook 135's reading of the same test matrix, so the share and the comparison rest on one cohort of 30 test animals.
 
 ### Seeds
 
@@ -251,22 +266,25 @@ The first start takes the run's first two CMA seeds. Start a = 1–5 takes R + 2
 | the first readiness pilot, stopped at 2a | 900,000,000, on the first layout | 9504–9507 | discarded |
 | the second readiness pilot, which kept no start | 1,100,000,000 | 9531–9534, restarts 9541–9550 | discarded |
 | the third readiness pilot, whose kept start missed 2a's bar | 1,140,000,000, on the 20,000,000 layout | 9591–9594, restarts 9651–9660 | discarded |
-| the readiness pilot (amended 2026-11-14) | 1,200,000,000 | 9661–9664, restarts 9671–9680 | discarded |
+| the fourth readiness pilot, whose answer failed the go rule | 1,200,000,000 | 9661–9664, restarts 9671–9680 | discarded |
+| the readiness pilot (amended 2026-11-16) | 1,360,000,000 | 9682–9685, restarts 9686–9695 | discarded |
 | F.0b-ii's recovery fit | 1,240,000,000 (920,000,000 until 2026-11-14) | 5801–5804, restarts 5831–5840 | registered |
 | the truth's observation (q = 0) and re-simulations (1–20) | 940,000,000 + 200·q + i | | registered |
 | the prior draws | 941,000,000 + 200·j + i, j < 200 | `default_rng(5805)` | registered |
 | the box centre | 942,000,000 + 200·q + i, q < 10 | | registered |
 | the registered fit | 1,280,000,000 (960,000,000 until 2026-11-14) | 5811–5814, restarts 5841–5850 | registered |
 | the tax-4 leave-one-out | 1,320,000,000 (980,000,000 until 2026-11-14) | 5821–5824, restarts 5851–5860 | registered, description |
-| the neural reading | chance's relabellings `default_rng(9731)`, M-a's own null reused; the paired test `default_rng(9781)` | | description |
+| the neural reading | chance's relabellings `default_rng(9731)`, M-a's own null reused; the paired test's class resample `default_rng(9811)` and neuron resample `default_rng(9812)` (`default_rng(9781)` until 2026-11-16) | | description |
 | slow noise's control | 888,000,000 + i, reference episode 888,000,200 | | the control's reading |
 | the stand-in preflight | 885,000,000–887,100,999 | `default_rng(9512)` | discarded |
 | the smoke | 99,880,000–99,889,999: 8 animals, population 6, two generations a stage outside 2a, 22 in 2a, four starts | 9508–9511, restarts 9561–9566 | discarded |
 | the runs that diagnosed the first pilot | 1,010,000,000–1,055,000,199, and 890,000,000 + i for the checks of its worm | 9516–9525 | discarded |
 | the runs that diagnosed the second pilot | 1,060,000,000–1,065,000,199 and 1,090,000,000–1,095,000,199 (its starts 0 and 3 again), 1,130,000,000–1,135,000,199 (the guarded first half) | 9571, 9574, 9581–9582 | discarded |
 | the check that diagnosed the third pilot | 1,170,000,000 + 1,000·p + i, p < 4 (`probes/dopamine_flip.py.txt`) | | discarded |
+| the screen that diagnosed the fourth pilot (`probes/two_b_screen.py.txt`) | arm A 1,400,000,000 and arm B 1,410,000,000, each + 200·(48·(g − 1) + m) + i for g ≤ 60 (to 1,400,575,999 and 1,410,575,999); readouts on the fourth pilot's readout animals, 1,216,000,000 + i, reused for reading | 9922 (A), 9923 (B) | discarded |
+| a timing check of the simulation's kernels, no reading | 1,420,000,000–1,420,000,207 | | discarded |
 
-The tests check that every block is disjoint from the others, from the three earlier pilots' and their diagnoses', from the seed table's earlier blocks (which reach 880,001,999), and from the fit-first investigation's reserved animals (1,500,000,000–1,501,000,199). They also check that no run takes a CMA seed the seed tables give earlier pilots, probes or tests: 9601–9616, and the investigation's 9701–9722, 9731, 9732 and 9741–9759, among them.
+The tests check that every block is disjoint from the others, from the four earlier pilots' and their diagnoses', from the timing check's, from the seed table's earlier blocks (which reach 880,001,999), and from the fit-first investigation's reserved animals (1,500,000,000–1,501,000,199). The fourth pilot's block is taken whole, to 1,237,279,999, every start's 2a included. They also check that no run takes a CMA seed the seed tables give earlier pilots, probes or tests: 9601–9616, the screen's 9922 and 9923, the investigation's 9701–9722, 9731, 9732 and 9741–9759, and the neural readout's ceiling's 9770–9779, 9781–9799 and 9801–9805 ([Logbook 135](../../135-neural-readout-ceiling.md)), among them. The paired test's two generators are checked the same way.
 
 ### Disclosures
 
@@ -277,7 +295,7 @@ Seen before this record was committed, all on discarded seeds:
   - up to six starts of the first half, the first that holds the lawn kept (amended 2026-11-12; stage 1 was first registered at 200 animals and population 48);
   - 250 generations after 2a, not 500;
   - the mutants from 2b;
-  - the search state carried from 2a;
+  - the search state carried from 2a (until 2026-11-16, when 2b began restarting isotropically at σ₀ 0.05, as the route's 2b did; it is still carried from 2b to the final stage);
   - the package's speed-following knots throughout;
   - one noise measurement of 30 populations;
   - tph-1 on the roaming fraction alone.
@@ -459,6 +477,83 @@ Seen before this record was committed, all on discarded seeds:
     - a resume test that could not tell a resume from a restart, which now checks;
     - stale cost figures, a seed row missing chance's generator, and the neural reading's new code not stated. Each is now corrected or stated.
 
+**Seen before the amendment of 2026-11-16,** all on discarded seeds, each run's rule fixed before it ran (`pilot_fourth.json`, and each script as run with its record under `probes/`):
+
+- **The fourth readiness pilot** (base 1,200,000,000, Part A as amended 2026-11-14), 36.6 h from launch to its record:
+
+  | Start | CMA | 2a's readings | Outcome |
+  |---|---|---|---|
+  | 0 | 9661, 9662 | the lawn 0.899 | dropped at the lawn, after 2.2 h |
+  | 1 | 9671, 9672 | the lawn 0.957; the descent 4.53 | dropped at the descent, after 4.2 h |
+  | 2 | 9673, 9674 | the lawn 0.997; the descent 3.30; the bar 1.85 | kept |
+
+  - **The kept start's stages:** stage 1 0.81 h, 2a 6.04 h, 2b 19.24 h, the final stage 3.95 h. The final stage did not plateau.
+  - **Its go rule failed.** The wild type passed in 0 of the 5 populations, and tph-1, pdfr-1 and tax-4 in 5 of 5 each. Over all 15 populations the wild type passed in none, tph-1 in 14, pdfr-1 and tax-4 in all 15.
+  - **What failed, in all 5 populations:** local search's log early/late ratio (z −3.5 to −3.7), with γ failing in 4 (z 3.4 to 10) and local search's presence failing in 2; chemotaxis's flip fraction (4.5 to 4.6) and weathervane slope (6.3 to 8.3); the small lawn's pre-exit enrichment (−6.0 to −7.1); and the on-lawn onset rate (−3.1 to −3.5). Leaving failed once (−3.35).
+  - **2b moved the mutants, not local search or chemotaxis.** Over its 200 generations tph-1's roaming difference left −5.5 at generation 100 and swung between −2.7 and 3.8 after it, ending at 0.2. tax-4's left the cap of 10 at generation 110 and stayed above its bar (2.32 to 4.89) until generation 200, at 1.75. Local search's log early/late ratio stayed between −3.62 and −3.74, and the flip fraction between 4.41 and 5.02.
+  - **2a's answer already failed** pre-exit enrichment (−4.0) and the onset rate (−4.3), at a D_fit of 1.84 that passed 2a's bar.
+
+- **The screen that diagnosed it** (`probes/two_b_screen.py.txt`, as run; records `two_b_screen_a.json` and `two_b_screen_b.json`). As run, the script read the fourth pilot's record as `pilot.json` (now `pilot_fourth.json`), and the readout animals from `RUNS["pilot"]`, then the fourth pilot (1,216,000,000 + i). Against the amended script it would read the fifth pilot's, so it does not re-run unchanged; its records state the animals it read.
+
+  - **What it separates.** The pilot's 2b differed from Logbook 131's in two ways at once. It fitted the mutants from its first generation, and it carried 2a's search state where 131's 2b restarted isotropically at σ₀ 0.05.
+
+  - **How it ran.** Two arms from the pilot's 2a answer, each a new isotropic search at σ₀ 0.05, population 48 and 200 animals a candidate, on the registered arm and objective, for 60 generations. Arm A fitted the six families without the mutants, and arm B with them at half. Both were read on the pilot's own readout animals, and each arm's generation-0 readout reproduced the pilot's 2b generation-0 readout exactly.
+
+  - **The rule, fixed before either ran.** L is local search's log early/late z, averaged over the readouts at generations 40, 50 and 60, and an arm moves at L ≥ −3.45. For scale: the pilot's 2b read −3.64 and −3.62 at generations 40 and 60, 131's 2b a mean of −3.28 over 40–60, and the ratio's SD of z between populations is 0.065.
+
+    - If B moves, 2b restarts isotropically at σ₀ 0.05 with the mutants.
+    - If only A moves, 131's order returns: 2b without the mutants, then a stage adding them.
+    - If neither moves, the procedure goes back to the maintainer.
+
+  - **The reading:**
+
+    | Arm | Generation 40 | 50 | 60 | L | |
+    |---|---|---|---|---|---|
+    | A, without the mutants | −3.35 | −2.92 | −2.89 | −3.06 | moves |
+    | B, the mutants at half | −3.34 | −3.16 | −3.14 | −3.22 | moves |
+
+    B moves, so the amendment takes the first branch.
+
+  - **Reported, not selected on:**
+
+    - at generation 60, D_fit 2.37 (A) and 2.73 (B), and on the lawn 0.994 and 0.985;
+    - neither arm brought the flip fraction (4.82 and 4.21; 131's passed near generation 150) or pre-exit enrichment (−4.0 and −5.1) to passing, and the weathervane slope fell to 4.5 and 4.1 without passing;
+    - B's tph-1 reached −2.1 and its tax-4 7.7 by generation 60;
+    - the share of candidates with γ defined rose from about a quarter to 83% (A) and 71% (B);
+    - A ran 6.3 h and B 8.8 h. B was stopped once, at its generation 37 when A finished, and resumed exactly on 16 workers (`probes/screen_a_then_b16.sh.txt`).
+
+  - The screen's candidate stores (11–13 MB each) are kept off the repository with the pilots' run states.
+
+- **The neural readout's ceiling** ([Logbook 135](../../135-neural-readout-ceiling.md), merged into this branch 2026-11-16 before this amendment), read before it:
+
+  - the readout's ceiling is 0.423, not 0.173;
+  - the calibrated unfitted network is the reference to beat: 0.132 on held-out stimulations, 0.092 on held-out worms;
+  - paired and resampled by class, Logbook 131's answer is not above its unfitted network (−0.012 to −0.013 on the three splits);
+  - its null rewirings use generators 9781–9799, so Part A's paired test shared 9781.
+
+- **A timing check of the simulation's kernels** (`probes/kernel_timing.py.txt` and `.json`). One candidate at arm A's answer on 200 discarded animals (1,420,000,000 + i), on one core, was profiled and re-run with two kernels compiled. Its records were compared for identity only. Nothing in the procedure changes.
+
+- **What the amendment takes from them:**
+
+  - **the result points to the carried search state, not the mutants.** From the same point, both arms moved local search within 60 generations, where the carried 2b had not moved it in 200. Each arm is one CMA seed on its own candidate animals, so this is consistent with the state holding it back, not a measurement of why;
+  - **the mutants stay in 2b,** by the rule: B moved, so the mutants keep shaping serotonin's producers while the search is broad, as the registration chose;
+  - **A moved further than B** (−3.06 against −3.22), consistent with the mutants slowing local search, on one seed each. That is reported, not selected on;
+  - **2b starts its own search** at σ₀ 0.05 on the run's third CMA seed, as the screen's arms did. The final stage still carries 2b's state, as the route carried it from stage 3 on;
+  - **stated, not remedied:** the flip fraction, the weathervane slope, pre-exit enrichment and the on-lawn onset rate did not pass in either arm's 60 generations. 131's flip fraction passed near generation 150, and the registered 2b runs 200. The pilot's answer may still fail on any of them, and its go rule reads it.
+
+- **The amended script's checks (2026-11-16):**
+
+  - 60 tests in the fast tier;
+  - **deliberate bugs** (`probes/mutants_fresh.py.txt` and its two logs):
+    - the first run, on the amended code with the third amendment's bugs again, caught 120 of 122 applicable, and 29 were not applicable (earlier pilots' seed lines). One miss was the third amendment's equivalent bug (a reading not saved, which a resumed run takes again). The other was real: dropping the pilot's kill rules passed the suite. A test now checks that the pilot alone has them;
+    - on the final code, all 36 of this amendment's caught: 23 in 2b's start, the pilot's seeds and the neural reading's generators, 12 earlier pilot-seed bugs ported to the new line, and the review's below;
+  - **the smoke on real simulation** (9.5 min) dropped its first three starts at the lawn, the descent and the bar in turn and kept the fourth. Its 2b started its own search (σ 0.049 after its first generation, from 0.05), and the final stage carried 2b's state, then the noise step, the grade, the preflight's arithmetic and the held-out reading ran;
+  - **an independent review** (2026-11-16, a reviewer without the author's reading) found no defect in the code, the seed blocks, the CMA seeds or the generators, and confirmed the disclosed figures against the records except as below. It found:
+    - **a test gap:** with 2b's state not handed on, the final stage carried 2a's σ and steps and the suite still passed. The hand-off test now checks the handed σ is 2b's own, and catches it;
+    - the held-out-worm calibration misdescribed (Logbook 135's drops the transpose floor there), the fourth pilot's 2b ranges misquoted (now −3.62 to −3.74 and 4.41 to 5.02), the mutants' timing, and a cost total that counted the pilot's dropped starts (now about 120 h);
+    - "did not move" where "did not pass" holds (the weathervane slope fell), stale proposal text, and claims stronger than one seed per arm supports. Each is now corrected or stated;
+    - that the archived screen script reads `pilot.json` and `RUNS["pilot"]` as they were, now stated beside it.
+
 ### Slow noise's positive control
 
 `speed_noise_control.json` (run 2026-11-10 at HEAD `52212e43`; seeds 888,000,000 + i, reference episode 888,000,200): **passes.**
@@ -484,7 +579,7 @@ At the measured rates on 16 workers (77.7 s a generation on two assays, 309.5 s 
 | the pilot, F.0b-ii's fit, the registered fit | one run each |
 | `recovery-preflight` | 231 simulations, about 30 min |
 | the leave-one-out | about 26 h |
-| in all | about 114 h with every first start kept, about 127 h at 2 in 5. *(2026-11-13, at the measured rates: about 117 h with every first start kept (three runs at about 30 h, the leave-one-out at about 27 h, the preflight 0.5 h), and 2.3 h for each dropped start.)* *(2026-11-14: the third pilot measured 2a at about 87 s a generation on 16 workers, so a run at about 30.4 h, the leave-one-out at about 27.5 h, and about 119 h in all with every first start kept. A start dropped at the lawn costs about 2.3 h, at the descent about 4.4 h and at the bar about 8 h. At 2 stalls in 5, a run expects about 3 h of dropped starts.)* |
+| in all | about 114 h with every first start kept, about 127 h at 2 in 5. *(2026-11-13, at the measured rates: about 117 h with every first start kept (three runs at about 30 h, the leave-one-out at about 27 h, the preflight 0.5 h), and 2.3 h for each dropped start.)* *(2026-11-14: the third pilot measured 2a at about 87 s a generation on 16 workers, so a run at about 30.4 h, the leave-one-out at about 27.5 h, and about 119 h in all with every first start kept. A start dropped at the lawn costs about 2.3 h, at the descent about 4.4 h and at the bar about 8 h. At 2 stalls in 5, a run expects about 3 h of dropped starts.)* *(2026-11-16: the fourth pilot measured its kept start's stage 1 at 0.81 h, 2a at 6.04 h, 2b at 19.24 h (346 s a generation, against the 309.5 s above) and the final stage at 3.95 h, about 30.5 h with the noise step and the grade. Its two dropped starts cost 2.2 h at the lawn and 4.2 h at the descent, and the pilot 36.6 h in all. A 2b that starts its own search costs what a carried one did, so a run is about 30.5 h with its first start kept, the leave-one-out about 27.6 h, and the chain about 120 h in all with every first start kept, before dropped starts.)* |
 
 ### The guards
 

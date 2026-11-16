@@ -31,7 +31,7 @@
 
   - stage 1's subset;
   - the 1-s timescale at 2a;
-  - the search state carried from 2a to 2b and from 2b to the final stage (σ and `CMA_stds` = stds/σ);
+  - the search state carried from 2a to 2b and from 2b to the final stage (σ and `CMA_stds` = stds/σ) *(from 2026-11-16, task 4.1n: 2b starts a new isotropic search at 2a's answer, σ₀ 0.05, and only 2b's state is carried)*;
   - fixed budgets, with the final stage's plateau reported;
   - readouts every 10 generations recording every statistic;
   - atomic state every generation, and a resume that refuses changed settings.
@@ -192,9 +192,30 @@
   - the earlier blocks and CMA seeds, including the third pilot's, its diagnosis's and the investigation's;
   - deliberate bugs in the readings, the layout and the seeds each caught, and both earlier amendments' again on the new code.
 
-- [ ] 4.1k Part A amended and committed before the pilot runs a fourth time, with the third pilot's record, its diagnosis's script and record and start 3's guarded 2a under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row and its neural reading).
+- [x] 4.1k Part A amended and committed before the pilot runs a fourth time, with the third pilot's record, its diagnosis's script and record and start 3's guarded 2a under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row and its neural reading).
 
-- [ ] 4.1l `pilot` a fourth time (about 30 h with its first start kept; about 4.4 h for a start dropped at the descent and 8 h at the bar).
+- [x] 4.1l `pilot` a fourth time (about 30 h with its first start kept; about 4.4 h for a start dropped at the descent and 8 h at the bar). *(2026-11-16: it dropped starts 0 and 1 at the lawn and the descent and kept start 2, which passed 2a's bar at 1.85; its answer failed the go rule, the wild type 0 of 5 and every mutant 5 of 5, after 36.6 h; `pilot_fourth.json`.)*
+
+- [x] 4.1m Diagnose the fourth pilot on discarded seeds, its rule fixed before it ran: 2b again from the pilot's 2a answer as a new isotropic search at σ₀ 0.05, without the mutants (arm A) and with them at half (arm B), 60 generations each (`probes/two_b_screen.py.txt`). Both moved local search; by the rule, B's moving decides.
+
+- [x] 4.1n The amendment of 2026-11-16 (design decision 3d), on the maintainer's decision:
+
+  - `c2_fit.py`: 2b starts a new isotropic search at 2a's answer, σ₀ 0.05, on the run's third CMA seed; the final stage still carries 2b's state;
+  - the pilot on a new base (1,360,000,000) and new CMA seeds (9682–9685, restarts 9686–9695);
+  - the neural reading: its share of the measured ceiling (0.423), the paired test's class resample (`default_rng(9811)`) with the neuron resample beside it (`default_rng(9812)`), off 9781, and Logbook 135's calibrated references quoted.
+
+  Tests:
+
+  - 2b's strategy isotropic at 0.05 at 2a's answer on the run's third seed, whichever start was kept, and only 2b's state, its own final σ, carried to the final stage;
+  - a resume with 2b's start changed refused;
+  - the pilot alone has kill rules;
+  - the fourth pilot's, the screen's and the timing check's blocks, and their CMA seeds and Logbook 135's generators, as earlier blocks;
+  - the paired test's generators clear of every earlier one and of every run's CMA seeds;
+  - deliberate bugs in 2b's start, the pilot's seeds and the neural reading's generators each caught, and the third amendment's again.
+
+- [ ] 4.1o Part A amended and committed before the pilot runs a fifth time, with the fourth pilot's record, the screen's script and records and the timing check under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row and its neural reading).
+
+- [ ] 4.1p `pilot` a fifth time (about 31 h with its first start kept).
 
 - [ ] 4.2 Read the go rule. Part B: the result, the cost per stage and the plateau reading, committed. If the go rule fails, diagnose it and return to the maintainer before anything registered.
 

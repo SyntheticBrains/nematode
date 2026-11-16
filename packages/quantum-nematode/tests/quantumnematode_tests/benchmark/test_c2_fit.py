@@ -338,9 +338,31 @@ def test_stage_one_fits_only_its_subset(fake_run: dict) -> None:
     answer = fake_run["record"]["answers"]["1"]
     assert answer[5] == 0.5
     starts = fake_run["seen"]["fresh"]
-    assert [s["sigma0"] for s in starts] == [0.2, 0.1]
+    assert [s["sigma0"] for s in starts] == [0.2, 0.1, 0.05]
     assert starts[0]["x0"] == [0.5] * 5
     assert starts[1]["x0"] == [*answer[:5], 0.123, answer[6]]
+
+
+def test_2b_restarts_the_search_at_2as_answer(fake_run: dict) -> None:
+    """Covers "2b restarts the search at 2a's answer": isotropic at 0.05, on the third seed."""
+    answers = fake_run["record"]["answers"]
+    run = fake_run["run"]
+    two_b = fake_run["seen"]["fresh"][2]
+    assert two_b == {
+        "x0": answers["2a"],
+        "sigma0": 0.05,
+        "seed": run.cma_seeds[2],
+        "popsize": run.layout.popsize,
+    }
+    assert fit.STAGES[2].name == "2b"
+    assert fit.STAGES[2].sigma0 == 0.05
+    # The new strategy is isotropic: every per-parameter step is sigma0, whatever 2a's were.
+    es = _FRESH(two_b["x0"], two_b["sigma0"], two_b["seed"], two_b["popsize"])
+    assert es.sigma == pytest.approx(0.05)
+    assert np.allclose(es.stds, 0.05)
+    assert np.allclose(es.result.xfavorite, answers["2a"])
+    # 2a's search state is handed to no stage.
+    assert not [h for h in fake_run["seen"]["carried"] if np.allclose(h["new_mean"], answers["2a"])]
 
 
 def test_each_stage_reads_its_start_point_first(fake_run: dict) -> None:
@@ -355,14 +377,18 @@ def test_each_stage_reads_its_start_point_first(fake_run: dict) -> None:
 
 
 def test_a_later_stage_keeps_the_search_steps(fake_run: dict) -> None:
-    """Covers "A later stage keeps the search's steps": sigma, steps and mean carried twice."""
+    """Covers "The final stage keeps 2b's search steps": sigma, steps and mean carried once."""
     hands = fake_run["seen"]["carried"]
-    assert len(hands) == 2  # 2a -> 2b, 2b -> final
-    answers = fake_run["record"]["answers"]
-    for hand, previous in zip(hands, ("2a", "2b"), strict=True):
+    assert len(hands) == 1  # 2b -> final; 2b starts its own search
+    record = fake_run["record"]
+    answers = record["answers"]
+    for hand, previous in zip(hands, ("2b",), strict=True):
         assert hand["new_sigma"] == pytest.approx(hand["sigma"])
         assert np.allclose(hand["new_stds"], hand["stds"])
         assert np.allclose(hand["new_mean"], answers[previous])
+        # The strategy handed on is 2b's own at its end, not 2a's.
+        assert hand["sigma"] == pytest.approx(record["histories"][previous]["sigmas"][-1])
+        assert hand["sigma"] != pytest.approx(record["histories"]["2a"]["sigmas"][-1])
 
 
 def test_a_plateau_does_not_stop_a_stage(fake_run: dict) -> None:
@@ -411,6 +437,14 @@ def test_a_resume_with_changed_settings(fake_run: dict, monkeypatch: pytest.Monk
     for name, value in (("LAWN_GUARD_BELOW", 0.9), ("LAWN_PENALTY", 200.0)):
         with monkeypatch.context() as patch:
             patch.setattr(fit, name, value)
+            with pytest.raises(RuntimeError, match="other settings"):
+                fit.procedure(run, fake_run["truth"], pool=None)
+    # So is a stage's start: 2b carrying 2a's search state, or at another sigma0.
+    for sigma0 in (None, 0.1):
+        stages = list(fit.STAGES)
+        stages[2] = dataclasses.replace(stages[2], sigma0=sigma0)
+        with monkeypatch.context() as patch:
+            patch.setattr(fit, "STAGES", tuple(stages))
             with pytest.raises(RuntimeError, match="other settings"):
                 fit.procedure(run, fake_run["truth"], pool=None)
     # Resumed with its own settings, the finished run returns its answer unchanged.
@@ -480,11 +514,13 @@ def test_a_start_that_does_not_hold_the_lawn_is_dropped(
     assert dropped["answers"]["1"] != record["answers"]["1"]
     assert len(record["histories"]["2a"]["medians"]) == 20
     assert set(record["histories"]) == {"1", "2a", "2b", "final"}
-    # Each start is fresh from the box's centre, on its own CMA seeds and at stage 1's own size.
+    # Each start is fresh from the box's centre, on its own CMA seeds and at stage 1's own size;
+    # 2b then starts its own search, on the run's seed whichever start was kept.
     fresh = seen["fresh"]
-    assert [f["sigma0"] for f in fresh] == [0.2, 0.1, 0.2, 0.1]
-    assert [f["seed"] for f in fresh] == [1, 2, 11, 12]
-    assert [f["popsize"] for f in fresh] == [3, 4, 3, 4]
+    assert [f["sigma0"] for f in fresh] == [0.2, 0.1, 0.2, 0.1, 0.05]
+    assert [f["seed"] for f in fresh] == [1, 2, 11, 12, 3]
+    assert [f["popsize"] for f in fresh] == [3, 4, 3, 4, 4]
+    assert fresh[4]["x0"] == record["answers"]["2a"]
     assert fresh[2]["x0"] == [0.5] * 5
     assert (dropped["cma_seeds"], kept["cma_seeds"]) == ([1, 2], [11, 12])
     # Every start's 2a opens with the speed noise's timescale at 1 s (the fake entry's 0.123).
@@ -627,8 +663,9 @@ def test_a_start_that_misses_the_descent_or_the_bar_is_dropped(
     # The kept start's 2a is the record's; the dropped ones ran no later stage.
     assert len(record["histories"]["2a"]["medians"]) == 30
     assert set(record["histories"]) == {"1", "2a", "2b", "final"}
-    assert [f["seed"] for f in seen["fresh"]] == [1, 2, 11, 12, 13, 14]
-    assert all(f["x0"] == [0.5] * 5 for f in seen["fresh"][::2])
+    assert [f["seed"] for f in seen["fresh"]] == [1, 2, 11, 12, 13, 14, 3]
+    assert all(f["x0"] == [0.5] * 5 for f in seen["fresh"][:6:2])
+    assert seen["fresh"][6]["x0"] == record["answers"]["2a"]
     # A start is read against its own bars: with start 1's bar at 3.0, it is kept.
     again = _fake(
         monkeypatch,
@@ -802,8 +839,9 @@ def test_an_interrupted_drop_resumes_to_the_same_answer(
     assert resumed["answer"] == whole["answer"]
     assert resumed["histories"] == whole["histories"]
     assert _timeless(resumed["starts"]) == _timeless(whole["starts"])
-    # It resumed: nothing of the first start ran again, and only the second start was opened.
-    assert [f["seed"] for f in again["seen"]["fresh"]] == [11, 12]
+    # It resumed: nothing of the first start ran again, and only the second start was opened
+    # (then 2b's own search).
+    assert [f["seed"] for f in again["seen"]["fresh"]] == [11, 12, 3]
     assert not [x for x in again["seen"]["stores"] if x[2] == 0 and x[0] < 2]
 
 
@@ -1106,12 +1144,20 @@ EARLIER = (
     # The third readiness pilot, whose kept start missed 2a's bar, and the check that diagnosed it.
     (1_140_000_000, 1_158_002_999),
     (1_170_000_000, 1_170_003_199),
+    # The fourth readiness pilot, whose answer failed its go rule (every start's 2a reserved), the
+    # 2b screen that diagnosed it (its readouts reused the pilot's readout animals), and a timing
+    # check of the simulation's kernels.
+    (1_200_000_000, 1_237_279_999),
+    (1_400_000_000, 1_400_575_999),
+    (1_410_000_000, 1_410_575_999),
+    (1_420_000_000, 1_420_000_207),
     # The fit-first investigation's reserved animals.
     (1_500_000_000, 1_501_000_199),
 )
 # The CMA seeds the seed tables give earlier pilots, probes and tests: C.2's pilots and probes,
-# the speed-following reversals' tests (9601-9605), the sign-scale calibration (9601-9616) and the
-# fit-first investigation's generators and reserved seeds (9701-9722, 9731, 9732, 9741-9759).
+# the speed-following reversals' tests (9601-9605), the sign-scale calibration (9601-9616), the
+# fit-first investigation's generators and reserved seeds (9701-9722, 9731, 9732, 9741-9759), and
+# the neural readout's ceiling's generators (9770-9779, 9781-9799, 9801-9805).
 EARLIER_CMA = frozenset(
     [
         *range(9504, 9508),
@@ -1125,10 +1171,17 @@ EARLIER_CMA = frozenset(
         *range(9591, 9595),
         *range(9601, 9617),
         *range(9651, 9661),
+        *range(9661, 9665),
+        *range(9671, 9681),
         *range(9701, 9723),
         9731,
         9732,
         *range(9741, 9760),
+        *range(9770, 9780),
+        *range(9781, 9800),
+        *range(9801, 9806),
+        9922,
+        9923,
     ],
 )
 
@@ -1169,7 +1222,8 @@ def test_the_longest_stage_stays_inside_its_sub_block() -> None:
     # The last start's 2a ends inside the run's 40,000,000, before the next run's block.
     last = layout.candidate_seeds(1, 300, fit.POPSIZE - 1, fit.STARTS - 1)[-1]
     assert last < base + 40_000_000 == fit.RUNS["loo"].layout.base
-    bases = [fit.RUNS[n].layout.base for n in ("pilot", "recovery", "fit", "loo")]
+    # The pilot, on its fifth base, follows the leave-one-out's block.
+    bases = [fit.RUNS[n].layout.base for n in ("recovery", "fit", "loo", "pilot")]
     assert [b - a for a, b in itertools.pairwise(bases)] == [40_000_000] * 3
     smoke = fit.RUNS["smoke"]
     for start, end in smoke.layout.spans(smoke.generations, smoke.starts).values():
@@ -1225,6 +1279,24 @@ def test_each_start_has_its_own_animals() -> None:
     assert not EARLIER_CMA & set(flat), "a run reuses an earlier pilot's or probe's CMA seed"
     for name in ("recovery", "fit", "loo"):
         assert all(5801 <= seed <= 5864 for seed in seeds[name])
+
+
+def test_only_the_pilot_has_kill_rules() -> None:
+    """Covers "A registered run misses a checkpoint": the pilot alone stops on a kill rule."""
+    assert fit.RUNS["pilot"].kill_rules is True
+    assert [n for n, r in fit.RUNS.items() if r.kill_rules] == ["pilot"]
+
+
+def test_the_neural_readings_generators() -> None:
+    """The paired test's two bootstraps are their own, clear of every earlier generator."""
+    bootstraps = {fit.NEURAL_CLASS_BOOTSTRAP_SEED, fit.NEURAL_NEURON_BOOTSTRAP_SEED}
+    assert len(bootstraps) == 2
+    assert not bootstraps & EARLIER_CMA, "a bootstrap reuses an earlier generator"
+    assert 9781 not in bootstraps  # the ceiling's first null rewiring
+    # Chance's relabellings reuse the first reading's generator, so the two compare.
+    assert fit.NEURAL_CHANCE_SEED == 9731
+    runs = {r.cma_seed(s, a) for r in fit.RUNS.values() for s in range(4) for a in range(r.starts)}
+    assert not bootstraps & (runs | {fit.PRIOR_SEED})
 
 
 # ---------------------------------------------------------------------------------------------

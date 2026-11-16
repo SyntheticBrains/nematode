@@ -17,7 +17,7 @@ The roadmap also no longer matches what C.2 needs:
 
 The maintainer's decisions (2026-11-10), from the change plan:
 
-1. **Procedure B.** The fitted families (300 generations), then all six families with the mutants at half the objective (200), then a noise measurement, then the failure-probability stage (50). The search state is carried between stages, and the speed-following reversal is on. The design puts B04's stage 1 before them: 2a starts from its answer, and it is the clean start's only evidence.
+1. **Procedure B.** The fitted families (300 generations), then all six families with the mutants at half the objective (200), then a noise measurement, then the failure-probability stage (50). The search state is carried between stages (from the amendment of 2026-11-16, only from 2b to the final stage: 2b starts a new isotropic search at 2a's answer), and the speed-following reversal is on. The design puts B04's stage 1 before them: 2a starts from its answer, and it is the clean start's only evidence.
 2. **A readiness pilot first,** on discarded seeds. Its go rule: the wild type in at least 3 of 5 populations, and tph-1 and tax-4 each in at least 3 of 5.
 3. **F.0b-ii as one truth, before the fit.** The truth is the pilot's answer, refitted from the box centre by the same procedure, with a floor-relative gain gate preflighted against the oracle. The order is pilot, then F.0b-ii, then the registered fit.
 4. **Symmetric fit splits.** C.2, and C.1's refit before C.4, each fit their encodable mutants at half the objective. Both are read on Scheer's held-out recording dates beside W's minimum, plus one tax-4 leave-one-out as description.
@@ -32,7 +32,7 @@ The maintainer's decisions (2026-11-10), from the change plan:
 
   - the objective: the ranking score, the mutants at half the objective on the encoding table's graded statistics, the saturation and graded responsiveness guards, a lawn guard below 0.95 on the lawn (from the amendment of 2026-11-13), and each statistic's chance of failing a population;
   - four stages at population 48 and 200 animals (stage 1 at population 24 and 64 animals, and the first half started up to six times, from the amendment of 2026-11-12; a start kept only when 2a holds the lawn, keeps up its descent and reaches its bar, from the amendment of 2026-11-14): stage 1 on the 77 parameters that carry senses to outputs, 2a, 2b with the mutants, and the failure-probability stage;
-  - each later stage starts from the one before's mean, σ and per-parameter steps;
+  - each later stage starts from the one before's mean, σ and per-parameter steps (from the amendment of 2026-11-16, 2b starts a new isotropic search at 2a's answer, σ₀ 0.05, and only the final stage carries the one before's steps);
   - the noise measurement as a step of its own;
   - readouts every 10 generations recording every statistic, and state saved every generation;
   - the stages `smoke`, `pilot`, `recovery-preflight`, `recovery`, `run`, `grade`, `loo` and `read`, each guarded by the launch record.

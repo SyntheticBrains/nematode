@@ -1,0 +1,455 @@
+"""Numba spike: where one C.2 candidate's time goes, and what Numba buys (description; discarded).
+
+Not part of any registered procedure, and no reading here selects anything registered.
+
+One candidate in the 2b screen's arm B configuration (all four assays, then tph-1, pdfr-1 and
+tax-4 on the small lawn; 200 animals) is profiled on one core. Then two kernels are ported to Numba
+and checked against the NumPy code they replace:
+
+- **the splice** (``NoiseLibrary._splice``): the 50 candidates are still drawn from the same
+  generator in Python, and only the nearest-offset search runs in Numba;
+- **the lawn odour** (``BatchedEvaluator._odour``), two ways:
+  - *fused*: one pass per animal with its own dot product;
+  - *exact*: NumPy's matrix product kept, and the rest fused with NumPy's pairwise summation
+    reproduced.
+
+Each kernel is compared bit for bit with NumPy on inputs captured from a real simulation, and
+timed on them. Then whole candidates are run, alternating NumPy and the ports, patched into the
+package in process. A port is identical end to end when the candidate's record (every statistic, z,
+guard and mutant difference) is equal. The fused odour is also run end to end, to show how far a
+port that is not identical moves a candidate's statistics.
+
+Vector: the screen's arm A answer. Seeds (discarded): 1,420,000,000 + i, i < 200, and
+1,420,000,200 + i, i < 8, for the warm-up.
+
+Run from the repository root, with Numba as an overlay on the project's environment:
+
+    uv run --no-sync --with numba==0.68.1 python build/numba-spike/spike.py
+"""
+
+import copy
+import cProfile
+import json
+import math
+import pstats
+import statistics
+import sys
+import time
+import types
+from pathlib import Path
+
+import numba as nb
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import c2_fit as fit  # noqa: E402
+import npe_recovery as nr  # noqa: E402
+from quantumnematode.benchmark import measurement as M  # noqa: E402
+from quantumnematode.evaluation import batched as B  # noqa: E402
+
+OUT = Path("build/numba-spike")
+SEEDS = list(range(1_420_000_000, 1_420_000_200))
+WARM = list(range(1_420_000_200, 1_420_000_208))
+SCREEN_A = Path("build/c2-fit/two_b_screen_a.json")
+ODOUR_EVERY, ODOUR_MAX = 397, 160
+SPLICE_MAX = 20_000
+REPEATS = 3
+
+PARTS = {
+    "evaluator_run": ("batched.py", "run"),
+    "settling": ("connectome_ppo.py", "_settling_tanh"),
+    "forward_encoded": ("connectome_ppo.py", "_forward_encoded"),
+    "controller_sample": ("controllers.py", "_sample"),
+    "sense": ("batched.py", "_sense"),
+    "odour": ("batched.py", "_odour"),
+    "cells_under": ("batched.py", "_cells_under"),
+    "move": ("batched.py", "_move"),
+    "start_bouts": ("batched.py", "_start_bouts"),
+    "eat": ("batched.py", "_eat"),
+    "chen_odour": ("odour_field.py", "odour"),
+    "record_conversion": ("batched.py", "to_behaviour_steps"),
+    "measurement": ("measurement.py", "measure_window"),
+    "noise_draw": ("measurement.py", "draw"),
+    "splice": ("measurement.py", "_splice"),
+    "grading": ("benchmark_grade.py", "grade_populations_v4"),
+}
+
+ORIGINAL_ODOUR = B.BatchedEvaluator._odour
+ORIGINAL_SPLICE = M.NoiseLibrary._splice
+
+
+# ---------------------------------------------------------------------------------------------
+# The Numba kernels
+# ---------------------------------------------------------------------------------------------
+
+
+@nb.njit(cache=True)
+def splice_search(xs, ys, starts, lengths, ks, x, y):
+    """Return (index after the nearest usable offset, its stretch's end), first minimum first."""
+    best = np.inf
+    best_j = -1
+    best_r = -1
+    for r in range(ks.shape[0]):
+        k = ks[r]
+        s = starts[k]
+        for j in range(s, s + lengths[k] - 1):
+            d = math.hypot(xs[j] - x, ys[j] - y)
+            if d < best:
+                best = d
+                best_j = j
+                best_r = r
+    k = ks[best_r]
+    return best_j + 1, starts[k] + lengths[k]
+
+
+def splice_numba(self, x, y, rng):
+    ks = rng.integers(len(self.lengths), size=M.SPLICE_CANDIDATES)
+    j, end = splice_search(self.x_mm, self.y_mm, self.starts, self.lengths, ks, x, y)
+    return int(j), int(end)
+
+
+@nb.njit(cache=True)
+def _pairwise(a, start, n):
+    """NumPy's float64 pairwise sum of a[start:start + n] (blocks of 128, eight accumulators)."""
+    if n < 8:
+        res = -0.0
+        for i in range(n):
+            res += a[start + i]
+        return res
+    if n <= 128:
+        r0, r1, r2, r3 = a[start], a[start + 1], a[start + 2], a[start + 3]
+        r4, r5, r6, r7 = a[start + 4], a[start + 5], a[start + 6], a[start + 7]
+        i = 8
+        stop = n - (n % 8)
+        while i < stop:
+            r0 += a[start + i]
+            r1 += a[start + i + 1]
+            r2 += a[start + i + 2]
+            r3 += a[start + i + 3]
+            r4 += a[start + i + 4]
+            r5 += a[start + i + 5]
+            r6 += a[start + i + 6]
+            r7 += a[start + i + 7]
+            i += 8
+        res = ((r0 + r1) + (r2 + r3)) + ((r4 + r5) + (r6 + r7))
+        while i < n:
+            res += a[start + i]
+            i += 1
+        return res
+    n2 = n // 2
+    n2 -= n2 % 8
+    return _pairwise(a, start, n2) + _pairwise(a, start + n2, n - n2)
+
+
+@nb.njit(cache=True)
+def _pairwise_row(a):
+    return _pairwise(a, 0, a.shape[0])
+
+
+@nb.njit(cache=True)
+def gauss(p, grid, length):
+    """exp(-(((p - grid) / length) ** 2)) for each point and grid line, as the evaluator writes it."""
+    out = np.empty((p.shape[0], grid.shape[0]))
+    for r in range(p.shape[0]):
+        for k in range(grid.shape[0]):
+            v = (p[r] - grid[k]) / length
+            out[r, k] = math.exp(-(v * v))
+    return out
+
+
+@nb.njit(cache=True)
+def weighted_rows(gx, along_y):
+    """Each row's pairwise sum of gx * along_y."""
+    out = np.empty(gx.shape[0])
+    tmp = np.empty(gx.shape[1])
+    for r in range(gx.shape[0]):
+        for k in range(gx.shape[1]):
+            tmp[k] = gx[r, k] * along_y[r, k]
+        out[r] = 0.0 + _pairwise_row(tmp)
+    return out
+
+
+@nb.njit(cache=True)
+def odour_fused_core(px, py, xs, ys, length, density, rows):
+    """One pass per animal: the separable Fick sum with its own dot product."""
+    out = np.empty(rows.shape[0])
+    gy = np.empty(ys.shape[0])
+    for q in range(rows.shape[0]):
+        r = rows[q]
+        for k in range(ys.shape[0]):
+            v = (py[r] - ys[k]) / length
+            gy[k] = math.exp(-(v * v))
+        acc = 0.0
+        for k in range(xs.shape[0]):
+            v = (px[r] - xs[k]) / length
+            dot = 0.0
+            for m in range(ys.shape[0]):
+                dot += density[r, k, m] * gy[m]
+            acc += math.exp(-(v * v)) * dot
+        out[q] = acc
+    return out
+
+
+def _early(self, points):
+    """The original's two early returns, unchanged; None where the grid path runs."""
+    if self.odour_field is not None and not self.lawn_on.any():
+        return self.odour_field.odour(points)
+    if self.grid is None or not self.lawn_on.any():
+        return np.tanh(np.zeros(len(points)))
+    return None
+
+
+def odour_exact(self, points):
+    early = _early(self, points)
+    if early is not None:
+        return early
+    n = len(points)
+    out = np.zeros(n)
+    grid = self.grid
+    rows = np.flatnonzero(self.lawn_on)
+    gx = gauss(np.ascontiguousarray(points[rows, 0]), grid.xs, self.fick_length)
+    gy = gauss(np.ascontiguousarray(points[rows, 1]), grid.ys, self.fick_length)
+    density = self.density_grid[rows]
+    along_y = np.matmul(density, gy[:, :, None])[:, :, 0]
+    raw = grid.weights[0] * weighted_rows(gx, along_y)
+    out[rows] = self.field_strength * raw
+    return np.tanh(out)
+
+
+def odour_fused(self, points):
+    early = _early(self, points)
+    if early is not None:
+        return early
+    n = len(points)
+    out = np.zeros(n)
+    grid = self.grid
+    rows = np.flatnonzero(self.lawn_on)
+    p = np.ascontiguousarray(points)
+    acc = odour_fused_core(
+        p[:, 0].copy(), p[:, 1].copy(), grid.xs, grid.ys, self.fick_length, self.density_grid, rows
+    )
+    out[rows] = self.field_strength * (grid.weights[0] * acc)
+    return np.tanh(out)
+
+
+# ---------------------------------------------------------------------------------------------
+# Capture, comparison and timing
+# ---------------------------------------------------------------------------------------------
+
+CAPTURE = {"odour": [], "splice": [], "odour_calls": 0, "splice_calls": 0, "bytes": 0}
+CAPTURE_BYTES = 1_500_000_000
+
+
+def capturing_odour(self, points):
+    out = ORIGINAL_ODOUR(self, points)
+    CAPTURE["odour_calls"] += 1
+    # The grid path runs exactly when a lawn grid exists and some animal's lawn is out.
+    grid_path = self.grid is not None and bool(self.lawn_on.any())
+    if (
+        grid_path
+        and CAPTURE["odour_calls"] % ODOUR_EVERY == 0
+        and len(CAPTURE["odour"]) < ODOUR_MAX
+        and CAPTURE["bytes"] + self.density_grid.nbytes <= CAPTURE_BYTES
+    ):
+        CAPTURE["bytes"] += self.density_grid.nbytes
+        CAPTURE["odour"].append({
+            "self": types.SimpleNamespace(
+                odour_field=self.odour_field, lawn_on=self.lawn_on.copy(), grid=self.grid,
+                density_grid=self.density_grid.copy(), fick_length=self.fick_length,
+                field_strength=self.field_strength,
+            ),
+            "points": points.copy(),
+            "out": out.copy(),
+        })
+    return out
+
+
+def capturing_splice(self, x, y, rng):
+    keep = len(CAPTURE["splice"]) < SPLICE_MAX
+    state = copy.deepcopy(rng.bit_generator.state) if keep else None
+    result = ORIGINAL_SPLICE(self, x, y, rng)
+    CAPTURE["splice_calls"] += 1
+    if keep:
+        CAPTURE["splice"].append((self, x, y, state, type(rng.bit_generator), result))
+    return result
+
+
+def _rng(kind, state):
+    bit = kind()
+    bit.state = copy.deepcopy(state)
+    return np.random.Generator(bit)
+
+
+def _ulps(a, b):
+    a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    ia, ib = a.view(np.int64), b.view(np.int64)
+    ia = np.where(ia < 0, np.int64(-(2**63)) - ia, ia)
+    ib = np.where(ib < 0, np.int64(-(2**63)) - ib, ib)
+    return int(np.max(np.abs(ia - ib))) if a.size else 0
+
+
+def _per_call(fn, calls, repeats=20):
+    """Median seconds per call over the captured calls, each call repeated."""
+    times = []
+    for args in calls:
+        began = time.perf_counter_ns()
+        for _ in range(repeats):
+            fn(*args)
+        times.append((time.perf_counter_ns() - began) / repeats / 1e9)
+    return float(statistics.median(times)), float(sum(times))
+
+
+def kernels():
+    odour, splice = CAPTURE["odour"], CAPTURE["splice"]
+    shapes = sorted({(int(c["self"].lawn_on.sum()), *c["self"].density_grid.shape[1:]) for c in odour})
+    exact_same = sum(bool(np.array_equal(odour_exact(c["self"], c["points"]), c["out"])) for c in odour)
+    fused = [odour_fused(c["self"], c["points"]) for c in odour]
+    fused_same = sum(bool(np.array_equal(f, c["out"])) for f, c in zip(fused, odour))
+    fused_ulps = max(_ulps(f, c["out"]) for f, c in zip(fused, odour))
+    fused_abs = max(float(np.max(np.abs(f - c["out"]))) for f, c in zip(fused, odour))
+    original_also = sum(bool(np.array_equal(ORIGINAL_ODOUR(c["self"], c["points"]), c["out"])) for c in odour)
+    calls = [(c["self"], c["points"]) for c in odour]
+    t_orig = _per_call(ORIGINAL_ODOUR, calls)
+    t_exact = _per_call(odour_exact, calls)
+    t_fused = _per_call(odour_fused, calls)
+
+    splice_same = 0
+    for lib, x, y, state, kind, result in splice:
+        splice_same += splice_numba(lib, x, y, _rng(kind, state)) == result
+    replay = [(lib, x, y, _rng(kind, state)) for lib, x, y, state, kind, _ in splice[:4000]]
+    t_sorig = _per_call(ORIGINAL_SPLICE, replay, repeats=1)
+    replay = [(lib, x, y, _rng(kind, state)) for lib, x, y, state, kind, _ in splice[:4000]]
+    t_snb = _per_call(splice_numba, replay, repeats=1)
+    return {
+        "odour": {
+            "captured": len(odour), "of_calls": CAPTURE["odour_calls"],
+            "shapes_animals_nx_ny": [list(s) for s in shapes],
+            "original_reproduces_itself": original_also,
+            "exact_identical": exact_same, "fused_identical": fused_same,
+            "fused_max_ulps": fused_ulps, "fused_max_abs": fused_abs,
+            "seconds_per_call_median": {"numpy": t_orig[0], "exact": t_exact[0], "fused": t_fused[0]},
+            "speedup": {"exact": t_orig[0] / t_exact[0], "fused": t_orig[0] / t_fused[0]},
+        },
+        "splice": {
+            "captured": len(splice), "of_calls": CAPTURE["splice_calls"], "identical": int(splice_same),
+            "seconds_per_call_median": {"numpy": t_sorig[0], "numba": t_snb[0]},
+            "speedup": t_sorig[0] / t_snb[0],
+        },
+    }
+
+
+# ---------------------------------------------------------------------------------------------
+# Whole candidates
+# ---------------------------------------------------------------------------------------------
+
+
+def patch(odour=None, splice=None):
+    B.BatchedEvaluator._odour = odour or ORIGINAL_ODOUR
+    M.NoiseLibrary._splice = splice or ORIGINAL_SPLICE
+
+
+def candidate(z, seeds=SEEDS):
+    return fit.simulate_point(z, seeds, assays=None, mutants=fit.MUTANTS)
+
+
+def _key(record):
+    return json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def profile(z):
+    prof = cProfile.Profile()
+    began = time.perf_counter()
+    prof.enable()
+    record = candidate(z)
+    prof.disable()
+    seconds = time.perf_counter() - began
+    stats = pstats.Stats(prof).stats
+    parts = {}
+    for name, (fname, func) in PARTS.items():
+        parts[name] = sum(
+            v[3] for (f, _line, fn), v in stats.items() if f.endswith(fname) and fn == func
+        )
+    top = sorted(stats.items(), key=lambda kv: -kv[1][2])[:30]
+    return record, {
+        "profiled_seconds": seconds,
+        "parts_cumulative_seconds": parts,
+        "top_by_own_time": [
+            {"function": f"{Path(f).name}:{line}:{fn}", "own": v[2], "cumulative": v[3], "calls": v[1]}
+            for (f, line, fn), v in top
+        ],
+    }
+
+
+ARMS = {
+    "numpy": {},
+    "splice": {"splice": splice_numba},
+    "exact": {"odour": odour_exact, "splice": splice_numba},
+    "fused": {"odour": odour_fused, "splice": splice_numba},
+}
+
+
+def end_to_end(z, reference):
+    results = {arm: {"seconds": [], "identical": []} for arm in ARMS}
+    records = {}
+    for _ in range(REPEATS):
+        for arm, ports in ARMS.items():
+            patch(**ports)
+            began = time.perf_counter()
+            record = candidate(z)
+            results[arm]["seconds"].append(time.perf_counter() - began)
+            results[arm]["identical"].append(_key(record) == _key(reference))
+            records[arm] = record
+            patch()
+            print(f"  {arm}: {results[arm]['seconds'][-1]:.1f} s identical {results[arm]['identical'][-1]}",
+                  flush=True)
+    base = statistics.median(results["numpy"]["seconds"])
+    for arm in ARMS:
+        results[arm]["median_seconds"] = statistics.median(results[arm]["seconds"])
+        results[arm]["speedup"] = base / results[arm]["median_seconds"]
+    zs = reference["z"]
+    moved = {
+        k: (records["fused"]["z"].get(k), v)
+        for k, v in zs.items()
+        if v is not None and records["fused"]["z"].get(k) is not None
+    }
+    results["fused"]["z_differences"] = {k: a - b for k, (a, b) in moved.items()}
+    results["fused"]["D_fit"] = [records["fused"]["D_fit"], reference["D_fit"]]
+    return results
+
+
+def main():
+    nr._worker_setup()
+    z = json.loads(SCREEN_A.read_text())["answer"]
+    assert len(z) == len(fit.entries()) == 137
+    out = {"description": __doc__, "numba": nb.__version__, "numpy": np.__version__,
+           "seeds": [SEEDS[0], SEEDS[-1]], "warm_seeds": [WARM[0], WARM[-1]]}
+
+    print("warm-up (brains, bands, noise library, Numba compilation)", flush=True)
+    candidate(z, WARM)
+    print("capture: one full candidate with the inputs of sampled odour and splice calls kept", flush=True)
+    patch(odour=capturing_odour, splice=capturing_splice)
+    began = time.perf_counter()
+    reference = candidate(z)
+    out["capture_seconds"] = time.perf_counter() - began
+    patch()
+
+    print("kernels", flush=True)
+    out["kernels"] = kernels()
+    print(json.dumps(out["kernels"], indent=1), flush=True)
+    CAPTURE["odour"].clear()
+    CAPTURE["splice"].clear()
+
+    print("profile", flush=True)
+    profiled, out["profile"] = profile(z)
+    out["profile_reproduces_reference"] = _key(profiled) == _key(reference)
+    print(json.dumps(out["profile"]["parts_cumulative_seconds"], indent=1), flush=True)
+
+    print("end to end", flush=True)
+    out["end_to_end"] = end_to_end(z, reference)
+    (OUT / "spike.json").write_text(json.dumps(nr._finite(out), indent=1) + "\n")
+    print(json.dumps({a: {k: v for k, v in r.items() if k != "z_differences"}
+                      for a, r in out["end_to_end"].items()}, indent=1), flush=True)
+
+
+if __name__ == "__main__":
+    main()

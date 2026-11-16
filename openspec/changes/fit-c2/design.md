@@ -114,11 +114,11 @@ Every stage runs on the speed-following arm. Stage 1 runs with population 24 and
 |---|---|---|---|---|---|
 | **1** | the 77 parameters of the wiring, sensory, readout and noise blocks and the pool centres; the other 60 held at 0.5 | D_fit's four (two assays) | none | x₀ = the graded box's centre, 0.5 everywhere, so every sensory gain is 0; σ₀ 0.2 | 150 |
 | **2a** | all 137 | D_fit's four | none | stage 1's answer, the speed noise's timescale set to 1 s; σ₀ 0.1, fresh | 300 |
-| **2b** | all 137 | all six | tph-1, pdfr-1, tax-4 at half | 2a's search state | 200 |
+| **2b** | all 137 | all six | tph-1, pdfr-1, tax-4 at half | 2a's answer; a new isotropic search, σ₀ 0.05 (decision 3d; until 2026-11-16 2a's search state) | 200 |
 | **noise** | none: 2b's answer on 30 populations | all six | all three | | |
 | **final** | all 137 | all six | all three at half, plus the failure probability | 2b's search state | 50 |
 
-- **The search state passes** from 2a to 2b and from 2b to the final stage. Each later stage starts a new strategy at the previous stage's answer, with its σ and per-parameter steps (`CMA_stds` = stds/σ), and its own CMA seed. Stage 1 to 2a cannot carry the state, since the dimension changes, so 2a starts fresh as the curriculum's did.
+- **The search state passes** from 2b to the final stage: a new strategy at 2b's answer, with its σ and per-parameter steps (`CMA_stds` = stds/σ), and its own CMA seed. Stage 1 to 2a cannot carry the state, since the dimension changes, so 2a starts fresh as the curriculum's did. 2b starts fresh too, at σ₀ 0.05 (decision 3d), as the curriculum's 2b did.
 
 - **The timescale at 1 s** is the curriculum's choice. With the timescale at its centre (8.7 s), B04's second stage stalled at D about 5 with its speed distributions far off.
 
@@ -138,7 +138,7 @@ Every stage runs on the speed-following arm. Stage 1 runs with population 24 and
   | the lawn | no guard | a guard below 0.95 on the lawn, in every stage (decision 3b) |
   | after 2a | 500 generations: 2b 150, stage 3 150, four continuations of 50 | 250: 2b 200, the final stage 50 |
   | the mutants | from stage 3 | from 2b, the maintainer's choice, so serotonin's producers are shaped while the search is broad |
-  | search state | isotropic restarts at 2b and stage 3 (σ₀ 0.05); carried from stage 3 on | carried from 2a on |
+  | search state | isotropic restarts at 2b and stage 3 (σ₀ 0.05); carried from stage 3 on | an isotropic restart at 2b (σ₀ 0.05), carried from 2b on (decision 3d; carried from 2a on until 2026-11-16) |
   | the final stage's start | σ 0.010, steps 0.0016–0.022, after four tuned stages | 2b's end state |
   | the body | the pooled on-food reversal speed until the last stage, then a patched line clipped to [0.049, 0.084] | the package's speed-following knots throughout |
   | the noise | the largest of four measurements (15, 10, 10 and 10 populations, on three answers) | one measurement of 30 populations, on 2b's answer |
@@ -234,6 +234,27 @@ Every guarded 2a so far, each from its own start:
 - **F.0b-ii's preflight gains a check:** the truth's observation has D_fit at most 2.5 against the bands. 2a's readings read D_fit against the bands in every run, the recovery's too, so a truth past the bar could not be recovered by a start the procedure keeps. It mirrors decision 3a's check that the truth holds the lawn.
 - **For W:** W's arms run this procedure, so a fit's cost grows by its dropped starts. A null wiring may stall more often than the true one, and that rate is unmeasured. Each arm reports its starts.
 
+### 3d. 2b starts its own search (amended 2026-11-16)
+
+The fourth readiness pilot (base 1,200,000,000; `pilot_fourth.json`, 36.6 h) dropped its first start at the lawn (0.899) and its second at the descent (4.53). It kept its third, which passed all three of 2a's readings (0.997 on the lawn, 3.30 at the descent, 1.85 at the bar). Its answer then failed the go rule: the wild type passed in 0 of 5 populations, and tph-1, pdfr-1 and tax-4 in 5 of 5 each. In all five, local search's log early/late ratio failed (z −3.5 to −3.7), as did chemotaxis's flip fraction (4.5 to 4.6) and weathervane slope (6.3 to 8.3), the small lawn's pre-exit enrichment (−6.0 to −7.1) and the on-lawn onset rate (−3.1 to −3.5). Over 2b's 200 generations, carrying 2a's search state with the mutants at half, the mutants moved from generations 100–110: tph-1 swung about its band, and tax-4 stayed above its bar until generation 200. Local search's ratio stayed between −3.62 and −3.74, and the flip fraction between 4.41 and 5.02. Logbook 131's 2b moved both from a similar 2a answer.
+
+The pilot's 2b differed from 131's in two ways at once: the mutants from its first generation, and 2a's carried search state where 131's restarted isotropically at σ₀ 0.05. A screen separated them (`probes/two_b_screen.py.txt`). From the pilot's 2a answer, each arm ran a new isotropic search at σ₀ 0.05, population 48 and 200 animals, on the registered arm and objective, for 60 generations: arm A without the mutants, arm B with them at half. Its rule was fixed before either ran: an arm moves when local search's log early/late z, averaged over generations 40, 50 and 60, is at least −3.45. The pilot's 2b read −3.64 and −3.62 there, and the ratio's SD between populations is 0.065.
+
+| Arm | Generations 40, 50, 60 | Mean | |
+|---|---|---|---|
+| A, without the mutants | −3.35, −2.92, −2.89 | −3.06 | moves |
+| B, the mutants at half | −3.34, −3.16, −3.14 | −3.22 | moves |
+
+- **What it shows.** The result points to the carried search state, not the mutants. With a fresh search, both arms moved local search within 60 generations from the point where the carried 2b had not moved it in 200. Each arm is one CMA seed on its own animals, so this is consistent with 2a's steps, adapted to its four families, which leave local search and chemotaxis out, holding 2b where 2a left them. The mechanism was not measured. A moved further than B (−3.06 against −3.22), consistent with the mutants slowing it, but B moves.
+- **The amendment** (the maintainer's decision, 2026-11-16, by the screen's rule):
+  - **2b starts a new isotropic search at 2a's answer,** σ₀ 0.05, on the run's third CMA seed, with all six families and the mutants at half as before;
+  - **the final stage still carries 2b's search state;**
+  - **the pilot runs a fifth time on new seeds:** base 1,360,000,000, CMA 9682–9685, restarts 9686–9695.
+- **Why it cannot bias a verdict.** It changes how 2b's search starts, on a rule read on discarded seeds before any registered simulation, and it holds in every run.
+- **Stated, not remedied.** The flip fraction, the weathervane slope, pre-exit enrichment and the on-lawn onset rate did not pass in either arm's 60 generations. The weathervane slope fell (from 9.1 to 4.5 and 4.1) and the others barely moved. 2a's answer already failed pre-exit enrichment (−4.0) and the onset rate (−4.3) at D_fit 1.84, since D_fit's RMS can pass with two statistics failing. 131's flip fraction passed near its generation 150, and the registered 2b runs 200. The pilot's go rule reads whether they pass.
+- **Cost.** None: a 2b that starts its own search costs what a carried one did. The fourth pilot measured 2b at 346 s a generation, about 19.2 h.
+- **For W:** every arm's 2b starts its own search at σ₀ 0.05.
+
 ### 4. The noise step
 
 - 2b's answer is graded on 30 populations of 200, without presence. Presence leaves every statistic's value unchanged, and grading without it is 1.76× faster.
@@ -267,7 +288,7 @@ Every guarded 2a so far, each from its own start:
   - the final stage's plateau reading;
   - the reversal share against Roberts' 17.3%;
   - the cost per stage;
-  - **the neural reading** (added 2026-11-14, the maintainer's decision): the answer's in-silico single-neuron stimulation responses against Creamer et al.'s measured ones, as Logbook 134's M-a read Logbook 131's answer, with a paired test against the unfitted network and a wiring-only control. Its rules are fixed in Part A, and it is description, never graded;
+  - **the neural reading** (added 2026-11-14, the maintainer's decision): the answer's in-silico single-neuron stimulation responses against Creamer et al.'s measured ones, as Logbook 134's M-a read Logbook 131's answer, with a paired test against the unfitted network and a wiring-only control. Its rules are fixed in Part A, and it is description, never graded. *(Amended 2026-11-16, the maintainer's decision, after Logbook 135: the answer's share is of the readout's reliability ceiling, 0.423, with r(training, test) = 0.173 beside it as copying the training animals; the paired test's named interval resamples the stimulated neurons' 74 classes, with the neuron resample beside it; Logbook 135's calibrated references on held-out worms are quoted, not computed, and a calibrated reading is left to W.)*;
   - **the restart spread:** the median over g < 15 of the capped D between the pilot's population g and the registered answer's population g, on W's fitted families (the small lawn, kinematics, activity) beside W's minimum, and on all six beside it.
 - **Description-only outcomes, named in advance:**
   - **a pass with a poor held-out reading** (the answer's median distance to a held-out half above the band-cohort reference's 95th percentile): C.2 passes, and C.4 states the held-out distance as a limit of the fit;
@@ -401,7 +422,10 @@ Each run of the procedure has a block of 40,000,000 animal seeds from its base B
 | the first pilot, stopped at 2a | 900,000,000 | 9504–9507 | discarded, on the first layout |
 | the second pilot, which kept no start | 1,100,000,000 | 9531–9534, restarts 9541–9550 | discarded |
 | the third pilot, whose kept start missed 2a's bar | 1,140,000,000 | 9591–9594, restarts 9651–9660 | discarded, on the 20,000,000 layout |
-| the pilot (amended 2026-11-14, decision 3c) | 1,200,000,000 | 9661–9664, restarts 9671–9680 | discarded |
+| the fourth pilot, whose answer failed the go rule | 1,200,000,000 | 9661–9664, restarts 9671–9680 | discarded |
+| the pilot (amended 2026-11-16, decision 3d) | 1,360,000,000 | 9682–9685, restarts 9686–9695 | discarded |
+| the screen that diagnosed the fourth pilot | 1,400,000,000–1,400,575,999 and 1,410,000,000–1,410,575,999; readouts on 1,216,000,000 + i reused | 9922, 9923 | discarded |
+| a timing check of the simulation's kernels | 1,420,000,000–1,420,000,207 | | discarded |
 | the runs that diagnosed the first pilot | 1,010,000,000–1,055,000,199, and 890,000,000 + i for the checks of its worm | 9516–9525 | discarded |
 | the runs that diagnosed the second pilot | 1,060,000,000–1,065,000,199, 1,090,000,000–1,095,000,199 and 1,130,000,000–1,135,000,199 | 9571, 9574, 9581–9582 | discarded |
 | the check that diagnosed the third pilot | 1,170,000,000 + 1,000·p + i, p < 4 | | discarded |
@@ -430,9 +454,12 @@ Each run of the procedure has a block of 40,000,000 animal seeds from its base B
   - the first pilot (900,000,000–916,000,199) and the runs that diagnosed it (890,000,000–890,000,199 and 1,010,000,000–1,055,000,199);
   - the second pilot (1,100,000,000–1,118,002,999) and the runs that diagnosed it;
   - the third pilot (1,140,000,000–1,158,002,999) and the check that diagnosed it (1,170,000,000–1,170,003,199);
+  - the fourth pilot (1,200,000,000–1,237,279,999, every start's 2a reserved), the screen that diagnosed it and the timing check (1,400,000,000–1,420,000,207, in three blocks);
   - the fit-first investigation's reserved animals (1,500,000,000–1,501,000,199, Logbook 134).
 
-- The CMA seeds lie in C.2's reserved band (5801–5864) or, for discarded runs, in 9504–9680. They are clear of the seeds the Phase 10 table gives other work: 9601–9616, and the fit-first investigation's 9701–9722, 9731, 9732 and 9741–9759.
+- The CMA seeds lie in C.2's reserved band (5801–5864) or, for discarded runs, in 9504–9695 and the screen's 9922–9923. They are clear of the seeds the Phase 10 table gives other work: 9601–9616, the fit-first investigation's 9701–9722, 9731, 9732 and 9741–9759, and the neural readout's ceiling's 9770–9779, 9781–9799 and 9801–9805 (Logbook 135).
+
+- The neural reading's paired test resamples on `default_rng(9811)` (classes) and `default_rng(9812)` (neurons), clear of the same (amended 2026-11-16; `default_rng(9781)` until then, which Logbook 135's null rewirings use).
 
 - Tests check that no two blocks overlap.
 
@@ -485,6 +512,7 @@ The guards, through `cma_recovery.launch_committed`:
   - The first half's restarts, their selection rule and their count are pre-registered like a stage's budget.
 - **D38**, a note of 2026-11-13 (decision 3b), the maintainer's decision: C.2's objective carries a lawn guard in every stage, paid only below 0.95 on the lawn, where the statistic already fails at 200 animals. It is pre-registered like the other guards and W's arms inherit it.
 - **D38**, a note of 2026-11-14 (decision 3c), the maintainer's decision: a start of C.2's first half is also dropped when 2a's D_fit lags at generation 150 (above 4.25) or misses 2a's bar at its end (above 2.5), in every run. A run is kept on its first start to pass all three of 2a's readings. The readings, their bars and the count of starts are pre-registered like a stage's budget, and W's arms inherit them.
+- **D38**, a note of 2026-11-16 (decision 3d), the maintainer's decision: C.2's 2b starts a new isotropic search at 2a's answer (σ₀ 0.05) instead of carrying 2a's search state, which held local search and chemotaxis where 2a left them. The start is pre-registered like a stage's σ₀, and W's arms inherit it.
 - **D38**, amended 2026-11-10:
   - C.2's procedure is staged, with each stage's families, budget, x₀ and σ₀ (or carried search state) pre-registered, and every stage a fixed generation count.
   - The plateau criterion is read on the final stage and reported, not used as a stop, so W's arms run at equal budget.
@@ -499,8 +527,8 @@ The guards, through `cma_recovery.launch_committed`:
 ## Risks / Trade-offs
 
 - **[Procedure B is untested as a whole]**
-  - 2b has to find every family and the mutants at once from 2a's state. In the curriculum, 2b without the mutants reached five families.
-  - Mitigation: the pilot runs the exact procedure with a go rule and kill rules. A failed pilot changes no registered reading. From 2026-11-14 it costs at most about 48 h with no answer (six starts dropped at 2a's bar), or about 71 h when five are dropped there before a kept start runs to its answer. The second pilot cost 15.8 h and dropped all six starts at the lawn; the third cost 9.9 h.
+  - 2b has to find every family and the mutants at once, from 2a's answer. In the curriculum, 2b without the mutants reached five families. In the fourth pilot, a 2b that carried 2a's search state moved the mutants and not local search or chemotaxis. From the same point, a fresh search moved local search with and without the mutants (decision 3d). In either arm's 60 generations, the flip fraction, the weathervane slope, pre-exit enrichment and the onset rate did not pass.
+  - Mitigation: the pilot runs the exact procedure with a go rule and kill rules. A failed pilot changes no registered reading. From 2026-11-14 it costs at most about 48 h with no answer (six starts dropped at 2a's bar), or about 71 h when five are dropped there before a kept start runs to its answer. The second pilot cost 15.8 h and dropped all six starts at the lawn; the third cost 9.9 h; the fourth 36.6 h, with an answer that failed the go rule.
 - **[Noise measured on 2b's answer, not the final one]**
   - The final stage moves the answer, and its SDs may differ there. Logbook 131's ranged across answers: pre-exit enrichment 1.00–1.39, the onset rate 0.09–0.15.
   - The floor of 0.05 bounds a near-zero SD, but not a statistic whose SD shrinks at the final answer. The final stage's readouts record every statistic, so a drift is visible.

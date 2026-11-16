@@ -1,0 +1,353 @@
+{
+ "description": "Numba spike: where one C.2 candidate's time goes, and what Numba buys (description; discarded).\n\nNot part of any registered procedure, and no reading here selects anything registered.\n\nOne candidate in the 2b screen's arm B configuration (all four assays, then tph-1, pdfr-1 and\ntax-4 on the small lawn; 200 animals) is profiled on one core. Then two kernels are ported to Numba\nand checked against the NumPy code they replace:\n\n- **the splice** (``NoiseLibrary._splice``): the 50 candidates are still drawn from the same\n  generator in Python, and only the nearest-offset search runs in Numba;\n- **the lawn odour** (``BatchedEvaluator._odour``), two ways:\n  - *fused*: one pass per animal with its own dot product;\n  - *exact*: NumPy's matrix product kept, and the rest fused with NumPy's pairwise summation\n    reproduced.\n\nEach kernel is compared bit for bit with NumPy on inputs captured from a real simulation, and\ntimed on them. Then whole candidates are run, alternating NumPy and the ports, patched into the\npackage in process. A port is identical end to end when the candidate's record (every statistic, z,\nguard and mutant difference) is equal. The fused odour is also run end to end, to show how far a\nport that is not identical moves a candidate's statistics.\n\nVector: the screen's arm A answer. Seeds (discarded): 1,420,000,000 + i, i < 200, and\n1,420,000,200 + i, i < 8, for the warm-up.\n\nRun from the repository root, with Numba as an overlay on the project's environment:\n\n    uv run --no-sync --with numba==0.68.1 python build/numba-spike/spike.py\n",
+ "numba": "0.68.1",
+ "numpy": "2.5.4",
+ "seeds": [
+  1420000000,
+  1420000199
+ ],
+ "warm_seeds": [
+  1420000200,
+  1420000207
+ ],
+ "capture_seconds": 39.5355651662685,
+ "kernels": {
+  "odour": {
+   "captured": 160,
+   "of_calls": 83700,
+   "shapes_animals_nx_ny": [
+    [
+     200,
+     3,
+     3
+    ],
+    [
+     200,
+     11,
+     11
+    ],
+    [
+     200,
+     51,
+     51
+    ]
+   ],
+   "original_reproduces_itself": 160,
+   "exact_identical": 160,
+   "fused_identical": 93,
+   "fused_max_ulps": 8,
+   "fused_max_abs": 3.3306690738754696e-16,
+   "seconds_per_call_median": {
+    "numpy": 1.7480200000000002e-05,
+    "exact": 1.335105e-05,
+    "fused": 5.941649999999999e-06
+   },
+   "speedup": {
+    "exact": 1.3092753004445346,
+    "fused": 2.9419773968510436
+   }
+  },
+  "splice": {
+   "captured": 20000,
+   "of_calls": 362715,
+   "identical": 20000,
+   "seconds_per_call_median": {
+    "numpy": 8.458e-06,
+    "numba": 3.25e-06
+   },
+   "speedup": 2.6024615384615384
+  }
+ },
+ "profile": {
+  "profiled_seconds": 48.08925054082647,
+  "parts_cumulative_seconds": {
+   "evaluator_run": 34.445365375,
+   "settling": 4.548848534,
+   "forward_encoded": 12.577491862,
+   "controller_sample": 0,
+   "sense": 8.31834055,
+   "odour": 3.761573233,
+   "cells_under": 1.2717615400000002,
+   "move": 6.006849467,
+   "start_bouts": 4.380998607,
+   "eat": 0.7507203640000001,
+   "chen_odour": 0.11103696,
+   "record_conversion": 2.659639004,
+   "measurement": 6.976729519,
+   "noise_draw": 4.6220667010000005,
+   "splice": 4.2826062590000005,
+   "grading": 2.311746208
+  },
+  "top_by_own_time": [
+   {
+    "function": "connectome_ppo.py:2512:_forward_encoded",
+    "own": 4.610591219000001,
+    "cumulative": 12.577491862,
+    "calls": 27900
+   },
+   {
+    "function": "connectome_ppo.py:1587:_settling_tanh",
+    "own": 4.430445659,
+    "cumulative": 4.548848534,
+    "calls": 111600
+   },
+   {
+    "function": "batched.py:487:_odour",
+    "own": 3.23865755,
+    "cumulative": 3.761573233,
+    "calls": 83700
+   },
+   {
+    "function": "batched.py:712:_start_bouts",
+    "own": 2.7946697250000003,
+    "cumulative": 4.380998607,
+    "calls": 27900
+   },
+   {
+    "function": "~:0:<built-in method torch.randn>",
+    "own": 2.366672704,
+    "cumulative": 2.366672704,
+    "calls": 5580000
+   },
+   {
+    "function": "measurement.py:70:_splice",
+    "own": 2.329488622,
+    "cumulative": 4.2826062590000005,
+    "calls": 362715
+   },
+   {
+    "function": "batched.py:148:to_behaviour_steps",
+    "own": 2.028600415,
+    "cumulative": 2.659639004,
+    "calls": 1400
+   },
+   {
+    "function": "measurement.py:257:measure_window",
+    "own": 1.710378234,
+    "cumulative": 6.976729519,
+    "calls": 1200
+   },
+   {
+    "function": "controllers.py:244:_sample_slow_speed",
+    "own": 1.303068885,
+    "cumulative": 4.220452677,
+    "calls": 27900
+   },
+   {
+    "function": "batched.py:575:_sense",
+    "own": 1.283245371,
+    "cumulative": 8.31834055,
+    "calls": 27900
+   },
+   {
+    "function": "encoder.py:302:compose_chemical",
+    "own": 1.190682231,
+    "cumulative": 1.528571205,
+    "calls": 27900
+   },
+   {
+    "function": "~:0:<method 'reduce' of 'numpy.ufunc' objects>",
+    "own": 1.096481077,
+    "cumulative": 1.096481077,
+    "calls": 1841793
+   },
+   {
+    "function": "batched.py:638:_stam_state",
+    "own": 0.802620619,
+    "cumulative": 1.60046865,
+    "calls": 27900
+   },
+   {
+    "function": "batched.py:531:_cells_under",
+    "own": 0.740259301,
+    "cumulative": 1.2717615400000002,
+    "calls": 79200
+   },
+   {
+    "function": "batched.py:659:_move",
+    "own": 0.652675992,
+    "cumulative": 6.006849467,
+    "calls": 27900
+   },
+   {
+    "function": "batched.py:629:_stam_derivative",
+    "own": 0.608932608,
+    "cumulative": 0.812512965,
+    "calls": 27900
+   },
+   {
+    "function": "connectome_ppo.py:2554:_layer_current",
+    "own": 0.48496973000000004,
+    "cumulative": 0.809421955,
+    "calls": 27900
+   },
+   {
+    "function": "roaming_dwelling.py:134:_viterbi",
+    "own": 0.47856356400000005,
+    "cumulative": 0.7474250960000001,
+    "calls": 15793
+   },
+   {
+    "function": "fromnumeric.py:48:_wrapfunc",
+    "own": 0.47462920000000003,
+    "cumulative": 1.865022578,
+    "calls": 2505946
+   },
+   {
+    "function": "controllers.py:220:act",
+    "own": 0.43057660000000003,
+    "cumulative": 18.923723738,
+    "calls": 27900
+   },
+   {
+    "function": "primitives.py:355:push_run_speed",
+    "own": 0.352765582,
+    "cumulative": 0.482437221,
+    "calls": 3369117
+   },
+   {
+    "function": "~:0:<method 'index_select' of 'torch._C.TensorBase' objects>",
+    "own": 0.34425208100000004,
+    "cumulative": 0.34425208100000004,
+    "calls": 128700
+   },
+   {
+    "function": "references.py:250:sample_field",
+    "own": 0.335177279,
+    "cumulative": 0.43410329000000003,
+    "calls": 30570
+   },
+   {
+    "function": "_methods.py:96:_clip",
+    "own": 0.32590393100000004,
+    "cumulative": 0.326207895,
+    "calls": 432050
+   },
+   {
+    "function": "measurement.py:86:draw",
+    "own": 0.318903217,
+    "cumulative": 4.6220667010000005,
+    "calls": 1000
+   },
+   {
+    "function": "~:0:<built-in method torch.stack>",
+    "own": 0.30871888000000003,
+    "cumulative": 0.30871888000000003,
+    "calls": 55800
+   },
+   {
+    "function": "batched.py:764:_eat",
+    "own": 0.292139341,
+    "cumulative": 0.7507203640000001,
+    "calls": 27900
+   },
+   {
+    "function": "fromnumeric.py:66:_wrapreduction",
+    "own": 0.288727821,
+    "cumulative": 1.18736971,
+    "calls": 611492
+   },
+   {
+    "function": "connectome_ppo.py:2559:_layer_release",
+    "own": 0.28342833,
+    "cumulative": 0.41360718500000004,
+    "calls": 27900
+   },
+   {
+    "function": "~:0:<method 'append' of 'list' objects>",
+    "own": 0.274346144,
+    "cumulative": 0.274346144,
+    "calls": 6467814
+   }
+  ]
+ },
+ "profile_reproduces_reference": true,
+ "end_to_end": {
+  "numpy": {
+   "seconds": [
+    39.588807084131986,
+    39.859148000366986,
+    40.162785209249705
+   ],
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "median_seconds": 39.859148000366986,
+   "speedup": 1.0
+  },
+  "splice": {
+   "seconds": [
+    37.96623208327219,
+    38.01158995786682,
+    38.175056625157595
+   ],
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "median_seconds": 38.01158995786682,
+   "speedup": 1.048605123977925
+  },
+  "exact": {
+   "seconds": [
+    37.645367375109345,
+    37.6145126670599,
+    37.58462395798415
+   ],
+   "identical": [
+    true,
+    true,
+    true
+   ],
+   "median_seconds": 37.6145126670599,
+   "speedup": 1.0596747152668224
+  },
+  "fused": {
+   "seconds": [
+    36.925207749940455,
+    36.816676165908575,
+    36.815563207957894
+   ],
+   "identical": [
+    false,
+    false,
+    false
+   ],
+   "median_seconds": 36.816676165908575,
+   "speedup": 1.0826384169159646,
+   "z_differences": {
+    "small_lawn/roaming_fraction": 0.0,
+    "small_lawn/roaming_bout_s": 0.0,
+    "small_lawn/dwelling_bout_s": 0.0,
+    "small_lawn/exits_per_on_lawn_hour": 0.0,
+    "small_lawn/pre_exit_enrichment": 0.0,
+    "small_lawn/time_on_lawn": 0.0,
+    "kinematics/dwelling_speed_median": 0.0,
+    "kinematics/dwelling_speed_p90": 0.0,
+    "kinematics/roaming_speed_median": 0.0,
+    "kinematics/roaming_speed_p90": 0.0,
+    "kinematics/roaming_survival_5min": 0.0,
+    "activity/pause_share": 0.0,
+    "activity/flip_fraction": 0.0,
+    "activity/onset_rate_per_min": 0.0,
+    "uniform_lawn/roaming_fraction": -0.0003509642910964894,
+    "uniform_lawn/roaming_bout_s": -0.0008052340468249763,
+    "uniform_lawn/dwelling_bout_s": 8.401352717490873e-05,
+    "local_search/gamma_per_min": 0.0,
+    "local_search/log_early_late_ratio": 0.0,
+    "chemotaxis/drift_mm_s": 0.0,
+    "chemotaxis/log_quintile_ratio": 0.0,
+    "chemotaxis/weathervane_deg_s": 0.0,
+    "chemotaxis/onset_per_min": 0.0,
+    "chemotaxis/flip_fraction": 0.0
+   },
+   "D_fit": [
+    2.2061908730574995,
+    2.206145501789528
+   ]
+  }
+ }
+}

@@ -26,7 +26,8 @@ stage 1, which runs at population 24 and 64 animals:
    families, 150 generations;
 2. **2a**, all 137 from stage 1's answer with the speed noise's timescale at 1 s, sigma0 0.1, on D_fit's
    families, 300 generations;
-3. **2b**, all six families with the mutants, from 2a's search state, 200 generations;
+3. **2b**, all six families with the mutants, a new isotropic search at 2a's answer, sigma0 0.05,
+   200 generations;
 4. the noise step: 2b's answer on 30 populations, each statistic's SD between them;
 5. **the final stage**, 2b's objective plus the failure probability, from 2b's search state, 50
    generations.
@@ -176,6 +177,13 @@ PRIOR_BASE = 941_000_000
 CENTRE_BASE = 942_000_000
 PRIOR_SEED = 5805
 PRIOR_DRAWS = 200
+# The neural reading's generators: chance's joint relabellings, reused from the reading that first
+# read these responses, and the paired test's two bootstraps, one resampling the stimulated
+# neurons' classes (the governing interval, since a class's left and right neurons respond alike)
+# and one resampling the stimulated neurons themselves.
+NEURAL_CHANCE_SEED = 9731
+NEURAL_CLASS_BOOTSTRAP_SEED = 9811
+NEURAL_NEURON_BOOTSTRAP_SEED = 9812
 TRUTH_REPEATS = 20  # 1-10 the floor, 11-20 the oracle
 CENTRE_REPEATS = 10
 RECOVERY_RESIMULATIONS = 10
@@ -220,7 +228,9 @@ STAGES: tuple[Stage, ...] = (
         generations=300,
         failure=False,
     ),
-    Stage("2b", None, mutants=True, subset=False, sigma0=None, generations=200, failure=False),
+    # 2b starts a new isotropic search at 2a's answer, not 2a's steps, which were adapted to 2a's
+    # four families alone: a 2b carrying them left local search where 2a did, and fresh ones moved it.
+    Stage("2b", None, mutants=True, subset=False, sigma0=0.05, generations=200, failure=False),
     Stage("final", None, mutants=True, subset=False, sigma0=None, generations=50, failure=True),
 )
 NOISE_AFTER = "2b"
@@ -370,7 +380,7 @@ SMOKE_LAYOUT = Layout(
 )
 SMOKE_GENERATIONS = (2, 22, 2, 2)
 RUNS: dict[str, Run] = {
-    "pilot": Run("pilot", Layout(1_200_000_000), (9661, 9662, 9663, 9664), 9671, kill_rules=True),
+    "pilot": Run("pilot", Layout(1_360_000_000), (9682, 9683, 9684, 9685), 9686, kill_rules=True),
     "recovery": Run("recovery", Layout(1_240_000_000), (5801, 5802, 5803, 5804), 5831),
     "fit": Run("fit", Layout(1_280_000_000), (5811, 5812, 5813, 5814), 5841),
     "loo": Run(

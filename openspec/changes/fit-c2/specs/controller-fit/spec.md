@@ -15,15 +15,20 @@ C.2 SHALL be fitted by sep-CMA (bounds [0, 1], the three guards; population 24 a
 
 - **stage 1:** the 77 parameters of the wiring, sensory, readout and noise blocks and the pool centres, from the graded box's centre at σ₀ 0.2, on D_fit's families, for 150 generations;
 - **2a:** all 137, from stage 1's answer with the speed noise's timescale set to 1 s, at σ₀ 0.1, on D_fit's families, for 300 generations;
-- **2b:** all six families with tph-1, pdfr-1 and tax-4 at half the objective, from 2a's search state, for 200 generations;
+- **2b:** all six families with tph-1, pdfr-1 and tax-4 at half the objective, from a new isotropic search at 2a's answer at σ₀ 0.05, for 200 generations;
 - **the final stage:** 2b's objective plus each statistic's chance of failing a population, from 2b's search state, for 50 generations.
 
-Each stage SHALL run its full generation count. The plateau rule SHALL be read on the final stage and reported, not used as a stop. A later stage SHALL start a new strategy at the previous stage's answer, with that strategy's σ and per-parameter steps. The answer SHALL be the final stage's mean, clipped to the box.
+Each stage SHALL run its full generation count. The plateau rule SHALL be read on the final stage and reported, not used as a stop. 2b SHALL start a new isotropic strategy at 2a's answer, on the run's third CMA seed. The final stage SHALL start a new strategy at 2b's answer, with 2b's σ and per-parameter steps. The answer SHALL be the final stage's mean, clipped to the box.
 
-#### Scenario: A later stage keeps the search's steps
+#### Scenario: 2b restarts the search at 2a's answer
 
-- **WHEN** 2b starts from 2a's strategy with σ and per-parameter steps s_j
-- **THEN** 2b's initial σ SHALL be 2a's σ, its initial per-parameter steps SHALL be s_j, and its mean SHALL be 2a's answer
+- **WHEN** 2b starts, whichever start of the first half was kept
+- **THEN** its strategy SHALL be isotropic at σ₀ 0.05 on the run's third CMA seed, its mean SHALL be 2a's answer, and no stage SHALL take 2a's search state
+
+#### Scenario: The final stage keeps 2b's search steps
+
+- **WHEN** the final stage starts from 2b's strategy with σ and per-parameter steps s_j
+- **THEN** its initial σ SHALL be 2b's σ, its initial per-parameter steps SHALL be s_j, and its mean SHALL be 2b's answer
 
 #### Scenario: Stage 1 fits only its subset
 
@@ -127,7 +132,7 @@ Every 10 generations, and at each stage's generation 0, the stage's mean SHALL b
 
 #### Scenario: A resume with changed settings
 
-- **WHEN** a run is resumed with a stage's generation count, the lawn guard's bar or weight, or any of 2a's readings' readouts or bars changed
+- **WHEN** a run is resumed with a stage's generation count or start (σ₀, or a carried search state), the lawn guard's bar or weight, or any of 2a's readings' readouts or bars changed
 - **THEN** it SHALL refuse and run nothing
 
 ### Requirement: C.2's registered fit runs on the speed-following arm
