@@ -23,10 +23,26 @@ from `ceiling/pipeline.py.txt`. The registered reading used commit `869c5659`, b
 ## Running it again
 
 On a scratch branch, rename every `.py.txt` back to `.py` in place: `ceiling/config` finds the
-repository and Creamer's matrices from its own path, so the folder must stay where it is. The
-commands are in `run.py`'s docstring. They expect the repository's `.venv` with the `cpu`, `torch`, `pixel`,
+repository and Creamer's matrices from its own path, so the folder must stay where it is. Commit
+the rename before running `preflight`, `oracles` or `score`: the scorer refuses any read of S while
+`ceiling/` has an uncommitted change. The commands are in `run.py`'s docstring. They expect the repository's `.venv` with the `cpu`, `torch`, `pixel`,
 `analysis` and `qpu` extras, and write into a run directory (`runs/` is gitignored). Run the tests
 with `OMP_NUM_THREADS=1 NC_PACKAGE_TESTS=1 python -m pytest -q` from the folder.
 
 The scorer refuses a second registered reading of S unless a committed amendment names it. A new
 reading needs its own registration.
+
+## Known limits, if the code is reused
+
+Found in review after the run. None was exercised by run 135. Every checkpoint line parses, and m
+is finite on every split and oracle cell. The code is left as it ran.
+
+- The cost projection does not count the one-time λ-grid extensions (Logbook 135, Corrections).
+- The branch mapper reads an undefined m (every reference unreadable) as "fails" in R-B, R-C and
+  the denoising reading, rather than as unreadable.
+- A record appended after a line torn by a stop joins that line and is lost on the next load.
+- Task identities do not digest their data set, so a rewritten `datasets/*.npz` can reuse stale
+  checkpoints on resume.
+- The once-only rule reads the working copy of `READS.md`, with no lock and no check against its
+  committed history.
+- `summarise.py.txt` assumes a complete run with no cuts and every arm readable.
