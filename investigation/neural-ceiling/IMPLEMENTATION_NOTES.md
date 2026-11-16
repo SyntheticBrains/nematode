@@ -40,3 +40,9 @@ follows the build report.
 | 25 | Unnamed cells | R-C with one comparator unreadable reads "*tied or sparse-ER* read alone: wins" or "fails". **tied**'s R-A while **masked** is unreadable reads "Unreadable: m is undefined while masked is unreadable". |
 | 26 | Checksum before logging | The checksum is verified before a read is logged, so a wrong file spends no once-only reading. |
 | 27 | Equivalent mutants | Once amendment 1, item 5 applies, the within-fold exclusion is implied by the requirement that the transpose be defined. Removing either rule alone changes nothing. Removing both is caught by the tests. |
+
+## Readings added with amendment 2
+
+| # | Rule | The reading registered |
+|---|---|---|
+| 28 | A constant prediction (amendment 2) | `readings.is_constant`: standard deviation at most `CONSTANT_RTOL` (10⁻¹⁰) of the largest absolute value, over the split's entry set and over each fold's entries. One collapsed fold makes the arm unreadable on the split, with `why` set to `CONSTANT_PREDICTION`. The target is never consulted. |

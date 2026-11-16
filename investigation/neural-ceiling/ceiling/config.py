@@ -88,6 +88,10 @@ N_BOOT = 2000
 M_FRACTION = 0.25
 M0 = 0.0109
 CI_LEVEL = 0.95
+# Amendment 2: a prediction whose spread on an entry set is at most this fraction of its largest
+# magnitude is constant up to rounding, so a correlation with it is undefined.
+CONSTANT_RTOL = 1e-10
+CONSTANT_PREDICTION = "the selected fit predicts a constant"
 
 # ---- Budget (section 10) ----------------------------------------------------------------------
 WORKERS = 8

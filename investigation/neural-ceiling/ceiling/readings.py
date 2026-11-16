@@ -18,12 +18,24 @@ REFERENCES = ("floor-C", "H0-cal", "C.2-cal")
 # ---- Scoring ----------------------------------------------------------------------------------
 
 
+def is_constant(values: np.ndarray) -> bool:
+    """True if the values' spread is at most CONSTANT_RTOL of their largest magnitude. The spread
+    of such values is rounding noise, so a correlation with them is undefined."""
+    v = np.asarray(values, float)
+    if v.size == 0:
+        return False
+    return bool(np.std(v) <= C.CONSTANT_RTOL * np.max(np.abs(v)))
+
+
 def score_split(target: np.ndarray, preds: dict[str, np.ndarray | None], entries: np.ndarray,
                 split: str, layout: Layout, counts: np.ndarray,
                 fold_entries: list[np.ndarray] | None = None) -> dict[str, dict]:
     """Every arm's point r (nan_corr over the entry set), its resampled r and per-fold r.
     An arm whose prediction is None is unreadable on the split. A readable arm must be defined on
-    every entry of the set, so every arm is scored on the same entries (amendment 1, item 5)."""
+    every entry of the set, so every arm is scored on the same entries (amendment 1, item 5). An
+    arm whose prediction is constant on the set, or on any one fold's entries, is unreadable: a
+    collapsed fold counts as an unreadable fold fit, and an arm needs all its fold fits readable
+    (amendment 2)."""
     rows, cols = np.nonzero(entries)
     y = target[rows, cols]
     unit = unit_class(split, layout, rows, cols)
@@ -36,6 +48,9 @@ def score_split(target: np.ndarray, preds: dict[str, np.ndarray | None], entries
         defined = int(np.isfinite(vec).sum())
         if defined != len(vec):
             raise AssertionError(f"{split}: {arm} is defined on {defined} of the {len(vec)} entries")
+        if is_constant(vec) or any(is_constant(pred[f]) for f in (fold_entries or [])):
+            out[arm] = {"readable": False, "why": C.CONSTANT_PREDICTION, "n": len(vec)}
+            continue
         per_fold = [r_point(target[f], pred[f]) for f in (fold_entries or [])]
         out[arm] = {"readable": True, "r": r_point(y, vec), "n": int(np.isfinite(vec).sum()),
                     "boot": resampled_r(y, vec, unit, counts), "per_fold": per_fold}

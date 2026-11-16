@@ -493,3 +493,64 @@ under it:
 - r_ref taken as the worst reference.
 
 The review's leak check becomes a test.
+
+## Amendment 2 (2026-11-16, after the oracles and before the read of S's values)
+
+Written after the oracle stage and before the registered reading. S's values have not been read: its
+two logged reads so far took its finite-entry pattern and § 3's summaries (`READS.md`). The oracles
+fit synthetic data only. This amendment changes scoring only, not fitting, and no gate depends on
+it. The maintainer chose its rule on 2026-11-16 in two steps, both before S's values were read:
+first the rule for a constant prediction, drafted while the real stage was running; then, after the
+real fits to T showed **tied** collapsing fold by fold, its extension to a collapsed fold. Those real
+fits were seen before the extension was chosen. They are fits to T and say nothing about S.
+
+1. **A constant prediction is unreadable.**
+
+   - **What happened:** on held-out worms, in all three draws of oracle P, **tied**'s inner
+     cross-validation chose λ = 10 (draws 9773 and 9776) or λ = 1 (draw 9775). At λ ≥ 1 the
+     factorised W = URUᵀ, started from N(0, 0.01²), reaches W = 0 in 4 or 5 iterations, so its
+     prediction is the training mean, 0.2254477522516836, on every entry; its standard deviation is
+     about 10⁻¹⁷. At λ ≤ 0.1 its summed inner validation loss was 5.8 to 10.1, against 3.0 for
+     predicting the mean, so the selection preferred the constant.
+   - **The problem:** a constant has no correlation with anything. Creamer's `nan_corr` divides by
+     the prediction's standard deviation, and returned −∞, +∞ and −0.094 (rounding noise) in the
+     three draws. This record defines no reading for such an arm. With an infinite difference and
+     an undefined interval, the code would have read R-C's contrast against **tied** as "fails",
+     and R-A's **tied** cell as "above the reference" (+∞) or "above, under the minimum" (−∞). K, P
+     and N do not read **tied**, so their gates stand.
+   - **The rule:** a prediction is **constant** on a set of entries if its standard deviation there
+     is at most 10⁻¹⁰ of its largest absolute value. An arm is **unreadable** on a split if its
+     prediction is constant on the split's entry set, or on any one fold's entries, recorded as "the
+     selected fit predicts a constant". A collapsed fold counts as an unreadable fold fit, and an
+     arm is readable only if all its fold fits are (reading 20). The test reads the prediction
+     alone, never the target. Every rule for an unreadable arm then applies:
+     - R-A's cell for that arm reads unreadable;
+     - a null-D, null-R or sparse-ER draw counts as an unreadable draw;
+     - an unreadable **tied** makes R-C's contrast against it unreadable (amendment 1, item 7), and
+       R-C is read on sparse-ER alone (reading 25);
+     - a constant **masked** makes its split unreadable.
+   - **Why a fold counts:** on the real T, **tied**'s inner cross-validation chose λ = 1 or 10 in
+     every fold of held-out stimulations and held-out neurons. Its summed inner validation loss was
+     14.3 there, against 147 to 388 at λ ≤ 0.1. Each fold then predicts its own training mean, so
+     the pooled prediction is five different constants. It is not constant overall, and its r would
+     measure only how the fold means differ, which comes from standardising each fold on its own.
+     On the real fits only the **tied** family collapses: the registered **tied** on all three
+     splits, and the description sweep's ranks in some or all folds. No fold of **masked**, the
+     nulls, sparse-ER, **dense**, **untied** or masked-prior is constant.
+   - **Reported beside it, as description:** **tied**'s inner validation losses by λ on every split
+     where it collapses.
+   - **The options not taken:** scoring a constant as r = 0, which would credit **masked** with a
+     win over an optimiser collapse; refitting **tied** with other λ values or another start, which
+     would change fitting after the oracle results were seen; and, for the extension, making an arm
+     unreadable only when every fold collapses, or scoring the fold constants as drafted.
+
+2. **What the oracles' P failure means, as registered.** P failed on held-out stimulations and on
+   held-out neurons, and passed its held-out-worm line. § 10's only oracle stop rule is a failure of
+   K on held-out stimulations, and K passed. So the run continues. R-B and R-D are unreadable on
+   both held-out splits (amendment 1, item 6). R-A, R-C, the denoising reading and R-0 are read.
+
+**Test added with this amendment** (`investigation/neural-ceiling/tests/test_amendment2.py`). A
+collapsed prediction is unreadable on every split, whatever the target's scale. A small but real
+prediction stays readable. One collapsed fold makes the arm unreadable, and so do five folds at
+five different constants. A collapsed **tied** makes R-A's tied cell and R-C's tied contrast
+unreadable. A collapsed **masked** makes its split unreadable.

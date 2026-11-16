@@ -33,7 +33,7 @@ def _strip(scores: dict) -> dict:
     out = {}
     for arm, s in scores.items():
         if not s.get("readable"):
-            out[arm] = {"readable": False}
+            out[arm] = {"readable": False, **({"why": s["why"]} if "why" in s else {})}
             continue
         out[arm] = {"readable": True, "r": s["r"], "ci": interval(s["boot"]), "n": s["n"],
                     "per_fold": s["per_fold"]}
