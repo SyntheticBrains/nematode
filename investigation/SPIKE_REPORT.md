@@ -63,6 +63,8 @@ independently.
 | Chance, the 97.5th percentile of 1,000 relabellings | 0.022 | |
 | Creamer's LDS fitted to these data, as published | 0.14 | 82% |
 
+*(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): 0.173 is r(training, test), a reference, not the ceiling. The reliability ceiling is 0.423, against which the box centre is at 15% and C.2 at 13%.)* Creamer's 0.14 is about a third of it.
+
 **The registered reading:** above chance, not above the floor.
 
 - The connectome's structure alone carries some signal about who responds to whom.
@@ -126,7 +128,7 @@ long-run goal *faster and more reliably* than the current approach.
   machine time as W, before any closed-loop work. The closed loop needs an interface that neither
   model provides.
 - **But behaviour fitting showed no detectable gain in neural fidelity either.** C.2's fitted head
-  scored 0.053 against its unfitted wiring's 0.065, with overlapping intervals and no paired test. If neural fidelity is part of the long-run goal,
+  scored 0.053 against its unfitted wiring's 0.065, with overlapping intervals and no paired test. *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): paired, C.2 is below the unfitted network by about 0.012 on every split, with the interval below 0 on two of three.)* If neural fidelity is part of the long-run goal,
   neural data have to supply it.
 
 ## 8. What stays unknown

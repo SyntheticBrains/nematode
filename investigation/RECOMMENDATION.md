@@ -28,9 +28,9 @@ that is a PASS: the slimmed hybrid. Two further points:
 - **Behaviour fitting does not detectably add to it.** C.2's fitted answer scores 0.0534 on the true wiring,
   against 0.0653 unfitted. The intervals overlap, but they treat the matrix's entries as
   independent and both networks are scored on the same matrix, and no paired test was run. So
-  there is no detectable gain, which is not the same as evidence of none.
+  there is no detectable gain, which is not the same as evidence of none. *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): paired, C.2 is below the unfitted network by about 0.012 on every split, with the interval below 0 on two of three.)*
 - **The absolute level is modest.** The true wiring reaches 38% of the data's own ceiling of 0.173,
-  where Creamer's fitted model reaches 82%.
+  where Creamer's fitted model reaches 82%. *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): 0.173 is r(training, test), a reference, not the ceiling. The reliability ceiling is 0.423, against which the box centre is at 15% and C.2 at 13%.)*
 
 ## Why not the others
 

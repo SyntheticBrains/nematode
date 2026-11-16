@@ -9,7 +9,7 @@ in `ma_c2/result.json`.
 matrix at r = 0.0534. That is above the null's 97.5th percentile (0.0224), but below the box
 centre's r = 0.0653. The unfitted network matches the measured responses slightly better than the
 behaviour-fitted one. The two 95% intervals overlap widely (0.035 to 0.072 for C.2, 0.047 to 0.084
-for the box centre), so the two are not told apart here. Both sit near a third of the data ceiling.
+for the box centre), so the two are not told apart here. Both sit near a third of the data ceiling. *(2026-11-16, [Logbook 135](../../docs/experiments/logbooks/135-neural-readout-ceiling.md): 0.173 is r(training, test), a reference, not the ceiling. The reliability ceiling is 0.423, against which the box centre is at 15% and C.2 at 13%.)* *(2026-11-16, [Logbook 135](../../docs/experiments/logbooks/135-neural-readout-ceiling.md): paired, C.2 is below the unfitted network by about 0.012 on every split, with the interval below 0 on two of three.)*
 
 ## Numbers
 

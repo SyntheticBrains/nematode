@@ -295,4 +295,3 @@ def run_dataset(run_dir: Path, prefix: str, dataset: str, arms_by_unit: dict, la
     T, _ = load_dataset(Path(run_dir), dataset)
     return {"choice": choice, "pooled": pool(run_dir, ck, tasks, T, layout),
             "fits": fit_summaries(ck, tasks)}
-

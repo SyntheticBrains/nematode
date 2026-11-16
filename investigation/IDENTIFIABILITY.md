@@ -252,7 +252,7 @@ parameters.
 - **No parameter class is well constrained by the data alone.** What comes closest is a prediction:
   the head network's effective response to single-neuron stimulation, constrained with priors (the
   mask and the signs), up to a ceiling the data set themselves (r = 0.17 between training and test
-  animals).
+  animals). *(2026-11-16, [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md): 0.17 is a reference; the reliability ceiling is 0.423.)*
 - **Neural data and behaviour data identify different layers.** Perturbation recordings reach
   effective head coupling and slow timescales, which behaviour statistics reach not at all. Behaviour
   and mutants reach state-level neuromodulator effects, which neural recordings currently reach no

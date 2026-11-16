@@ -33,4 +33,3 @@ amendment.
 - amendment: `869c5659dc151499dbbbb98f6ae233d757aedb0d`
 - code: clean at HEAD
 - read: the registered readings: every arm's r on S over each split's entry set, the paired class bootstraps, R-0 to R-D
-
