@@ -74,7 +74,8 @@ The investigation used no Phase 10 compute, and ran nothing while a C.2 run was 
 
 ## Addendum, 2026-11-16: the readout's ceiling (Logbook 135)
 
-A registered spike, run after the merge, measured what the neural readout can reach. Nothing here
+A registered spike, run after the merge, measured what the neural readout can reach. It is closed:
+nothing further is planned on these matrices. Nothing here
 changes a registered rule or verdict; the tracker and roadmap entries stay with the Phase 10 session.
 
 - **The readout's ceiling is about 0.42, not 0.17.** √(Cov(T, S)/Var(S)) is 0.423 (0.369 to 0.471).

@@ -1,6 +1,6 @@
 # 135: The Neural Readout's Ceiling Is About 0.42, and a Linear Model Learned on the Connectome Does Not Beat the Calibrated Unfitted Network Under It (Phase 10 / the fit-first investigation)
 
-**Status**: `completed`. **Ceiling 0.42; R-A not above the reference; R-B and R-D unreadable
+**Status**: `completed`; the spike is closed (see [below](#the-spike-is-closed)). **Ceiling 0.42; R-A not above the reference; R-B and R-D unreadable
 (oracle P failed); R-C: anatomy beats random sparsity; no denoising beyond copying.** Established
 on Creamer et al.'s two measured response matrices:
 
@@ -281,6 +281,25 @@ unfitted wiring, and its small deficit is below 0 on two splits but not on the g
 arms can be read for the same paired difference. A learned test of anatomy would need more independent data than two aggregated
 matrices; [DATA_CHECK.md](../../../investigation/neural-ceiling/DATA_CHECK.md) lists the datasets that
 pair controlled inputs with neural activity and behaviour, without building anything.
+
+## The spike is closed
+
+Closed 2026-11-16, on the maintainer's decision after this reading. Two of its three questions have
+answers: the ceiling, and C.2 against its unfitted network. The third, whether anatomy helps a
+learned model beyond rewirings, cannot be answered on these two matrices. S is spent for
+learned-model questions: R-B's descriptive margins have been seen, so any redesign aimed at reading
+it again (a stronger positive truth than a shrunk fit to T, or a wider ridge grid) would be shaped
+by them and could not be registered cleanly.
+
+- **Considered and not taken:**
+  - a synthetic power curve, asking how much higher the data's reliability must be before oracle P
+    passes. It reads no S and costs a few hours, but it matters only if more independent data are
+    planned, and none are;
+  - per-animal data from the CC-BY atlas (DANDI 001075). That is the path the fit-first spike
+    stopped on: the deposit names the target of only half its stimulations.
+- **What stays usable:** scoring a new mechanistic model zero-shot against S remains fair, since
+  nothing is tuned to it. Its next use is C.2's registered answer (launch record 133), already
+  deferred there by Logbook 134.
 
 ## Registered consequences
 

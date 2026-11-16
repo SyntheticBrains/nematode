@@ -1,6 +1,6 @@
 # The neural readout's ceiling: the spike's code
 
-The code behind [Logbook 135](../../docs/experiments/logbooks/135-neural-readout-ceiling.md),
+Closed 2026-11-16. The code behind [Logbook 135](../../docs/experiments/logbooks/135-neural-readout-ceiling.md),
 registered in
 [launch record 135](../../docs/experiments/logbooks/supporting/135-neural-readout-ceiling/launch.md).
 Every Python file is kept as `.py.txt`, so the repository's linters and test runner leave it alone.
