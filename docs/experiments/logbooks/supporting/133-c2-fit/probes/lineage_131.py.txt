@@ -1,0 +1,44 @@
+"""Logbook 131's lineage on the registered body (description; discarded).
+
+The curriculum's stage-3 answer and the hinge, hinge2, hinge3 and hinge4 answers, each graded on
+the registered arm (the speed-following on-food reversal) on onset_sweep.py's three populations
+(1,430,000,000 + 200 p + i), all six assays and the three mutants, without presence. Where did the
+lineage's onset rate and dwelling speeds stand, on this body, at each step of its route?
+"""
+
+import json
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-fit")
+import benchmark_grade as bg
+import c2_fit as fit
+import onset_sweep as first
+
+D = Path("docs/experiments/logbooks/supporting/131-c2-clean-start/probes")
+OUT = Path("build/c2-fit/lineage_131.json")
+
+
+def main() -> int:
+    bands = bg.load_bands_v4()
+    pts = [("curriculum", json.loads((D / "curriculum.json").read_text())["z"])]
+    pts += [(h, json.loads((D / f"{h}.json").read_text())["z"]) for h in ("hinge", "hinge2", "hinge3")]
+    pts += [("hinge4", fit.answer_131())]
+    n = first.POPULATIONS
+    jobs = [(z, first.seeds(p), False) for _, z in pts for p in range(n)]
+    start = time.perf_counter()
+    with fit._pool(16) as pool:
+        results = list(pool.map(fit._point_job, jobs))
+    records = {name: {"vector": fit.vector_digest(z),
+                      "populations": [fit.grade_record(r, bands) for r in results[i * n:(i + 1) * n]]}
+               for i, (name, z) in enumerate(pts)}
+    OUT.write_text(json.dumps({"description": __doc__, "seconds": time.perf_counter() - start,
+                               "points": records}, indent=1))
+    print(f"done in {time.perf_counter() - start:.0f} s", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,107 @@
+"""Can the fifth pilot's answer reverse more on the lawn without losing the rest? (description; discarded)
+
+The fifth readiness pilot failed its go rule (the wild type 0 of 5, 0 of 15; every mutant 15 of
+15) on one statistic: the on-lawn onset rate, 1.32 a minute against the bands' 2.28 (scale 0.225
+at 200 animals; the pass bar about 1.59), z -4.1 to -4.5 in all 15 populations. Across the final
+stage's candidates the onset rate's z moved with the pause share (r -0.90) and the dwelling speed
+median (r +0.92), so the search raised onsets only with a busier dwelling worm, which took the
+dwelling speed's 90th percentile over its bar. Logbook 131's answer, on the same encoder and body,
+reverses at 1.69 a minute with the same dwelling speeds, pausing less and roaming more.
+
+This sweep asks whether a direction exists at the pilot's answer that raises the onset rate while
+the dwelling speeds, the other fitted statistics and tph-1 hold: one parameter at a time, in the
+encoder's unit coordinates (clipped to [0, 1]), plus two points on the line to Logbook 131's
+answer. Every point is simulated on all six assays and the three mutants, without presence, on the
+same three populations (common animals), so the points compare with each other paired.
+
+**The points.** The pilot's answer; Logbook 131's answer; the reversal readout's bias +0.05,
++0.10, +0.20; the speed readout's bias -0.05, +0.05, +0.10; CEP's food-contact gain at 0.10, 0.25,
+0.50; serotonin's fixed-sign strength -0.10, -0.25; the reversal output's noise -0.15, +0.10; the
+omega and delta readouts' biases +0.10; the pilot's answer moved a quarter and a half of the way to
+Logbook 131's.
+
+**The reading, fixed before it runs** (2026-11-18). A point **opens a direction** when, in all
+three populations, the onset rate's z is at least -3.0781, every other D_fit statistic passes, and
+tph-1 passes. Then:
+
+- **Some point opens a direction:** an available move the search did not take. The fix is in the
+  objective's weighting or the final stage's budget, and the next probe tests that.
+- **None does, but some point raises the onset rate by at least 1 in z:** onsets can rise here
+  only at a cost elsewhere; the point's failing statistics name the coupling, and the route is
+  compared with Logbook 131's.
+- **No point raises it by 1:** the answer sits where these parameters do not move onsets; the
+  comparison with Logbook 131's answer is the next step.
+
+**Reported beside it, never selected on:** every point's statistics, z and mutant readings.
+
+**Seeds (discarded).** Population p's animals 1,430,000,000 + 200 p + i, i < 200, p < 3.
+
+Run from the repository root: ``onset_sweep.py [workers]``.
+"""
+
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+
+OUT = Path("build/c2-fit/onset_sweep.json")
+PILOT = Path("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json")
+BASE = 1_430_000_000
+POPULATIONS = 3
+
+
+def seeds(p: int) -> list[int]:
+    return list(range(BASE + fit.ANIMALS * p, BASE + fit.ANIMALS * (p + 1)))
+
+
+def points() -> list[tuple[str, list[float]]]:
+    names = [e.name for e in fit.entries()]
+    z0 = np.asarray(json.loads(PILOT.read_text())["answer"], dtype=float)
+    z131 = np.asarray(fit.answer_131(), dtype=float)
+    idx = {n: i for i, n in enumerate(names)}
+
+    def moved(name: str, *, by: float | None = None, to: float | None = None) -> list[float]:
+        z = z0.copy()
+        z[idx[name]] = np.clip(to if to is not None else z[idx[name]] + by, 0.0, 1.0)
+        return z.tolist()
+
+    out = [("pilot", z0.tolist()), ("answer_131", z131.tolist())]
+    out += [(f"reversal.bias{d:+.2f}", moved("readout.reversal.bias", by=d)) for d in (0.05, 0.10, 0.20)]
+    out += [(f"speed.bias{d:+.2f}", moved("readout.speed.bias", by=d)) for d in (-0.05, 0.05, 0.10)]
+    out += [(f"CEP.contact={v:.2f}", moved("sensory.CEP.contact", to=v)) for v in (0.10, 0.25, 0.50)]
+    out += [(f"serotonin{d:+.2f}", moved("modulator.fixed.serotonin", by=d)) for d in (-0.10, -0.25)]
+    out += [(f"noise.reversal{d:+.2f}", moved("noise.reversal", by=d)) for d in (-0.15, 0.10)]
+    out += [("omega.bias+0.10", moved("readout.omega.bias", by=0.10))]
+    out += [("delta.bias+0.10", moved("readout.delta.bias", by=0.10))]
+    out += [(f"toward_131_{t:.2f}", (z0 + t * (z131 - z0)).tolist()) for t in (0.25, 0.5)]
+    return out
+
+
+def main() -> int:
+    workers = int(sys.argv[1]) if len(sys.argv) > 1 else 16
+    bands = bg.load_bands_v4()
+    pts = points()
+    jobs = [(z, seeds(p), False) for _, z in pts for p in range(POPULATIONS)]
+    print(f"{len(pts)} points x {POPULATIONS} populations = {len(jobs)} jobs on {workers}", flush=True)
+    start = time.perf_counter()
+    with fit._pool(workers) as pool:
+        results = list(pool.map(fit._point_job, jobs))
+    records = {}
+    for i, (name, z) in enumerate(pts):
+        rs = [fit.grade_record(r, bands) for r in results[i * POPULATIONS : (i + 1) * POPULATIONS]]
+        records[name] = {"vector": fit.vector_digest(z), "populations": rs}
+    OUT.write_text(json.dumps(
+        {"description": __doc__, "seeds": {"base": BASE, "populations": POPULATIONS},
+         "seconds": time.perf_counter() - start, "points": records}, indent=1))
+    print(f"done in {time.perf_counter() - start:.0f} s -> {OUT}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

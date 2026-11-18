@@ -1,0 +1,251 @@
+"""Does a hinge move the onset rate the final stage cannot? (description; discarded)
+
+The fifth readiness pilot failed its go rule (the wild type 0 of 5, 0 of 15; every mutant 15 of 15)
+on the on-lawn onset rate alone: z -4.1 to -4.5 in all 15 populations. Its final stage scores each
+statistic's chance of failing a population, 10 x Phi((|z| - 3.0781) / SD), and the onset rate's SD
+between populations is 0.112, so that term is flat at 10.000 for any onset z below about -3.5: the
+stage earns nothing for raising the onset rate from where it sat, and pays for any move that costs
+a statistic near its bar (the dwelling speed's 90th percentile, SD 0.30). Logbook 131's route ran a
+quadratic hinge before its failure-probability stage, which moved the onset rate from -3.6 to -3.1
+with the dwelling speeds unchanged; the registered procedure has no hinge (``onset_sweep.py``,
+``lineage_131.py``, 2026-11-18).
+
+**The screen.** From the pilot's final search state (``state.pkl``'s ``previous``, 50 generations
+in, sigma 0.0271), a new sep-CMA carrying its sigma and per-parameter steps at the pilot's answer
+(``c2_fit.carried``), population 48 at 200 animals, the registered arm, for 50 generations, on the
+final stage's objective (``c2_fit.Objective`` with all six families, the three mutants at half and
+the pilot's noise SDs, plus the guards) plus Logbook 131's hinge: 5 x the sum over statistics of
+max(0, |10 asinh(z / 10)| - target)^2, the target 0.3 inside each pass rule (2.7781 for a
+wild-type statistic, 1.9414 for a mutant's graded difference), z on the bands' scales at 200
+animals; undefined statistics are left to the ranking score. Readouts at generation 0 and every 10
+generations on the pilot's own readout animals; generation 0 reproduces the pilot's final
+generation-50 readout, a check on this setup.
+
+**The rule, fixed before it runs** (2026-11-18). Over the readouts at generations 30, 40 and 50,
+the screen **passes** when the on-lawn onset rate's mean z is at least -3.0781, every other
+wild-type statistic is defined at all three and its mean |z| is at most 3.0781, and each mutant
+passes in at least 2 of the 3.
+
+- **Passes:** the hinge moves what the failure term cannot. The amendment adds the hinge to the
+  final stage's objective.
+- **Fails:** the hinge cannot escape this basin's coupling between on-lawn reversals and dwelling
+  speed; the fix has to act in 2a, where the basin is chosen.
+
+**Reported beside it, never selected on:** every readout's statistics, z and mutant readings; each
+generation's median and best score, its best candidate's hinge, and the step size; the last answer
+graded with presence on 5 fresh populations.
+
+**Seeds (discarded).** Candidates 1,440,000,000 + 200 x (48 x (g - 1) + m) + i (50 generations:
+480,000 animals); readouts on the pilot's 1,376,000,000 + i, i < 200, reused for reading only; the
+grade 1,441,000,000 + 200 p + i, p < 5; CMA 9924.
+
+Run from the repository root: ``hinge_screen.py [workers]``. Every candidate's record is stored as
+it completes, and the strategy after every generation, so a resume continues exactly.
+"""
+
+import json
+import math
+import os
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+
+BASE, CMA_SEED, GRADE_BASE = 1_440_000_000, 9924, 1_441_000_000
+POPSIZE, ANIMALS, GENERATIONS, EVERY = 48, 200, 50, 10
+READING = (30, 40, 50)
+HINGE_WEIGHT, MARGIN = 5.0, 0.3
+ONSET = "activity/onset_rate_per_min"
+PILOT = Path("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json")
+PILOT_STATE = Path("build/c2-fit/pilot/state.pkl")
+READOUT_SEEDS = fit.RUNS["pilot"].layout.readout_seeds()
+OUT = Path("build/c2-fit/hinge_screen")
+WILD_BAR = float(bg.load_bands_v4()["bars"]["wild_type"])
+
+
+def compressed(z: float) -> float:
+    return fit.v2.COMPRESSION * math.asinh(z / fit.v2.COMPRESSION)
+
+
+class HingeObjective(fit.Objective):
+    """The final stage's objective plus a hinge on every statistic past a target inside its bar."""
+
+    def hinge(self, record):
+        wild_target = self.wild_bar - MARGIN
+        excess = 0.0
+        for key, centre in self.truth["statistics"].items():
+            value = record["statistics"].get(key)
+            if value is None or centre is None or not math.isfinite(float(value)):
+                continue
+            z = (float(value) - float(centre)) / self.scales[key]
+            excess += max(0.0, abs(compressed(z)) - wild_target) ** 2
+        for m in self.mutants:
+            for s in fit.GRADED[m]:
+                z = fit.mutant_z(self.truth, record, self.mscales[m][s], m, s)
+                excess += max(0.0, abs(compressed(z)) - (self.mutant_bars[m] - MARGIN)) ** 2
+        return HINGE_WEIGHT * excess
+
+    def __call__(self, record):
+        return super().__call__(record) + self.hinge(record)
+
+
+def _job(item):
+    generation, member, seeds, z = item
+    began = time.perf_counter()
+    record = fit.simulate_point(z, seeds, assays=None, mutants=fit.MUTANTS)
+    return {"generation": generation, "member": member, "vector": fit.vector_digest(z), **record,
+            "seconds": time.perf_counter() - began}
+
+
+def _save(path, state):
+    tmp = path.with_suffix(".tmp")
+    tmp.write_bytes(pickle.dumps(state))
+    os.replace(tmp, path)
+
+
+def _stored(path):
+    out = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:  # a torn last line from an interrupted write
+                continue
+            out[r["generation"], r["member"]] = r
+    return out
+
+
+def seeds_of(g, m):
+    first = BASE + ANIMALS * (POPSIZE * (g - 1) + m)
+    return list(range(first, first + ANIMALS))
+
+
+def reading(readouts):
+    wild = list(readouts[READING[0]]["z"])
+    zs = {k: [readouts[g]["z"].get(k) for g in READING] for k in wild}
+    undefined = sorted(k for k, v in zs.items() if any(z is None for z in v))
+    means = {k: float(np.mean(v)) for k, v in zs.items() if k not in undefined}
+    onset = means.get(ONSET)
+    others = sorted(k for k, z in means.items() if k != ONSET and abs(z) > WILD_BAR)
+    mutants = {m: sum(bool(readouts[g]["mutants"][m]["passes"]) for g in READING) for m in fit.MUTANTS}
+    passes = (onset is not None and onset >= -WILD_BAR and not others and not undefined
+              and all(n >= 2 for n in mutants.values()))
+    return {"generations": list(READING), "onset_mean_z": onset, "other_failing": others,
+            "undefined": undefined, "mutant_passes_of_3": mutants, "passes": bool(passes)}
+
+
+def main(workers):
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path, store = OUT / "state.pkl", OUT / "candidates.jsonl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    pilot = json.loads(PILOT.read_text())
+    objective = HingeObjective(truth, bands, families=None, mutants=fit.MUTANTS, sd=pilot["noise"]["sd"])
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        previous = pickle.loads(PILOT_STATE.read_bytes())["previous"]
+        x0 = [float(v) for v in pilot["answer"]]
+        assert np.allclose(np.clip(previous.result.xfavorite, 0, 1), x0)
+        assert previous.countiter == 50 and len(x0) == len(fit.entries()) == 137
+        state = {"es": fit.carried(previous, x0, CMA_SEED, POPSIZE), "sigma0": float(previous.sigma),
+                 "medians": [], "best": [], "hinge_best": [], "sigmas": [], "readouts": {},
+                 "seconds": 0.0}
+        _save(state_path, state)
+    es = state["es"]
+
+    def read(g):
+        z = list(map(float, np.clip(es.result.xfavorite, 0, 1)))
+        r = state["readouts"][g] = fit.readout(pool, z, READOUT_SEEDS, truth)
+        fails = {k.split("/")[1]: round(v, 2) for k, v in r["z"].items() if v is None or abs(v) > WILD_BAR}
+        mp = {m: r["mutants"][m]["passes"] for m in fit.MUTANTS}
+        print(f"hinge screen readout {g}: D_fit {r['D_fit']:.2f} D {r['D']:.2f} onset {r['z'].get(ONSET):+.2f} "
+              f"dwelling p90 {r['z'].get('kinematics/dwelling_speed_p90'):+.2f} "
+              f"median {r['z'].get('kinematics/dwelling_speed_median'):+.2f} fails {fails} mutants {mp}", flush=True)
+
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        if 0 not in state["readouts"]:
+            read(0)
+            pilot50 = pilot["readouts"]["final"]["50"]["statistics"]
+            mine = state["readouts"][0]["statistics"]
+            same = all(
+                (pilot50[k] is None and mine.get(k) is None)
+                or (pilot50[k] is not None and mine.get(k) is not None
+                    and abs(pilot50[k] - mine[k]) <= 1e-9 * max(1.0, abs(pilot50[k])))
+                for k in pilot50
+            )
+            state["reproduces_pilot_final_50"] = bool(same)
+            print(f"hinge screen: generation-0 readout reproduces the pilot's final generation 50: {same}", flush=True)
+            _save(state_path, state)
+        while len(state["medians"]) < GENERATIONS:
+            g = len(state["medians"]) + 1
+            began = time.time()
+            points = es.ask()
+            candidates = [list(map(float, np.clip(p, 0, 1))) for p in points]
+            stored = _stored(store)
+            records, todo = {}, []
+            for m, z in enumerate(candidates):
+                r = stored.get((g, m))
+                if r is None:
+                    todo.append((g, m, seeds_of(g, m), z))
+                elif r["vector"] != fit.vector_digest(z):
+                    raise ValueError(f"{store}: generation {g} member {m} is stored at another vector")
+                else:
+                    records[m] = r
+            if todo:
+                with store.open("a") as handle:
+                    for r in pool.map(_job, todo):
+                        handle.write(json.dumps(nr._finite(r), allow_nan=False) + "\n")
+                        handle.flush()
+                        records[r["member"]] = r
+            records = [records[m] for m in range(len(candidates))]
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            best = int(np.argmin(scores))
+            state["medians"].append(float(np.median(scores)))
+            state["best"].append(float(scores[best]))
+            state["hinge_best"].append(float(objective.hinge(records[best])))
+            state["sigmas"].append(float(es.sigma))
+            if g % EVERY == 0:
+                read(g)
+            state["seconds"] += time.time() - began
+            print(f"hinge screen gen {g}: median {state['medians'][-1]:.2f} best {state['best'][-1]:.2f} "
+                  f"(hinge {state['hinge_best'][-1]:.2f}) sigma {es.sigma:.4f} {time.time() - began:.0f} s",
+                  flush=True)
+            _save(state_path, state)
+        result = reading(state["readouts"])
+        answer = list(map(float, np.clip(es.result.xfavorite, 0, 1)))
+        if "grade" not in state:
+            jobs = [(answer, list(range(GRADE_BASE + ANIMALS * p, GRADE_BASE + ANIMALS * (p + 1))), True)
+                    for p in range(5)]
+            state["grade"] = [nr._finite({"population": p, **fit.grade_record(r, bands)})
+                              for p, r in enumerate(pool.map(fit._point_job, jobs))]
+            _save(state_path, state)
+    grade = state["grade"]
+    described = {"wild_type": sum(bool(r["wild_type_passes"]) for r in grade),
+                 "mutants": {m: sum(bool(r["mutants"][m]["passes"]) for r in grade) for m in fit.MUTANTS},
+                 "onset_z": [r["z"].get(ONSET) for r in grade]}
+    record = {
+        "description": __doc__, "base": BASE, "cma": CMA_SEED, "grade_base": GRADE_BASE,
+        "sigma0": state["sigma0"], "generations": GENERATIONS, "hinge": {"weight": HINGE_WEIGHT, "margin": MARGIN},
+        "readout_seeds": [READOUT_SEEDS[0], READOUT_SEEDS[-1]],
+        "reproduces_pilot_final_50": state.get("reproduces_pilot_final_50"),
+        "reading": result, "grade_described": described,
+        "medians": state["medians"], "best": state["best"], "hinge_best": state["hinge_best"],
+        "sigmas": state["sigmas"], "readouts": {str(g): v for g, v in sorted(state["readouts"].items())},
+        "grade": grade, "answer": answer, "seconds": state["seconds"],
+    }
+    Path("build/c2-fit/hinge_screen.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"hinge screen done: {result}; described grade {described}", flush=True)
+
+
+if __name__ == "__main__":
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else 16)

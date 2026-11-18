@@ -1,0 +1,58 @@
+hinge screen readout 0: D_fit 1.89 D 1.69 onset -4.31 dwelling p90 +2.15 median +1.18 fails {'onset_rate_per_min': -4.31} mutants {'tph-1': True, 'pdfr-1': True, 'tax-4': True}
+hinge screen: generation-0 readout reproduces the pilot's final generation 50: True
+hinge screen gen 1: median 43.47 best 9.68 (hinge 0.30) sigma 0.0257 277 s
+hinge screen gen 2: median 34.64 best 13.04 (hinge 1.02) sigma 0.0247 307 s
+hinge screen gen 3: median 36.54 best 14.60 (hinge 0.31) sigma 0.0240 306 s
+hinge screen gen 4: median 40.94 best 17.46 (hinge 4.04) sigma 0.0233 307 s
+hinge screen gen 5: median 27.16 best 14.78 (hinge 1.81) sigma 0.0229 307 s
+hinge screen gen 6: median 28.82 best 16.02 (hinge 1.83) sigma 0.0225 309 s
+hinge screen gen 7: median 31.21 best 15.27 (hinge 0.79) sigma 0.0220 310 s
+hinge screen gen 8: median 27.38 best 11.90 (hinge 0.62) sigma 0.0218 310 s
+hinge screen gen 9: median 30.48 best 7.59 (hinge 0.00) sigma 0.0217 310 s
+hinge screen readout 10: D_fit 1.69 D 1.52 onset -3.13 dwelling p90 +3.02 median +1.97 fails {'onset_rate_per_min': -3.13} mutants {'tph-1': True, 'pdfr-1': True, 'tax-4': True}
+hinge screen gen 10: median 29.39 best 5.43 (hinge 0.00) sigma 0.0215 337 s
+hinge screen gen 11: median 25.28 best 6.64 (hinge 0.00) sigma 0.0215 303 s
+hinge screen gen 12: median 24.40 best 5.73 (hinge 0.09) sigma 0.0214 313 s
+hinge screen gen 13: median 34.31 best 6.37 (hinge 0.00) sigma 0.0214 312 s
+hinge screen gen 14: median 32.61 best 8.13 (hinge 0.19) sigma 0.0213 312 s
+hinge screen gen 15: median 31.52 best 11.23 (hinge 0.16) sigma 0.0212 313 s
+hinge screen gen 16: median 29.77 best 5.68 (hinge 0.15) sigma 0.0210 313 s
+hinge screen gen 17: median 28.31 best 6.35 (hinge 0.07) sigma 0.0209 315 s
+hinge screen gen 18: median 28.61 best 4.71 (hinge 0.00) sigma 0.0208 318 s
+hinge screen gen 19: median 28.59 best 8.49 (hinge 0.17) sigma 0.0207 313 s
+hinge screen readout 20: D_fit 1.60 D 1.45 onset -3.05 dwelling p90 +2.90 median +2.32 fails {} mutants {'tph-1': True, 'pdfr-1': True, 'tax-4': True}
+hinge screen gen 20: median 30.95 best 8.26 (hinge 0.05) sigma 0.0207 340 s
+hinge screen gen 21: median 30.08 best 6.04 (hinge 0.05) sigma 0.0207 305 s
+hinge screen gen 22: median 23.99 best 4.72 (hinge 0.00) sigma 0.0207 315 s
+hinge screen gen 23: median 21.64 best 7.78 (hinge 0.00) sigma 0.0207 315 s
+hinge screen gen 24: median 21.71 best 7.39 (hinge 0.00) sigma 0.0208 315 s
+hinge screen gen 25: median 22.85 best 4.64 (hinge 0.00) sigma 0.0207 314 s
+hinge screen gen 26: median 27.05 best 3.83 (hinge 0.02) sigma 0.0208 315 s
+hinge screen gen 27: median 28.03 best 6.64 (hinge 0.00) sigma 0.0207 315 s
+hinge screen gen 28: median 23.65 best 5.79 (hinge 0.00) sigma 0.0207 315 s
+hinge screen gen 29: median 25.80 best 7.13 (hinge 0.08) sigma 0.0206 315 s
+hinge screen readout 30: D_fit 1.62 D 1.45 onset -3.15 dwelling p90 +2.48 median +2.25 fails {'onset_rate_per_min': -3.15} mutants {'tph-1': True, 'pdfr-1': True, 'tax-4': True}
+hinge screen gen 30: median 23.23 best 6.29 (hinge 0.00) sigma 0.0206 341 s
+hinge screen gen 31: median 19.97 best 2.70 (hinge 0.00) sigma 0.0205 307 s
+hinge screen gen 32: median 24.31 best 4.63 (hinge 0.00) sigma 0.0205 316 s
+hinge screen gen 33: median 23.73 best 5.19 (hinge 0.05) sigma 0.0206 316 s
+hinge screen gen 34: median 24.02 best 7.31 (hinge 0.14) sigma 0.0207 316 s
+hinge screen gen 35: median 24.76 best 2.81 (hinge 0.00) sigma 0.0207 316 s
+hinge screen gen 36: median 20.86 best 5.37 (hinge 0.00) sigma 0.0207 316 s
+hinge screen gen 37: median 23.06 best 5.89 (hinge 0.02) sigma 0.0207 316 s
+hinge screen gen 38: median 22.62 best 5.45 (hinge 0.00) sigma 0.0208 317 s
+hinge screen gen 39: median 26.87 best 4.37 (hinge 0.00) sigma 0.0208 316 s
+hinge screen readout 40: D_fit 1.64 D 1.50 onset -2.88 dwelling p90 +2.86 median +2.18 fails {} mutants {'tph-1': True, 'pdfr-1': True, 'tax-4': True}
+hinge screen gen 40: median 22.14 best 4.90 (hinge 0.03) sigma 0.0208 342 s
+hinge screen gen 41: median 21.36 best 6.18 (hinge 0.00) sigma 0.0208 307 s
+hinge screen gen 42: median 27.88 best 5.00 (hinge 0.09) sigma 0.0207 316 s
+hinge screen gen 43: median 26.22 best 4.18 (hinge 0.03) sigma 0.0207 316 s
+hinge screen gen 44: median 23.72 best 3.32 (hinge 0.04) sigma 0.0207 317 s
+hinge screen gen 45: median 20.42 best 3.50 (hinge 0.07) sigma 0.0205 316 s
+hinge screen gen 46: median 26.81 best 2.35 (hinge 0.00) sigma 0.0205 316 s
+hinge screen gen 47: median 23.83 best 4.82 (hinge 0.08) sigma 0.0204 316 s
+hinge screen gen 48: median 22.20 best 4.63 (hinge 0.00) sigma 0.0203 317 s
+hinge screen gen 49: median 17.88 best 7.45 (hinge 0.00) sigma 0.0203 316 s
+hinge screen readout 50: D_fit 1.57 D 1.47 onset -3.01 dwelling p90 +2.64 median +2.27 fails {} mutants {'tph-1': True, 'pdfr-1': True, 'tax-4': True}
+hinge screen gen 50: median 20.45 best 4.09 (hinge 0.00) sigma 0.0202 341 s
+hinge screen done: {'generations': [30, 40, 50], 'onset_mean_z': -3.01373939336434, 'other_failing': [], 'undefined': [], 'mutant_passes_of_3': {'tph-1': 3, 'pdfr-1': 3, 'tax-4': 3}, 'passes': True}; described grade {'wild_type': 2, 'mutants': {'tph-1': 5, 'pdfr-1': 5, 'tax-4': 5}, 'onset_z': [-2.9003328198414793, -2.949702481210463, -2.7272406623432213, -2.9599248990060287, -2.968271399840062]}
