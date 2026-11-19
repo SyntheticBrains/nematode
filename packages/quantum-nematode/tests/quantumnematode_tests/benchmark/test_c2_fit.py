@@ -10,9 +10,10 @@ reproduce W's minimum", "The smoke reads no held-out track", "A start that does 
 is dropped", "A start that misses 2a's descent or bar is dropped", "A registered run misses a
 checkpoint", "A start's 2a ends above the bar", "No start holds the lawn", "The lawn-holding
 reading is a mean", "The descent reading is a mean", "An interrupted drop resumes to the same
-answer", "Each start has its own animals", "A registered fit with no answer fails" and "The lawn
-guard"; and the fit-recovery spec's "The preflight fails", "The recovery falls short", "A truth
-whose statistic flips", "The preflight runs once" and "A recovery with no answer does not pass".
+answer", "Each start has its own animals", "A registered fit with no answer fails", "The lawn
+guard", "The hinge" and "Presence is scored"; and the fit-recovery spec's "The preflight fails",
+"The recovery falls short", "A truth whose statistic flips", "A truth below presence's target", "The
+preflight runs once" and "A recovery with no answer does not pass".
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ import pickle
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 import pytest
@@ -96,6 +97,178 @@ def test_a_statistic_at_its_bar(bands: dict[str, Any]) -> None:
     assert fit.phi(0.0) == 0.5
 
 
+def test_the_hinge(bands: dict[str, Any]) -> None:
+    """Covers "The hinge": 5 x the square of each compressed abs(z) past 0.3 inside its bar."""
+    truth = fit.band_truth(bands)
+    objective = fit.Objective(truth, bands, families=None, mutants=fit.MUTANTS, hinge=True)
+    record = _record(truth)
+    assert objective.hinge(record) == 0.0
+    # The registered targets: 0.3 inside the wild type's bar and each mutant's.
+    assert (fit.HINGE_WEIGHT, fit.HINGE_MARGIN) == (5.0, 0.3)
+    wild = float(bands["bars"]["wild_type"]) - 0.3
+    assert wild == pytest.approx(2.77809, abs=1e-5)
+    # One 2 past its target below, one 1 past above, one inside it, one undefined, one infinite.
+    statistics = record["statistics"]
+    onset, p90 = "activity/onset_rate_per_min", "kinematics/dwelling_speed_p90"
+    statistics[onset] = _at_z(truth, bands, onset, -10 * math.sinh((wild + 2.0) / 10))
+    statistics[p90] = _at_z(truth, bands, p90, 10 * math.sinh((wild + 1.0) / 10))
+    roaming = "small_lawn/roaming_fraction"
+    statistics[roaming] = _at_z(truth, bands, roaming, 10 * math.sinh((wild - 0.1) / 10))
+    statistics["chemotaxis/drift_mm_s"] = None
+    statistics["chemotaxis/weathervane_deg_s"] = math.inf
+    assert objective.hinge(record) == pytest.approx(5.0 * (4 + 1), rel=1e-9)
+    # A graded mutant difference 0.5 past its own target; tph-1's leaving is not graded.
+    scales = fit.mutant_scales(bands)
+    target = float(bands["bars"]["tax-4"]) - 0.3
+    assert target == pytest.approx(1.94140, abs=1e-5)
+    z = 10 * math.sinh((target + 0.5) / 10)
+    record["delta"]["tax-4"]["roaming_fraction"] = (
+        truth["delta"]["tax-4"]["roaming_fraction"] + z * scales["tax-4"]["roaming_fraction"]
+    )
+    record["delta"]["tph-1"]["exits_per_on_lawn_hour"] += 50.0
+    assert objective.hinge(record) == pytest.approx(5.0 * (5 + 0.25), rel=1e-9)
+    # It enters the score only where the stage takes it.
+    plain = fit.Objective(truth, bands, families=None, mutants=fit.MUTANTS)
+    statistics["chemotaxis/weathervane_deg_s"] = truth["statistics"]["chemotaxis/weathervane_deg_s"]
+    assert objective(record) - plain(record) == pytest.approx(objective.hinge(record), rel=1e-9)
+    assert plain.hinge(record) == objective.hinge(record)
+
+
+def test_the_procedure_scores_the_final_stages_hinge(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bands: dict[str, Any],
+) -> None:
+    """With every candidate off the lawn, the final stage's best score carries its hinge."""
+    done = _fake(monkeypatch, tmp_path, bands, candidate_lawn=0.0)
+    final = done["record"]["histories"]["final"]
+    # Far off the lawn, the hinge alone is in the thousands.
+    assert min(final["hinge"]) > 1000.0
+    for best, hinge, presence in zip(final["best"], final["hinge"], final["presence"], strict=True):
+        assert best >= hinge + presence + fit.LAWN_PENALTY - 1e-6
+    # 2b scores no hinge, so its best stays below it.
+    two_b = done["record"]["histories"]["2b"]
+    assert max(two_b["best"]) < min(final["hinge"])
+
+
+def test_the_presence_term(bands: dict[str, Any]) -> None:
+    """Covers "Presence is scored": a hinge below two SDs, and the chance of falling below 0."""
+    truth = fit.band_truth(bands)
+    keys = fit.PRESENCE_STATISTICS
+    assert keys == ("drift_mm_s", "log_quintile_ratio")
+
+    def at(**units: float | None) -> dict[str, Any]:
+        bounds = {k: None if u is None else u * fit.PRESENCE_SD[k] for k, u in units.items()}
+        return _record(truth, chemotaxis_presence={"lower_bounds": bounds, "present": True})
+
+    on_target = at(drift_mm_s=2.0, log_quintile_ratio=2.0)
+    assert fit.Objective.presence(on_target) == pytest.approx(2 * 10 * fit.phi(-2.0), rel=1e-12)
+    # At 0: 5 x 2^2 + 10 x 0.5 for the ratio, the drift far above its target.
+    zero = at(drift_mm_s=40.0, log_quintile_ratio=0.0)
+    assert fit.Objective.presence(zero) == pytest.approx(20.0 + 5.0 + 10 * fit.phi(-40.0))
+    # Undefined, missing, or far below: the floor, 5 x 12^2 + 10 x Phi(10), for each bound.
+    floor = 5.0 * 12.0**2 + 10.0 * fit.phi(10.0)
+    for record in (
+        at(drift_mm_s=None, log_quintile_ratio=None),
+        _record(truth),
+        _record(truth, chemotaxis_presence=None),
+        at(drift_mm_s=-1e6, log_quintile_ratio=-math.inf),
+    ):
+        assert fit.Objective.presence(record) == pytest.approx(2 * floor)
+    # It enters the score only where the stage takes it.
+    scored = fit.Objective(truth, bands, families=None, mutants=(), presence=True)
+    plain = fit.Objective(truth, bands, families=None, mutants=())
+    assert scored(zero) - plain(zero) == pytest.approx(fit.Objective.presence(zero))
+    # Its scales: the lower bounds' spread over the fifth pilot's 15 grade populations.
+    pilot = json.loads((fit.SUPPORT / "pilot_fifth.json").read_text())
+    assert len(pilot["grades"]) == 15
+    for k in keys:
+        bounds = [g["chemotaxis_presence"]["lower_bounds"][k] for g in pilot["grades"]]
+        spread = np.std(bounds, ddof=1)
+        assert fit.PRESENCE_SD[k] == pytest.approx(float(spread), rel=1e-12)
+
+
+def test_each_stage_scores_its_own_terms(fake_run: dict) -> None:
+    """The hinge enters the final stage alone, presence 2b and the final stage, as recorded."""
+    flags = {s.name: (s.failure, s.hinge, s.presence) for s in fit.STAGES}
+    assert flags == {
+        "1": (False, False, False),
+        "2a": (False, False, False),
+        "2b": (False, False, True),
+        "final": (True, True, True),
+    }
+    histories = fake_run["record"]["histories"]
+    # The fake records carry no presence, so each scored generation pays the floor for both bounds.
+    floor = 2 * (5.0 * 12.0**2 + 10.0 * fit.phi(10.0))
+    for name, n in zip(histories, fake_run["run"].generations, strict=True):
+        stage = next(s for s in fit.STAGES if s.name == name)
+        assert ("hinge" in histories[name]) is stage.hinge
+        assert ("presence" in histories[name]) is stage.presence
+        if stage.presence:
+            assert histories[name]["presence"] == pytest.approx([floor] * n)
+            # The best score includes it.
+            assert min(histories[name]["best"]) >= floor
+        else:
+            assert max(histories[name]["best"]) < floor
+        if stage.hinge:
+            assert len(histories[name]["hinge"]) == n
+
+
+def test_each_generation_records_its_best_candidates_terms(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bands: dict[str, Any],
+) -> None:
+    """The hinge and presence recorded each generation are the best-scoring candidate's own."""
+    done = _fake(monkeypatch, tmp_path, bands, candidate_bounds=True)
+    record, run, truth = done["record"], done["run"], done["truth"]
+    popsize = run.layout.popsize
+    for s, stage in enumerate(fit.STAGES):
+        if not stage.presence:
+            continue
+        objective = fit.Objective(
+            truth,
+            bands,
+            families=stage.families,
+            mutants=run.mutants,
+            sd=record["noise"]["sd"] if stage.failure else None,
+            hinge=stage.hinge,
+            presence=stage.presence,
+        )
+        history = record["histories"][stage.name]
+        candidates = done["seen"]["candidates"][s]
+        varied = 0
+        for g in range(len(history["best"])):
+            records = [
+                _fake_candidate(truth, z, bounds=True)
+                for z in candidates[popsize * g : popsize * (g + 1)]
+            ]
+            scores = [objective(r) for r in records]
+            best = int(np.argmin(scores))
+            assert history["best"][g] == pytest.approx(scores[best], rel=1e-12)
+            assert history["presence"][g] == pytest.approx(objective.presence(records[best]))
+            if stage.hinge:
+                assert history["hinge"][g] == pytest.approx(objective.hinge(records[best]))
+            terms = {round(objective.presence(r), 9) for r in records}
+            hinges = {round(objective.hinge(r), 9) for r in records}
+            varied += len(terms) > 1 and (not stage.hinge or len(hinges) > 1)
+        # The candidates' terms differ, so a record of another candidate's would not match.
+        assert varied == len(history["best"])
+
+
+def test_a_readout_grades_presence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every readout's wild type is graded with presence; a mutant's small lawn has none."""
+    seen = []
+
+    def simulate(z, seeds, *, assays, mutants, presence):
+        seen.append((assays, mutants, presence))
+        return {"statistics": {}}
+
+    monkeypatch.setattr(fit, "simulate_point", simulate)
+    assert fit._readout_job(("wild", [0.5], [1, 2])) == ("wild", {"statistics": {}})
+    assert seen == [(None, (), True)]
+
+
 def test_tph1_leaving_is_not_scored(bands: dict[str, Any]) -> None:
     """Covers "tph-1's leaving is not scored": its exits difference moves no term."""
     truth = fit.band_truth(bands)
@@ -155,6 +328,8 @@ def test_the_lawn_guard(bands: dict[str, Any], stage: Any) -> None:
         families=stage.families,
         mutants=fit.MUTANTS if stage.mutants else (),
         sd=sd if stage.failure else None,
+        hinge=stage.hinge,
+        presence=stage.presence,
     )
     assert truth["statistics"][fit.LAWN_STATISTIC] > fit.LAWN_GUARD_BELOW
     for lawn, paid in ((None, 300.0), (0.0, 300.0), (0.475, 150.0), (0.95, 0.0), (0.99, 0.0)):
@@ -163,6 +338,8 @@ def test_the_lawn_guard(bands: dict[str, Any], stage: Any) -> None:
         assert fit.lawn_guard(record) == pytest.approx(paid, abs=1e-9)
         assert fit.Objective.guards(record) == pytest.approx(paid, abs=1e-9)
         rest = objective.distance(record) + objective.failure(record)
+        rest += objective.hinge(record) if stage.hinge else 0.0
+        rest += objective.presence(record) if stage.presence else 0.0
         assert objective(record) - rest == pytest.approx(paid, abs=1e-9)
     # It adds to the other guards.
     pinned = _record(truth, saturated=0.6)
@@ -202,7 +379,31 @@ def _fake_entries() -> list[Any]:
     ]
 
 
-def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its starts read
+def _fake_candidate(
+    truth: dict[str, Any],
+    z: list[float],
+    lawn: float | None = None,
+    *,
+    bounds: bool = False,
+) -> dict[str, Any]:
+    """Return a fake run's candidate record: its roaming fraction, and its bounds, move with z."""
+    record = _record(truth)
+    key = "small_lawn/roaming_fraction"
+    record["statistics"][key] = truth["statistics"][key] + 0.01 * float(np.sum(z))
+    if lawn is not None:
+        record["statistics"][fit.LAWN_STATISTIC] = lawn
+    if bounds:
+        # The ratio's bound runs from 3 SDs below 0 to 4 above as z's mean runs over the box, and
+        # the time on the lawn from 0.5 to 0.8, so each candidate's hinge and presence differ.
+        u = float(np.mean(z)) * 7.0 - 3.0
+        record["statistics"][fit.LAWN_STATISTIC] = 0.5 + 0.3 * float(np.mean(z))
+        record["chemotaxis_presence"] = {
+            "lower_bounds": {k: u * fit.PRESENCE_SD[k] for k in fit.PRESENCE_STATISTICS},
+        }
+    return record
+
+
+def _fake(  # noqa: PLR0913 - the patches, the run's shape and what its starts read
     monkeypatch: pytest.MonkeyPatch,
     build: Path,
     bands: dict[str, Any],
@@ -221,6 +422,7 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
     kill_rules: bool = False,
     interrupt: tuple[int, int, int] | None = None,
     candidate_lawn: float | None = None,
+    candidate_bounds: bool = False,
 ) -> dict:
     """Run the procedure on fake simulations: every candidate and readout seen, every hand-off.
 
@@ -231,6 +433,7 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
     readouts. ``at`` overrides a readout's values at (start, 2a's generation). ``interrupt`` stops
     the run as (stage, generation, start) begins to simulate, as a process dying there would.
     ``candidate_lawn``, when given, is every candidate's time on the small lawn.
+    ``candidate_bounds`` gives each candidate presence's lower bounds, varying with its vector.
     """
     seen: dict[str, Any] = {"candidates": {}, "carried": [], "fresh": [], "stores": [], "start": 0}
     truth = fit.band_truth(bands)
@@ -246,15 +449,9 @@ def _fake(  # noqa: C901, PLR0913 - the patches, the run's shape and what its st
         seen["stores"].append((stage, g, first_half_start, path.name))
         # The readout that follows a generation reads its stage and generation.
         seen["at"] = (stage, g)
-        out = []
-        for z in candidates:
-            record = _record(truth)
-            key = "small_lawn/roaming_fraction"
-            record["statistics"][key] = truth["statistics"][key] + 0.01 * float(np.sum(z))
-            if candidate_lawn is not None:
-                record["statistics"][fit.LAWN_STATISTIC] = candidate_lawn
-            out.append(record)
-        return out
+        return [
+            _fake_candidate(truth, z, candidate_lawn, bounds=candidate_bounds) for z in candidates
+        ]
 
     def of(values: tuple[float, ...]) -> float:
         return values[min(seen["start"], len(values) - 1)]
@@ -882,8 +1079,10 @@ def test_a_starts_candidates_are_simulated_on_its_own_animals(
     """Covers "Each start has its own animals": the start reaches the simulation's seeds."""
     seen = []
 
-    def simulate(z, seeds, *, assays, mutants):
-        seen.append({"seeds": list(seeds), "assays": assays, "mutants": mutants})
+    def simulate(z, seeds, *, assays, mutants, presence):
+        seen.append(
+            {"seeds": list(seeds), "assays": assays, "mutants": mutants, "presence": presence},
+        )
         return {"statistics": {}}
 
     monkeypatch.setattr(fit, "simulate_point", simulate)
@@ -896,6 +1095,7 @@ def test_a_starts_candidates_are_simulated_on_its_own_animals(
         assert [r["member"] for r in records] == [0, 1]
         assert seen[-1]["seeds"] == run.layout.candidate_seeds(stage, generation, 1, start)
         assert seen[-1]["assays"] == fit.FIT_ASSAYS
+        assert seen[-1]["presence"] is False
     assert seen[0]["seeds"][0] == 1_280_000_000 + 250_000 * 3 + 64 * 24
     # A stored candidate is reused at the same vector, and refused at another.
     path = tmp_path / "0_2.jsonl"
@@ -910,6 +1110,12 @@ def test_a_starts_candidates_are_simulated_on_its_own_animals(
     own = 1_280_000_000 + 20_000_000 + 2_880_000 * 3
     assert seen[2]["seeds"][0] == own + 200 * 48 * 59
     assert seen[4]["seeds"][0] == own + 200 * 48 * 60
+    # 2b's and the final stage's candidates are graded with presence, on all six assays.
+    for stage in (2, 3):
+        fit._generation(pool, run, stage, 1, [z], tmp_path / f"{stage}_1.jsonl")
+        assert seen[-1]["presence"] is True
+        assert seen[-1]["assays"] is None
+        assert seen[-1]["mutants"] == run.mutants
 
 
 def test_a_reading_without_a_readout_is_refused(
@@ -1050,11 +1256,13 @@ def _preflight(
 
     def run(kind: str) -> dict[str, Any]:
         statistics = {"a": 1.0, fit.LAWN_STATISTIC: distances.get("lawn", 0.98)}
+        bounds = distances.get("bounds", {"drift_mm_s": 0.004, "log_quintile_ratio": 0.12})
         return {
             "kind": kind,
             "statistics": statistics,
             "delta": {"tph-1": {"s": 0.1}},
             "D_fit": distances.get("d_fit", 1.8),
+            "chemotaxis_presence": {"lower_bounds": bounds, "present": True},
         }
 
     repeats = [run("floor")] * 10 + [run("oracle")] * 10
@@ -1082,6 +1290,19 @@ def test_the_preflight_checks(monkeypatch: pytest.MonkeyPatch, bands: dict[str, 
     for d_fit, reaches in ((2.5, True), (2.6, False), (None, False)):
         far = _preflight(monkeypatch, {**good, "d_fit": d_fit}, bands)
         assert (far["checks"]["reaches_bar"], far["passed"]) == (reaches, reaches)
+    # Covers "A truth below presence's target": each lower bound must clear two of its SDs, since
+    # 2b and the final stage pull every candidate toward them.
+    assert record["checks"]["clears_presence"] is True
+    bounds = record["observation_presence_bounds"]
+    assert bounds == {"drift_mm_s": 0.004, "log_quintile_ratio": 0.12}
+    at = {k: fit.PRESENCE_TARGET * fit.PRESENCE_SD[k] for k in fit.PRESENCE_STATISTICS}
+    ratio = "log_quintile_ratio"
+    below = {**at, ratio: 0.99 * at[ratio]}
+    for bounds, clears in ((at, True), (below, False), ({**at, ratio: None}, False), ({}, False)):
+        read = _preflight(monkeypatch, {**good, "bounds": bounds}, bands)
+        assert (read["checks"]["clears_presence"], read["passed"]) == (clears, clears)
+    drift = _preflight(monkeypatch, {**good, "bounds": {**at, "drift_mm_s": 0.0}}, bands)
+    assert drift["checks"]["clears_presence"] is False
 
 
 def test_a_truth_whose_statistic_flips() -> None:
@@ -1097,6 +1318,56 @@ def test_the_recovery_falls_short() -> None:
     preflight = {"prior_D": 6.4, "floor": 0.4}
     assert fit.recovery_gate(6.4 - 0.70 * 6.0, preflight)["passes"] is False
     assert fit.recovery_gate(6.4 - 0.80 * 6.0, preflight)["passes"] is True
+
+
+def test_the_preflight_grades_the_observation_with_presence(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The truth's observation (q = 0) is graded with presence, its re-simulations and draws not."""
+    jobs: list[tuple[list[float], list[int], bool]] = []
+
+    class Pool:
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_a: object) -> None:
+            return None
+
+        def map(self, _job, items):
+            items = list(items)
+            jobs.extend(items)
+            # The truth's runs sit near it, the prior's draws far, the box centre between.
+            near = {fit.TRUTH_BASE // 10**6: 0.4, fit.PRIOR_BASE // 10**6: 6.0}
+            return [
+                {
+                    "statistics": {fit.LAWN_STATISTIC: 0.98},
+                    "delta": {},
+                    "D_fit": 1.0,
+                    "distance": near.get(seeds[0] // 10**6, 5.9),
+                    "chemotaxis_presence": {
+                        "lower_bounds": dict.fromkeys(fit.PRESENCE_STATISTICS, 1.0),
+                    },
+                }
+                for _, seeds, _ in items
+            ]
+
+    pilot = tmp_path / "pilot.json"
+    pilot.write_text(json.dumps({"answer": [0.5, 0.5]}) + "\n")
+    monkeypatch.setattr(fit, "PILOT_PATH", pilot)
+    monkeypatch.setattr(fit, "RECOVERY_PREFLIGHT_PATH", tmp_path / "recovery_preflight.json")
+    monkeypatch.setattr(fit, "BUILD", tmp_path)
+    monkeypatch.setattr(fit, "_pool", lambda _w: Pool())
+    monkeypatch.setattr(fit, "recovery_distance", lambda _o, r, _b: r.get("distance", 1.0))
+    monkeypatch.setattr(fit, "head", lambda: "head")
+    monkeypatch.setattr(fit, "manifest_digest", lambda: "digest")
+    fit._recovery_preflight(1)
+    n = fit.TRUTH_REPEATS + 1 + fit.PRIOR_DRAWS + fit.CENTRE_REPEATS
+    assert len(jobs) == n
+    assert [presence for _, _, presence in jobs] == [True] + [False] * (n - 1)
+    assert jobs[0][1][0] == fit.TRUTH_BASE
+    record = json.loads((tmp_path / "recovery_preflight.json").read_text())
+    assert record["checks"]["clears_presence"] is True
 
 
 def test_the_preflight_runs_once(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -1151,13 +1422,25 @@ EARLIER = (
     (1_400_000_000, 1_400_575_999),
     (1_410_000_000, 1_410_575_999),
     (1_420_000_000, 1_420_000_207),
+    # The fifth readiness pilot, whose answer failed its go rule (every start's 2a reserved), and
+    # the runs that diagnosed it: the onset sweeps and the trace of Logbook 131's route, the hinge
+    # screen and its grade, the chemotaxis sweep, and the presence screen and its grade (the
+    # screens' readouts reused the pilot's readout animals).
+    (1_360_000_000, 1_397_279_999),
+    (1_430_000_000, 1_430_000_599),
+    (1_440_000_000, 1_440_479_999),
+    (1_441_000_000, 1_441_000_999),
+    (1_450_000_000, 1_450_000_599),
+    (1_460_000_000, 1_460_479_999),
+    (1_461_000_000, 1_461_000_999),
     # The fit-first investigation's reserved animals.
     (1_500_000_000, 1_501_000_199),
 )
-# The CMA seeds the seed tables give earlier pilots, probes and tests: C.2's pilots and probes,
-# the speed-following reversals' tests (9601-9605), the sign-scale calibration (9601-9616), the
-# fit-first investigation's generators and reserved seeds (9701-9722, 9731, 9732, 9741-9759), and
-# the neural readout's ceiling's generators (9770-9779, 9781-9799, 9801-9805).
+# The CMA seeds the seed tables give earlier pilots, probes and tests: C.2's pilots and probes
+# (the fifth pilot's 9682-9695, the screens' 9922-9925), the speed-following reversals' tests
+# (9601-9605), the sign-scale calibration (9601-9616), the fit-first investigation's generators and
+# reserved seeds (9701-9722, 9731, 9732, 9741-9759), and the neural readout's ceiling's generators
+# (9770-9779, 9781-9799, 9801-9805).
 EARLIER_CMA = frozenset(
     [
         *range(9504, 9508),
@@ -1173,6 +1456,7 @@ EARLIER_CMA = frozenset(
         *range(9651, 9661),
         *range(9661, 9665),
         *range(9671, 9681),
+        *range(9682, 9696),
         *range(9701, 9723),
         9731,
         9732,
@@ -1182,6 +1466,8 @@ EARLIER_CMA = frozenset(
         *range(9801, 9806),
         9922,
         9923,
+        9924,
+        9925,
     ],
 )
 
@@ -1222,9 +1508,14 @@ def test_the_longest_stage_stays_inside_its_sub_block() -> None:
     # The last start's 2a ends inside the run's 40,000,000, before the next run's block.
     last = layout.candidate_seeds(1, 300, fit.POPSIZE - 1, fit.STARTS - 1)[-1]
     assert last < base + 40_000_000 == fit.RUNS["loo"].layout.base
-    # The pilot, on its fifth base, follows the leave-one-out's block.
-    bases = [fit.RUNS[n].layout.base for n in ("recovery", "fit", "loo", "pilot")]
-    assert [b - a for a, b in itertools.pairwise(bases)] == [40_000_000] * 3
+    # The registered runs' blocks follow one another; the pilot, on its sixth base, is past the
+    # fifth pilot's diagnosis and the fit-first investigation's reserved animals.
+    bases = [fit.RUNS[n].layout.base for n in ("recovery", "fit", "loo")]
+    assert [b - a for a, b in itertools.pairwise(bases)] == [40_000_000] * 2
+    assert fit.RUNS["pilot"].layout.base == 1_540_000_000
+    pilot = fit.RUNS["pilot"]
+    last = max(end for _, end in pilot.layout.spans(pilot.generations, pilot.starts).values())
+    assert last == 1_540_000_000 + 20_000_000 + 2_880_000 * fit.STARTS - 1
     smoke = fit.RUNS["smoke"]
     for start, end in smoke.layout.spans(smoke.generations, smoke.starts).values():
         assert 99_880_000 <= start <= end <= 99_889_999
@@ -1279,6 +1570,8 @@ def test_each_start_has_its_own_animals() -> None:
     assert not EARLIER_CMA & set(flat), "a run reuses an earlier pilot's or probe's CMA seed"
     for name in ("recovery", "fit", "loo"):
         assert all(5801 <= seed <= 5864 for seed in seeds[name])
+    # The sixth pilot's: 9926-9929, restarts 9930-9939.
+    assert sorted(seeds["pilot"]) == list(range(9926, 9940))
 
 
 def test_only_the_pilot_has_kill_rules() -> None:

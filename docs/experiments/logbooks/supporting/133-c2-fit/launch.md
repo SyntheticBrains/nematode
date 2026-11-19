@@ -22,6 +22,15 @@ Everything seen before it is listed under *Disclosures*. No registered simulatio
 
 Everything seen before it is listed under *Disclosures*. No registered simulation had run, and no verdict, gate or bar changes.
 
+**Part A amended a fifth time 2026-11-19,** the maintainer's decision, before any registered run. The fifth readiness pilot kept its fifth start (D_fit 1.97 at 2a's end) and failed its go rule: the wild type passed in 0 of 5 populations, and every mutant in 5 of 5. The on-lawn onset rate failed in all 15 populations (z −4.1 to −4.5), and chemotaxis presence in 3 of the first 5. Two screens on discarded seeds, each with its rule fixed before it ran, found what the final stage could not see. A hinge moves the onset rate where the failure probability is flat, and a term on chemotaxis presence's lower bounds restores presence. With both, the screens' answer passed the wild type in 4 of 5 fresh populations and every mutant in 5 of 5. The amendment does four things:
+
+- The final stage adds Logbook 131's hinge to its objective (*The objective*).
+- 2b and the final stage add a presence term, and their candidates are graded with presence (*The objective*). Every readout's wild type is graded with presence too (*Readouts and state*).
+- F.0b-ii's preflight adds a seventh check: the truth's own lower bounds clear the presence term's target (*F.0b-ii*).
+- The pilot moves to new seeds (*Seeds*).
+
+Everything seen before it is listed under *Disclosures*. No registered simulation had run. No verdict, gate or bar changes; F.0b-ii's preflight gains a check, and its gate is unchanged.
+
 ## Part A: the rules
 
 ### The controller and its arm
@@ -46,7 +55,9 @@ For a candidate's record against a truth T (the bands' centres; in F.0b-ii, the 
 - **the saturation guard:** + 500 when over half the motor neurons sit at abs(h) > 0.99 in over half the steps;
 - **the graded responsiveness guard:** + 300·(1 − s/0.5) when s < 0.5, s the smaller of the speed and reversal outputs' 5th-to-95th-percentile spreads over 8 recorded animals;
 - **the lawn guard,** in every stage (added 2026-11-13): + 300·(0.95 − t)/0.95 when t < 0.95, t the time on the small lawn, an undefined time counting as 0. The three guards read the wild type's simulation only;
-- **the failure probability,** in the final stage only: + 10·Σ Φ((abs(z) − bar) / SD) over every defined wild-type statistic and every graded mutant statistic, with the bands' bars (3.07809 and 2.24140) and SD from the noise step.
+- **the failure probability,** in the final stage only: + 10·Σ Φ((abs(z) − bar) / SD) over every defined wild-type statistic and every graded mutant statistic, with the bands' bars (3.07809 and 2.24140) and SD from the noise step;
+- **the hinge,** in the final stage only (added 2026-11-19): + 5·Σ max(0, abs(10·asinh(z/10)) − target)² over every defined wild-type statistic and every graded mutant statistic, the target 0.3 inside each pass rule (2.77809 and 1.94140). The failure probability is flat far past a bar (with the onset rate's SD of 0.112 it is 9.999 at z −3.5 and 10.000 below about −3.55), so a statistic failing there is pushed back by the hinge alone;
+- **chemotaxis presence,** in 2b and the final stage (added 2026-11-19): for each of presence's two lower bounds b (the drift and the log quintile ratio, as the registered grade computes them: 2,000 resamples of the candidate's animals, the 2.5% quantile), with s its SD between populations, + 5·max(0, 2 − b/s)² + 10·Φ(−b/s). b/s is floored at −10, and an undefined bound takes the floor. s is the SD of the bound over the fifth pilot's 15 grade populations: 0.000177 mm/s for the drift and 0.0443 for the ratio. The ranking score cannot see presence: the ratio's band is wide. From the fifth pilot's answer to the hinge screen's, the ratio fell from 0.097 to 0.048 (the means over their grades' 15 and 5 populations), its lower bound falling below 0 in 3 of the 5, while its z moved from −1.69 to −1.76.
 
 **The graded statistics** are the encoding table's (`113-c1-fit/encodings.md`, bound):
 
@@ -64,9 +75,11 @@ sep-CMA (`CMA_diagonal`), bounds [0, 1]. Each stage's answer is its mean (`xfavo
 |---|---|---|---|---|---|---|
 | **1** | the 77 parameters of the wiring, sensory, readout and noise blocks with the pool centres; the other 60 at 0.5 | D_fit's four | none | the graded box's centre, 0.5 everywhere; σ₀ 0.2; 64 animals a candidate, population 24 | 150 | the start's first |
 | **2a** | all 137 | D_fit's four | none | stage 1's answer, the speed noise's timescale set to 1 s; σ₀ 0.1 | 300 | the start's second |
-| **2b** | all 137 | all six | the run's, at half | 2a's answer; a new isotropic search, σ₀ 0.05 (amended 2026-11-16; until then 2a's search state) | 200 | third |
+| **2b** | all 137 | all six, plus chemotaxis presence (from 2026-11-19) | the run's, at half | 2a's answer; a new isotropic search, σ₀ 0.05 (amended 2026-11-16; until then 2a's search state) | 200 | third |
 | **noise** | none: 2b's answer on 30 populations | all six | the run's | | | |
-| **final** | all 137 | all six | the run's, at half, plus the failure probability | 2b's search state | 50 | fourth |
+| **final** | all 137 | all six, plus chemotaxis presence (from 2026-11-19) | the run's, at half, plus the failure probability and the hinge (from 2026-11-19) | 2b's search state | 50 | fourth |
+
+2b's and the final stage's candidates are graded with presence (from 2026-11-19). Their statistics are the same as without it; only presence's lower bounds are added.
 
 - **The search state passes** from 2b to the final stage: a new strategy at 2b's answer, with 2b's σ and per-parameter steps (`CMA_stds` = stds/σ). *(Amended 2026-11-16: it passed from 2a to 2b too until then.)*
 - **Fixed budgets:** every stage runs its count. The plateau rule (`cma_recovery.plateau_reached`) is read on the final stage and reported, never a stop.
@@ -102,8 +115,8 @@ Stage 1 and 2a are started up to **six** times in sequence. The rule is the same
 
 ### Readouts and state
 
-- **Every 10 generations, at each stage's generation 0 and at its last,** the stage's mean is graded on the same 200 readout animals, on all six families and the three mutants, without presence.
-- **Recorded:** every statistic's value and z, the families passing, time on the lawn, the output spreads, each mutant's reading, and the distance to the run's truth.
+- **Every 10 generations, at each stage's generation 0 and at its last,** the stage's mean is graded on the same 200 readout animals, on all six families and the three mutants, with presence on the wild type (from 2026-11-19; until then without presence). No reading or kill rule reads presence.
+- **Recorded:** every statistic's value and z, the families passing, time on the lawn, the output spreads, each mutant's reading, presence's lower bounds, and the distance to the run's truth. From 2026-11-19, every generation of 2b and the final stage also records its best candidate's presence term, and the final stage its hinge.
 - **State is saved atomically after every generation.** A resumed run refuses a saved state whose settings differ from its own, and a stored candidate is refused at another vector.
 
 ### The readiness pilot
@@ -136,14 +149,15 @@ Stage 1 and 2a are started up to **six** times in sequence. The rule is the same
   | box centre | the median over 10 re-simulations of 0.5 everywhere |
   | wild-type reference | a record at the bands' and the mutant bands' centres, reported |
 
-  It passes only if all six hold. Otherwise the recovery returns to the maintainer.
+  It passes only if all seven hold. Otherwise the recovery returns to the maintainer.
 
   - prior D − floor ≥ **1.0**;
   - the oracle's gain ≥ **0.85**;
   - the box centre's gain ≤ **0.25**;
   - **stability:** no statistic flips between defined and undefined across re-simulations 1–10;
   - **the truth holds the lawn:** the observation's time on the lawn is at least 0.95, the bar a kept start must reach (added 2026-11-12);
-  - **the truth reaches 2a's bar:** the observation's D_fit is at most 2.5. 2a's readings read D_fit against the bands in every run, the recovery's too, so a truth past the bar could not be recovered by a start the procedure keeps (added 2026-11-14).
+  - **the truth reaches 2a's bar:** the observation's D_fit is at most 2.5. 2a's readings read D_fit against the bands in every run, the recovery's too, so a truth past the bar could not be recovered by a start the procedure keeps (added 2026-11-14);
+  - **the truth clears presence's target:** the observation, graded with presence, has both lower bounds at least 2 s above 0 (0.000353 mm/s and 0.0886). 2b and the final stage score presence against that target in every run, not against the truth, so a truth below it would be pulled from. Above the target only the chance part pulls, weakly: 0.23 a bound at the target and 0.013 at 3 s (added 2026-11-19). Only the observation is graded with presence; its statistics are the same as without it.
 
 - **The recovery fit:** the registered procedure from the box centre against the observation, every stage, budget, guard and noise step identical.
 
@@ -267,7 +281,8 @@ The first start takes the run's first two CMA seeds. Start a = 1–5 takes R + 2
 | the second readiness pilot, which kept no start | 1,100,000,000 | 9531–9534, restarts 9541–9550 | discarded |
 | the third readiness pilot, whose kept start missed 2a's bar | 1,140,000,000, on the 20,000,000 layout | 9591–9594, restarts 9651–9660 | discarded |
 | the fourth readiness pilot, whose answer failed the go rule | 1,200,000,000 | 9661–9664, restarts 9671–9680 | discarded |
-| the readiness pilot (amended 2026-11-16) | 1,360,000,000 | 9682–9685, restarts 9686–9695 | discarded |
+| the fifth readiness pilot, whose answer failed the go rule | 1,360,000,000 | 9682–9685, restarts 9686–9695 | discarded |
+| the readiness pilot (amended 2026-11-19) | 1,540,000,000 | 9926–9929, restarts 9930–9939 | discarded |
 | F.0b-ii's recovery fit | 1,240,000,000 (920,000,000 until 2026-11-14) | 5801–5804, restarts 5831–5840 | registered |
 | the truth's observation (q = 0) and re-simulations (1–20) | 940,000,000 + 200·q + i | | registered |
 | the prior draws | 941,000,000 + 200·j + i, j < 200 | `default_rng(5805)` | registered |
@@ -283,8 +298,12 @@ The first start takes the run's first two CMA seeds. Start a = 1–5 takes R + 2
 | the check that diagnosed the third pilot | 1,170,000,000 + 1,000·p + i, p < 4 (`probes/dopamine_flip.py.txt`) | | discarded |
 | the screen that diagnosed the fourth pilot (`probes/two_b_screen.py.txt`) | arm A 1,400,000,000 and arm B 1,410,000,000, each + 200·(48·(g − 1) + m) + i for g ≤ 60 (to 1,400,575,999 and 1,410,575,999); readouts on the fourth pilot's readout animals, 1,216,000,000 + i, reused for reading | 9922 (A), 9923 (B) | discarded |
 | a timing check of the simulation's kernels, no reading | 1,420,000,000–1,420,000,207 | | discarded |
+| the runs that diagnosed the fifth pilot: the onset sweeps and the trace of Logbook 131's route (`probes/onset_sweep.py.txt`, `onset_sweep2.py.txt`, `lineage_131.py.txt`), on common animals | 1,430,000,000 + 200·p + i, p < 3 (to 1,430,000,599) | | discarded |
+| the hinge screen (`probes/hinge_screen.py.txt`) | candidates 1,440,000,000 + 200·(48·(g − 1) + m) + i, g ≤ 50 (to 1,440,479,999); its grade 1,441,000,000 + 200·p + i, p < 5; readouts on the fifth pilot's readout animals, 1,376,000,000 + i, reused for reading | 9924 | discarded |
+| the chemotaxis sweep (`probes/chemotaxis_sweep.py.txt`) | 1,450,000,000 + 200·p + i, p < 3 (to 1,450,000,599) | | discarded |
+| the presence screen (`probes/presence_screen.py.txt`) | candidates 1,460,000,000 + 200·(48·(g − 1) + m) + i, g ≤ 50 (to 1,460,479,999); its grade 1,461,000,000 + 200·p + i, p < 5; readouts on the fifth pilot's readout animals, reused for reading | 9925 | discarded |
 
-The tests check that every block is disjoint from the others, from the four earlier pilots' and their diagnoses', from the timing check's, from the seed table's earlier blocks (which reach 880,001,999), and from the fit-first investigation's reserved animals (1,500,000,000–1,501,000,199). The fourth pilot's block is taken whole, to 1,237,279,999, every start's 2a included. They also check that no run takes a CMA seed the seed tables give earlier pilots, probes or tests: 9601–9616, the screen's 9922 and 9923, the investigation's 9701–9722, 9731, 9732 and 9741–9759, and the neural readout's ceiling's 9770–9779, 9781–9799 and 9801–9805 ([Logbook 135](../../135-neural-readout-ceiling.md)), among them. The paired test's two generators are checked the same way.
+The tests check that every block is disjoint from the others, from the five earlier pilots' and their diagnoses', from the timing check's, from the seed table's earlier blocks (which reach 880,001,999), and from the fit-first investigation's reserved animals (1,500,000,000–1,501,000,199). The fourth and fifth pilots' blocks are taken whole, to 1,237,279,999 and 1,397,279,999, every start's 2a included. They also check that no run takes a CMA seed the seed tables give earlier pilots, probes or tests: 9601–9616, the fifth pilot's 9682–9695, the screens' 9922–9925, the investigation's 9701–9722, 9731, 9732 and 9741–9759, and the neural readout's ceiling's 9770–9779, 9781–9799 and 9801–9805 ([Logbook 135](../../135-neural-readout-ceiling.md)), among them. The paired test's two generators are checked the same way.
 
 ### Disclosures
 
@@ -554,6 +573,105 @@ Seen before this record was committed, all on discarded seeds:
     - "did not move" where "did not pass" holds (the weathervane slope fell), stale proposal text, and claims stronger than one seed per arm supports. Each is now corrected or stated;
     - that the archived screen script reads `pilot.json` and `RUNS["pilot"]` as they were, now stated beside it.
 
+**Seen before the amendment of 2026-11-19,** all on discarded seeds, each rule fixed before its run (the trace of Logbook 131's route, a description, had none; `pilot_fifth.json`, and each script as run with its record under `probes/`). As run, the scripts read the fifth pilot's record as `pilot.json` (now `pilot_fifth.json`), and the readout animals from `RUNS["pilot"]`, then the fifth pilot (1,376,000,000 + i). Against the amended script they would read the sixth pilot's, so they do not re-run unchanged; their records state the animals they read.
+
+- **The fifth readiness pilot** (base 1,360,000,000, Part A as amended 2026-11-16), 47.1 h from launch to its record:
+
+  | Start | CMA | 2a's readings | Outcome |
+  |---|---|---|---|
+  | 0 | 9682, 9683 | the lawn 0.998; the descent 4.30 | dropped at the descent, after 4.1 h |
+  | 1 | 9686, 9687 | the lawn 0.979; the descent 5.14 | dropped at the descent, after 4.2 h |
+  | 2 | 9688, 9689 | the lawn 0.963; the descent 5.63 | dropped at the descent, after 4.3 h |
+  | 3 | 9690, 9691 | the lawn 0.991; the descent 4.77 | dropped at the descent, after 4.4 h |
+  | 4 | 9692, 9693 | the lawn 0.988; the descent 2.28; the bar 1.97 | kept |
+
+  - **The kept start's stages:** stage 1 0.89 h, 2a 6.85 h, 2b 17.87 h, the final stage 4.32 h. The final stage did not plateau.
+  - **Its go rule failed.** The wild type passed in 0 of the 5 populations, and tph-1, pdfr-1 and tax-4 in 5 of 5 each. Over all 15 populations the wild type passed in none, and every mutant in all 15.
+  - **What failed:** the on-lawn onset rate in all 15 populations (1.32 a minute against the bands' 2.28; z −4.1 to −4.5). Chemotaxis presence failed in 3 of the first 5 and 5 of the 15, the log quintile ratio's lower bound below 0. Pre-exit enrichment failed in 2 of the first 5 (−3.09 and −3.15), and the dwelling bout once (3.65). Local search passed in every population.
+  - **Across the final stage's candidates** the onset rate's z moved with the pause share (r −0.90) and the dwelling speed's median (r +0.92). The search raised onsets only with a busier dwelling worm, which took the dwelling speed's 90th percentile over its bar.
+  - **2b moved the mutants and lost chemotaxis.** tph-1 and tax-4 failed at 2b's start. tax-4 passed from generation 50 (failing once more at 180), and tph-1 from generation 190. On the readout animals, through 2a, which does not fit chemotaxis, the log quintile ratio read 0.10–0.34 at generations 0–290 (−0.11 at 300) and the drift 0.007–0.012 mm/s. Through 2b the drift fell to 0.003 and the ratio ranged between −0.02 and 0.16.
+
+- **The onset sweeps** (`probes/onset_sweep.py.txt` and `onset_sweep2.py.txt`, with their records). At the pilot's answer, on three common populations:
+
+  - one parameter at a time: the reversal, speed, omega and delta readouts' biases, CEP's food-contact gain, serotonin's fixed-sign strength and the reversal output's noise;
+  - then the reversal bias at +0.10 with each of five moves that slow the dwelling worm.
+
+  The rule: a point opens a direction when, in all three populations, the onset rate passes, every other D_fit statistic passes and tph-1 passes. No move from the pilot's answer opened one. Every move that raised the onset rate by at least 1 in z took the dwelling speeds over their bars, and a slower speed bias added pausing, not reversals. Logbook 131's answer, a reference among the points, met the rule in all three (onset rate z −2.53 to −2.74, every mutant 3 of 3). Read literally, the rule's first branch names it, but that branch is about a move at the pilot's answer, and 131's answer sits 5.07 from it in unit coordinates. The points a quarter and half of the way to it failed badly.
+
+- **The trace of Logbook 131's route** (`probes/lineage_131.py.txt` and its record, the same animals). 131's lineage stayed in one basin, 0.54 apart from its curriculum's stage-3 answer to its last answer. The stage-1 answers of the four kept starts and 131's B04 are 3.19–4.07 apart, and those of every pilot start 3.19–4.57 (`probes/basin_distances.py.txt` and its record), so the basin is a start's.
+
+  - **On this arm,** 131's curriculum answer read an onset rate z of −3.6 (−3.55 to −3.76), its dwelling speed's 90th percentile where the pilot's sits (z 2.0–2.2) and its median lower (0.3–0.7, against the pilot's 1.0–1.35). Its hinge and failure-probability stages moved the onset rate to −2.6 (−2.53 to −2.74) with the 90th percentile unchanged (1.9–2.3) and the median up to 1.4–1.9. It had room on the median that the pilot's answer did not.
+  - **Why the registered final stage could not:** with the onset rate's SD of 0.112 between populations, the failure probability is 9.999 at onset z −3.5 and 10.000 below about −3.55. The stage earns nothing for raising it from −4.3, and pays for any move that costs a statistic near its bar (the dwelling speed's 90th percentile, SD 0.30). 131 ran a quadratic hinge before its failure stage.
+
+- **The hinge screen** (`probes/hinge_screen.py.txt`, its record and log).
+
+  - **How it ran.** From the pilot's final search state (σ 0.0271), a new sep-CMA carrying its σ and steps at the pilot's answer: population 48 at 200 animals, the registered arm, 50 generations. The objective was the final stage's plus the hinge as registered above. Its generation-0 readout reproduced the pilot's final readout exactly.
+  - **The rule, fixed before it ran.** Over the readouts at generations 30, 40 and 50, the screen passes when the onset rate's mean z is at least −3.0781, every other wild-type statistic is defined with mean abs(z) at most 3.0781, and each mutant passes in at least 2 of 3. If it passes, the amendment adds the hinge to the final stage. If it fails, the fix has to act in 2a.
+  - **The reading: passes.** The onset rate's z rose from −4.31 at generation 0 to −3.15, −2.88 and −3.01 at generations 30, 40 and 50 (mean −3.01). Nothing else failed on the mean, and every mutant passed 3 of 3.
+  - **Reported, not selected on:** its answer graded with presence on 5 fresh populations passed the onset rate in all 5 (z −2.73 to −2.97) and the wild type in 2. Chemotaxis presence failed in 3 (the ratio's lower bound −0.04, −0.09, −0.04), with the roaming bout at 4.06 in one of them. The ratio's value fell from the pilot's 0.097 to 0.048 while its z moved from −1.69 to −1.76. It ran about 4.4 h, at 315 s a generation. Its script's docstring says Logbook 131's hinge stages left the dwelling speeds unchanged; that holds for the 90th percentile only (the trace above).
+
+- **The chemotaxis sweep** (`probes/chemotaxis_sweep.py.txt` and its record, three common populations with presence).
+
+  - **The points:** Logbook 131's sensory gains written into the hinge screen's answer: the whole sensory block, the odour block, its lateral, derivative or concentration gains, AWC's three, AWA's three, and the odour block moved halfway.
+  - **The rule:** a point restores chemotaxis when, in all three populations, chemotaxis is present, the onset rate passes, everything else passes and every mutant passes.
+  - **No point restored it.** No point from the screen's answer was present in all three, and most broke the lawn's statistics. Read on those moves, the rule's third branch holds: the screen's answer does not get chemotaxis from its sensory gains alone, and the fix acts where the search still moves the network. Logbook 131's own answer, a reference in the sweep, was present in all three (the ratio 0.35). Read literally, the rule's second branch ("some point is present in all three") names it, but that branch is about moves from the screen's answer.
+  - **Where it was lost:** the pilot's readouts above place it in 2b.
+
+- **The presence screen** (`probes/presence_screen.py.txt`, its record and log).
+
+  - **How it ran.** From the hinge screen's search state after its 50 generations (σ 0.0202), carried as before: population 48 at 200 animals, 50 generations. The objective was the hinge screen's plus the presence term as registered above, each candidate graded with presence. Its generation-0 readout reproduced the hinge screen's last readout exactly.
+
+  - **The rule, fixed before it ran.** Over the readouts at generations 30, 40 and 50, the screen passes when all of these hold:
+
+    - chemotaxis is present in at least 2 of the 3;
+    - the onset rate's mean z is at least −3.0781;
+    - every other wild-type statistic is defined, with mean abs(z) at most 3.0781;
+    - local search is present in at least 2 of the 3;
+    - each mutant passes in at least 2 of the 3.
+
+    If it passes, the amendment puts the hinge in the final stage and the presence term in 2b and the final stage. If it fails, chemotaxis has to enter 2a's objective.
+
+  - **The reading: passes.** Chemotaxis was present at every readout from generation 10. The ratio rose from 0.021 at generation 0 to 0.204, 0.212 and 0.184 at generations 30, 40 and 50, its lower bound from −0.041 to 0.139, 0.148 and 0.120, and the drift from 0.0040 to 0.0061 mm/s. The onset rate read −3.10, −2.99 and −2.90 (mean −3.00). Local search was present at every readout, and every mutant passed 3 of 3.
+
+  - **Reported, not selected on:**
+
+    - its answer graded with presence on 5 fresh populations passed the wild type in 4, and tph-1, pdfr-1 and tax-4 in 5 each. Chemotaxis was present in all 5 (the ratio's lower bound 0.065–0.132), and the onset rate passed in all 5 (z −2.65 to −2.93). The one failure was pre-exit enrichment at −3.10, which read −3.07 in another population;
+    - pre-exit enrichment also failed at the readouts at generations 10 (−3.91) and 50 (−3.73). Its mean over 30–50 was −2.17, inside the rule. It is the noisiest statistic, with an SD of z between populations of 1.14;
+    - it ran 5.6 h, at 404 s a generation over its 50 against the hinge screen's 315 s, about 28% more, the cost of grading each candidate with presence;
+    - its script's docstring quotes the drift's scale as 0.000183. The term used the value computed from the fifth pilot's grade, 0.000177, as its record states.
+
+  - The screens' candidate stores (11–13 MB each) are kept off the repository with the pilots' run states.
+
+- **What the amendment takes from them:**
+
+  - **the hinge goes in the final stage,** by the hinge screen's rule. It moved the onset rate where the failure probability gave nothing, as Logbook 131's hinge stage did before its failure stage;
+  - **presence enters the objective,** by the presence screen's rule: once scored, presence came back by generation 10 in the pilot's basin and stayed. On the rule's means over generations 30–50 everything else held, though single readouts failed pre-exit enrichment (generations 10 and 50) and the onset rate (30);
+  - **presence also enters 2b,** where the pilot lost it. That part is not screened: the screen scored presence in the final stage only. 2b starts from 2a's answer, which held chemotaxis unscored, so the term is meant to stop 2b trading it away;
+  - **2b's presence term carries no failure probability of the other statistics,** as 2b never has. The term is the same in both stages;
+  - **F.0b-ii's truth must clear presence's target,** since the term pulls every candidate toward it whatever the truth. That mirrors the lawn's check, added with the lawn guard. Above the target the chance part still pulls, 0.23 a bound at the target and 0.013 at 3 s;
+  - **every readout grades presence,** so a run's records show where presence goes. No reading or kill rule reads it;
+  - **stated, not remedied:**
+    - each screen continued the fifth pilot's basin 100 generations past its final stage, which no registered run does. The sixth pilot runs the procedure from the box's centre, so its basin and answer may differ. Each described grade is one CMA seed;
+    - pre-exit enrichment sits near its bar (−3.10 and −3.07 in the presence screen's grade), and the go rule reads it;
+    - **the presence term can outweigh the guards.** At the floor it is 1,460 (730 a bound), above the lawn guard's 300, the saturation guard's 500 and an undefined statistic's 1,000. The fifth pilot's 2a answer read a ratio of −0.11 on its readout animals, a lower bound near −0.18, where the term is about 190 against a distance near 2. A 2b starting there would rank its candidates on presence alone until it cleared. The screen started at about 51. The term is registered as screened, uncapped;
+    - presence's scales were measured at the fifth pilot's answer, where the bounds' spread may differ from another answer's;
+    - the screens' readouts reused the fifth pilot's readout animals, so their readings share those animals' noise with the pilot's.
+
+- **The amended script's checks (2026-11-19):**
+
+  - 68 tests in the fast tier;
+  - **the amended objective reproduces the presence screen's** (`probes/objective_parity.py.txt` and its record, the candidate store's SHA-256 recorded): the final stage's objective, at the fifth pilot's noise SDs, scores every one of the screen's 2,400 stored candidates within 1.4·10⁻¹⁴ of the screen's own objective. It reproduces the screen's best score in all 50 generations within 1.8·10⁻¹⁵, and its best candidates' hinge and presence terms within 4.4·10⁻¹⁶. The presence scales are the screen's to the last digit;
+  - **deliberate bugs** (`probes/mutants_presence.py.txt` and its two logs):
+    - the first run caught 179 of 184 applicable bugs, and 54 were not applicable (earlier code lines this amendment changed; those that still apply are ported to the new lines). One miss was the equivalent bug of earlier runs (a reading not saved, which a resumed run takes again). Four were real gaps in the hinge's tests: the procedure dropping its flag, its margin at 0, its square dropped, and an infinite value not skipped. The tests now check the registered weight, margin and targets, a statistic 2 past its target, an infinite value, and the procedure's final stage carrying the hinge in its best score;
+    - on the final tests, all seven of the hinge's bugs caught, and the review's five below (`mutants_presence_review.log.txt`);
+  - **the smoke on real simulation** (9.4 min) dropped its first three starts at the lawn, the descent and the bar in turn and kept the fourth. Only 2b's and the final stage's candidates were graded with presence. 2b recorded its best presence term and the final stage its hinge and presence terms, and every readout carried presence's lower bounds. The noise step, the grade, the preflight's arithmetic and the held-out reading then ran;
+  - **an independent review** (2026-11-19, a reviewer without the author's reading, on snapshots of the code) found no defect in the code. It recomputed both screens' recorded hinge and presence terms from their stored candidates in every generation (within 4·10⁻¹⁶), found the presence scales bit-exact, the new seed blocks and CMA seeds clear of every earlier one, and no planning reference in package code. It found:
+    - **test gaps:** the hinge's wiring into the procedure untested (fake candidates sat at the truth, their hinge 0), and the best candidate's recorded terms unchecked (every fake candidate scored the same). A fake run now puts its candidates off the lawn, and another varies their bounds and time on the lawn with their vectors; the five bugs it named are caught;
+    - **misquoted or overstated figures:** the ratio's fall credited to the pilot's final stage (it is between the pilot's answer and the hinge screen's), the presence cost (28%, not 23%), Logbook 131's dwelling median (it rose; only the 90th percentile held), "everything else held" (on the rule's means; single readouts failed), the stage-1 distances (no record computed them; `probes/basin_distances.py.txt` now does), and the objective's parity stated as a test (it is a probe, now committed);
+    - **the onset sweep's literal reading:** 131's answer, a reference among its points, met the rule, as in the chemotaxis sweep. Both are now disclosed;
+    - **two risks not stated:** the presence term's size against the guards at a start far below the target, and the chance part's pull above it. Both are now stated;
+    - wording: "past its bar" for the hinge's push, the failure probability's flat point (9.999 at −3.5), a start's cost, the drift at 2b's start, the Risks' cost bounds, and the gate unchanged while the preflight gains a check. Each is corrected.
+
 ### Slow noise's positive control
 
 `speed_noise_control.json` (run 2026-11-10 at HEAD `52212e43`; seeds 888,000,000 + i, reference episode 888,000,200): **passes.**
@@ -579,7 +697,7 @@ At the measured rates on 16 workers (77.7 s a generation on two assays, 309.5 s 
 | the pilot, F.0b-ii's fit, the registered fit | one run each |
 | `recovery-preflight` | 231 simulations, about 30 min |
 | the leave-one-out | about 26 h |
-| in all | about 114 h with every first start kept, about 127 h at 2 in 5. *(2026-11-13, at the measured rates: about 117 h with every first start kept (three runs at about 30 h, the leave-one-out at about 27 h, the preflight 0.5 h), and 2.3 h for each dropped start.)* *(2026-11-14: the third pilot measured 2a at about 87 s a generation on 16 workers, so a run at about 30.4 h, the leave-one-out at about 27.5 h, and about 119 h in all with every first start kept. A start dropped at the lawn costs about 2.3 h, at the descent about 4.4 h and at the bar about 8 h. At 2 stalls in 5, a run expects about 3 h of dropped starts.)* *(2026-11-16: the fourth pilot measured its kept start's stage 1 at 0.81 h, 2a at 6.04 h, 2b at 19.24 h (346 s a generation, against the 309.5 s above) and the final stage at 3.95 h, about 30.5 h with the noise step and the grade. Its two dropped starts cost 2.2 h at the lawn and 4.2 h at the descent, and the pilot 36.6 h in all. A 2b that starts its own search costs what a carried one did, so a run is about 30.5 h with its first start kept, the leave-one-out about 27.6 h, and the chain about 120 h in all with every first start kept, before dropped starts.)* |
+| in all | about 114 h with every first start kept, about 127 h at 2 in 5. *(2026-11-13, at the measured rates: about 117 h with every first start kept (three runs at about 30 h, the leave-one-out at about 27 h, the preflight 0.5 h), and 2.3 h for each dropped start.)* *(2026-11-14: the third pilot measured 2a at about 87 s a generation on 16 workers, so a run at about 30.4 h, the leave-one-out at about 27.5 h, and about 119 h in all with every first start kept. A start dropped at the lawn costs about 2.3 h, at the descent about 4.4 h and at the bar about 8 h. At 2 stalls in 5, a run expects about 3 h of dropped starts.)* *(2026-11-16: the fourth pilot measured its kept start's stage 1 at 0.81 h, 2a at 6.04 h, 2b at 19.24 h (346 s a generation, against the 309.5 s above) and the final stage at 3.95 h, about 30.5 h with the noise step and the grade. Its two dropped starts cost 2.2 h at the lawn and 4.2 h at the descent, and the pilot 36.6 h in all. A 2b that starts its own search costs what a carried one did, so a run is about 30.5 h with its first start kept, the leave-one-out about 27.6 h, and the chain about 120 h in all with every first start kept, before dropped starts.)* *(2026-11-19: the fifth pilot measured its kept start's stage 1 at 0.89 h, 2a at 6.85 h, 2b at 17.87 h and the final stage at 4.32 h. Its four starts dropped at the descent cost 4.1–4.4 h each, and the pilot 47.1 h in all. Grading each candidate with presence cost the presence screen about 28% a generation (404 s against 315 s), so 2b is about 22.9 h and the final stage about 5.5 h. A run is then about 37 h with its first start kept, the leave-one-out about 34 h, and the chain about 145 h in all with every first start kept, before dropped starts. At the fifth pilot's four dropped starts, a run adds about 17 h.)* |
 
 ### The guards
 

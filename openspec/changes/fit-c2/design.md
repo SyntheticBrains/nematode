@@ -106,6 +106,17 @@ For a candidate's record r against a truth T (the bands' centres, or F.0b-ii's o
 
   Its sum is about 10 × the expected number of statistics failing a population.
 
+- **The hinge,** in the final stage only (amended 2026-11-19, decision 3e), adds 5·Σ max(0, abs(10·asinh(z/10)) − target)²:
+
+  - the sum runs over every defined wild-type statistic and each fitted mutant's graded statistics;
+  - the target is 0.3 inside each pass rule: 2.77809 for a wild-type statistic, 1.94140 for a mutant's. This is Logbook 131's hinge.
+
+- **Chemotaxis presence,** in 2b and the final stage (amended 2026-11-19, decision 3e), adds Σ over its two lower bounds b of 5·max(0, 2 − b/s)² + 10·Φ(−b/s):
+
+  - the bounds are the registered grade's (2,000 resamples of the candidate's animals, the 2.5% quantile), for the drift and the log quintile ratio, so those stages' candidates are graded with presence;
+  - s is each bound's SD over the fifth pilot's 15 grade populations: 0.000177 mm/s and 0.0443;
+  - b/s is floored at −10, and an undefined bound takes the floor.
+
 ### 3. The procedure
 
 Every stage runs on the speed-following arm. Stage 1 runs with population 24 and 64 animals a candidate, as the route's did (amended 2026-11-12, decision 3a). Every later stage runs with population 48 and 200 animals a candidate, at least D38's 200. Every stage has the three guards (the lawn guard from decision 3b), sep-CMA (`CMA_diagonal`) and bounds [0, 1]. The answer of each stage is its mean (`xfavorite`) clipped to the box.
@@ -114,9 +125,9 @@ Every stage runs on the speed-following arm. Stage 1 runs with population 24 and
 |---|---|---|---|---|---|
 | **1** | the 77 parameters of the wiring, sensory, readout and noise blocks and the pool centres; the other 60 held at 0.5 | D_fit's four (two assays) | none | x₀ = the graded box's centre, 0.5 everywhere, so every sensory gain is 0; σ₀ 0.2 | 150 |
 | **2a** | all 137 | D_fit's four | none | stage 1's answer, the speed noise's timescale set to 1 s; σ₀ 0.1, fresh | 300 |
-| **2b** | all 137 | all six | tph-1, pdfr-1, tax-4 at half | 2a's answer; a new isotropic search, σ₀ 0.05 (decision 3d; until 2026-11-16 2a's search state) | 200 |
+| **2b** | all 137 | all six, plus chemotaxis presence (decision 3e) | tph-1, pdfr-1, tax-4 at half | 2a's answer; a new isotropic search, σ₀ 0.05 (decision 3d; until 2026-11-16 2a's search state) | 200 |
 | **noise** | none: 2b's answer on 30 populations | all six | all three | | |
-| **final** | all 137 | all six | all three at half, plus the failure probability | 2b's search state | 50 |
+| **final** | all 137 | all six, plus chemotaxis presence (decision 3e) | all three at half, plus the failure probability and the hinge (decision 3e) | 2b's search state | 50 |
 
 - **The search state passes** from 2b to the final stage: a new strategy at 2b's answer, with its σ and per-parameter steps (`CMA_stds` = stds/σ), and its own CMA seed. Stage 1 to 2a cannot carry the state, since the dimension changes, so 2a starts fresh as the curriculum's did. 2b starts fresh too, at σ₀ 0.05 (decision 3d), as the curriculum's 2b did.
 
@@ -255,6 +266,40 @@ The pilot's 2b differed from 131's in two ways at once: the mutants from its fir
 - **Cost.** None: a 2b that starts its own search costs what a carried one did. The fourth pilot measured 2b at 346 s a generation, about 19.2 h.
 - **For W:** every arm's 2b starts its own search at σ₀ 0.05.
 
+### 3e. The hinge and chemotaxis presence (amended 2026-11-19)
+
+The fifth readiness pilot (base 1,360,000,000; `pilot_fifth.json`, 47.1 h) dropped its first four starts at the descent (4.30, 5.14, 5.63, 4.77). It kept its fifth (0.988 on the lawn, 2.28 at the descent, 1.97 at the bar). Its answer failed the go rule: the wild type passed in 0 of 5 populations, and tph-1, pdfr-1 and tax-4 in 5 of 5 each. The on-lawn onset rate failed in all 15 populations (z −4.1 to −4.5), and chemotaxis presence in 3 of the first 5. Everything since ran on discarded seeds, each rule fixed before its run (records under `133-c2-fit/probes/`):
+
+| Run | What it asked | Reading |
+|---|---|---|
+| the onset sweeps | does a one- or two-parameter move at the answer raise the onset rate with everything else passing? | no: every gain of 1 in z took the dwelling speeds over their bars |
+| the trace of Logbook 131's route | how did 131 reach the onset rate? | in its own basin, by a quadratic hinge stage before its failure stage, with room on the dwelling speed's median; the failure probability is 10.000 for any onset z below about −3.55 |
+| the hinge screen: 50 generations from the pilot's final state, the hinge added | does the onset rate's mean z at generations 30–50 reach −3.0781, with nothing else failing and the mutants passing? | **yes**: −3.01. Its answer passed the wild type in 2 of 5 fresh populations, chemotaxis presence failing in 3 |
+| the chemotaxis sweep | do 131's sensory gains restore presence at the screen's answer? | no |
+| the presence screen: 50 generations from the hinge screen's state, the presence term added | is chemotaxis present in at least 2 of the readouts at generations 30–50, with the onset rate, everything else, local search and the mutants holding? | **yes**: present at every readout from generation 10. Its answer passed the wild type in 4 of 5 fresh populations, every mutant in 5 of 5 |
+
+- **What it shows.**
+  - The final stage's failure probability is flat far past a bar, so it gave the onset rate nothing at z −4.3 and charged every move that cost a statistic near its bar. The hinge pushes there.
+  - The objective could not see presence. The log quintile ratio's band is wide: from the fifth pilot's answer to the hinge screen's, the ratio fell from 0.097 to 0.048 with its z moving from −1.69 to −1.76, while its lower bound fell below 0 in 3 of 5 populations.
+  - On the pilot's readout animals the ratio read 0.10–0.34 through 2a, which does not score chemotaxis, and 2b, which scores it only by z, traded it away (the drift from 0.009 to 0.003 mm/s).
+  - Once scored, presence came back by generation 10 and stayed. On the rule's means over generations 30–50 the onset rate and everything else held, though single readouts failed pre-exit enrichment and the onset rate.
+- **The amendment** (the maintainer's decision, 2026-11-19, by the screens' rules):
+  - **the final stage adds the hinge** (decision 2);
+  - **2b and the final stage add the presence term** (decision 2), their candidates graded with presence;
+  - **every readout's wild type is graded with presence** (decision 5);
+  - **F.0b-ii's preflight adds a check:** the truth's observation, graded with presence, has both lower bounds at least 2 s above 0 (decision 10);
+  - **the pilot runs a sixth time on new seeds:** base 1,540,000,000, CMA 9926–9929, restarts 9930–9939.
+- **Why it cannot bias a verdict.** It changes the objective of two stages, on rules read on discarded seeds before any registered simulation, and it holds in every run. The verdict reads presence as it always has. F.0b-ii's preflight gains a check; its gate is unchanged.
+- **Stated, not remedied.**
+  - Each screen continued the fifth pilot's basin past its final stage, which no registered run does. The sixth pilot runs from the box's centre, so its basin may differ.
+  - The term in 2b is not screened there.
+  - Pre-exit enrichment sits near its bar in the presence screen's answer (−3.10 and −3.07 in its grade). It is the noisiest statistic (SD 1.14).
+  - Presence's scales come from one answer.
+  - Each described grade is one CMA seed.
+  - The presence term can outweigh the guards: 1,460 at the floor, against the lawn guard's 300, the saturation guard's 500 and an undefined statistic's 1,000, and about 190 at a lower bound near −0.18, where the fifth pilot's 2a answer read. A 2b starting there would rank on presence alone until it cleared. The term is registered as screened, uncapped.
+- **Cost.** Grading a candidate with presence cost the presence screen about 28% a generation (404 s against 315 s). 2b is then about 22.9 h and the final stage about 5.5 h, so a run is about 37 h with its first start kept.
+- **For W:** every arm's 2b and final stage score presence, and every final stage takes the hinge.
+
 ### 4. The noise step
 
 - 2b's answer is graded on 30 populations of 200, without presence. Presence leaves every statistic's value unchanged, and grading without it is 1.76× faster.
@@ -264,7 +309,7 @@ The pilot's 2b differed from 131's in two ways at once: the mutants from its fir
 
 ### 5. Readouts and state
 
-- **Every 10 generations, and at each stage's generation 0,** the stage's mean is graded on the readout animals: the same 200 at every readout, all six families and the three mutants, without presence.
+- **Every 10 generations, and at each stage's generation 0,** the stage's mean is graded on the readout animals: the same 200 at every readout, all six families and the three mutants, with presence on the wild type (decision 3e; until 2026-11-19 without presence). No reading or kill rule reads presence.
 - **Every statistic's value and z is recorded,** with D, D_fit, the families passing, time on the lawn, the output spreads and each mutant's reading.
 - **State is saved atomically after every generation:** the strategy, the stage, and the medians and best scores. A resumed run refuses a saved state whose recorded settings differ from the run's.
 - **Simulation records** go to a JSON-lines store keyed by k. A stored k at another vector is refused, and a torn last line is dropped (`c1_v3_fit.run_jobs`'s rule).
@@ -369,6 +414,8 @@ The fitted worm against held-out recording dates, on W's own rule (`benchmark_v4
   - the oracle's gain ≥ 0.85;
   - the box centre's gain ≤ 0.25.
 
+- **The truth clears presence's target** (amended 2026-11-19, decision 3e): the observation, graded with presence, has both lower bounds at least 2 s above 0 (0.000353 mm/s and 0.0886). 2b and the final stage score presence against that target, not against the truth, so a truth below it would be pulled from. Above the target only the chance part pulls, 0.23 a bound at the target and 0.013 at 3 s. Only the observation is graded with presence, since its statistics are the same without it.
+
 - **The truth's stability:** if any of re-simulations 1–10 flips a statistic between defined and undefined against the observation, the recovery returns to the maintainer. The truth is fixed, so no next candidate is taken.
 
 - **The wild-type reference,** reported beside the gate: a record at the bands' centres and the mutant bands' centres, scored by the same gain.
@@ -423,7 +470,8 @@ Each run of the procedure has a block of 40,000,000 animal seeds from its base B
 | the second pilot, which kept no start | 1,100,000,000 | 9531–9534, restarts 9541–9550 | discarded |
 | the third pilot, whose kept start missed 2a's bar | 1,140,000,000 | 9591–9594, restarts 9651–9660 | discarded, on the 20,000,000 layout |
 | the fourth pilot, whose answer failed the go rule | 1,200,000,000 | 9661–9664, restarts 9671–9680 | discarded |
-| the pilot (amended 2026-11-16, decision 3d) | 1,360,000,000 | 9682–9685, restarts 9686–9695 | discarded |
+| the fifth pilot, whose answer failed the go rule | 1,360,000,000 | 9682–9685, restarts 9686–9695 | discarded |
+| the pilot (amended 2026-11-19, decision 3e) | 1,540,000,000 | 9926–9929, restarts 9930–9939 | discarded |
 | the screen that diagnosed the fourth pilot | 1,400,000,000–1,400,575,999 and 1,410,000,000–1,410,575,999; readouts on 1,216,000,000 + i reused | 9922, 9923 | discarded |
 | a timing check of the simulation's kernels | 1,420,000,000–1,420,000,207 | | discarded |
 | the runs that diagnosed the first pilot | 1,010,000,000–1,055,000,199, and 890,000,000 + i for the checks of its worm | 9516–9525 | discarded |
@@ -513,6 +561,7 @@ The guards, through `cma_recovery.launch_committed`:
 - **D38**, a note of 2026-11-13 (decision 3b), the maintainer's decision: C.2's objective carries a lawn guard in every stage, paid only below 0.95 on the lawn, where the statistic already fails at 200 animals. It is pre-registered like the other guards and W's arms inherit it.
 - **D38**, a note of 2026-11-14 (decision 3c), the maintainer's decision: a start of C.2's first half is also dropped when 2a's D_fit lags at generation 150 (above 4.25) or misses 2a's bar at its end (above 2.5), in every run. A run is kept on its first start to pass all three of 2a's readings. The readings, their bars and the count of starts are pre-registered like a stage's budget, and W's arms inherit them.
 - **D38**, a note of 2026-11-16 (decision 3d), the maintainer's decision: C.2's 2b starts a new isotropic search at 2a's answer (σ₀ 0.05) instead of carrying 2a's search state, which held local search and chemotaxis where 2a left them. The start is pre-registered like a stage's σ₀, and W's arms inherit it.
+- **D38**, a note of 2026-11-19 (decision 3e), the maintainer's decision: C.2's final stage adds a hinge, 5·Σ max(0, abs(10·asinh(z/10)) − target)² with the target 0.3 inside each pass rule. 2b and the final stage add a term on chemotaxis presence's two lower bounds, their candidates graded with presence. Both are pre-registered like the other terms, and W's arms inherit them.
 - **D38**, amended 2026-11-10:
   - C.2's procedure is staged, with each stage's families, budget, x₀ and σ₀ (or carried search state) pre-registered, and every stage a fixed generation count.
   - The plateau criterion is read on the final stage and reported, not used as a stop, so W's arms run at equal budget.
@@ -528,7 +577,8 @@ The guards, through `cma_recovery.launch_committed`:
 
 - **[Procedure B is untested as a whole]**
   - 2b has to find every family and the mutants at once, from 2a's answer. In the curriculum, 2b without the mutants reached five families. In the fourth pilot, a 2b that carried 2a's search state moved the mutants and not local search or chemotaxis. From the same point, a fresh search moved local search with and without the mutants (decision 3d). In either arm's 60 generations, the flip fraction, the weathervane slope, pre-exit enrichment and the onset rate did not pass.
-  - Mitigation: the pilot runs the exact procedure with a go rule and kill rules. A failed pilot changes no registered reading. From 2026-11-14 it costs at most about 48 h with no answer (six starts dropped at 2a's bar), or about 71 h when five are dropped there before a kept start runs to its answer. The second pilot cost 15.8 h and dropped all six starts at the lawn; the third cost 9.9 h; the fourth 36.6 h, with an answer that failed the go rule.
+  - In the fifth pilot, the fresh 2b passed local search and the mutants but traded chemotaxis presence away, and the final stage could not raise the onset rate from z −4.3 (decision 3e). Two screens from its answer, one CMA seed each, moved both once the hinge and a presence term entered the objective. A registered run starts from the box's centre, and its basin may differ.
+  - Mitigation: the pilot runs the exact procedure with a go rule and kill rules. A failed pilot changes no registered reading. From 2026-11-14 it costs at most about 48 h with no answer (six starts dropped at 2a's bar), or, from 2026-11-19, about 77 h when five are dropped there before a kept start runs to its answer. The second pilot cost 15.8 h and dropped all six starts at the lawn; the third cost 9.9 h; the fourth 36.6 h and the fifth 47.1 h, each with an answer that failed the go rule.
 - **[Noise measured on 2b's answer, not the final one]**
   - The final stage moves the answer, and its SDs may differ there. Logbook 131's ranged across answers: pre-exit enrichment 1.00–1.39, the onset rate 0.09–0.15.
   - The floor of 0.05 bounds a near-zero SD, but not a statistic whose SD shrinks at the final answer. The final stage's readouts record every statistic, so a drift is visible.

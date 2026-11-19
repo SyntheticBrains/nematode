@@ -95,9 +95,11 @@ The objective SHALL be the definedness-first ranking score against the truth on 
 - 500 SHALL be added when over half the motor neurons sit at abs(h) > 0.99 in over half the steps;
 - 300·(1 − s/0.5) SHALL be added when the smaller of the speed and reversal outputs' 5th-to-95th-percentile spreads, s, is below 0.5;
 - in every stage, 300·(0.95 − t)/0.95 SHALL be added when the time on the small lawn, t, is below 0.95. An undefined time on the lawn SHALL count as 0;
-- in the final stage, 10·Σ Φ((abs(z) − bar) / SD) SHALL be added over every defined wild-type and table-graded mutant statistic, with the bars read from the bands and SD from the noise step.
+- in the final stage, 10·Σ Φ((abs(z) − bar) / SD) SHALL be added over every defined wild-type and table-graded mutant statistic, with the bars read from the bands and SD from the noise step;
+- in the final stage, 5·Σ max(0, abs(10·asinh(z/10)) − target)² SHALL be added over the same statistics, the target 0.3 inside each pass rule;
+- in 2b and the final stage, for each of chemotaxis presence's two lower bounds b (the drift and the log quintile ratio, as the registered grade computes them), with s its registered SD between populations, 5·max(0, 2 − b/s)² + 10·Φ(−b/s) SHALL be added, b/s floored at −10 and an undefined bound at the floor. Those stages' candidates SHALL be graded with presence.
 
-The three guards SHALL read the wild type's simulation only. Each generation's share of candidates paying the lawn guard SHALL be recorded.
+The three guards SHALL read the wild type's simulation only. Each generation's share of candidates paying the lawn guard SHALL be recorded, and in the stages that score them its best candidate's hinge and presence terms.
 
 The noise step SHALL grade 2b's answer on 30 populations of 200 without presence, and take each statistic's SD between them, floored at 0.05. A statistic defined in fewer than 2 populations SHALL take the floor.
 
@@ -126,9 +128,19 @@ The noise step SHALL grade 2b's answer on 30 populations of 200 without presence
 - **WHEN** a statistic is defined in only one of the 30 noise populations
 - **THEN** its SD SHALL be 0.05
 
+#### Scenario: The hinge
+
+- **WHEN** a wild-type statistic's compressed abs(z) is 1 past its target in the final stage
+- **THEN** its hinge term SHALL be 5, and inside the target SHALL be 0
+
+#### Scenario: Presence is scored
+
+- **WHEN** a candidate in 2b or the final stage has a lower bound at 0
+- **THEN** that bound's presence term SHALL be 5 × 2² + 10 × 0.5 = 25, and a missing bound SHALL score at the floor
+
 ### Requirement: Readouts record every statistic, and runs resume safely
 
-Every 10 generations, and at each stage's generation 0, the stage's mean SHALL be graded on the same 200 readout animals, on all six families and the three mutants without presence. Every statistic's value and z SHALL be recorded, with each mutant's reading. The strategy and history SHALL be saved atomically after every generation. A resumed run SHALL refuse a saved state whose recorded settings differ from its own. A stored simulation record SHALL be refused at another vector. Each start's first-half records SHALL sit in that start's own store.
+Every 10 generations, and at each stage's generation 0, the stage's mean SHALL be graded on the same 200 readout animals, on all six families and the three mutants, the wild type with presence. Every statistic's value and z SHALL be recorded, with each mutant's reading. The strategy and history SHALL be saved atomically after every generation. A resumed run SHALL refuse a saved state whose recorded settings differ from its own. A stored simulation record SHALL be refused at another vector. Each start's first-half records SHALL sit in that start's own store.
 
 #### Scenario: A resume with changed settings
 

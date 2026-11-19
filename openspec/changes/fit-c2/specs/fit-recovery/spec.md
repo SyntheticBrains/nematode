@@ -13,6 +13,7 @@ Before C.2's registered fit, the registered procedure SHALL recover one known tr
 - **The truth's stability:** if any of re-simulations 1–10 flips a statistic's definedness against the observation, the recovery SHALL return to the maintainer.
 - **The truth's lawn-holding:** if the observation's time on the lawn is below 0.95, the bar a start must reach to be kept, the recovery SHALL return to the maintainer.
 - **The truth's bar:** if the observation's D_fit against the bands is above 2.5 or undefined, the bar 2a's last reading holds a start to, the recovery SHALL return to the maintainer.
+- **The truth's presence:** the observation SHALL be graded with presence, and if either of chemotaxis presence's lower bounds is undefined or below 2 of its registered SDs, the target 2b and the final stage score presence against, the recovery SHALL return to the maintainer.
 - **The gate:** the recovery's answer SHALL be re-simulated 10 times, and the fit SHALL run only if the gain at its median D, (prior D − D) / (prior D − floor), is at least 0.75.
 - **The wild-type reference:** a record at the bands' centres and the mutant bands' centres SHALL be scored by the same gain and reported beside the gate. The record SHALL state that the gate cannot tell recovering the truth from fitting the wild type.
 
@@ -34,6 +35,11 @@ Before C.2's registered fit, the registered procedure SHALL recover one known tr
 #### Scenario: A truth past 2a's bar
 
 - **WHEN** the observation's D_fit against the bands is 2.6
+- **THEN** the recovery fit SHALL NOT run, and the change SHALL return to the maintainer
+
+#### Scenario: A truth below presence's target
+
+- **WHEN** the observation's log quintile ratio has its lower bound at 0.99 × 2 of its registered SDs
 - **THEN** the recovery fit SHALL NOT run, and the change SHALL return to the maintainer
 
 #### Scenario: A recovery with no answer does not pass

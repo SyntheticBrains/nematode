@@ -1,0 +1,152 @@
+"""Deliberate bugs in the hinge, the presence term, their stages, the preflight's presence check and
+the sixth pilot's seeds, and the earlier amendments' bugs again: does test_c2_fit.py catch each?
+(run from the repository root)
+
+An earlier bug whose code this amendment changed is reported as not applicable, not as caught; the
+ones that still apply are ported to the new lines.
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+SOURCE = Path("scripts/analysis/c2_fit.py")
+TEST = "packages/quantum-nematode/tests/quantumnematode_tests/benchmark/test_c2_fit.py"
+PILOT = '    "pilot": Run("pilot", Layout(1_540_000_000), (9926, 9927, 9928, 9929), 9930, kill_rules=True),'
+TWO_A_FLAGS = "        generations=300,\n        failure=False,\n        hinge=False,\n        presence=False,"
+TWO_B_FLAGS = "        generations=200,\n        failure=False,\n        hinge=False,\n        presence=True,"
+FINAL_FLAGS = "        generations=50,\n        failure=True,\n        hinge=True,\n        presence=True,"
+HINGE_WILD = "            excess += max(0.0, abs(v2.COMPRESSION * math.asinh(z / v2.COMPRESSION)) - target) ** 2"
+NEW = {
+    # The stages' flags.
+    "the final stage without the hinge": (FINAL_FLAGS, FINAL_FLAGS.replace("hinge=True", "hinge=False")),
+    "the final stage without presence": (FINAL_FLAGS, FINAL_FLAGS.replace("presence=True", "presence=False")),
+    "the final stage without the failure term": (FINAL_FLAGS, FINAL_FLAGS.replace("failure=True", "failure=False")),
+    "2b without presence": (TWO_B_FLAGS, TWO_B_FLAGS.replace("presence=True", "presence=False")),
+    "2b with the hinge": (TWO_B_FLAGS, TWO_B_FLAGS.replace("hinge=False", "hinge=True")),
+    "2a with presence": (TWO_A_FLAGS, TWO_A_FLAGS.replace("presence=False", "presence=True")),
+    "2a with the hinge": (TWO_A_FLAGS, TWO_A_FLAGS.replace("hinge=False", "hinge=True")),
+    # The wiring.
+    "the procedure drops the hinge flag": ("            hinge=stage.hinge,\n", ""),
+    "the procedure drops the presence flag": ("            presence=stage.presence,\n        )\n\n        def full(", "        )\n\n        def full("),
+    "candidates never graded with presence": ("        presence=spec.presence,\n    )", "        presence=False,\n    )"),
+    "candidates always graded with presence": ("        presence=spec.presence,\n    )", "        presence=True,\n    )"),
+    "readouts without presence": ("mutants=(), presence=True)", "mutants=())"),
+    "the hinge recorded in every stage": ('            if stage.hinge:\n                history.setdefault("hinge"', '            if True:\n                history.setdefault("hinge"'),
+    "presence recorded in every stage": ('            if stage.presence:\n                history.setdefault("presence"', '            if True:\n                history.setdefault("presence"'),
+    "the hinge always scored": ("        if self.hinged:\n            score += self.hinge(record)", "        score += self.hinge(record)"),
+    "presence always scored": ("        if self.scores_presence:\n            score += self.presence(record)", "        score += self.presence(record)"),
+    "the hinge never scored": ("            score += self.hinge(record)", "            score += 0.0"),
+    "presence never scored": ("            score += self.presence(record)", "            score += 0.0"),
+    # Added after the independent review of 2026-11-19.
+    "the hinge recorded at the first candidate": ('history.setdefault("hinge", []).append(objective.hinge(records[best]))', 'history.setdefault("hinge", []).append(objective.hinge(records[0]))'),
+    "presence recorded at the first candidate": ('history.setdefault("presence", []).append(objective.presence(records[best]))', 'history.setdefault("presence", []).append(objective.presence(records[0]))'),
+    "the hinge wired to presence's flag": ("            hinge=stage.hinge,\n", "            hinge=stage.presence,\n"),
+    "the hinge in every stage's objective": ("            hinge=stage.hinge,\n", "            hinge=True,\n"),
+    "presence in every stage's objective": ("            presence=stage.presence,\n        )\n\n        def full(", "            presence=True,\n        )\n\n        def full("),
+    # The hinge.
+    "the hinge at half weight": ("HINGE_WEIGHT = 5.0", "HINGE_WEIGHT = 2.5"),
+    "the hinge at the bar itself": ("HINGE_MARGIN = 0.3", "HINGE_MARGIN = 0.0"),
+    "the hinge one-sided": (HINGE_WILD, HINGE_WILD.replace("abs(v2.COMPRESSION * math.asinh(z / v2.COMPRESSION))", "v2.COMPRESSION * math.asinh(z / v2.COMPRESSION)")),
+    "the hinge uncompressed": (HINGE_WILD, HINGE_WILD.replace("abs(v2.COMPRESSION * math.asinh(z / v2.COMPRESSION))", "abs(z)")),
+    "the hinge not squared": (HINGE_WILD, HINGE_WILD.replace(" ** 2", "")),
+    "the mutants' hinge at the wild type's bar": ("            target = self.mutant_bars[m] - HINGE_MARGIN", "            target = self.wild_bar - HINGE_MARGIN"),
+    "the mutants' hinge on ungraded statistics": (
+        "            for s in GRADED[m]:\n                z = mutant_z(self.truth, record, self.mscales[m][s], m, s)\n                compressed",
+        "            for s in LAWN_DIFFERENCES:\n                z = mutant_z(self.truth, record, self.mscales[m][s], m, s)\n                compressed",
+    ),
+    "the mutants left out of the hinge": ("        for m in self.mutants:\n            target = self.mutant_bars[m]", "        for m in ():\n            target = self.mutant_bars[m]"),
+    "the hinge skips nothing undefined": ("            if not math.isfinite(float(value)):\n                continue\n", ""),
+    # Presence.
+    "presence's target at one SD": ("PRESENCE_TARGET = 2.0", "PRESENCE_TARGET = 1.0"),
+    "presence's floor at -3": ("PRESENCE_FLOOR = -10.0", "PRESENCE_FLOOR = -3.0"),
+    "presence's ratio scale rounded": ('    "log_quintile_ratio": 0.0443153683806959,', '    "log_quintile_ratio": 0.05,'),
+    "presence's drift scale rounded": ('    "drift_mm_s": 0.0001766214148233308,', '    "drift_mm_s": 0.00018,'),
+    "presence ignores the drift": ('PRESENCE_STATISTICS: tuple[str, ...] = ("drift_mm_s", "log_quintile_ratio")', 'PRESENCE_STATISTICS: tuple[str, ...] = ("log_quintile_ratio",)'),
+    "presence without its failure part": ("            total += FAILURE_WEIGHT * phi(-x)\n", ""),
+    "presence's chance the wrong way": ("            total += FAILURE_WEIGHT * phi(-x)", "            total += FAILURE_WEIGHT * phi(x)"),
+    "presence without its hinge part": ("            total += HINGE_WEIGHT * max(0.0, PRESENCE_TARGET - x) ** 2\n", ""),
+    "presence's low bounds unfloored": ("                x = max(PRESENCE_FLOOR, float(b) / PRESENCE_SD[key])", "                x = float(b) / PRESENCE_SD[key]"),
+    "presence's missing bounds score 0": ("            x = PRESENCE_FLOOR\n", "            x = 0.0\n"),
+    # The preflight's presence check.
+    "the preflight drops the presence check": ('        "clears_presence": clears,\n', ""),
+    "the preflight's presence check at 0": ("float(bounds[k]) >= PRESENCE_TARGET * PRESENCE_SD[k]", "float(bounds[k]) > 0"),
+    "the preflight's presence check on the ratio alone": ("        for k in PRESENCE_STATISTICS\n    )\n    checks", '        for k in ("log_quintile_ratio",)\n    )\n    checks'),
+    "the observation graded without presence": ("seeds(TRUTH_BASE, q), q == 0)", "seeds(TRUTH_BASE, q), False)"),
+    "every truth run graded with presence": ("seeds(TRUTH_BASE, q), q == 0)", "seeds(TRUTH_BASE, q), True)"),
+    # The sixth pilot's seeds.
+    "the pilot on the fifth pilot's base": (PILOT, PILOT.replace("1_540_000_000", "1_360_000_000")),
+    "the pilot on the hinge screen's animals": (PILOT, PILOT.replace("1_540_000_000", "1_440_000_000")),
+    "the pilot on the presence screen's animals": (PILOT, PILOT.replace("1_540_000_000", "1_460_000_000")),
+    "the pilot over the sweeps' animals": (PILOT, PILOT.replace("1_540_000_000", "1_420_000_000")),
+    "the pilot running into the investigation's animals": (PILOT, PILOT.replace("1_540_000_000", "1_480_000_000")),
+    "the pilot on the fifth pilot's CMA seeds": (PILOT, PILOT.replace("(9926, 9927, 9928, 9929)", "(9682, 9683, 9684, 9685)")),
+    "the pilot's restarts on the fifth pilot's": (PILOT, PILOT.replace("9930, kill", "9686, kill")),
+    "the pilot's later stages on the screens' CMA seeds": (PILOT, PILOT.replace("9928, 9929", "9924, 9925")),
+    "the pilot's restarts running into the screens'": (PILOT, PILOT.replace("9930, kill", "9922, kill")),
+    "the pilot without its kill rules": (PILOT, PILOT.replace(", kill_rules=True", "")),
+    # The fourth amendment's 2b bugs, ported to the multi-line stages.
+    "[ported 5] 2b carries 2a's search state": ("        sigma0=0.05,\n        generations=200,", "        sigma0=None,\n        generations=200,"),
+    "[ported 5] 2b at 2a's sigma0": ("        sigma0=0.05,\n        generations=200,", "        sigma0=0.1,\n        generations=200,"),
+    "[ported 5] 2b at a wider sigma0": ("        sigma0=0.05,\n        generations=200,", "        sigma0=0.2,\n        generations=200,"),
+    "[ported 5] the final stage restarts too": ("        sigma0=None,\n        generations=50,", "        sigma0=0.05,\n        generations=50,"),
+    # The earlier amendments' pilot-seed bugs, ported to the sixth pilot's line.
+    "[ported 5] the pilot on its first seeds": (PILOT, PILOT.replace("1_540_000_000", "900_000_000")),
+    "[ported 5] the pilot on the second pilot's animals": (PILOT, PILOT.replace("1_540_000_000", "1_100_000_000")),
+    "[ported 5] the pilot on the third pilot's animals": (PILOT, PILOT.replace("1_540_000_000", "1_140_000_000")),
+    "[ported 5] the pilot on the fourth pilot's base": (PILOT, PILOT.replace("1_540_000_000", "1_200_000_000")),
+    "[ported 5] the pilot on the flip check's animals": (PILOT, PILOT.replace("1_540_000_000", "1_170_000_000")),
+    "[ported 5] the pilot on the investigation's animals": (PILOT, PILOT.replace("1_540_000_000", "1_500_000_000")),
+    "[ported 5] the pilot inside the leave-one-out's block": (PILOT, PILOT.replace("1_540_000_000", "1_350_000_000")),
+    "[ported 5] the pilot on the third pilot's CMA seed": (PILOT, PILOT.replace("(9926,", "(9591,")),
+    "[ported 5] the pilot on the fourth pilot's CMA seeds": (PILOT, PILOT.replace("(9926, 9927, 9928, 9929)", "(9661, 9662, 9663, 9664)")),
+    "[ported 5] the pilot on the sign calibration's CMA seed": (PILOT, PILOT.replace("(9926,", "(9610,")),
+    "[ported 5] the pilot's restarts on the second pilot's": (PILOT, PILOT.replace("9930, kill", "9541, kill")),
+    "[ported 5] the pilot's restarts on the third pilot's": (PILOT, PILOT.replace("9930, kill", "9651, kill")),
+    "[ported 5] the pilot's restarts on the fourth pilot's": (PILOT, PILOT.replace("9930, kill", "9671, kill")),
+    "[ported 5] the pilot's restarts on the investigation's": (PILOT, PILOT.replace("9930, kill", "9701, kill")),
+    "[ported 5] the pilot's restarts on the ceiling's generators": (PILOT, PILOT.replace("9930, kill", "9770, kill")),
+    "[ported 5] the pilot's later stages on the investigation's": (PILOT, PILOT.replace("9928, 9929", "9741, 9742")),
+    "[ported 5] the pilot's later stages on the recovery's": (PILOT, PILOT.replace("9928, 9929", "5803, 5804")),
+    "[ported 5] the pilot's later stages on the fourth screen's": (PILOT, PILOT.replace("9928, 9929", "9922, 9923")),
+}
+
+
+def earlier(path: str) -> dict[str, tuple[str, str]]:
+    text = Path(path).read_text()
+    namespace: dict = {}
+    exec(text.split("\nonly = sys.argv[1:]")[0], namespace)  # noqa: S102 - our own harness
+    return namespace["MUTANTS"]
+
+
+MUTANTS = {
+    **{f"[presence] {k}" if not k.startswith("[") else k: v for k, v in NEW.items()},
+    **{k: v for k, v in earlier("build/c2-fit/mutants_fresh.py").items()},
+}
+
+only = sys.argv[1:]
+original = SOURCE.read_text()
+counts = {"caught": 0, "MISSED": 0, "n/a": 0}
+try:
+    for name, (old, new) in MUTANTS.items():
+        if only and name not in only:
+            continue
+        n = original.count(old)
+        if n != 1:
+            print(f"{name:75s} n/a (pattern found {n} times)", flush=True)
+            counts["n/a"] += 1
+            continue
+        SOURCE.write_text(original.replace(old, new))
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", TEST, "-q", "-m", "not slow", "-n", "8", "--no-cov",
+             "-p", "no:cacheprovider", "-p", "no:randomly", "-x"],
+            capture_output=True, text=True, check=False,
+        )
+        caught = result.returncode != 0
+        failed = [l.split("::")[-1].split(" ")[0] for l in result.stdout.splitlines() if l.startswith("FAILED")]
+        counts["caught" if caught else "MISSED"] += 1
+        print(f"{name:75s} {'caught' if caught else 'MISSED'} {failed[:2]}", flush=True)
+finally:
+    SOURCE.write_text(original)
+assert SOURCE.read_text() == original
+print(counts, flush=True)

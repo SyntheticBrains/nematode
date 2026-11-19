@@ -1,0 +1,191 @@
+{
+ "description": "How far apart are the stage-1 answers? (description; no simulation)\n\nEach start of the first half begins at the box's centre with its own CMA seeds and animals. These are\nthe Euclidean distances, in the encoder's unit coordinates, between every stage-1 answer on record:\nLogbook 131's B04 (its stage 1), and every start of the second to fifth readiness pilots (the first\npilot ran stage 1 at another size). It reports the range over all pairs, and over B04 with the starts\neach pilot kept.\n\nRun from the repository root: ``basin_distances.py``.\n",
+ "answers": {
+  "131 B04": {
+   "kept": true
+  },
+  "second 0": {
+   "kept": false
+  },
+  "second 1": {
+   "kept": false
+  },
+  "second 2": {
+   "kept": false
+  },
+  "second 3": {
+   "kept": false
+  },
+  "second 4": {
+   "kept": false
+  },
+  "second 5": {
+   "kept": false
+  },
+  "third 0": {
+   "kept": true
+  },
+  "fourth 0": {
+   "kept": false
+  },
+  "fourth 1": {
+   "kept": false
+  },
+  "fourth 2": {
+   "kept": true
+  },
+  "fifth 0": {
+   "kept": false
+  },
+  "fifth 1": {
+   "kept": false
+  },
+  "fifth 2": {
+   "kept": false
+  },
+  "fifth 3": {
+   "kept": false
+  },
+  "fifth 4": {
+   "kept": true
+  }
+ },
+ "all_pairs": {
+  "n": 120,
+  "min": 3.19114875036283,
+  "max": 4.568645281024578
+ },
+ "kept_and_b04": {
+  "answers": [
+   "131 B04",
+   "third 0",
+   "fourth 2",
+   "fifth 4"
+  ],
+  "n": 6,
+  "min": 3.19114875036283,
+  "max": 4.06892254988167
+ },
+ "pairs": {
+  "131 B04 | second 0": 4.228826352103042,
+  "131 B04 | second 1": 3.494777150217385,
+  "131 B04 | second 2": 4.293933103952395,
+  "131 B04 | second 3": 3.4313286130851797,
+  "131 B04 | second 4": 3.7032846821261294,
+  "131 B04 | second 5": 3.71241136635411,
+  "131 B04 | third 0": 3.7406881856033585,
+  "131 B04 | fourth 0": 3.273768324337979,
+  "131 B04 | fourth 1": 3.8586992238336046,
+  "131 B04 | fourth 2": 4.06892254988167,
+  "131 B04 | fifth 0": 3.9165140447928306,
+  "131 B04 | fifth 1": 3.8754740177998026,
+  "131 B04 | fifth 2": 3.2315633151535734,
+  "131 B04 | fifth 3": 3.2451978307704588,
+  "131 B04 | fifth 4": 4.063766485503108,
+  "second 0 | second 1": 3.9244937295193245,
+  "second 0 | second 2": 4.366361097934281,
+  "second 0 | second 3": 3.684015125997412,
+  "second 0 | second 4": 3.8751880303948285,
+  "second 0 | second 5": 3.891990645565039,
+  "second 0 | third 0": 3.9379064199056875,
+  "second 0 | fourth 0": 4.05888791160765,
+  "second 0 | fourth 1": 4.21860422413277,
+  "second 0 | fourth 2": 4.249314685134552,
+  "second 0 | fifth 0": 3.936188603497155,
+  "second 0 | fifth 1": 3.9114906422027853,
+  "second 0 | fifth 2": 4.29076113590446,
+  "second 0 | fifth 3": 3.80280337554373,
+  "second 0 | fifth 4": 4.4292316861053616,
+  "second 1 | second 2": 3.6467033122520234,
+  "second 1 | second 3": 4.0761637916302265,
+  "second 1 | second 4": 3.397529100437149,
+  "second 1 | second 5": 4.076490217999693,
+  "second 1 | third 0": 3.762493317941129,
+  "second 1 | fourth 0": 3.5669096306220465,
+  "second 1 | fourth 1": 4.341488641684006,
+  "second 1 | fourth 2": 4.107984066752457,
+  "second 1 | fifth 0": 4.211814839044676,
+  "second 1 | fifth 1": 3.719853418548759,
+  "second 1 | fifth 2": 3.7840333132587904,
+  "second 1 | fifth 3": 3.734862254225321,
+  "second 1 | fifth 4": 4.185312644510531,
+  "second 2 | second 3": 4.212926034388146,
+  "second 2 | second 4": 3.888060307829352,
+  "second 2 | second 5": 4.156456565778169,
+  "second 2 | third 0": 4.177699380748389,
+  "second 2 | fourth 0": 3.966103212653474,
+  "second 2 | fourth 1": 4.239066710870546,
+  "second 2 | fourth 2": 4.373365051062387,
+  "second 2 | fifth 0": 4.530127266927539,
+  "second 2 | fifth 1": 3.8422921541769366,
+  "second 2 | fifth 2": 4.228215686970443,
+  "second 2 | fifth 3": 4.361640456030524,
+  "second 2 | fifth 4": 4.287057054265777,
+  "second 3 | second 4": 3.430072991513001,
+  "second 3 | second 5": 4.029853889258602,
+  "second 3 | third 0": 3.98166415307749,
+  "second 3 | fourth 0": 3.893430475784088,
+  "second 3 | fourth 1": 3.758438550975552,
+  "second 3 | fourth 2": 4.11653078644758,
+  "second 3 | fifth 0": 3.623104808945119,
+  "second 3 | fifth 1": 3.828317514261742,
+  "second 3 | fifth 2": 3.79877983415275,
+  "second 3 | fifth 3": 4.0020451529596865,
+  "second 3 | fifth 4": 4.028866154702922,
+  "second 4 | second 5": 4.568645281024578,
+  "second 4 | third 0": 4.123255147220044,
+  "second 4 | fourth 0": 4.002942279845863,
+  "second 4 | fourth 1": 3.877883433241541,
+  "second 4 | fourth 2": 3.7958836240956906,
+  "second 4 | fifth 0": 4.324270434992313,
+  "second 4 | fifth 1": 3.5235136320960194,
+  "second 4 | fifth 2": 4.2010973838660695,
+  "second 4 | fifth 3": 3.962795352610697,
+  "second 4 | fifth 4": 3.92362857543212,
+  "second 5 | third 0": 3.7892696042831404,
+  "second 5 | fourth 0": 3.724059059047272,
+  "second 5 | fourth 1": 3.9615316592310386,
+  "second 5 | fourth 2": 4.302162388295382,
+  "second 5 | fifth 0": 3.4956376645798057,
+  "second 5 | fifth 1": 3.647925617313718,
+  "second 5 | fifth 2": 3.5808833091768872,
+  "second 5 | fifth 3": 3.8673137605445556,
+  "second 5 | fifth 4": 3.951182295338802,
+  "third 0 | fourth 0": 4.232483069541322,
+  "third 0 | fourth 1": 3.725710640175034,
+  "third 0 | fourth 2": 3.19114875036283,
+  "third 0 | fifth 0": 3.4147121957069198,
+  "third 0 | fifth 1": 3.9428471022419775,
+  "third 0 | fifth 2": 3.445616132066342,
+  "third 0 | fifth 3": 4.205745927758103,
+  "third 0 | fifth 4": 3.9576010552357888,
+  "fourth 0 | fourth 1": 4.127147050215658,
+  "fourth 0 | fourth 2": 4.298671843634709,
+  "fourth 0 | fifth 0": 4.116317343132332,
+  "fourth 0 | fifth 1": 4.182781905602534,
+  "fourth 0 | fifth 2": 3.892591204396121,
+  "fourth 0 | fifth 3": 3.674418397853367,
+  "fourth 0 | fifth 4": 4.110562430047925,
+  "fourth 1 | fourth 2": 3.517400733169534,
+  "fourth 1 | fifth 0": 3.511623532198789,
+  "fourth 1 | fifth 1": 3.325532604627806,
+  "fourth 1 | fifth 2": 3.832987147615478,
+  "fourth 1 | fifth 3": 4.0746514123675155,
+  "fourth 1 | fifth 4": 4.043896145333878,
+  "fourth 2 | fifth 0": 3.6940742215077407,
+  "fourth 2 | fifth 1": 3.9677886469391175,
+  "fourth 2 | fifth 2": 3.9657283762518256,
+  "fourth 2 | fifth 3": 4.2268645335485635,
+  "fourth 2 | fifth 4": 3.8353578926844407,
+  "fifth 0 | fifth 1": 3.7660537642829954,
+  "fifth 0 | fifth 2": 3.7758967041081695,
+  "fifth 0 | fifth 3": 3.9547149316924806,
+  "fifth 0 | fifth 4": 4.029080220467988,
+  "fifth 1 | fifth 2": 4.008428856268039,
+  "fifth 1 | fifth 3": 3.8915959565126603,
+  "fifth 1 | fifth 4": 3.341565397776603,
+  "fifth 2 | fifth 3": 3.702287712262777,
+  "fifth 2 | fifth 4": 4.169115434655289,
+  "fifth 3 | fifth 4": 3.854765665931918
+ }
+}

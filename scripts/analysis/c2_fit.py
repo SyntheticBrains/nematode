@@ -17,7 +17,14 @@ speed noise), on the grading arm whose on-food reversals follow the worm's run s
 - 300·(0.95 - t)/0.95 for a wild type on the small lawn a share t < 0.95 of the time, in every
   stage;
 - in the final stage, 10·Σ Φ((abs(z) - bar) / SD), each statistic's chance of failing a
-  population, with SD measured by the noise step.
+  population, with SD measured by the noise step;
+- in the final stage, a hinge: 5·Σ max(0, abs(10·asinh(z/10)) - target)², the target 0.3 inside
+  each pass rule, which pushes back a statistic sitting far past its bar, where the failure
+  probability is flat;
+- in 2b and the final stage, chemotaxis presence: for its two lower bounds b, each in units s of its
+  spread between populations, 5·max(0, 2 - b/s)² + 10·Φ(-b/s). The ranking score cannot see
+  presence: the log quintile ratio's band is wide, so a ratio whose lower bound falls below 0
+  barely moves its z.
 
 **The procedure** (:data:`STAGES`), sep-CMA at population 48 and 200 animals a candidate after
 stage 1, which runs at population 24 and 64 animals:
@@ -29,8 +36,10 @@ stage 1, which runs at population 24 and 64 animals:
 3. **2b**, all six families with the mutants, a new isotropic search at 2a's answer, sigma0 0.05,
    200 generations;
 4. the noise step: 2b's answer on 30 populations, each statistic's SD between them;
-5. **the final stage**, 2b's objective plus the failure probability, from 2b's search state, 50
-   generations.
+5. **the final stage**, 2b's objective plus the failure probability and the hinge, from 2b's search
+   state, 50 generations.
+
+2b's and the final stage's candidates are graded with presence; every readout's wild type is too.
 
 Each stage runs its full count; the final stage's plateau is read and reported.
 
@@ -149,6 +158,19 @@ LAWN_GUARD_BELOW = 0.95
 LAWN_PENALTY = 300.0
 RECORDED_ANIMALS = 8
 FAILURE_WEIGHT = 10.0
+# The hinge: each statistic's compressed abs(z) past a target this far inside its pass rule.
+HINGE_WEIGHT = 5.0
+HINGE_MARGIN = 0.3
+# Chemotaxis presence's term: each lower bound in units of its standard deviation between
+# populations of 200 animals at a fitted answer (15 populations), a hinge below a target of two of
+# them, and its chance of falling below 0. An undefined bound, or one below the floor, takes it.
+PRESENCE_STATISTICS: tuple[str, ...] = ("drift_mm_s", "log_quintile_ratio")
+PRESENCE_SD: dict[str, float] = {
+    "drift_mm_s": 0.0001766214148233308,
+    "log_quintile_ratio": 0.0443153683806959,
+}
+PRESENCE_TARGET = 2.0
+PRESENCE_FLOOR = -10.0
 SD_FLOOR = 0.05
 TIMESCALE_AT_2A_S = 1.0
 READOUT_EVERY = 10
@@ -207,6 +229,8 @@ class Stage:
     sigma0: float | None  # None: the previous stage's search state
     generations: int
     failure: bool  # whether the failure probability enters
+    hinge: bool  # whether the hinge enters
+    presence: bool  # whether chemotaxis presence enters, its candidates graded with presence
 
 
 STAGES: tuple[Stage, ...] = (
@@ -218,6 +242,8 @@ STAGES: tuple[Stage, ...] = (
         sigma0=0.2,
         generations=150,
         failure=False,
+        hinge=False,
+        presence=False,
     ),
     Stage(
         "2a",
@@ -227,11 +253,34 @@ STAGES: tuple[Stage, ...] = (
         sigma0=0.1,
         generations=300,
         failure=False,
+        hinge=False,
+        presence=False,
     ),
     # 2b starts a new isotropic search at 2a's answer, not 2a's steps, which were adapted to 2a's
     # four families alone: a 2b carrying them left local search where 2a did, and fresh ones moved it.
-    Stage("2b", None, mutants=True, subset=False, sigma0=0.05, generations=200, failure=False),
-    Stage("final", None, mutants=True, subset=False, sigma0=None, generations=50, failure=True),
+    # Presence enters where chemotaxis does: unscored, 2b traded it away.
+    Stage(
+        "2b",
+        None,
+        mutants=True,
+        subset=False,
+        sigma0=0.05,
+        generations=200,
+        failure=False,
+        hinge=False,
+        presence=True,
+    ),
+    Stage(
+        "final",
+        None,
+        mutants=True,
+        subset=False,
+        sigma0=None,
+        generations=50,
+        failure=True,
+        hinge=True,
+        presence=True,
+    ),
 )
 NOISE_AFTER = "2b"
 
@@ -380,7 +429,7 @@ SMOKE_LAYOUT = Layout(
 )
 SMOKE_GENERATIONS = (2, 22, 2, 2)
 RUNS: dict[str, Run] = {
-    "pilot": Run("pilot", Layout(1_360_000_000), (9682, 9683, 9684, 9685), 9686, kill_rules=True),
+    "pilot": Run("pilot", Layout(1_540_000_000), (9926, 9927, 9928, 9929), 9930, kill_rules=True),
     "recovery": Run("recovery", Layout(1_240_000_000), (5801, 5802, 5803, 5804), 5831),
     "fit": Run("fit", Layout(1_280_000_000), (5811, 5812, 5813, 5814), 5841),
     "loo": Run(
@@ -584,6 +633,7 @@ def _candidate_job(item: tuple[str, int, int, int, list[float], int]) -> dict[st
         seeds,
         assays=FIT_ASSAYS if spec.families == FIT_FAMILIES else None,
         mutants=run.mutants if spec.mutants else (),
+        presence=spec.presence,
     )
     return {
         "generation": generation,
@@ -662,7 +712,7 @@ def lawn_guard(record: dict[str, Any]) -> float:
 class Objective:
     """A stage's score of a candidate's record against a truth."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - the truth, the bands and the stage's terms
         self,
         truth: dict[str, Any],
         bands: dict[str, Any],
@@ -670,7 +720,11 @@ class Objective:
         families: tuple[str, ...] | None,
         mutants: tuple[str, ...],
         sd: dict[str, float] | None = None,
+        hinge: bool = False,
+        presence: bool = False,
     ) -> None:
+        self.hinged = hinge
+        self.scores_presence = presence
         self.truth = truth
         self.scales = v2.band_scales_v2(bands)
         self.mscales = mutant_scales(bands)
@@ -725,9 +779,60 @@ class Objective:
                 total += phi((z - self.mutant_bars[m]) / self.sd[f"{m}/{s}"])
         return FAILURE_WEIGHT * total
 
+    def hinge(self, record: dict[str, Any]) -> float:
+        """Return 5 x the summed square of each statistic's compressed abs(z) past its target.
+
+        The target is :data:`HINGE_MARGIN` inside the pass rule: the wild type's bar for every
+        defined wild-type statistic, each fitted mutant's own for its graded differences. An
+        undefined wild-type statistic is left to the ranking score.
+        """
+        excess = 0.0
+        target = self.wild_bar - HINGE_MARGIN
+        for key, centre in self.truth["statistics"].items():
+            value = record["statistics"].get(key)
+            if key.split("/")[0] not in self.all_families or value is None or centre is None:
+                continue
+            if not math.isfinite(float(value)):
+                continue
+            z = (float(value) - float(centre)) / self.scales[key]
+            excess += max(0.0, abs(v2.COMPRESSION * math.asinh(z / v2.COMPRESSION)) - target) ** 2
+        for m in self.mutants:
+            target = self.mutant_bars[m] - HINGE_MARGIN
+            for s in GRADED[m]:
+                z = mutant_z(self.truth, record, self.mscales[m][s], m, s)
+                compressed = v2.COMPRESSION * math.asinh(z / v2.COMPRESSION)
+                excess += max(0.0, abs(compressed) - target) ** 2
+        return HINGE_WEIGHT * excess
+
+    @staticmethod
+    def presence(record: dict[str, Any]) -> float:
+        """Return chemotaxis presence's term: each lower bound's hinge and chance of falling below 0.
+
+        A record graded without presence, or with a bound undefined, scores each missing bound at
+        the floor.
+        """
+        bounds = (record.get("chemotaxis_presence") or {}).get("lower_bounds") or {}
+        total = 0.0
+        for key in PRESENCE_STATISTICS:
+            b = bounds.get(key)
+            x = PRESENCE_FLOOR
+            if b is not None and math.isfinite(float(b)):
+                x = max(PRESENCE_FLOOR, float(b) / PRESENCE_SD[key])
+            total += HINGE_WEIGHT * max(0.0, PRESENCE_TARGET - x) ** 2
+            total += FAILURE_WEIGHT * phi(-x)
+        return total
+
     def __call__(self, record: dict[str, Any]) -> float:
-        """Return the candidate's score: the distance, the guards and the failure probability."""
-        return self.distance(record) + self.guards(record) + self.failure(record)
+        """Return the candidate's score: the distance, the guards, and the stage's further terms.
+
+        The further terms are the failure probability (with SDs), the hinge and presence.
+        """
+        score = self.distance(record) + self.guards(record) + self.failure(record)
+        if self.hinged:
+            score += self.hinge(record)
+        if self.scores_presence:
+            score += self.presence(record)
+        return score
 
 
 def noise_sd(
@@ -1122,6 +1227,13 @@ def preflight_record(
     # the bands, so the truth it recovers must do both.
     lawn = observation["statistics"].get(LAWN_STATISTIC) or 0.0
     d_fit = observation.get("D_fit")
+    # 2b and the final stage score chemotaxis presence against a target, not the truth, so a truth
+    # below the target would be pulled from: its own lower bounds must clear it.
+    bounds = (observation.get("chemotaxis_presence") or {}).get("lower_bounds") or {}
+    clears = all(
+        bounds.get(k) is not None and float(bounds[k]) >= PRESENCE_TARGET * PRESENCE_SD[k]
+        for k in PRESENCE_STATISTICS
+    )
     checks = {
         "separated": prior - floor >= SEPARATION,
         "oracle": gain(prior, oracle, floor) >= ORACLE_GATE,
@@ -1129,11 +1241,13 @@ def preflight_record(
         "stable": not flips,
         "holds_lawn": lawn >= HOLD_BAR,
         "reaches_bar": d_fit is not None and d_fit <= REACH_BAR,
+        "clears_presence": clears,
     }
     return {
         "floor": floor,
         "observation_time_on_lawn": lawn,
         "observation_D_fit": d_fit,
+        "observation_presence_bounds": {k: bounds.get(k) for k in PRESENCE_STATISTICS},
         "oracle_D": oracle,
         "prior_D": prior,
         "centre_D": centre,
@@ -1236,11 +1350,11 @@ def settings_of(run: Run, truth: dict[str, Any]) -> dict[str, Any]:
 
 
 def _readout_job(item: tuple[str, list[float], list[int]]) -> tuple[str, dict[str, Any]]:
-    """Simulate the readout's wild type (every assay, guards) or one mutant's small lawn."""
+    """Simulate the readout's wild type (every assay, guards, presence) or one mutant's small lawn."""
     kind, z, seeds = item
     bands = bg.load_bands_v4()
     if kind == "wild":
-        return kind, simulate_point(z, seeds, assays=None, mutants=())
+        return kind, simulate_point(z, seeds, assays=None, mutants=(), presence=True)
     clf = bg.classifier(bands)
     _, factory = controller(z, kind)
     populations, _ = bg.simulate_v2(ARM, factory, seeds, bands, assays=("small_lawn",))
@@ -1569,6 +1683,8 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
             families=stage.families,
             mutants=run.mutants if stage.mutants else (),
             sd=sd,
+            hinge=stage.hinge,
+            presence=stage.presence,
         )
 
         def full(point: Sequence[float], x: list[float] = state["x"], idx: list[int] = idx) -> list:
@@ -1622,6 +1738,11 @@ def procedure(  # noqa: C901, PLR0912, PLR0915 - the stages in order, each saved
             history["best"].append(float(scores[best]))
             history["sigmas"].append(float(es.sigma))
             history["failure"].append(objective.failure(records[best]))
+            # The best candidate's hinge and presence terms, where the stage scores them.
+            if stage.hinge:
+                history.setdefault("hinge", []).append(objective.hinge(records[best]))
+            if stage.presence:
+                history.setdefault("presence", []).append(objective.presence(records[best]))
             # The share of the generation's candidates that pay the lawn guard.
             history["lawn_guarded"].append(float(np.mean([lawn_guard(r) > 0 for r in records])))
             if g % READOUT_EVERY == 0 or g == generations:
@@ -1991,7 +2112,8 @@ def _recovery_preflight(workers: int) -> int:
     def seeds(base: int, q: int) -> list[int]:
         return list(range(base + ANIMALS * q, base + ANIMALS * (q + 1)))
 
-    jobs = [(truth, seeds(TRUTH_BASE, q), False) for q in range(TRUTH_REPEATS + 1)]
+    # The observation is graded with presence, which the preflight reads; its statistics are the same.
+    jobs = [(truth, seeds(TRUTH_BASE, q), q == 0) for q in range(TRUTH_REPEATS + 1)]
     jobs += [(list(map(float, prior[j])), seeds(PRIOR_BASE, j), False) for j in range(PRIOR_DRAWS)]
     jobs += [([0.5] * n, seeds(CENTRE_BASE, q), False) for q in range(CENTRE_REPEATS)]
     with _pool(workers) as pool:

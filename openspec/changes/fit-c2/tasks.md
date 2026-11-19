@@ -213,9 +213,34 @@
   - the paired test's generators clear of every earlier one and of every run's CMA seeds;
   - deliberate bugs in 2b's start, the pilot's seeds and the neural reading's generators each caught, and the third amendment's again.
 
-- [ ] 4.1o Part A amended and committed before the pilot runs a fifth time, with the fourth pilot's record, the screen's script and records and the timing check under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row and its neural reading).
+- [x] 4.1o Part A amended and committed before the pilot runs a fifth time, with the fourth pilot's record, the screen's script and records and the timing check under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row and its neural reading). *(2026-11-16, `e6b98a44`.)*
 
-- [ ] 4.1p `pilot` a fifth time (about 31 h with its first start kept).
+- [x] 4.1p `pilot` a fifth time (about 31 h with its first start kept). *(2026-11-18: it dropped starts 0–3 at the descent and kept start 4, which passed 2a's bar at 1.97; its answer failed the go rule, the wild type 0 of 5 and every mutant 5 of 5, after 47.1 h; `pilot_fifth.json`.)*
+
+- [x] 4.1q Diagnose the fifth pilot on discarded seeds, each run's rule fixed before it ran: the onset sweeps and the trace of Logbook 131's route, the hinge screen (50 generations from the pilot's final state with the hinge), the chemotaxis sweep, and the presence screen (50 generations from the hinge screen's state with the presence term). Both screens passed their rules; the presence screen's answer passed the wild type in 4 of 5 fresh populations and every mutant in 5 of 5.
+
+- [x] 4.1r The amendment of 2026-11-19 (design decision 3e), on the maintainer's decision:
+
+  - `c2_fit.py`: the final stage adds the hinge; 2b and the final stage add the presence term, their candidates graded with presence; every readout's wild type graded with presence; each generation's best hinge and presence terms recorded;
+  - F.0b-ii's preflight: the observation graded with presence, and a check that its lower bounds clear presence's target;
+  - the pilot on a new base (1,540,000,000) and new CMA seeds (9926–9929, restarts 9930–9939).
+
+  Tests:
+
+  - the hinge's value on both sides of a target, inside it, undefined, on a mutant's graded difference and not on tph-1's leaving, and in the score only where the stage takes it;
+  - the presence term's value at its target, at 0, and at the floor for missing, undefined and far-low bounds; its scales the fifth pilot's grade populations';
+  - each stage's flags, and the procedure scoring and recording the terms of its own stages alone;
+  - 2b's and the final stage's candidates graded with presence, the first half's without; every readout's wild type graded with presence;
+  - the preflight's presence check at the target, below it, undefined and on the drift, and the observation alone graded with presence;
+  - the fifth pilot's, the sweeps' and the screens' blocks and CMA seeds as earlier ones;
+  - the procedure's final stage carrying the hinge in its best score and 2b not, and each generation recording its best candidate's own terms;
+  - deliberate bugs in the terms, their stages, the preflight's check and the pilot's seeds each caught, and the earlier amendments' again.
+
+  Checked, as probes: the amended objective reproduces the presence screen's score on every stored candidate (`probes/objective_parity.py.txt`); the stage-1 answers' distances (`probes/basin_distances.py.txt`). An independent review's findings are fixed or stated.
+
+- [ ] 4.1s Part A amended and committed before the pilot runs a sixth time, with the fifth pilot's record, the diagnosis's scripts and records under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row).
+
+- [ ] 4.1t `pilot` a sixth time (about 37 h with its first start kept).
 
 - [ ] 4.2 Read the go rule. Part B: the result, the cost per stage and the plateau reading, committed. If the go rule fails, diagnose it and return to the maintainer before anything registered.
 

@@ -1,0 +1,328 @@
+"""Can the final stage restore chemotaxis presence once it is scored? (description; discarded)
+
+The hinge screen (2026-11-19, ``hinge_screen.py``) passed its rule: with Logbook 131's hinge added
+to the final stage's objective, the on-lawn onset rate's z rose from -4.31 to a mean of -3.01 over
+the readouts at generations 30-50, nothing else failed and every mutant passed. Its answer's
+described grade on five fresh populations passed the onset rate in all five but the wild type in
+only two: chemotaxis presence failed in three, the log quintile ratio's lower bound below 0. The
+objective is blind to presence: the ratio's band is wide, so its value fell from 0.097 to 0.048
+with its z moving from -1.69 to -1.76. Presence already failed in 5 of the fifth pilot's 15 grade
+populations. Its readouts show the ratio at 0.10-0.34 and the drift at 0.008-0.012 mm/s through 2a,
+which does not fit chemotaxis, and both falling in 2b (drift to 0.003). Writing Logbook 131's
+sensory gains into the screen's answer never restored presence (``chemotaxis_sweep.py``).
+
+**The screen.** From the hinge screen's search state after its 50 generations (sigma 0.0202), a
+new sep-CMA carrying its sigma and per-parameter steps at its answer (``c2_fit.carried``),
+population 48 at 200 animals, the registered arm, for 50 generations, on the hinge screen's
+objective (the final stage's, all six families, the three mutants at half, the fifth pilot's noise
+SDs, the guards, plus the hinge) plus a presence term. Each candidate is graded with presence as
+the grade grades it (2,000 resamples of its animals, the lower bound at the 2.5% quantile), and for
+each of the two presence statistics k (the drift and the log quintile ratio) with lower bound b_k
+and scale s_k, the lower bound's standard deviation over the fifth pilot's 15 grade populations
+(0.000183 mm/s and 0.0443), the term adds
+
+    5 x max(0, 2 - b_k / s_k)^2 + 10 x Phi(-b_k / s_k),
+
+the hinge's weight at a target two of its own deviations above 0, and the final stage's failure
+weight on its chance of falling below 0; b_k / s_k is floored at -10 where it is undefined or lower.
+Readouts at generation 0 and every 10 generations on the fifth pilot's readout animals, with
+presence; generation 0 reproduces the hinge screen's generation-50 readout, a check on this setup.
+
+**The rule, fixed before it runs** (2026-11-19). Over the readouts at generations 30, 40 and 50,
+the screen **passes** when chemotaxis is present in at least 2 of the 3, the on-lawn onset rate's
+mean z is at least -3.0781, every other wild-type statistic is defined at all three and its mean
+|z| is at most 3.0781, local search is present in at least 2 of the 3, and each mutant passes in at
+least 2 of the 3.
+
+- **Passes:** the final stage can restore presence once it scores it, in the basin the fifth pilot
+  chose. The amendment adds the hinge to the final stage and the presence term to 2b and the final
+  stage.
+- **Fails:** presence does not come back in this basin with everything else held; chemotaxis has
+  to enter 2a's objective, where the basin is chosen.
+
+**Reported beside it, never selected on:** every readout's statistics, z, lower bounds and mutant
+readings; each generation's median and best score, its best candidate's hinge and presence terms,
+and the step size; the last answer graded with presence on 5 fresh populations.
+
+**Seeds (discarded).** Candidates 1,460,000,000 + 200 x (48 x (g - 1) + m) + i (50 generations:
+480,000 animals, to 1,460,479,999); readouts on the fifth pilot's 1,376,000,000 + i, i < 200,
+reused for reading only; the grade 1,461,000,000 + 200 p + i, p < 5; CMA 9925.
+
+Run from the repository root: ``presence_screen.py [workers]``. Every candidate's record is stored
+as it completes, and the strategy after every generation, so a resume continues exactly.
+"""
+
+import json
+import math
+import os
+import pickle
+import statistics
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+from scipy.stats import norm
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+
+BASE, CMA_SEED, GRADE_BASE = 1_460_000_000, 9925, 1_461_000_000
+POPSIZE, ANIMALS, GENERATIONS, EVERY = 48, 200, 50, 10
+READING = (30, 40, 50)
+HINGE_WEIGHT, MARGIN = 5.0, 0.3
+PRESENCE_TARGET, PRESENCE_FLOOR = 2.0, -10.0
+PRESENCE = ("drift_mm_s", "log_quintile_ratio")
+ONSET = "activity/onset_rate_per_min"
+PILOT = Path("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json")
+HINGE_STATE = Path("build/c2-fit/hinge_screen/state.pkl")
+HINGE_RECORD = Path("build/c2-fit/hinge_screen.json")
+READOUT_SEEDS = fit.RUNS["pilot"].layout.readout_seeds()
+OUT = Path("build/c2-fit/presence_screen")
+WILD_BAR = float(bg.load_bands_v4()["bars"]["wild_type"])
+
+
+def compressed(z: float) -> float:
+    return fit.v2.COMPRESSION * math.asinh(z / fit.v2.COMPRESSION)
+
+
+def presence_scales(pilot: dict) -> dict[str, float]:
+    """The lower bounds' standard deviation over the fifth pilot's grade populations."""
+    return {k: statistics.stdev(g["chemotaxis_presence"]["lower_bounds"][k] for g in pilot["grades"])
+            for k in PRESENCE}
+
+
+class PresenceObjective(fit.Objective):
+    """The final stage's objective, the hinge screen's hinge and a term on presence's lower bounds."""
+
+    def __init__(self, *args, presence_sd: dict[str, float], **kwargs):
+        super().__init__(*args, **kwargs)
+        self.presence_sd = presence_sd
+
+    def hinge(self, record):
+        wild_target = self.wild_bar - MARGIN
+        excess = 0.0
+        for key, centre in self.truth["statistics"].items():
+            value = record["statistics"].get(key)
+            if value is None or centre is None or not math.isfinite(float(value)):
+                continue
+            z = (float(value) - float(centre)) / self.scales[key]
+            excess += max(0.0, abs(compressed(z)) - wild_target) ** 2
+        for m in self.mutants:
+            for s in fit.GRADED[m]:
+                z = fit.mutant_z(self.truth, record, self.mscales[m][s], m, s)
+                excess += max(0.0, abs(compressed(z)) - (self.mutant_bars[m] - MARGIN)) ** 2
+        return HINGE_WEIGHT * excess
+
+    def presence(self, record):
+        bounds = (record.get("chemotaxis_presence") or {}).get("lower_bounds") or {}
+        total = 0.0
+        for k in PRESENCE:
+            b = bounds.get(k)
+            x = b / self.presence_sd[k] if b is not None and math.isfinite(float(b)) else PRESENCE_FLOOR
+            x = max(PRESENCE_FLOOR, x)
+            total += HINGE_WEIGHT * max(0.0, PRESENCE_TARGET - x) ** 2
+            total += fit.FAILURE_WEIGHT * float(norm.cdf(-x))
+        return total
+
+    def __call__(self, record):
+        return super().__call__(record) + self.hinge(record) + self.presence(record)
+
+
+def _job(item):
+    generation, member, seeds, z = item
+    began = time.perf_counter()
+    record = fit.simulate_point(z, seeds, assays=None, mutants=fit.MUTANTS, presence=True)
+    return {"generation": generation, "member": member, "vector": fit.vector_digest(z), **record,
+            "seconds": time.perf_counter() - began}
+
+
+def _readout_job(item):
+    kind, z, seeds = item
+    if kind == "wild":
+        return kind, fit.simulate_point(z, seeds, assays=None, mutants=(), presence=True)
+    return fit._readout_job(item)
+
+
+def readout(pool, z, seeds, truth):
+    """``c2_fit.readout``, with the wild type graded with presence."""
+    bands = bg.load_bands_v4()
+    parts = dict(pool.map(_readout_job, [(k, z, seeds) for k in ("wild", *fit.MUTANTS)]))
+    wild = parts["wild"]
+    wild_small = {s: wild["statistics"].get(f"small_lawn/{s}") for s in fit.LAWN_DIFFERENCES}
+    wild["delta"] = {
+        m: {s: fit._difference(parts[m].get(s), wild_small.get(s)) for s in fit.LAWN_DIFFERENCES}
+        for m in fit.MUTANTS
+    }
+    record = fit.grade_record(wild, bands)
+    record["D_truth"] = fit.recovery_distance(truth, record, bands)
+    return nr._finite(record)
+
+
+def _save(path, state):
+    tmp = path.with_suffix(".tmp")
+    tmp.write_bytes(pickle.dumps(state))
+    os.replace(tmp, path)
+
+
+def _stored(path):
+    out = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:  # a torn last line from an interrupted write
+                continue
+            out[r["generation"], r["member"]] = r
+    return out
+
+
+def seeds_of(g, m):
+    first = BASE + ANIMALS * (POPSIZE * (g - 1) + m)
+    return list(range(first, first + ANIMALS))
+
+
+def reading(readouts):
+    wild = list(readouts[READING[0]]["z"])
+    zs = {k: [readouts[g]["z"].get(k) for g in READING] for k in wild}
+    undefined = sorted(k for k, v in zs.items() if any(z is None for z in v))
+    means = {k: float(np.mean(v)) for k, v in zs.items() if k not in undefined}
+    onset = means.get(ONSET)
+    others = sorted(k for k, z in means.items() if k != ONSET and abs(z) > WILD_BAR)
+    chem = sum(bool((readouts[g].get("chemotaxis_presence") or {}).get("present")) for g in READING)
+    search = sum(bool((readouts[g].get("local_search_presence") or {}).get("present")) for g in READING)
+    mutants = {m: sum(bool(readouts[g]["mutants"][m]["passes"]) for g in READING) for m in fit.MUTANTS}
+    passes = (chem >= 2 and onset is not None and onset >= -WILD_BAR and not others and not undefined
+              and search >= 2 and all(n >= 2 for n in mutants.values()))
+    return {"generations": list(READING), "chemotaxis_present_of_3": chem, "onset_mean_z": onset,
+            "other_failing": others, "undefined": undefined, "local_search_present_of_3": search,
+            "mutant_passes_of_3": mutants, "passes": bool(passes)}
+
+
+def main(workers):
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path, store = OUT / "state.pkl", OUT / "candidates.jsonl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    pilot = json.loads(PILOT.read_text())
+    hinge_record = json.loads(HINGE_RECORD.read_text())
+    sd = presence_scales(pilot)
+    objective = PresenceObjective(truth, bands, families=None, mutants=fit.MUTANTS,
+                                  sd=pilot["noise"]["sd"], presence_sd=sd)
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        hinge_state = pickle.loads(HINGE_STATE.read_bytes())
+        previous = hinge_state["es"]
+        x0 = [float(v) for v in hinge_record["answer"]]
+        assert np.allclose(np.clip(previous.result.xfavorite, 0, 1), x0)
+        assert len(hinge_state["medians"]) == 50 and len(x0) == len(fit.entries()) == 137
+        state = {"es": fit.carried(previous, x0, CMA_SEED, POPSIZE), "sigma0": float(previous.sigma),
+                 "presence_sd": sd, "medians": [], "best": [], "hinge_best": [], "presence_best": [],
+                 "sigmas": [], "readouts": {}, "seconds": 0.0}
+        _save(state_path, state)
+    es = state["es"]
+
+    def read(g):
+        z = list(map(float, np.clip(es.result.xfavorite, 0, 1)))
+        r = state["readouts"][g] = readout(pool, z, READOUT_SEEDS, truth)
+        fails = {k.split("/")[1]: round(v, 2) for k, v in r["z"].items() if v is None or abs(v) > WILD_BAR}
+        mp = {m: r["mutants"][m]["passes"] for m in fit.MUTANTS}
+        cp = r.get("chemotaxis_presence") or {}
+        lb = {k: round(v, 4) for k, v in (cp.get("lower_bounds") or {}).items()}
+        print(f"presence screen readout {g}: D_fit {r['D_fit']:.2f} D {r['D']:.2f} "
+              f"onset {r['z'].get(ONSET):+.2f} ratio {r['statistics'].get('chemotaxis/log_quintile_ratio'):.3f} "
+              f"lower bounds {lb} present {cp.get('present')} "
+              f"search {(r.get('local_search_presence') or {}).get('present')} fails {fails} mutants {mp}",
+              flush=True)
+
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        if 0 not in state["readouts"]:
+            read(0)
+            hinge50 = hinge_record["readouts"]["50"]["statistics"]
+            mine = state["readouts"][0]["statistics"]
+            same = all(
+                (hinge50[k] is None and mine.get(k) is None)
+                or (hinge50[k] is not None and mine.get(k) is not None
+                    and abs(hinge50[k] - mine[k]) <= 1e-9 * max(1.0, abs(hinge50[k])))
+                for k in hinge50
+            )
+            state["reproduces_hinge_50"] = bool(same)
+            print(f"presence screen: generation-0 readout reproduces the hinge screen's generation 50: {same}",
+                  flush=True)
+            _save(state_path, state)
+        while len(state["medians"]) < GENERATIONS:
+            g = len(state["medians"]) + 1
+            began = time.time()
+            points = es.ask()
+            candidates = [list(map(float, np.clip(p, 0, 1))) for p in points]
+            stored = _stored(store)
+            records, todo = {}, []
+            for m, z in enumerate(candidates):
+                r = stored.get((g, m))
+                if r is None:
+                    todo.append((g, m, seeds_of(g, m), z))
+                elif r["vector"] != fit.vector_digest(z):
+                    raise ValueError(f"{store}: generation {g} member {m} is stored at another vector")
+                else:
+                    records[m] = r
+            if todo:
+                with store.open("a") as handle:
+                    for r in pool.map(_job, todo):
+                        handle.write(json.dumps(nr._finite(r), allow_nan=False) + "\n")
+                        handle.flush()
+                        records[r["member"]] = r
+            records = [records[m] for m in range(len(candidates))]
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            best = int(np.argmin(scores))
+            state["medians"].append(float(np.median(scores)))
+            state["best"].append(float(scores[best]))
+            state["hinge_best"].append(float(objective.hinge(records[best])))
+            state["presence_best"].append(float(objective.presence(records[best])))
+            state["sigmas"].append(float(es.sigma))
+            if g % EVERY == 0:
+                read(g)
+            state["seconds"] += time.time() - began
+            print(f"presence screen gen {g}: median {state['medians'][-1]:.2f} best {state['best'][-1]:.2f} "
+                  f"(hinge {state['hinge_best'][-1]:.2f}, presence {state['presence_best'][-1]:.2f}) "
+                  f"sigma {es.sigma:.4f} {time.time() - began:.0f} s", flush=True)
+            _save(state_path, state)
+        result = reading(state["readouts"])
+        answer = list(map(float, np.clip(es.result.xfavorite, 0, 1)))
+        if "grade" not in state:
+            jobs = [(answer, list(range(GRADE_BASE + ANIMALS * p, GRADE_BASE + ANIMALS * (p + 1))), True)
+                    for p in range(5)]
+            state["grade"] = [nr._finite({"population": p, **fit.grade_record(r, bands)})
+                              for p, r in enumerate(pool.map(fit._point_job, jobs))]
+            _save(state_path, state)
+    grade = state["grade"]
+    described = {"wild_type": sum(bool(r["wild_type_passes"]) for r in grade),
+                 "mutants": {m: sum(bool(r["mutants"][m]["passes"]) for r in grade) for m in fit.MUTANTS},
+                 "chemotaxis_present": sum(bool(r["chemotaxis_presence"]["present"]) for r in grade),
+                 "ratio_lower_bounds": [r["chemotaxis_presence"]["lower_bounds"]["log_quintile_ratio"]
+                                        for r in grade],
+                 "onset_z": [r["z"].get(ONSET) for r in grade]}
+    record = {
+        "description": __doc__, "base": BASE, "cma": CMA_SEED, "grade_base": GRADE_BASE,
+        "sigma0": state["sigma0"], "generations": GENERATIONS,
+        "hinge": {"weight": HINGE_WEIGHT, "margin": MARGIN},
+        "presence_term": {"target": PRESENCE_TARGET, "floor": PRESENCE_FLOOR, "sd": state["presence_sd"],
+                          "weights": {"hinge": HINGE_WEIGHT, "failure": fit.FAILURE_WEIGHT}},
+        "readout_seeds": [READOUT_SEEDS[0], READOUT_SEEDS[-1]],
+        "reproduces_hinge_50": state.get("reproduces_hinge_50"),
+        "reading": result, "grade_described": described,
+        "medians": state["medians"], "best": state["best"], "hinge_best": state["hinge_best"],
+        "presence_best": state["presence_best"], "sigmas": state["sigmas"],
+        "readouts": {str(g): v for g, v in sorted(state["readouts"].items())},
+        "grade": grade, "answer": answer, "seconds": state["seconds"],
+    }
+    Path("build/c2-fit/presence_screen.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"presence screen done: {result}; described grade {described}", flush=True)
+
+
+if __name__ == "__main__":
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else 16)

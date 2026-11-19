@@ -893,6 +893,18 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     rates, with every first start kept. Stated, not remedied: the flip fraction, the weathervane
     slope, pre-exit enrichment and the on-lawn onset rate did not pass in the screen's 60
     generations. **For W:** every arm's 2b starts its own search.
+  - *(2026-11-19, Part A amended a fifth time before any registered run.)* **The fifth pilot kept
+    its fifth start,** which passed 2a's bar at 1.97, and **failed its go rule:** the wild type in 0
+    of 5 populations, every mutant in 5 of 5 (47.1 h). The on-lawn onset rate failed in all 15
+    populations, and chemotaxis presence in 3 of the first 5, which 2b traded away unscored. On
+    discarded seeds, by rules fixed before they ran, a hinge moved the onset rate inside its bar where
+    the final stage's chance of failing is flat, and a term on presence's lower bounds then
+    restored presence. The screens' answer passed the wild type in 4 of 5 fresh populations and
+    every mutant in 5 of 5. **The final stage adds the hinge; 2b and the final stage score
+    presence;** F.0b-ii's truth must clear presence's target. The pilot runs a sixth time on new
+    seeds. About 37 h a run and 145 h for the chain, with every first start kept. Stated, not
+    remedied: the screens continued the fifth pilot's basin, and pre-exit enrichment sits near its
+    bar. **For W:** every arm takes both terms.
   - *(2026-11-16.)* **The neural reading follows Logbook 135:** the answer's share is of the
     readout's measured ceiling (0.423, not 0.173), the paired test resamples the stimulated
     neurons' classes, with the neuron resample beside it, on generators clear of Logbook 135's, and

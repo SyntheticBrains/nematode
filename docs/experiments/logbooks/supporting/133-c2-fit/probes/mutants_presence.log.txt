@@ -1,0 +1,239 @@
+[presence] the final stage without the hinge                                caught ['test_each_stage_scores_its_own_terms']
+[presence] the final stage without presence                                 caught ['test_each_stage_scores_its_own_terms']
+[presence] the final stage without the failure term                         caught ['test_each_stage_scores_its_own_terms']
+[presence] 2b without presence                                              caught ['test_each_stage_scores_its_own_terms']
+[presence] 2b with the hinge                                                caught ['test_each_stage_scores_its_own_terms']
+[presence] 2a with presence                                                 caught ['test_each_stage_scores_its_own_terms']
+[presence] 2a with the hinge                                                caught ['test_each_stage_scores_its_own_terms']
+[presence] the procedure drops the hinge flag                               MISSED []
+[presence] the procedure drops the presence flag                            caught ['test_each_stage_scores_its_own_terms']
+[presence] candidates never graded with presence                            caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[presence] candidates always graded with presence                           caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[presence] readouts without presence                                        caught ['test_a_readout_grades_presence']
+[presence] the hinge recorded in every stage                                caught ['test_each_stage_scores_its_own_terms']
+[presence] presence recorded in every stage                                 caught ['test_each_stage_scores_its_own_terms']
+[presence] the hinge always scored                                          caught ['test_the_lawn_guard[1]', 'test_the_hinge']
+[presence] presence always scored                                           caught ['test_the_lawn_guard[2a]', 'test_the_mutants_weigh_half']
+[presence] the hinge never scored                                           caught ['test_the_lawn_guard[final]', 'test_the_hinge']
+[presence] presence never scored                                            caught ['test_the_lawn_guard[2b]', 'test_the_lawn_guard[final]']
+[presence] the hinge at half weight                                         caught ['test_the_hinge', 'test_each_stage_scores_its_own_terms']
+[presence] the hinge at the bar itself                                      MISSED []
+[presence] the hinge one-sided                                              caught ['test_the_hinge']
+[presence] the hinge uncompressed                                           caught ['test_the_hinge']
+[presence] the hinge not squared                                            MISSED []
+[presence] the mutants' hinge at the wild type's bar                        caught ['test_the_hinge']
+[presence] the mutants' hinge on ungraded statistics                        caught ['test_the_hinge']
+[presence] the mutants left out of the hinge                                caught ['test_the_hinge']
+[presence] the hinge skips nothing undefined                                MISSED []
+[presence] presence's target at one SD                                      caught ['test_the_presence_term', 'test_each_stage_scores_its_own_terms']
+[presence] presence's floor at -3                                           caught ['test_the_presence_term', 'test_each_stage_scores_its_own_terms']
+[presence] presence's ratio scale rounded                                   caught ['test_the_presence_term']
+[presence] presence's drift scale rounded                                   caught ['test_the_presence_term']
+[presence] presence ignores the drift                                       caught ['test_the_presence_term', 'test_each_stage_scores_its_own_terms']
+[presence] presence without its failure part                                caught ['test_the_presence_term', 'test_each_stage_scores_its_own_terms']
+[presence] presence's chance the wrong way                                  caught ['test_the_presence_term', 'test_each_stage_scores_its_own_terms']
+[presence] presence without its hinge part                                  caught ['test_the_presence_term', 'test_each_stage_scores_its_own_terms']
+[presence] presence's low bounds unfloored                                  caught ['test_the_presence_term']
+[presence] presence's missing bounds score 0                                caught ['test_the_presence_term', 'test_each_stage_scores_its_own_terms']
+[presence] the preflight drops the presence check                           caught ['test_the_preflight_grades_the_observation_with_presence', 'test_the_preflight_checks']
+[presence] the preflight's presence check at 0                              caught ['test_the_preflight_checks']
+[presence] the preflight's presence check on the ratio alone                caught ['test_the_preflight_checks']
+[presence] the observation graded without presence                          caught ['test_the_preflight_grades_the_observation_with_presence']
+[presence] every truth run graded with presence                             caught ['test_the_preflight_grades_the_observation_with_presence']
+[presence] the pilot on the fifth pilot's base                              caught ['test_seed_blocks_do_not_overlap']
+[presence] the pilot on the hinge screen's animals                          caught ['test_seed_blocks_do_not_overlap']
+[presence] the pilot on the presence screen's animals                       caught ['test_seed_blocks_do_not_overlap']
+[presence] the pilot over the sweeps' animals                               caught ['test_seed_blocks_do_not_overlap']
+[presence] the pilot running into the investigation's animals               caught ['test_seed_blocks_do_not_overlap']
+[presence] the pilot on the fifth pilot's CMA seeds                         caught ['test_each_start_has_its_own_animals']
+[presence] the pilot's restarts on the fifth pilot's                        caught ['test_each_start_has_its_own_animals']
+[presence] the pilot's later stages on the screens' CMA seeds               caught ['test_each_start_has_its_own_animals']
+[presence] the pilot's restarts running into the screens'                   caught ['test_each_start_has_its_own_animals']
+[presence] the pilot without its kill rules                                 caught ['test_only_the_pilot_has_kill_rules']
+[ported 5] 2b carries 2a's search state                                     caught ['test_stage_one_fits_only_its_subset', 'test_a_resume_with_changed_settings']
+[ported 5] 2b at 2a's sigma0                                                caught ['test_stage_one_fits_only_its_subset', 'test_a_resume_with_changed_settings']
+[ported 5] 2b at a wider sigma0                                             caught ['test_each_generation_records_who_pays_the_lawn_guard[0.5-1.0]', 'test_each_generation_records_who_pays_the_lawn_guard[0.95-0.0]']
+[ported 5] the final stage restarts too                                     caught ['test_stage_one_fits_only_its_subset', 'test_a_later_stage_keeps_the_search_steps']
+[ported 5] the pilot on its first seeds                                     caught ['test_seed_blocks_do_not_overlap']
+[ported 5] the pilot on the second pilot's animals                          caught ['test_seed_blocks_do_not_overlap']
+[ported 5] the pilot on the third pilot's animals                           caught ['test_seed_blocks_do_not_overlap']
+[ported 5] the pilot on the fourth pilot's base                             caught ['test_the_longest_stage_stays_inside_its_sub_block', 'test_seed_blocks_do_not_overlap']
+[ported 5] the pilot on the flip check's animals                            caught ['test_the_longest_stage_stays_inside_its_sub_block', 'test_seed_blocks_do_not_overlap']
+[ported 5] the pilot on the investigation's animals                         caught ['test_seed_blocks_do_not_overlap']
+[ported 5] the pilot inside the leave-one-out's block                       caught ['test_seed_blocks_do_not_overlap']
+[ported 5] the pilot on the third pilot's CMA seed                          caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot on the fourth pilot's CMA seeds                        caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot on the sign calibration's CMA seed                     caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's restarts on the second pilot's                       caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's restarts on the third pilot's                        caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's restarts on the fourth pilot's                       caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's restarts on the investigation's                      caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's restarts on the ceiling's generators                 caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's later stages on the investigation's                  caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's later stages on the recovery's                       caught ['test_each_start_has_its_own_animals']
+[ported 5] the pilot's later stages on the fourth screen's                  caught ['test_each_start_has_its_own_animals']
+[fresh 2b] 2b carries 2a's search state                                     n/a (pattern found 0 times)
+[fresh 2b] 2b at 2a's sigma0                                                n/a (pattern found 0 times)
+[fresh 2b] 2b at a wider sigma0                                             n/a (pattern found 0 times)
+[fresh 2b] the final stage restarts too                                     n/a (pattern found 0 times)
+[fresh 2b] a later stage with a sigma0 still carries                        caught ['test_stage_one_fits_only_its_subset', 'test_a_later_stage_keeps_the_search_steps']
+[fresh 2b] fresh ignores its sigma0                                         caught ['test_2b_restarts_the_search_at_2as_answer']
+[fresh 2b] 2b on the kept start's restart seed                              caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[fresh 2b] 2b's x0 at stage 1's answer                                      caught ['test_each_stage_reads_its_start_point_first', 'test_2b_restarts_the_search_at_2as_answer']
+[fresh 2b] the stages left out of the resume's settings                     caught ['test_a_resume_with_changed_settings']
+[fresh 2b] the pilot on the fourth pilot's base                             n/a (pattern found 0 times)
+[fresh 2b] the pilot on the screen's animals                                n/a (pattern found 0 times)
+[fresh 2b] the pilot inside the leave-one-out's block                       n/a (pattern found 0 times)
+[fresh 2b] the pilot on the fourth pilot's CMA seeds                        n/a (pattern found 0 times)
+[fresh 2b] the pilot's restarts on the fourth pilot's                       n/a (pattern found 0 times)
+[fresh 2b] the pilot's later stages on the screen's CMA seeds               n/a (pattern found 0 times)
+[fresh 2b] the pilot's restarts on the ceiling's generators                 n/a (pattern found 0 times)
+[fresh 2b] the pilot without its kill rules                                 n/a (pattern found 0 times)
+[fresh 2b] the class bootstrap on the ceiling's null                        caught ['test_the_neural_readings_generators']
+[fresh 2b] both bootstraps on one generator                                 caught ['test_the_neural_readings_generators']
+[fresh 2b] a bootstrap on the ceiling's sparse supports                     caught ['test_the_neural_readings_generators']
+[fresh 2b] a bootstrap on the screen's CMA seed                             caught ['test_the_neural_readings_generators']
+[fresh 2b] a bootstrap on the pilot's restarts                              caught ['test_the_neural_readings_generators']
+[fresh 2b] chance on another generator                                      caught ['test_the_neural_readings_generators']
+[fresh 2b] the final stage carries 2a's search state                        caught ['test_a_later_stage_keeps_the_search_steps']
+[fresh 2b] [ported 4] the pilot on its first seeds                          n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot on the second pilot's animals               n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot on the third pilot's animals                n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot on the flip check's animals                 n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot on the investigation's animals              n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot on the third pilot's CMA seed               n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot on the sign calibration's CMA seed          n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot's restarts on the second pilot's            n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot's restarts on the third pilot's             n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot's restarts on the investigation's           n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot's later stages on the investigation's       n/a (pattern found 0 times)
+[fresh 2b] [ported 4] the pilot's later stages on the recovery's            n/a (pattern found 0 times)
+[restart] the descent bar is strict                                         caught ['test_the_descent_reading_is_a_mean', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[restart] every descent passes                                              caught ['test_the_descent_reading_is_a_mean', 'test_the_checkpoints_stop_only_the_pilot']
+[restart] an undefined D_fit is near                                        caught ['test_the_descent_reading_is_a_mean']
+[restart] the descent reads its last readout                                caught ['test_the_descent_reading_is_a_mean', 'test_each_reading_in_a_run_is_a_mean_of_its_readouts']
+[restart] no descent reading                                                caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[restart] no bar reading                                                    caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_the_checkpoints_stop_only_the_pilot']
+[restart] every start read against the first's descent bar                  caught ['test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[restart] every start read against the first's bar                          caught ['test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[restart] a reading taken after its generation                              caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_the_checkpoints_stop_only_the_pilot']
+[restart] a failed reading does not drop                                    caught ['test_the_checkpoints_stop_only_the_pilot', 'test_a_start_that_does_not_hold_the_lawn_is_dropped']
+[restart] the readings forget what was taken                                caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[restart] a new reading is not saved                                        MISSED []
+[restart] the readings carry to the next start                              caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_each_start_is_read_against_its_own_bar']
+[restart] the kept start is not recorded                                    caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_the_checkpoints_stop_only_the_pilot']
+[restart] the kept start keeps no readings                                  caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_each_reading_in_a_run_is_a_mean_of_its_readouts']
+[restart] the lawn reading's pass inverted                                  caught ['test_each_stage_scores_its_own_terms', 'test_each_generation_records_who_pays_the_lawn_guard[None-0.0]']
+[restart] a changed descent bar resumes                                     caught ['test_a_resume_with_changed_settings']
+[restart] a changed descent readout resumes                                 caught ['test_a_resume_with_changed_settings']
+[restart] a changed bar resumes                                             caught ['test_a_resume_with_changed_settings']
+[restart] a changed bar readout resumes                                     caught ['test_a_resume_with_changed_settings']
+[restart] 2a's animals shared after generation 60                           caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[restart] starts share 2a's animals                                         caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[restart] 2a's slice too small                                              caught ['test_a_starts_candidates_are_simulated_on_its_own_animals', 'test_seed_blocks_do_not_overlap']
+[restart] 2a's block on the second half's                                   caught ['test_a_starts_candidates_are_simulated_on_its_own_animals', 'test_seed_blocks_do_not_overlap']
+[restart] the order check gone                                              caught ['test_a_reading_without_a_readout_is_refused']
+[restart] the seeds check gone                                              caught ['test_a_reading_without_a_readout_is_refused']
+[restart] the bars' count check gone                                        caught ['test_a_reading_without_a_readout_is_refused']
+[restart] the past-2a check gone                                            caught ['test_a_reading_without_a_readout_is_refused']
+[restart] the readout check gone                                            caught ['test_a_reading_without_a_readout_is_refused']
+[restart] a registered descent bar of 4.5                                   caught ['test_a_start_that_misses_the_descent_or_the_bar_is_dropped', 'test_the_descent_reading_is_a_mean']
+[restart] a registered bar of 3.0                                           caught ['test_the_descent_reading_is_a_mean', 'test_the_checkpoints_stop_only_the_pilot']
+[restart] the descent read at 160                                           caught ['test_the_descent_reading_is_a_mean']
+[restart] the bar read at its last readout                                  caught ['test_the_descent_reading_is_a_mean']
+[restart] the drop reason names the lawn                                    caught ['test_a_run_resumes_across_the_descent_and_the_bar[interrupt1]', 'test_a_run_resumes_across_the_descent_and_the_bar[interrupt3]']
+[restart] the drop reason names no D_fit                                    caught ['test_the_checkpoints_stop_only_the_pilot', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[restart] the pilot on the third pilot's animals                            n/a (pattern found 0 times)
+[restart] the pilot on the flip check's animals                             n/a (pattern found 0 times)
+[restart] the pilot on the third pilot's CMA seed                           n/a (pattern found 0 times)
+[restart] the pilot's restarts on the third pilot's                         n/a (pattern found 0 times)
+[restart] the pilot's restarts on the investigation's                       n/a (pattern found 0 times)
+[restart] the pilot's later stages on the investigation's                   n/a (pattern found 0 times)
+[restart] the fit's block over the leave-one-out's                          caught ['test_seed_blocks_do_not_overlap', 'test_a_starts_candidates_are_simulated_on_its_own_animals']
+[restart] the recovery on its old block                                     caught ['test_seed_blocks_do_not_overlap']
+[restart] the leave-one-out on the investigation's                          caught ['test_seed_blocks_do_not_overlap']
+[restart] a reading taken at its first readout                              caught ['test_each_reading_in_a_run_is_a_mean_of_its_readouts']
+[restart] the lawn reading reads its last readout                           caught ['test_each_reading_in_a_run_is_a_mean_of_its_readouts']
+[restart] the descent reading reads its last readout in the run             caught ['test_each_reading_in_a_run_is_a_mean_of_its_readouts']
+[restart] a truth past the bar passes the preflight                         caught ['test_the_preflight_checks']
+[restart] the preflight's bar is strict                                     caught ['test_the_preflight_checks']
+[ported] the reading is never taken                                         caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_the_checkpoints_stop_only_the_pilot']
+[ported] every start read against the first's lawn bar                      caught ['test_each_start_is_read_against_its_own_bar']
+[ported] the mean at the drop is the start point                            caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped']
+[ported] the kept decision is not taken                                     caught ['test_each_start_is_read_against_its_own_bar', 'test_a_start_that_does_not_hold_the_lawn_is_dropped']
+[ported] overlapping blocks                                                 caught ['test_seed_blocks_do_not_overlap']
+[ported] the pilot on its first seeds                                       n/a (pattern found 0 times)
+[ported] the pilot on the second pilot's animals                            n/a (pattern found 0 times)
+[ported] the pilot on the guarded probe's animals                           n/a (pattern found 0 times)
+[ported] the pilot on a probe's CMA seed                                    n/a (pattern found 0 times)
+[ported] the pilot's restarts on the second pilot's                         n/a (pattern found 0 times)
+[ported] the pilot's restarts on the sign calibration's                     n/a (pattern found 0 times)
+[ported] the pilot's later stages on the second pilot's                     n/a (pattern found 0 times)
+[amendment 1] the reading is the last readout                               caught ['test_the_lawn_holding_reading_is_a_mean', 'test_each_reading_in_a_run_is_a_mean_of_its_readouts']
+[amendment 1] every start holds                                             caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_each_start_is_read_against_its_own_bar']
+[amendment 1] the bar is strict                                             caught ['test_the_lawn_holding_reading_is_a_mean']
+[amendment 1] the next start keeps the answer                               caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[amendment 1] starts share CMA seeds                                        caught ['test_the_checkpoints_stop_only_the_pilot', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[amendment 1] 2b takes a start's CMA seed                                   caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[amendment 1] a start's two stages share a CMA seed                         caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[amendment 1] the fit's restarts on the recovery's seeds                    caught ['test_each_start_has_its_own_animals']
+[amendment 1] starts share stage 1's animals                                caught ['test_seed_blocks_do_not_overlap', 'test_a_starts_candidates_are_simulated_on_its_own_animals']
+[amendment 1] starts share 2a's animals                                     n/a (pattern found 0 times)
+[amendment 1] the kept start stays on its early seeds                       n/a (pattern found 0 times)
+[amendment 1] the candidates are on start 0                                 caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped', 'test_a_run_resumes_inside_any_start[interrupt1]']
+[amendment 1] the job ignores the start                                     caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[amendment 1] the store ignores the start                                   caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[amendment 1] stage 1 at the run's population                               caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped']
+[amendment 1] the reading is never taken                                    n/a (pattern found 0 times)
+[amendment 1] the run goes on with no start                                 caught ['test_no_start_holds_the_lawn', 'test_a_start_that_misses_the_descent_or_the_bar_is_dropped']
+[amendment 1] stage 1's bar stops every run                                 caught ['test_each_start_is_read_against_its_own_bar', 'test_the_checkpoints_stop_only_the_pilot']
+[amendment 1] a fit with no answer passes                                   caught ['test_a_registered_run_with_no_answer']
+[amendment 1] a recovery with no answer passes                              caught ['test_a_registered_run_with_no_answer']
+[amendment 1] a dropped start is not recorded                               caught ['test_no_start_holds_the_lawn', 'test_a_start_that_does_not_hold_the_lawn_is_dropped']
+[amendment 1] a dropped start keeps its histories in the run                caught ['test_no_start_holds_the_lawn', 'test_the_checkpoints_stop_only_the_pilot']
+[amendment 1] a changed bar resumes                                         caught ['test_a_resume_with_changed_settings']
+[amendment 1] a reading without a readout runs                              n/a (pattern found 0 times)
+[amendment 1] five starts                                                   caught ['test_the_descent_reading_is_a_mean']
+[amendment 1] a lower bar                                                   caught ['test_the_descent_reading_is_a_mean']
+[amendment 1] earlier readouts                                              caught ['test_the_descent_reading_is_a_mean']
+[amendment 1] stage 1 at 200 animals                                        caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[amendment 1] the dropped start runs 2a on                                  n/a (pattern found 0 times)
+[amendment 1] the timescale is reset for the first start only               caught ['test_a_start_that_does_not_hold_the_lawn_is_dropped']
+[amendment 1] every start is read against the first bar                     n/a (pattern found 0 times)
+[amendment 1] the mean at the drop is the start point                       n/a (pattern found 0 times)
+[amendment 1] the pilot's stage-1 kill is the first start's                 caught ['test_the_checkpoints_stop_only_the_pilot']
+[amendment 1] the leave-one-out grades no answer                            caught ['test_a_registered_run_with_no_answer']
+[amendment 1] the smoke grades no answer                                    caught ['test_a_registered_run_with_no_answer']
+[amendment 1] the pilot grades no answer                                    caught ['test_a_registered_run_with_no_answer']
+[amendment 1] a stored candidate at another vector is reused                caught ['test_a_starts_candidates_are_simulated_on_its_own_animals']
+[amendment 1] a resume starts over                                          caught ['test_a_resume_with_changed_settings', 'test_no_start_holds_the_lawn']
+[amendment 1] a fit with no answer stops at its grade                       caught ['test_a_registered_run_with_no_answer']
+[amendment 1] a truth off the lawn passes the preflight                     caught ['test_the_preflight_checks']
+[amendment 1] the kept decision is taken twice                              n/a (pattern found 0 times)
+[amendment 1] the 2a checkpoint stops every run                             caught ['test_the_checkpoints_stop_only_the_pilot']
+[amendment 1] overlapping blocks                                            n/a (pattern found 0 times)
+[amendment 1] the pilot on its first seeds                                  n/a (pattern found 0 times)
+[amendment 1] a changed restart seed resumes                                caught ['test_a_resume_with_changed_settings']
+[amendment 2] no lawn guard                                                 caught ['test_the_lawn_guard[2a]', 'test_the_lawn_guard[final]']
+[amendment 2] an undefined time costs nothing                               caught ['test_the_lawn_guard[final]', 'test_the_lawn_guard[1]']
+[amendment 2] the guard unscaled                                            caught ['test_the_lawn_guard[2a]', 'test_the_lawn_guard[final]']
+[amendment 2] the guard a step                                              caught ['test_the_lawn_guard[2a]', 'test_the_lawn_guard[1]']
+[amendment 2] the guard on another statistic                                caught ['test_the_lawn_guard[final]', 'test_the_lawn_guard[2a]']
+[amendment 2] the guard replaces the others                                 caught ['test_the_lawn_guard[2a]', 'test_an_undefined_statistic_and_the_guards']
+[amendment 2] the lawn guard left out of the guards                         caught ['test_the_lawn_guard[final]', 'test_the_lawn_guard[2a]']
+[amendment 2] the guard only off the lawn entirely                          caught ['test_the_lawn_guard[final]', 'test_the_lawn_guard[1]']
+[amendment 2] a weaker guard                                                caught ['test_the_lawn_guard[final]', 'test_the_lawn_guard[2a]']
+[amendment 2] a lower guard bar                                             caught ['test_the_lawn_guard[final]', 'test_the_lawn_guard[2a]']
+[amendment 2] the guards outside the objective                              n/a (pattern found 0 times)
+[amendment 2] a changed guard resumes                                       caught ['test_a_resume_with_changed_settings']
+[amendment 2] a changed guard weight resumes                                caught ['test_a_resume_with_changed_settings']
+[amendment 2] the share is never recorded                                   caught ['test_each_generation_records_who_pays_the_lawn_guard[0.95-0.0]', 'test_each_generation_records_who_pays_the_lawn_guard[0.5-1.0]']
+[amendment 2] the share counts every candidate                              caught ['test_each_generation_records_who_pays_the_lawn_guard[0.95-0.0]', 'test_each_generation_records_who_pays_the_lawn_guard[None-0.0]']
+[amendment 2] the share inverted                                            caught ['test_each_generation_records_who_pays_the_lawn_guard[0.5-1.0]', 'test_each_generation_records_who_pays_the_lawn_guard[None-0.0]']
+[amendment 2] the pilot on the second pilot's animals                       n/a (pattern found 0 times)
+[amendment 2] the pilot on the guarded probe's animals                      n/a (pattern found 0 times)
+[amendment 2] the pilot on a probe's CMA seed                               n/a (pattern found 0 times)
+[amendment 2] the pilot's restarts on the second pilot's                    n/a (pattern found 0 times)
+[amendment 2] the pilot's restarts on the sign calibration's                n/a (pattern found 0 times)
+[amendment 2] the pilot's later stages on the second pilot's                n/a (pattern found 0 times)
+{'caught': 179, 'MISSED': 5, 'n/a': 54}
