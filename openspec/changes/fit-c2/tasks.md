@@ -238,11 +238,11 @@
 
   Checked, as probes: the amended objective reproduces the presence screen's score on every stored candidate (`probes/objective_parity.py.txt`); the stage-1 answers' distances (`probes/basin_distances.py.txt`). An independent review's findings are fixed or stated.
 
-- [ ] 4.1s Part A amended and committed before the pilot runs a sixth time, with the fifth pilot's record, the diagnosis's scripts and records under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row).
+- [x] 4.1s Part A amended and committed before the pilot runs a sixth time, with the fifth pilot's record, the diagnosis's scripts and records under `probes/`, the manifest rebuilt, D38's note in the roadmap and the tracker's notes (C.2's seed row).
 
-- [ ] 4.1t `pilot` a sixth time (about 37 h with its first start kept).
+- [x] 4.1t `pilot` a sixth time (about 37 h with its first start kept). It ran 45.2 h on the clock and kept its third start. Its stage-1 kill at start 0 was overridden by the maintainer; Part B discloses it.
 
-- [ ] 4.2 Read the go rule. Part B: the result, the cost per stage and the plateau reading, committed. If the go rule fails, diagnose it and return to the maintainer before anything registered.
+- [x] 4.2 Read the go rule. Part B: the result, the cost per stage and the plateau reading, committed. If the go rule fails, diagnose it and return to the maintainer before anything registered. **Passes:** the wild type in 3 of 5, tph-1 and tax-4 each in 5 of 5 (11 of 15 and 15 of 15 on all 15 populations).
 
 ## 5. F.0b-ii
 

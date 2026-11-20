@@ -31,6 +31,8 @@ Everything seen before it is listed under *Disclosures*. No registered simulatio
 
 Everything seen before it is listed under *Disclosures*. No registered simulation had run. No verdict, gate or bar changes; F.0b-ii's preflight gains a check, and its gate is unchanged.
 
+**Part B added 2026-11-21,** after the sixth readiness pilot and before F.0b-ii's preflight. The pilot passed its go rule: the wild type in 3 of 5 populations, tph-1 and tax-4 each in 5 of 5. Part B records it and changes no rule (*Part B: the readiness pilot*, at the end).
+
 ## Part A: the rules
 
 ### The controller and its arm
@@ -709,3 +711,90 @@ At the measured rates on 16 workers (77.7 s a generation on two assays, 309.5 s 
 - **`recovery`** needs the preflight's record committed, unchanged and passing.
 - **`run`, `grade`, `read` and `loo`** need Part C, with both recovery records bound and the gate passing.
 - **`smoke`, `manifest` and `speed-noise-control`** are unguarded. The control and the smoke use discarded or the control's own seeds, and the smoke reads band-cohort dates only.
+
+## Part B: the readiness pilot
+
+**Added 2026-11-21.** The sixth readiness pilot ran at HEAD `08128bb7`, manifest `79f185d3…`, on base 1,540,000,000 with CMA seeds 9926–9929 and restarts from 9930. It ran from 2026-11-19 13:31 to 2026-11-21 10:44 AEDT. Its record is `pilot.json`, bound. The record written when its kill rule stopped it is `pilot_sixth_kill.json`. This Part changes no rule, threshold or seed.
+
+### The go rule: passes
+
+The pilot kept its third start, start 2. Its answer, graded with presence on the first 5 grade populations:
+
+| | Populations passing | The rule |
+|---|---|---|
+| the wild type | **3 of 5** (0, 3 and 4) | at least 3 |
+| tph-1 | **5 of 5** | at least 3 |
+| tax-4 | **5 of 5** | at least 3 |
+| pdfr-1, reported | 5 of 5 | |
+
+Populations 1 and 2 fail on one statistic, the on-lawn onset rate. Its z is −3.16 and −3.12 against the bar of 3.07809; in the passing three it is −3.01, −3.04 and −2.78. Local search and chemotaxis are present in all five. **The go rule passes.** F.0b-ii's truth is this answer (`pilot.json`'s `answer`).
+
+### Reported
+
+- **The 10 more populations:** the wild type passes in 8 of 10, so 11 of 15 in all. Each mutant passes in 10 of 10, so 15 of 15.
+
+- **Over the 15, statistic by statistic** (description):
+
+  - The onset rate is the only statistic that fails. It fails in 4 of 15, with z from −2.78 to −3.18 and a mean of −3.04.
+  - The chemotaxis flip fraction passes in all 15, with z from 2.82 to 2.94. That is just past the hinge's target (2.79–2.90 on the 10·asinh scale, against 2.77809).
+  - No other statistic's |z| reaches 2.8.
+  - D is 1.50–1.64, D_fit 1.59–1.76, and time on the small lawn 0.983–0.991.
+  - Local search's lower bound is at least 2.98.
+  - Chemotaxis presence's lower bounds are at least 0.0069 mm/s for the drift and 0.164 for the ratio. That is 39 and 3.7 of the presence term's scales.
+  - The reversal share is 11.7–11.9%, against Roberts' 17.3%; it is reported, never graded.
+
+- **The final stage's plateau reading:** the rule never held in its 50 generations. The final stage's median fell from 64.7 at generation 1 to 28.0 at generation 50.
+
+- **The noise step's SDs:** 0.095 for the onset rate. The flip fraction's took the floor, 0.05.
+
+- **The readouts** (description):
+
+  - 2b's 21 readouts never passed the wild type:
+    - the flip fraction failed in every one, with z from 3.75 to 5.39;
+    - the onset rate failed in 10 of them;
+    - local search was absent at generations 0–20.
+  - The final stage's readouts moved the flip fraction from 4.04 to 2.89, and its last readout passed the wild type.
+  - Every readout passed all three mutants from 2b's generation 40. Before that, tph-1 failed at 2b's generations 0–30.
+
+- **The starts.** Each start's output spreads at stage 1's end are reported, not selected on.
+
+  | Start | CMA seeds | Stage 1's last three readouts: on the lawn, smaller spread | Spreads at stage 1's end: speed, curvature, reversal, omega, delta | 2a's readings | Outcome |
+  |---|---|---|---|---|---|
+  | 0 | 9926, 9927 | 0.704, 2.89: the kill rule tripped, overridden (below) | 3.32, 2.31, 3.55, 0.16, 3.74 | lawn 0.877 | dropped at the lawn |
+  | 1 | 9930, 9931 | 0.953, 3.44 | 3.36, 0.01, 3.71, 0.06, 1.77 | lawn 0.974; descent 4.96 | dropped at the descent |
+  | 2 | 9932, 9933 | 0.902, 3.89 | 3.94, 3.15, 3.98, 0.26, 3.88 | lawn 0.958; descent 3.19; bar 1.69 | **kept** |
+
+  2b and the final stage took the run's third and fourth CMA seeds, 9928 and 9929.
+
+- **The cost per stage,** on 16 workers:
+
+  - **The kept start:** about 37.7 h.
+    - stage 1: 0.94 h;
+    - 2a: 6.98 h, 83.8 s a generation;
+    - 2b: 23.56 h, 424 s a generation;
+    - the noise step: about 4 min;
+    - the final stage: 6.14 h, 442 s a generation;
+    - the grade: about 4 min.
+  - **The dropped starts:**
+    - start 0: 2.36 h, stage 1 0.93 h and 2a 1.43 h;
+    - start 1: 4.48 h, stage 1 0.97 h and 2a 3.51 h.
+  - **The pilot:** 44.6 h of computing, or 45.2 h on the clock with the 0.57 h stop at the kill.
+  - **From here:** a run is about 38 h with its first start kept, and Part A's estimate holds:
+    - the preflight: about 0.5 h;
+    - F.0b-ii's fit: about 38 h;
+    - the registered fit: about 38 h;
+    - the leave-one-out: about 34 h;
+    - in all, about 110 h before dropped starts. At this pilot's two dropped starts, a run adds about 7 h.
+
+### Disclosures
+
+- **The stage-1 kill and its override.**
+  - **The kill.** At 14:27 on 2026-11-19, 0.93 h in, start 0's stage 1 tripped the pilot's kill rule. It was on the lawn 0.704 on the mean of readouts 130–150 (0.355, 0.919 and 0.836), against 0.75. From generation 90 it had read 0.85–0.92 on the lawn. Its smaller spread was 2.89, against a floor of 0.5. The pilot stopped and returned to the maintainer, as the rule says.
+  - **The override.** At 15:00 the maintainer overrode the kill. The saved state's kill flag was cleared, and the pilot resumed into start 0's 2a on the same seeds. Its checkpoint keeps the kill. A later start tripping the rule would have stopped the pilot again; none did. No code, rule or seed changed.
+  - **What is kept.** The record at the kill (`pilot_sixth_kill.json`) is committed. The saved state at the kill, the log up to it and the maintainer's note are kept with the pilot's state, off-repo.
+- **What the override changed.** In a registered run stage 1's checkpoint is reported, not a stop. The resumed pilot therefore ran the path the registered procedure runs.
+  - Start 0 was then dropped by 2a's lawn reading, a rule of every run, after 1.43 h more.
+  - The kept start never tripped a kill rule, and its seeds and animals are its own.
+  - Without the override the pilot would have stopped with no answer.
+- **Seen before this Part:** each readout, as the pilot ran, reported to the maintainer. No rule, threshold or seed was changed after any of it.
+- **Not in this Part:** the neural reading's paired test and wiring-only control. Part A allows them with Part B or Part C; they come with Part C, before `run`.

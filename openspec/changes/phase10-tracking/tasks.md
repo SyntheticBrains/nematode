@@ -905,6 +905,17 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     seeds. About 37 h a run and 145 h for the chain, with every first start kept. Stated, not
     remedied: the screens continued the fifth pilot's basin, and pre-exit enrichment sits near its
     bar. **For W:** every arm takes both terms.
+  - *(2026-11-21, Part B.)* **The sixth pilot passed its go rule:** the wild type in 3 of 5
+    populations and every mutant in 5 of 5. On all 15 populations the wild type passed in 11 and every
+    mutant in 15. It kept its third start: one start was dropped at the lawn and one at the descent. The
+    on-lawn onset rate is the only statistic that failed, in 4 of 15 populations, at a mean z of −3.04
+    against a bar of 3.08. The final stage's hinge brought the chemotaxis flip fraction inside its bar
+    in all 15, after it failed at every one of 2b's readouts. The pilot took 45.2 h on the clock.
+    - The maintainer overrode its stage-1 kill at the first start, which had one noisy readout on the
+      lawn. A registered run reports that checkpoint and does not stop, so the resumed pilot ran the
+      registered path.
+    - A run is about 38 h with its first start kept, and the chain about 110 h from here.
+    - F.0b-ii's preflight is next. Its truth is the pilot's answer.
   - *(2026-11-16.)* **The neural reading follows Logbook 135:** the answer's share is of the
     readout's measured ceiling (0.423, not 0.173), the paired test resamples the stimulated
     neurons' classes, with the neuron resample beside it, on generators clear of Logbook 135's, and
