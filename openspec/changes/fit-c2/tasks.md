@@ -246,7 +246,12 @@
 
 ## 5. F.0b-ii
 
-- [ ] 5.1 `recovery-preflight`: the observation, its stability, floor, oracle, prior D, box centre and the band-centre reference. Return to the maintainer if a check fails. Commit the record before `recovery` runs.
+- [x] 5.1 `recovery-preflight`: the observation, its stability, floor, oracle, prior D, box centre and the band-centre reference. Return to the maintainer if a check fails. Commit the record before `recovery` runs. **Passed all seven checks** (2026-11-21, 26 min):
+  - floor 0.364, prior D 5.98;
+  - oracle gain 0.998, box centre 0.040;
+  - no definedness flips;
+  - the observation 0.984 on the lawn, D_fit 1.76, presence's bounds 0.0069 and 0.149;
+  - the band-centre reference's gain 0.863, reported: the stated limit.
 - [ ] 5.2 `recovery` (about 30 h, and 2.3–8 h for each dropped start): the gate. Return to the maintainer if the gain is below 0.75.
 - [ ] 5.3 Part C, the recovery's result, committed.
 
