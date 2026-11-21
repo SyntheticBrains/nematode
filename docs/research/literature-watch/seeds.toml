@@ -270,6 +270,12 @@ label = "Correig-Fraga et al. 2026, structure alone supports fly visual computat
 id = "W7215069349"
 label = "Guan et al. 2026, how much of fly walking is written in the wiring (six null families)"
 
+# Added 2026-11-21 from the W47 digest: the comparison-protocol reference for the wiring test (each
+# wiring tuned on its own, physiology held to data, placebo nulls).
+[[openalex.seeds]]
+id = "W7225776054"
+label = "Liu 2026, when the real wiring wins: tuning protocols for connectome-versus-null claims"
+
 # Added 2026-10-23 at the Phase 10 plan review: the on-lawn assays the benchmark grades against, the
 # closest modelling precedent, and the neuromodulator connectome the wiring test rewires.
 

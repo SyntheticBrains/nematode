@@ -904,6 +904,15 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
   prediction, W.2's outcome "the nulls pass too" has a structural reading for the class-preserving
   null. Whether W carries the two readings is the registration's decision.
 
+  *(Added 2026-11-21, from digest #537: Betancourt et al. 2026.)* **Weight noise and the nulls.**
+  Real neurons in several connectomes score higher than comparable nulls on robustness: a statistic
+  of a neuron's incoming strengths that sets its error rate under synaptic noise in minimal models,
+  and that a broader spread raises at a fixed number of inputs. The degree-preserving null keeps
+  each neuron's in-degree, but its counts travel with their edges, so each neuron's incoming counts
+  change. The weight-noise check above is the wild type's. If the registration applies the noise to
+  the counts and extends the check to the null arms, each arm's robustness statistic is reported
+  beside it, since a null could be more fragile through its count spread alone.
+
 - [ ] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
   both directions. Draws per arm are sized from F.0 and the cost pilot. Every outcome is named,
   including "the nulls pass too" and "a null beats the wild type".
@@ -1012,6 +1021,41 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     4.8 h, so its cost is piloted before it registers.
   - **A pilot gate.** The wild type and the degree-preserving null, three fits each, before the full
     panel; the stopping rule on draws is preflighted on it.
+
+  *(Added 2026-11-21, from digest #537: Liu 2026.)* **What W's comparison estimates.** Liu names
+  three comparisons: physiology tuned on the real wiring and carried to the nulls (P1), each wiring
+  tuned on its own (P2), and P2 held to the physiology independent data allow (P3). W is P2 for the
+  encoder's parameters, every arm from the box centre with no warm start. The kinematics are fixed
+  from data in every arm, the modulator layer and its signs in every arm but the receptor-placement
+  null, and on rewired arms the sign overrides travel with their edges. For the registration:
+
+  - **The procedure was chosen on the real wiring.** From its stage-1 design to the hinge and
+    presence terms of its fifth amendment, it was developed and amended on the real wiring, with its
+    mutants, until it passed: P1 at the level of the procedure. In all six of Liu's placebo families
+    such selection favours the real wiring (its Proposition 2 makes the sign empirical when the
+    criterion is not the score itself). In expectation it therefore biases W toward the wild type and
+    cannot account for a null beating it. But a procedure improved on one wiring also lifts any arm
+    that responds alike, and can reorder the nulls, so "the nulls pass too" is not protected either.
+    The registration names the bias beside every outcome, and each arm's stage-by-stage readouts
+    show where a null falls behind.
+  - **Best of k needs equal pools.** P2 compares the mean of each wiring's K best of a pool of
+    parameter sets, and is unbiased between wirings only when the pools and K are equal. W's fits per
+    arm are the pool. A sequential stopping rule that ends a null arm early lowers that arm's expected
+    best, so if best of k is W's primary statistic, every arm stops at the same count, or the share
+    reaching the basin is primary. A rule that stops on the observed difference is a sequential test
+    and needs its own error control. (Inferred from Liu's equal pools, not shown there.)
+  - **A ranking is a ranking at its budget.** In one flyvis member retrained for 100,000 iterations
+    from the real wiring's solution, the ranking depended on which checkpoint was reported. W does
+    not warm-start, but the sixth readiness pilot's plateau never held. Grading each arm's answer at
+    a registered earlier checkpoint as well as at the end, as description, would show a ranking that
+    depends on the budget; whether W carries it is the registration's decision.
+  - **The neural reading is not a P3.** Its measured responses are the real animal's, so they grade
+    the network, wiring included. Unfitted, the 19 degree-preserving rewirings read a median r of
+    0.005 against the real wiring's 0.065, and 0.0047 carrying Logbook 131's answer
+    ([Logbook 134](../../../docs/experiments/logbooks/134-fit-first-neural-readings.md)). No null
+    fitted on its own has been read, and a low score for one would not separate its wiring from its
+    physiology. W has no P3 beyond what every arm fixes from data, until a measurement pins a
+    parameter that decides a verdict.
 
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 
