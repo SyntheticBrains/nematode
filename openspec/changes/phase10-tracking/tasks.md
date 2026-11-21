@@ -1031,19 +1031,27 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 
   - **The procedure was chosen on the real wiring.** From its stage-1 design to the hinge and
     presence terms of its fifth amendment, it was developed and amended on the real wiring, with its
-    mutants, until it passed: P1 at the level of the procedure. In all six of Liu's placebo families
-    such selection favours the real wiring (its Proposition 2 makes the sign empirical when the
-    criterion is not the score itself). In expectation it therefore biases W toward the wild type and
-    cannot account for a null beating it. But a procedure improved on one wiring also lifts any arm
-    that responds alike, and can reorder the nulls, so "the nulls pass too" is not protected either.
-    The registration names the bias beside every outcome, and each arm's stage-by-stage readouts
+    mutants, until it passed: P1 at the level of the procedure. Its direction for W is not known. The
+    procedure was chosen on a behavioural pass rule, not on W's own statistic, and under Liu's
+    Proposition 2 the bias then takes the sign of a covariance between that rule and W's comparison,
+    which W has not measured (positive in all six of Liu's placebo families, which are not W's). It
+    may also lift any arm that responds alike and reorder the nulls, so no outcome is protected from
+    it. The registration names the bias beside every outcome, and each arm's stage-by-stage readouts
     show where a null falls behind.
-  - **Best of k needs equal pools.** P2 compares the mean of each wiring's K best of a pool of
-    parameter sets, and is unbiased between wirings only when the pools and K are equal. W's fits per
-    arm are the pool. A sequential stopping rule that ends a null arm early lowers that arm's expected
-    best, so if best of k is W's primary statistic, every arm stops at the same count, or the share
-    reaching the basin is primary. A rule that stops on the observed difference is a sequential test
-    and needs its own error control. (Inferred from Liu's equal pools, not shown there.)
+  - **The null arms' estimand.** W.1 draws a fresh rewiring per fit, so a null arm's fits sample
+    the family (a wiring draw and a fit each), while the wild type's sample fits of one fixed wiring.
+    A null arm's statistic is then family-level: how the family fits, not how its best wiring fits.
+    Best of k is not fair there, even at equal k: a null arm's best is taken over wiring draws as
+    well as fits, and the extra spread raises its expected best. Under this design the primary
+    statistic is family-level and does not reward spread, such as the share of fits reaching the
+    basin or the median D. The alternative is a per-wiring P2: each drawn wiring fitted as many times
+    as the wild type, from its own pool, and the wild type compared with each draw's best, at that
+    many times the null arms' cost. The registration picks one. (This project's inference, not
+    Liu's.)
+  - **Stopping.** With the share primary, every arm runs a fixed number of draws, or the stopping
+    rule is a named sequential design whose estimator and error control are registered with it. The
+    raw observed share is not primary when stopping depends on outcomes, since stopping on what has
+    been seen biases it.
   - **A ranking is a ranking at its budget.** In one flyvis member retrained for 100,000 iterations
     from the real wiring's solution, the ranking depended on which checkpoint was reported. W does
     not warm-start, but the sixth readiness pilot's plateau never held. Grading each arm's answer at
