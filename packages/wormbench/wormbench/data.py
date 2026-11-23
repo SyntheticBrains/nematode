@@ -11,10 +11,16 @@ used, never when a module is imported, from the first of these sources that hold
 
 A file absent from one source falls through to the next. Nothing is ever downloaded here: a file no
 source holds raises :class:`MissingDataError`, naming the file and the command that fetches it.
+
+A file the package's manifest lists is checked against its SHA-256 when it is resolved from the
+environment variable's directory, the package or the cache, and refused if it differs
+(:class:`ChecksumError`). The host's root is the host's own, read as given, as an explicit path is.
 """
 
 from __future__ import annotations
 
+import functools
+import hashlib
 import json
 import os
 from importlib import resources
@@ -26,12 +32,17 @@ ENVIRONMENT_VARIABLE = "WORMBENCH_DATA"
 # The version of the fetched files; the cache keeps each version apart.
 DATA_VERSION = "1"
 FETCH_COMMAND = "wormbench data fetch"
+MANIFEST_NAME = "manifest.json"
 
 _root: Path | None = None
 
 
 class MissingDataError(FileNotFoundError):
     """A reference file that no source holds."""
+
+
+class ChecksumError(ValueError):
+    """A reference file whose SHA-256 differs from the package's manifest."""
 
 
 def set_root(path: Path | str | None) -> None:
@@ -77,18 +88,57 @@ def cache_directory() -> Path:
     return root / "wormbench" / DATA_VERSION
 
 
-def sources(namespace: str) -> list[Path]:
-    """Return the namespace's candidate directories, in resolution order."""
+def _sources(namespace: str) -> list[tuple[Path, bool]]:
+    """Return the namespace's directories in resolution order, each with whether it is checked."""
     _check_namespace(namespace)
-    found: list[Path] = []
+    found: list[tuple[Path, bool]] = []
     if _root is not None:
-        found.append(_root / namespace)
+        found.append((_root / namespace, False))
     environment = os.environ.get(ENVIRONMENT_VARIABLE)
     if environment:
-        found.append(Path(environment) / namespace)
-    found.append(package_directory() / namespace)
-    found.append(cache_directory() / namespace)
+        found.append((Path(environment) / namespace, True))
+    found.append((package_directory() / namespace, True))
+    found.append((cache_directory() / namespace, True))
     return found
+
+
+def sources(namespace: str) -> list[Path]:
+    """Return the namespace's candidate directories, in resolution order."""
+    return [candidate for candidate, _ in _sources(namespace)]
+
+
+def manifest() -> dict[str, Any]:
+    """Return the package's manifest: every reference file's SHA-256 and size."""
+    return _manifest_at(str(package_directory() / MANIFEST_NAME))
+
+
+@functools.cache
+def _manifest_at(location: str) -> dict[str, Any]:
+    return json.loads(Path(location).read_text())
+
+
+@functools.cache
+def _digest(stamp: tuple[str, int, int]) -> str:
+    return hashlib.sha256(Path(stamp[0]).read_bytes()).hexdigest()
+
+
+def _stamp(target: Path) -> tuple[str, int, int]:
+    status = target.stat()
+    return str(target), status.st_size, status.st_mtime_ns
+
+
+def verify(namespace: str, name: str, target: Path) -> None:
+    """Refuse a file the manifest lists whose SHA-256 differs from the manifest's."""
+    entry = manifest()["files"].get(f"{namespace}/{name}")
+    if entry is None:
+        return
+    found = _digest(_stamp(target))
+    if found != entry["sha256"]:
+        msg = (
+            f"the reference file {namespace}/{name} at {target} has SHA-256 {found}, not the "
+            f"package's {entry['sha256']}; replace it, for example with `{FETCH_COMMAND}`"
+        )
+        raise ChecksumError(msg)
 
 
 def directory(namespace: str) -> Path:
@@ -116,8 +166,14 @@ def locate(namespace: str, name: str) -> Path | None:
 
 
 def path(namespace: str, name: str) -> Path:
-    """Return a reference file's path, from the first source that holds it."""
-    target = locate(namespace, name)
+    """Return a reference file's path, from the first source that holds it, checked where due."""
+    target = None
+    for candidate, checked in _sources(namespace):
+        if (candidate / name).is_file():
+            target = candidate / name
+            if checked:
+                verify(namespace, name, target)
+            break
     if target is None:
         msg = (
             f"the reference file {namespace}/{name} is not available: no data root, "

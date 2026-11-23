@@ -1,0 +1,94 @@
+{
+  "files": {
+    "benchmark/PROVENANCE.md": {
+      "sha256": "20373a9b336ce3fcac421334867605a9b38775144154637f6fda365e6733b11e",
+      "size": 23095,
+      "in_package": true
+    },
+    "benchmark/bands.json": {
+      "sha256": "44122f9077b5911e1c5519ded43b558ffad2433e7b1315334aa41e02c3cb64a0",
+      "size": 9952,
+      "in_package": true
+    },
+    "benchmark/bands_v2.json": {
+      "sha256": "21f591b864d497ee3ee305c217e3c9e197a8bc466298219d46841819b875f438",
+      "size": 81028,
+      "in_package": true
+    },
+    "benchmark/bands_v3.json": {
+      "sha256": "8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b",
+      "size": 81971,
+      "in_package": true
+    },
+    "benchmark/bands_v4.json": {
+      "sha256": "355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448",
+      "size": 83795,
+      "in_package": true
+    },
+    "benchmark/calhoun2014_tracks.npz": {
+      "sha256": "1b138ebc1c4ff081df819e80a3a92e8d11aad4bc47213022d55d9a63d3157953",
+      "size": 375425,
+      "in_package": false
+    },
+    "benchmark/chen2025_tracks.npz": {
+      "sha256": "9320d320ffca780aa7f7ae56abf0c8b0cb7993fbbcd58d990f6765b4500b91c4",
+      "size": 3553533,
+      "in_package": false
+    },
+    "benchmark/classifier.json": {
+      "sha256": "e4a059de3d5b826d4fa2a99e61b3ed0f0cdefb3790ccfc4c8e38eefbb23b8239",
+      "size": 2208,
+      "in_package": true
+    },
+    "benchmark/lopezcruz2019_reference.json": {
+      "sha256": "c9132fbb4c28e475980f53cf09ad15811f8cd8e0ee565680b756b9d20f916d60",
+      "size": 2275,
+      "in_package": true
+    },
+    "benchmark/lopezcruz2019_reorientations.json": {
+      "sha256": "3a8b42babbb75f39abaea216b480cd18acf053ff047f2aa77d56c906e584d6b7",
+      "size": 110240,
+      "in_package": false
+    },
+    "benchmark/lopezcruz2019_split.json": {
+      "sha256": "da2d4a6144ce2072f2a0d352c97a7e7eb1dd6b98a53c4e915ff0b1c3d9428315",
+      "size": 1145,
+      "in_package": true
+    },
+    "benchmark/roberts2016_tracks.npz": {
+      "sha256": "d5e9aa11fa41b31b6c55a1648e05c246f63700429282dc49369ee063e759b95a",
+      "size": 388749,
+      "in_package": false
+    },
+    "benchmark/scheer2023_split.json": {
+      "sha256": "67b02c2e37faa9e4e57341b82ed679c276a1122a0649ef7dd4384e1ac2438231",
+      "size": 6231,
+      "in_package": false
+    },
+    "benchmark/scheer2023_tracks.npz": {
+      "sha256": "a50365e2d071a1f35db0f2b7e07e2855b0c8f8af17658d781e93553535cead56",
+      "size": 32524565,
+      "in_package": false
+    },
+    "benchmark/scheer_tracker_noise.npz": {
+      "sha256": "328bfbcece5c8ba21b7fe23c183d4a6efe14f9c88f56d46e0d555e36007ee1f4",
+      "size": 187517,
+      "in_package": true
+    },
+    "roaming_dwelling/PROVENANCE.md": {
+      "sha256": "103530abb6f10688d5bb14c4d8badd1ade41cdd51e315733bfef5d2e83ecf45a",
+      "size": 7715,
+      "in_package": true
+    },
+    "roaming_dwelling/calibration_retry.json": {
+      "sha256": "38c18a86807f5a6577504759605d609c513e96a6b6c2e4d6b3ecca56da612c86",
+      "size": 1249,
+      "in_package": true
+    },
+    "roaming_dwelling/reference_hmm.json": {
+      "sha256": "15f15a55a146d35e2adc7ea33167bc9a3b33fdf8f9f140689667e26b32989575",
+      "size": 734,
+      "in_package": true
+    }
+  }
+}

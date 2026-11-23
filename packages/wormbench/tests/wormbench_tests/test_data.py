@@ -107,3 +107,32 @@ def test_no_module_holds_a_data_path_after_import(tmp_path):
         env=env,
     ).stdout.strip()
     assert out == "[]"
+
+
+def test_a_tampered_copy_is_refused(tmp_path, monkeypatch):
+    """A listed file from WORMBENCH_DATA whose SHA-256 differs from the manifest's is refused."""
+    env = tmp_path / "env"
+    _make(env, "benchmark", "bands_v4.json", '{"tampered": true}\n')
+    monkeypatch.setenv(data.ENVIRONMENT_VARIABLE, str(env))
+    data.set_root(None)
+    with pytest.raises(data.ChecksumError, match=r"benchmark/bands_v4\.json"):
+        data.path("benchmark", "bands_v4.json")
+
+
+def test_the_host_root_is_read_as_given(tmp_path):
+    """The host's root is the host's own: a listed file there is not checked."""
+    host = tmp_path / "host"
+    target = _make(host, "benchmark", "bands_v4.json", '{"stand-in": true}\n')
+    data.set_root(host)
+    assert data.path("benchmark", "bands_v4.json") == target
+
+
+def test_the_shipped_copies_pass_their_own_check():
+    """Every file shipped in the package matches the manifest it ships with."""
+    data.set_root(None)
+    listed = data.manifest()["files"]
+    shipped = [key for key, entry in listed.items() if entry["in_package"]]
+    assert shipped
+    for key in shipped:
+        namespace, name = key.split("/", 1)
+        assert data.path(namespace, name).parent == data.package_directory() / namespace
