@@ -23,6 +23,7 @@ from quantumnematode.benchmark import grading as g
 from quantumnematode.benchmark.readouts import OFF_FOOD_DETECTOR
 from quantumnematode.report.dtypes import BehaviourStep
 from quantumnematode.validation import roaming_dwelling as rd
+from wormbench import grade as wgrade
 
 _REPO = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
@@ -475,8 +476,8 @@ def test_absent_search_fails_local_search_in_a_grading(monkeypatch: pytest.Monke
     """With every statistic passing, local search passes only when search is present."""
     bands = bg.load_bands()
     populations = {family: [[]] * 200 for family in g.FAMILIES}
-    monkeypatch.setattr(bg, "classifier", lambda _b: None)
-    monkeypatch.setattr(bg, "family_values", lambda _f, _a, _c: {})
+    monkeypatch.setattr(wgrade, "classifier", lambda _b: None)
+    monkeypatch.setattr(wgrade, "family_values", lambda _f, _a, _c: {})
 
     def passing(_values: object, family_bands: dict[str, g.Band], _bar: float) -> object:
         return {

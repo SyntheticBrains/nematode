@@ -12,6 +12,7 @@ import json
 import math
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -21,6 +22,10 @@ from quantumnematode.evaluation.odour_field import CHEN_PLATE_MM, OdourField, ch
 from quantumnematode.report.behaviour import BehaviourStep
 
 _REPO = Path(__file__).resolve().parents[5]
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
 import benchmark_bands as bb  # noqa: E402  # pyright: ignore[reportMissingImports]
 import benchmark_grade as bg  # noqa: E402  # pyright: ignore[reportMissingImports]
@@ -134,15 +139,11 @@ def test_imported_tracks_are_never_measured(
 def test_the_default_grades_on_v2_once_it_is_valid(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    validity_record: Callable[[dict[str, Any]], None],
 ) -> None:
     """With no ``--bands``, a VALID v2 verdict for its bands, and none for v3 or v4, gives v2."""
-    controls = tmp_path / "controls_v2.json"
-    controls.write_text(
-        json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bg.BANDS_V2_PATH)}),
-    )
-    monkeypatch.setattr(bg, "CONTROLS_V2_PATH", controls)
-    monkeypatch.setattr(bg, "CONTROLS_V3_PATH", tmp_path / "no_controls_v3.json")
-    monkeypatch.setattr(bg, "CONTROLS_V4_PATH", tmp_path / "no_controls_v4.json")
+    sha = mm.file_sha256(bg.BANDS_V2_PATH)
+    validity_record({"v2": {"bands": "bands_v2.json", "verdict": "VALID", "bands_sha256": sha}})
     _refuse_measurement(monkeypatch)
     out = tmp_path / "grade.json"
     assert bg.main(["tracks", "--manifest", str(_track_manifest(tmp_path)), "--out", str(out)]) == 0
@@ -187,24 +188,17 @@ def test_v1_weights_and_bar_are_unchanged() -> None:
     assert bg.load_bands()["bars"]["wild_type"] == pytest.approx(2.8375969129437877)
 
 
-def test_v2_is_the_default_only_for_the_validated_bands(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The default is v2 only when the verdict is VALID for the very bands file now vendored."""
-    bands = tmp_path / "bands_v2.json"
+def test_v2_is_the_default_only_for_the_validated_bands(benchmark_overrides: Path) -> None:
+    """The default is v2 only when the verdict is VALID for the very bands file now resolved."""
+    bands = benchmark_overrides / "bands_v2.json"
     bands.write_text("{}\n")
-    controls = tmp_path / "controls_v2.json"
-    monkeypatch.setattr(bg, "BANDS_V2_PATH", bands)
-    monkeypatch.setattr(bg, "CONTROLS_V2_PATH", controls)
-    controls.write_text(json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bands)}))
-    assert bg.v2_is_valid() is True
+    sha = mm.file_sha256(bands)
+    record = {"v2": {"bands": "bands_v2.json", "verdict": "VALID", "bands_sha256": sha}}
+    assert bg.v2_is_valid(record) is True
     bands.write_text('{"changed": true}\n')
-    assert bg.v2_is_valid() is False
-    controls.write_text(json.dumps({"verdict": "VALID"}))
-    assert bg.v2_is_valid() is False
-    controls.write_text("{not json")
-    assert bg.v2_is_valid() is False
+    assert bg.v2_is_valid(record) is False
+    assert bg.v2_is_valid({"v2": {"bands": "bands_v2.json", "verdict": "VALID"}}) is False
+    assert bg.v2_is_valid({"v2": "{not json"}) is False
 
 
 def test_samples_outside_the_field_are_missing() -> None:
