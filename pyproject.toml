@@ -61,6 +61,7 @@ analysis = [
 
 [tool.uv.sources]
 quantum-nematode = { workspace = true }
+wormbench = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -165,6 +166,16 @@ convention = "numpy" # https://numpydoc.readthedocs.io/en/latest/format.html#sec
 [tool.pyright]
 include = [
   "packages/quantum-nematode",
+  "packages/wormbench",
+]
+# The first matching root wins. wormbench supports Python 3.10, so it is checked at 3.10. The old
+# module paths of wormbench's modules resolve through .pyi stubs with no source beside them, which
+# is by design, so that warning is off where those paths are imported.
+executionEnvironments = [
+  { root = "packages/wormbench", pythonVersion = "3.10" },
+  { root = "packages/quantum-nematode/tests", reportMissingModuleSource = "none" },
+  { root = "scripts", reportMissingModuleSource = "none" },
+  { root = "packages/quantum-nematode" },
 ]
 exclude = [
   "**/__pycache__",
@@ -182,7 +193,7 @@ pythonVersion = "3.13"
 pythonPlatform = "Linux"
 
 [tool.pytest.ini_options]
-testpaths = ["packages/quantum-nematode/tests"]
+testpaths = ["packages/quantum-nematode/tests", "packages/wormbench/tests"]
 # `logical`, not `auto`: xdist's `auto` counts *physical* cores, which gives only
 # 2 workers on a 4-vCPU CI runner. Requires psutil (pinned in the dev group).
 addopts = "-n logical"

@@ -4,10 +4,10 @@ from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
+from wormbench.records import BehaviourStep
 
 from quantumnematode.brain.arch._brain import BrainHistoryData
 from quantumnematode.dtypes import AgentPath, FoodHistory
-from quantumnematode.report.behaviour import BehaviourStep
 
 
 class TerminationReason(StrEnum):

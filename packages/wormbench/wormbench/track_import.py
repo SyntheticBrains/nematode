@@ -27,9 +27,9 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from quantumnematode.benchmark import grading as g
-from quantumnematode.benchmark.references import boundary_distance
-from quantumnematode.report.behaviour import BehaviourStep
+from wormbench import grading as g
+from wormbench.records import BehaviourStep
+from wormbench.references import boundary_distance
 
 if TYPE_CHECKING:
     from pathlib import Path

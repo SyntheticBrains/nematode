@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from quantumnematode.benchmark.references import load_chen_tracks, sample_field
+from wormbench.references import load_chen_tracks, sample_field
 
 CHEN_PLATE_MM = 100.0
 CHEN_START_WINDOW_S = 30

@@ -2359,6 +2359,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "qiskit" },
     { name = "rich" },
+    { name = "wormbench" },
 ]
 
 [package.optional-dependencies]
@@ -2407,6 +2408,7 @@ requires-dist = [
     { name = "scikit-learn", marker = "extra == 'analysis'", specifier = ">=1.5.0" },
     { name = "scipy", marker = "extra == 'analysis'", specifier = ">=1.14.0" },
     { name = "torch", marker = "extra == 'torch'", specifier = ">=2.7.0" },
+    { name = "wormbench", editable = "packages/wormbench" },
 ]
 provides-extras = ["cpu", "gpu", "torch", "qpu", "pixel", "analysis"]
 
