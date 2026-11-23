@@ -53,7 +53,7 @@ name that moved, private names included.
 #### Scenario: Dotted imports of old paths type-check
 
 - **WHEN** Pyright checks a test that imports `from quantumnematode.benchmark.grading import ...`
-- **THEN** it SHALL report no missing import
+- **THEN** it SHALL report no diagnostic for that import
 
 #### Scenario: The project's benchmark tests keep their imports
 
@@ -101,8 +101,8 @@ Any difference SHALL block the merge.
 #### Scenario: No held-out cohort is read
 
 - **WHEN** the identity check, the example builder or any test of this change loads Scheer tracks
-- **THEN** it SHALL pass its rows through the held-out refusal, and SHALL read no PD1074 held-out
-  row
+- **THEN** it SHALL select its rows only by band-cohort side, or pass them through the held-out
+  refusal, and SHALL read no PD1074 held-out row
 
 ### Requirement: Reference data resolved when used, checked, and never fetched implicitly
 
@@ -188,8 +188,8 @@ and its animals SHALL need neither.
 
 #### Scenario: A simulated track without labels, or with a repeated seed
 
-- **WHEN** `--simulated` is given and a measured animal has no primitive labels or no seed, or two
-  animals share a seed
+- **WHEN** `--simulated` is given and a measured animal has no primitive labels or no seed, two
+  animals share a seed, or WCON records merged under one id carry different seeds
 - **THEN** grading SHALL fail, naming the animals and the field
 
 #### Scenario: Measured grading on v1
@@ -202,8 +202,8 @@ and its animals SHALL need neither.
 `wormbench example --out <dir>` SHALL write a 64-animal cohort and its manifest. The animals SHALL be
 band-cohort PD1074 OD 2 small-lawn animals, chosen by a recorded seed from rows with at least 90%
 finite positions, whose rows passed the held-out refusal. Grading it on v4 SHALL reproduce a stored
-expected grading: every statistic within a relative tolerance of 1e-9, and every pass, flag and count
-exactly. It SHALL NOT be presented as a validation, since its animals are inside the bands.
+expected grading: every statistic within a relative tolerance of 1e-9 with an absolute floor of
+1e-12, and every pass, flag and count exactly. It SHALL NOT be presented as a validation, since its animals are inside the bands.
 
 #### Scenario: The example grades with no download
 

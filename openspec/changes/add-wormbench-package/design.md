@@ -91,14 +91,31 @@ numpy integers), so each moves with its own module.
 
 1. **Path handling** resolves when used (Decision D): no import-time path, `None` defaults, and a lazy
    module `__getattr__` for the old constants.
+
 2. **`track_populations`** takes a `base` directory, against which a manifest's relative entries
    resolve. `benchmark_grade.py` passes `_REPO`, as it resolves them today. The CLI passes the
    manifest's directory.
+
 3. **`_builder`, `_kinematic_bands_at` and `_activity_bands_at`** import `wormbench.builder`
    directly, not `benchmark_bands` through `sys.path`.
+
 4. **The validity checks and `BandBuilder`'s kappa** read the package's records (Decision E).
-5. **Docstrings** that name versions "B v2", "B v3" or "B v4" (for example `benchmark_grade.py:285, 319, 612, 675, 730`) say "benchmark v2" and so on, since the moved code is package source and
-   follows its rule against planning labels.
+
+5. **Docstrings** that name versions "B v2", "B v3" or "B v4" (for example
+   `benchmark_grade.py:285, 319, 612, 675, 730`) say "benchmark v2" and so on, since the moved code
+   is package source and follows its rule against planning labels.
+
+6. **The measured import path** (Decision H), written as new functions in `track_import`. Today
+   the importer cannot carry what measurement needs:
+
+   - `read_csv` reads only `animal`, `t_s`, `x`, `y` and `on_lawn` (`track_import.py:183–191`);
+   - `read_wcon` accepts `@` fields but discards them (`:252`);
+   - `ImportedTrack` and `to_steps` carry no label or seed;
+   - `import_population` cuts to the window first (`:395`).
+
+   The new functions read the labels and the seed, and measure the whole track before windowing.
+   The existing functions keep their signatures and outputs, so reading unmeasured tracks stays
+   byte-identical, and the identity check covers it.
 
 **Stays in the scripts:**
 
@@ -135,6 +152,9 @@ for them (`c2_fit.py` uses `bg._builder` and `bg._kinematic_bands_at`, and the s
   stub (`from wormbench.grading import *`, plus the private names the scripts and tests use).
 
   - With the stubs, the scratch package checks with 0 errors, and nothing changes at run time.
+  - Each dotted import through a stub still gives a `reportMissingModuleSource` warning. That rule
+    is set to `none` for `packages/quantum-nematode/tests` in Pyright's configuration, so the check
+    is clean, not merely free of errors.
   - The two dotted imports in the package's own source (`report/dtypes.py:10`,
     `evaluation/batched.py:79`) are rewritten to import from `wormbench`.
   - The eight in the tests (`test_benchmark_v2_grading.py:20–21`, `test_grading.py:23`,
@@ -168,8 +188,10 @@ return stale bands.
 next.
 
 1. **A host root**, set by `wormbench.data.set_root(path)`. `quantumnematode/__init__.py` sets this
-   repository's `data/`. Importing any `quantumnematode` module finishes that `__init__` first, so the
-   project always reads its vendored files.
+   repository's `data/`, but only if `data/benchmark/` exists there, so an installed
+   `quantum-nematode` without the repository falls through to the other sources. Importing any
+   `quantumnematode` module finishes that `__init__` first, so the project always reads its vendored
+   files.
 2. **`WORMBENCH_DATA`**: a directory with `benchmark/` and `roaming_dwelling/` subdirectories.
 3. **The wheel** (`importlib.resources`, Decision F).
 4. **The fetched cache**: `$XDG_CACHE_HOME/wormbench/<data version>/`, or `~/.cache/wormbench/...`.
@@ -269,7 +291,9 @@ in editable installs.
 ## Decision G: versions and the default
 
 - **`wormbench` 1.x defaults to benchmark v4,** and only a major release changes the default, since
-  that changes what an unpinned user's grading means.
+  that changes what an unpinned user's grading means. If `validity.json` ever stops marking the
+  pinned default VALID, the CLI refuses to grade without `--bands`, rather than grade on a version
+  its own record does not support.
 - **A later benchmark version may ship in a 1.x release,** marked VALID in `validity.json`, but
   only behind `--bands`. Its default pin is in the package's code, not derived from the newest VALID
   entry.
@@ -297,8 +321,11 @@ integer seed:
 - in WCON, a per-record `@primitive` array and `@seed`. WCON's core rejects unprefixed fields
   (`track_import.py:252`).
 
-It refuses an animal missing either, and refuses two animals with the same seed, since they would
-draw the same noise.
+It refuses:
+
+- an animal missing either;
+- two animals with the same seed, since they would draw the same noise;
+- WCON records merged under one id that carry different `@seed`s.
 
 **Order**, as the captures path has it:
 
@@ -320,9 +347,10 @@ project's captures path give byte-identical gradings.
   held-out row cannot enter. The selection rule is fixed before any grading.
 - **Storage:** one compressed archive, about 0.9 MB. `wormbench example --out <dir>` writes its
   CSVs, sidecars and manifest.
-- **The expected grading** is stored. The test compares statistics with a relative tolerance of
-  1e-9, and every pass, flag and count exactly, since floating-point results can differ in the last
-  bits between macOS and Linux CI.
+- **The expected grading** is stored. The test compares statistics with
+  `math.isclose(rel_tol=1e-9, abs_tol=1e-12)`, and every pass, flag and count exactly, since
+  floating-point results can differ in the last bits between macOS and Linux CI. The absolute floor
+  keeps a statistic at or near zero from needing a bit-for-bit match.
 - **Not a validation.** It is not tested for a pass: band-cohort animals are inside the bands they
   are graded against, so it demonstrates the grader and validates nothing.
 
@@ -368,8 +396,12 @@ file keeps the repository's commands and links back to the package's contract.
   (`cma_recovery_v2.py:54, 56, 952`). The copy checks the SHA pinned at `cma_recovery_v2.py:954`.
 - The capture set is generated once, pinned by SHA256 and shared by both stages.
 
-**Preconditions:** `wormbench_records.py check` passes. Every Scheer load goes through
-`refuse_held_out`.
+**Preconditions:**
+
+- `wormbench_records.py check` passes.
+- Every Scheer load either selects its rows only with `band_rows` (`side == "bands"`), as
+  `wormbench.builder` does, or passes them through `track_import_check.refuse_held_out`. That script
+  function is not importable from package code.
 
 **Cases, band cohorts only:**
 
@@ -387,9 +419,21 @@ file keeps the repository's commands and links back to the package's contract.
   the committed statistics. No held-out row enters it. Logbook 124's controls read held-out rows
   and are not used.
 
-`speedup_identity_check.py` also runs, with `--workers 1`, `--build` set to the shared directory and
-`--out` in it, so Logbook 118's committed `identity.json` is never overwritten. Its baseline is taken
-before the move. `connectome_identity_check.py` adds `packages/wormbench` to its `SOURCE_PATHS`,
+`speedup_identity_check.py` also runs:
+
+- through the identity check's module-path guard;
+- with `--workers 1`;
+- with `--build` set to its own subdirectory of the shared directory, since its `baseline.jsonl`
+  and `baseline_manifest.json` would otherwise collide, and `--out` in it, so Logbook 118's committed
+  `identity.json` is never overwritten.
+
+Its baseline is taken before the move.
+
+**Absolute comparisons run at the baseline too.** Two cases compare today's code against outputs
+committed in Logbooks 118 and 124: the C.1 record, and the speed-up check's stored jobs. Code has
+changed since those logbooks, always under the byte-identity rule. So both run first at `origin/main`.
+A mismatch there is drift already on `main`: it is reported, and not attributed to the move. The
+change must then reproduce the baseline's outputs. `connectome_identity_check.py` adds `packages/wormbench` to its `SOURCE_PATHS`,
 since the batched evaluator runs `OdourField`.
 
 Any difference blocks the merge.

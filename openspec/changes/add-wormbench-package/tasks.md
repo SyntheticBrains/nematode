@@ -23,7 +23,7 @@ fit.
 - [x] 1.1 `/nematode-review-spec`, by an independent reviewer: 4 blocking and 12 should-fix
   findings, written into the design.
 - [x] 1.2 A second independent review: 2 blocking and 7 should-fix findings, written into the design.
-- [ ] 1.3 A short third look at the revision before code starts.
+- [x] 1.3 A short third look by the second reviewer: ready to implement once its two wording fixes (the measured import path as a sixth content change; band-cohort selection in the builder) were made, as they are.
 
 ## 2. Baselines, before any code moves
 
@@ -40,19 +40,23 @@ fit.
 
   The baseline is taken at `origin/main`.
 
-- [ ] 2.3 `speedup_identity_check.py baseline` at `origin/main`, with `--workers 1`, and `--build`
-  and `--out` in the shared directory.
+- [ ] 2.3 `speedup_identity_check.py baseline` at `origin/main`, through the module-path guard, with
+  `--workers 1`, and `--build` and `--out` in its own subdirectory of the shared directory.
+
+- [ ] 2.4 The two absolute comparisons (C.1's v4 record, the speed-up check's stored jobs) run at
+  `origin/main` first. Any mismatch there is reported as drift already on `main`.
 
 ## 3. The package
 
 - [ ] 3.1 `packages/wormbench/` with its `pyproject.toml` (Decision A), README, NOTICE,
   `CITATION.cff` and Ruff configuration.
-- [ ] 3.2 Move the modules of Decision B, making exactly its five content changes and no others:
+- [ ] 3.2 Move the modules of Decision B, making exactly its six content changes and no others:
   - path handling resolved when used;
   - `track_populations`'s `base`;
   - direct imports of `wormbench.builder`;
   - the package records;
-  - the docstring labels.
+  - the docstring labels;
+  - the measured import path, as new functions, with the existing reading functions unchanged.
 - [ ] 3.3 `bands`, `builder` and `grade`, with the two `mutant_bands` and the two `_finite` in their
   own modules. The scripts re-export every moved name, private ones included.
 - [ ] 3.4 The aliases at the top of each parent `__init__`, the `.pyi` stubs for the old paths, and
