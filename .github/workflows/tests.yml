@@ -178,19 +178,74 @@ jobs:
   # The ruleset-required "Tests" context. Reports a genuine success when the
   # shards were deliberately skipped for a docs-only diff; fails on any shard
   # failure, cancellation, or an unexpected skip (code change but no shards).
+  # The benchmark grader as an outsider installs it: the built wheel alone in a fresh environment,
+  # with nothing else from this repository, on the oldest supported Python at the declared
+  # dependency minimums and on the newest. Its tests run without xdist or the network.
+  wormbench-standalone:
+    name: wormbench alone (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.10'
+            pins: 'numpy==1.24.4 scipy==1.10.1'
+          - python: '3.13'
+            pins: ''
+    env:
+      OMP_NUM_THREADS: '1'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          lfs: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+          prune-cache: true
+
+      - name: Build the wheel from its sdist
+        run: uv build --package wormbench --out-dir dist
+
+      - name: Install the wheel alone
+        run: |
+          uv venv --python ${{ matrix.python }} "$RUNNER_TEMP/alone"
+          uv pip install --python "$RUNNER_TEMP/alone/bin/python" pytest ${{ matrix.pins }} dist/wormbench-*.whl
+
+      - name: Check it imports from the wheel and nothing else
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/alone/bin/python" - <<'PY'
+          import sys
+          import wormbench, wormbench.grade, wormbench.cli
+          assert "site-packages" in wormbench.__file__, wormbench.__file__
+          assert not [m for m in sys.modules if m.split(".")[0] == "quantumnematode"]
+          print("wormbench", wormbench.__version__, "from", wormbench.__file__)
+          PY
+
+      - name: Run its tests
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/alone/bin/python" -m pytest "$GITHUB_WORKSPACE/packages/wormbench/tests" \
+            -o addopts="" -p no:cacheprovider -q
+
   tests-complete:
     name: Tests
     runs-on: ubuntu-latest
-    needs: [changes, test]
+    needs: [changes, test, wormbench-standalone]
     if: always()
     steps:
       - name: Check shard results
         run: |
-          if [ "${{ needs.test.result }}" = "success" ]; then
-            echo "All test shards passed."
-          elif [ "${{ needs.test.result }}" = "skipped" ] && [ "${{ needs.changes.outputs.code }}" = "false" ]; then
+          if [ "${{ needs.test.result }}" = "success" ] && [ "${{ needs.wormbench-standalone.result }}" = "success" ]; then
+            echo "All test shards and the standalone wormbench jobs passed."
+          elif [ "${{ needs.test.result }}" = "skipped" ] && [ "${{ needs.wormbench-standalone.result }}" = "skipped" ] && [ "${{ needs.changes.outputs.code }}" = "false" ]; then
             echo "Docs-only change: test shards deliberately skipped."
           else
-            echo "::error::Test shards did not succeed (result: ${{ needs.test.result }}, code changes: ${{ needs.changes.outputs.code }})."
+            echo "::error::Tests did not succeed (shards: ${{ needs.test.result }}, wormbench alone: ${{ needs.wormbench-standalone.result }}, code changes: ${{ needs.changes.outputs.code }})."
             exit 1
           fi

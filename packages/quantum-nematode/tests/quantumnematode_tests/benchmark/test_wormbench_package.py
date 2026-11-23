@@ -192,3 +192,15 @@ def test_simulated_tracks_are_graded_as_the_project_grades_its_own(tmp_path: Pat
     graded_capture = bg._finite(bg.grade_populations_v4(by_capture, None, bands))
     graded_import = bg._finite(bg.grade_populations_v4(by_import, None, bands))
     assert json.dumps(graded_import) == json.dumps(graded_capture)
+
+
+def test_the_example_reads_band_cohorts_only() -> None:
+    """Covers "No held-out cohort is read": the example's animals are all band-cohort rows."""
+    sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
+    import wormbench_example  # pyright: ignore[reportMissingImports]
+    from wormbench import references as refs
+
+    tracks, rows = wormbench_example.selected_rows()
+    assert len(rows) == wormbench_example.ANIMALS
+    assert set(tracks.side[rows]) == {refs.BANDS}
+    assert set(tracks.arm(wormbench_example.ARM)) >= set(rows)

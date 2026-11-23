@@ -237,6 +237,16 @@ Releases are tags on `main` plus a GitHub Release; there is no PyPI publication.
    gh release create vX.Y.Z --title vX.Y.Z --notes-file /tmp/notes-X.Y.Z.md --generate-notes
    ```
 
+### Releasing wormbench
+
+`wormbench` (`packages/wormbench/`) is released on its own, as `wormbench-vX.Y.Z` tags, and published to PyPI with its fetched data on Zenodo. Each publishing step is confirmed with the maintainer before anything is uploaded.
+
+1. Run `uv run python scripts/analysis/wormbench_records.py check` and `wormbench_example.py check`; both must pass, so the package's records, copies, manifest and example match the committed sources.
+2. Set the version in `packages/wormbench/pyproject.toml`, `wormbench/__init__.py` and `packages/wormbench/CITATION.cff`. A change of the default benchmark version is a major release.
+3. Build with `uv build --package wormbench`, install the wheel alone into a fresh Python 3.10 environment at the declared minimums, and run the package's tests with `-o addopts=""` (the CI job `wormbench alone` does the same).
+4. With the maintainer's confirmation: a TestPyPI upload, installed and graded on the example; then the PyPI upload, and the tag on the merge commit.
+5. When the data deposit changes, publish a new Zenodo version and write its per-file addresses into `wormbench/_data/urls.json`; `wormbench_records.py sync` never touches that file.
+
 ## Where help is wanted
 
 Aligned with the [roadmap](docs/roadmap.md):
