@@ -1151,6 +1151,29 @@ def test_a_reading_without_a_readout_is_refused(
         fit.procedure(dataclasses.replace(run, layout=tight, **fitting), truth, pool=None)
 
 
+def test_the_read_records_the_recovery_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Covers "`read` SHALL record the recovery's gate beside the verdict", with an answer."""
+    monkeypatch.setattr(fit, "BUILD", tmp_path)
+    for name in ("FIT", "RECOVERY", "PILOT", "W_MINIMUM"):
+        monkeypatch.setattr(fit, f"{name}_PATH", tmp_path / f"{name.lower()}.json")
+    failed_gate = {"passes": False, "gain": 0.6}
+    (tmp_path / "recovery.json").write_text(json.dumps({"gate": failed_gate}))
+    (tmp_path / "pilot.json").write_text(json.dumps({"grades": []}))
+    (tmp_path / "fit_procedure.json").write_text(json.dumps({"killed": None, "answer": [0.5]}))
+    (tmp_path / "fit_grades.json").write_text(json.dumps({"grades": []}))
+    monkeypatch.setattr(fit, "verdict", lambda _g: {"passes": True})
+    monkeypatch.setattr(fit, "pass_rates", lambda _g: {})
+    monkeypatch.setattr(fit, "held_out_reading", lambda _g: {})
+    monkeypatch.setattr(fit, "restart_spread", lambda *_a: {})
+    assert fit._read() == 0
+    record = json.loads((tmp_path / "fit.json").read_text())
+    assert record["verdict"] == {"passes": True}
+    assert record["recovery_gate"] == failed_gate
+
+
 def test_a_registered_run_with_no_answer(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Covers "A registered fit with no answer fails" and the recovery's "no answer" scenario."""
     reason = fit.NO_START_KEPT.format(6)
@@ -1162,10 +1185,14 @@ def test_a_registered_run_with_no_answer(monkeypatch: pytest.MonkeyPatch, tmp_pa
     (tmp_path / "fit_procedure.json").write_text(json.dumps(killed))
     assert fit._grade(1) == 0
     assert not (tmp_path / "fit_grades.json").exists()
+    failed_gate = {"passes": False, "gain": 0.6}
+    (tmp_path / "recovery.json").write_text(json.dumps({"gate": failed_gate}))
     assert fit._read() == 0
-    reading = json.loads((tmp_path / "fit.json").read_text())["verdict"]
+    record = json.loads((tmp_path / "fit.json").read_text())
+    reading = record["verdict"]
     assert reading["passes"] is False
     assert reading["no_answer"] == reason
+    assert record["recovery_gate"] == failed_gate  # the gate is recorded beside the verdict
     # A fit still running has no answer either, and its grade refuses.
     (tmp_path / "fit_procedure.json").write_text(json.dumps({"killed": None, "answer": None}))
     assert fit._grade(1) == 1
@@ -1435,14 +1462,22 @@ EARLIER = (
     (1_461_000_000, 1_461_000_999),
     # The fit-first investigation's reserved animals.
     (1_500_000_000, 1_501_000_199),
+    # After the recovery: the serotonin swap check's three sets, and the serotonin-off probe's
+    # candidates, readouts and grade, with its smoke's.
+    (1_990_000_000, 1_990_002_199),
+    (1_995_000_000, 1_995_575_999),
+    (1_996_000_000, 1_996_000_199),
+    (1_996_100_000, 1_996_100_999),
+    (1_997_000_000, 1_997_200_015),
 )
 # The CMA seeds the seed tables give earlier pilots, probes and tests: C.2's pilots and probes
 # (the fifth pilot's 9682-9695, the screens' 9922-9925), the speed-following reversals' tests
 # (9601-9605), the sign-scale calibration (9601-9616), the fit-first investigation's generators and
-# reserved seeds (9701-9722, 9731, 9732, 9741-9759), and the neural readout's ceiling's generators
-# (9770-9779, 9781-9799, 9801-9805).
+# reserved seeds (9701-9722, 9731, 9732, 9741-9759), the neural readout's ceiling's generators
+# (9770-9779, 9781-9799, 9801-9805), and the serotonin-off probe's search (7311).
 EARLIER_CMA = frozenset(
     [
+        7311,
         *range(9504, 9508),
         *range(9516, 9526),
         *range(9531, 9535),
@@ -1616,8 +1651,16 @@ def test_a_changed_config_stops_a_run(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
 def _guards(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **state: Any) -> None:
     parts = state.get("parts", "")
+    decision = state.get("decision", "")  # the part whose text carries the gate decision
+    line = state.get("decision_line", fit.GATE_DECISION)
     launch = tmp_path / "launch.md"
-    launch.write_text("# Launch\n" + "".join(f"\n## Part {p}\n" for p in parts))
+    launch.write_text(
+        "# Launch\n"
+        + "".join(
+            f"\n## Part {p}\n" + (f"\nText.\n\n{line}\n\nText.\n" if p == decision else "")
+            for p in parts
+        ),
+    )
     records = {
         "speed": state.get("speed", {"passes": True}),
         "pilot": state.get("pilot", {"go": True}),
@@ -1633,9 +1676,17 @@ def _guards(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **state: Any) -> No
     monkeypatch.setattr(fit, "PILOT_PATH", paths["pilot"])
     monkeypatch.setattr(fit, "RECOVERY_PREFLIGHT_PATH", paths["preflight"])
     monkeypatch.setattr(fit, "RECOVERY_PATH", paths["recovery"])
+    monkeypatch.setattr(fit, "FIT_PATH", tmp_path / "fit.json")
     monkeypatch.setattr(fit, "manifest_matches", lambda *_a: state.get("manifest", True))
     monkeypatch.setattr(fit.bg, "v4_is_valid", lambda: True)
-    monkeypatch.setattr(fit.cr, "launch_committed", lambda *_a, **_k: state.get("committed", True))
+
+    def launch_committed(bound: tuple[Path, ...], **_k: Any) -> bool:
+        # committed_c=False: only Part C's binding, the one that holds the recovery's record, fails.
+        if not state.get("committed_c", True) and paths["recovery"] in bound:
+            return False
+        return state.get("committed", True)
+
+    monkeypatch.setattr(fit.cr, "launch_committed", launch_committed)
     monkeypatch.setattr(fit, "committed", lambda _p: state.get("preflight_committed", True))
 
 
@@ -1666,6 +1717,50 @@ def test_every_stage_refuses_before_its_part(
     assert "gate" in fit.guard("run")
     _guards(monkeypatch, tmp_path, parts="ABC")
     assert all(fit.guard(s) is None for s in ("run", "grade", "read", "loo"))
+
+
+def test_the_decision_lets_the_fit_run_with_the_gate_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Covers "The maintainer's decision lets the fit run with the gate failed".
+
+    And "The decision counts only in Part C" and "The fit runs once under the decision".
+    """
+    failed = {"gate": {"passes": False}}
+    fitted = ("run", "grade", "read")
+    _guards(monkeypatch, tmp_path, parts="ABC", recovery=failed, decision="C")
+    assert all(fit.guard(s) is None for s in fitted)
+    assert "leave-one-out" in fit.guard("loo")
+    # Outside Part C, the heading decides nothing: in Part B, or in a part after C.
+    for parts, decision in (("ABC", "B"), ("ABCD", "D")):
+        _guards(monkeypatch, tmp_path, parts=parts, recovery=failed, decision=decision)
+        assert all("gate" in fit.guard(s) for s in (*fitted, "loo"))
+    # Only the heading as a line of its own counts: nothing after it, and nothing before it.
+    for near in (f"{fit.GATE_DECISION} (draft)", f"> {fit.GATE_DECISION}"):
+        _guards(
+            monkeypatch,
+            tmp_path,
+            parts="ABC",
+            recovery=failed,
+            decision="C",
+            decision_line=near,
+        )
+        assert all("gate" in fit.guard(s) for s in fitted)
+    # The decision does not lift the earlier guards, Part C's own binding among them.
+    _guards(monkeypatch, tmp_path, parts="ABC", recovery=failed, decision="C", committed=False)
+    assert all("Part A" in fit.guard(s) for s in fitted)
+    _guards(monkeypatch, tmp_path, parts="ABC", recovery=failed, decision="C", committed_c=False)
+    assert all("Part C" in fit.guard(s) for s in (*fitted, "loo"))
+    # The fit runs once under the decision: its record refuses a second run, not its reads.
+    _guards(monkeypatch, tmp_path, parts="ABC", recovery=failed, decision="C")
+    (tmp_path / "fit.json").write_text("{}")
+    assert "runs once" in fit.guard("run")
+    assert fit.guard("grade") is None
+    assert fit.guard("read") is None
+    # A passing gate needs no decision, and keeps the leave-one-out.
+    _guards(monkeypatch, tmp_path, parts="ABC", decision="C")
+    assert all(fit.guard(s) is None for s in (*fitted, "loo"))
 
 
 def test_a_failed_pilot_blocks_the_recovery(

@@ -1,0 +1,265 @@
+"""C.2's neural reading on a fitted answer: M-a's responses, then the paired test and the wiring-only control.
+
+Launch record 133's *The neural reading*. The responses, the metric, chance and sign agreement are
+M-a's own: `reading.py.txt` (SHA-256 checked) is executed unchanged except for two constants, the
+vector's file and the output directory. The paired test and the wiring-only control are added here,
+to that record's rules:
+
+- the paired test: d = r(answer) - r(box centre) against the test matrix, with a 95% percentile
+  interval from 10,000 resamples of the stimulated neurons' classes with replacement
+  (`default_rng(9811)`), the classes being each stimulated neuron's class among the 302 neurons'.
+  A drawn class brings every stimulated neuron in it, and a class drawn c times counts c times; each
+  resample keeps the same drawn columns for both networks and the measured matrix, so r is a
+  weighted Pearson correlation over the drawn columns' entries, repeats kept. Beside it, the same
+  from 10,000 resamples of the 154 stimulated neurons (`default_rng(9812)`).
+- the wiring-only control: C[j, s], the count of chemical synapses from s to j plus gap junctions
+  between s and j, from the wiring the encoded brain is built on, unsigned, scored by the same
+  metric, with C.C (two-contact paths, over all 302) beside it.
+
+The reading sets torch to 8 threads. Run it with nothing else running.
+
+Usage: uv run python docs/experiments/logbooks/supporting/133-c2-fit/neural.py.txt
+       <vector.json, with "z" or "answer"> <out dir>
+Run from the repository root.
+"""
+
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+READING = Path("investigation/spike/ma_c2/reading.py.txt")
+READING_SHA = "dd6d8706e5162f2fad9ff457fea7df1f3f21b52138fc910a37f58bfb5cb3a9b0"
+STAMS = Path("investigation/spike/session0/exports/measured_stams.npz")
+STAMS_SHA = "1c98ae81f5422ac5f9cc35bbd375ac7ea7815c59e3cf0d5545d08e3898237b28"
+NAMES_PATH = Path("investigation/spike/session0/creamer_154_names.json")
+NAMES_SHA = "bbf27cd51bccee9e91a56df9d57508776d530f12b258492c354d81f02174e244"
+N_BOOT = 10_000
+CLASS_SEED, NEURON_SEED = 9811, 9812
+SQRT_REL_S = {"value": 0.423, "interval": [0.369, 0.471]}  # quoted, not computed here
+COPY_TRAIN_R = 0.173  # quoted: r(T, S), the score of copying the training animals
+
+
+def nan_corr(y_true, y_hat, alpha=0.05, mean_sub=True):  # noqa: ANN001, ANN201 - verbatim
+    """Ported verbatim from Creamer's metrics.py (bba43302), lines 109-136, as the reading's."""
+    import scipy.stats
+
+    y_true = y_true.reshape(-1)
+    y_hat = y_hat.reshape(-1)
+
+    mask = ~np.isnan(y_true) & ~np.isnan(y_hat)
+    y_true = y_true[mask]
+    y_hat = y_hat[mask]
+
+    if mean_sub:
+        y_true = y_true - np.mean(y_true)
+        y_hat = y_hat - np.mean(y_hat)
+
+    y_true_std = np.std(y_true, ddof=0)
+    y_hat_std = np.std(y_hat, ddof=0)
+
+    corr = np.mean(y_true * y_hat) / y_true_std / y_hat_std
+
+    # now estimate the confidence intervals for the correlation
+    n = y_true.shape[0]
+    z_a = scipy.stats.norm.ppf(1 - alpha / 2)
+    z_r = np.log((1 + corr) / (1 - corr)) / 2
+    l = z_r - (z_a / np.sqrt(n - 3))  # noqa: E741 - verbatim
+    u = z_r + (z_a / np.sqrt(n - 3))
+    ci_l = (np.exp(2 * l) - 1) / (np.exp(2 * l) + 1)
+    ci_u = (np.exp(2 * u) - 1) / (np.exp(2 * u) + 1)
+    ci = [np.abs(ci_l - corr), ci_u - corr]
+
+    return corr, ci
+
+
+def sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def run_reading(vector_path: Path, out_dir: Path) -> None:
+    """Execute M-a's reading unchanged but for its vector's file and its output directory."""
+    source = READING.read_text()
+    old_vector = 'HINGE4 = "docs/experiments/logbooks/supporting/131-c2-clean-start/probes/hinge4.json"'
+    old_dir = 'DIR = "investigation/spike/ma_c2"'
+    assert source.count(old_vector) == 1 and source.count(old_dir) == 1
+    source = source.replace(old_vector, f"HINGE4 = {str(vector_path)!r}")
+    source = source.replace(old_dir, f"DIR = {str(out_dir)!r}")
+    exec(compile(source, str(READING), "exec"), {"__name__": "__reading__"})  # noqa: S102
+
+
+def counts(n_units: int, seed: int) -> np.ndarray:
+    """(N_BOOT, n_units): how often each unit is drawn in each resample, drawn once."""
+    draws = np.random.default_rng(seed).integers(0, n_units, size=(N_BOOT, n_units))
+    out = np.zeros((N_BOOT, n_units))
+    np.add.at(out, (np.repeat(np.arange(N_BOOT), n_units), draws.reshape(-1)), 1.0)
+    return out
+
+
+def resampled_r(y: np.ndarray, pred: np.ndarray, unit: np.ndarray, c: np.ndarray) -> np.ndarray:
+    """r of pred against y in every resample, each entry weighted by its unit's draw count.
+
+    Entries where either is not finite are dropped, as nan_corr drops them. Each resample's r is the
+    weighted Pearson correlation, computed from per-unit sums.
+    """
+    keep = np.isfinite(y) & np.isfinite(pred)
+    y, a, u = y[keep], pred[keep], unit[keep]
+    y = y - y.mean()
+    a = a - a.mean()
+    sums = np.stack(
+        [np.bincount(u, weights=v, minlength=c.shape[1]) for v in (np.ones_like(y), y, a, y * y, a * a, a * y)],
+        axis=1,
+    )
+    n, sy, sa, syy, saa, say = (c @ sums).T
+    cov = say / n - sy * sa / n**2
+    vy = syy / n - (sy / n) ** 2
+    va = saa / n - (sa / n) ** 2
+    return cov / np.sqrt(vy * va)
+
+
+def self_check(y: np.ndarray, pred: np.ndarray, unit: np.ndarray, n_units: int) -> dict:
+    """The resampled r against nan_corr: every unit drawn once, and one unit twice and one not at all."""
+    once = float(resampled_r(y, pred, unit, np.ones((1, n_units)))[0])
+    direct = float(nan_corr(y.copy(), pred.copy())[0])
+    c = np.ones((1, n_units))
+    c[0, 0], c[0, 1] = 2.0, 0.0
+    rows = np.concatenate([np.flatnonzero(unit == u) for u in range(n_units) for _ in range(int(c[0, u]))])
+    twice = float(resampled_r(y, pred, unit, c)[0])
+    repeated = float(nan_corr(y[rows].copy(), pred[rows].copy())[0])
+    assert abs(once - direct) < 1e-12 and abs(twice - repeated) < 1e-12, "the resampled r is wrong"
+    return {"once": once, "nan_corr": direct, "unit_0_twice_unit_1_out": twice, "entries_repeated": repeated}
+
+
+def interval(x: np.ndarray) -> list[float]:
+    lo, hi = np.nanpercentile(x, [2.5, 97.5])
+    return [float(lo), float(hi)]
+
+
+def named(lo: float, hi: float) -> str:
+    if lo > 0:
+        return "fitting raised it"
+    if hi < 0:
+        return "fitting lowered it"
+    return "no detectable change"
+
+
+def wiring(names154: list[str]) -> tuple[np.ndarray, np.ndarray]:
+    """C and C.C on the 154, as [responder, stimulated], from the encoded brain's own wiring."""
+    sys.path.insert(0, "scripts/analysis")
+    import c2_fit as cf
+    from quantumnematode.connectome.loader import load_emmons_2024_hermaphrodite
+
+    built = cf.brain()
+    assert built.config.connectome_source == "emmons_2024_hermaphrodite"
+    assert built.config.wiring == "wild_type"
+    connectome = load_emmons_2024_hermaphrodite()
+    order = list(built.topology.neuron_names)
+    at = {n: i for i, n in enumerate(order)}
+    full = np.zeros((len(order), len(order)))
+    for syn in connectome.chemical_synapses:
+        full[at[syn.post], at[syn.pre]] += syn.weight  # responder post, stimulated pre
+    for gj in connectome.gap_junctions:
+        a, b = at[gj.neuron_a], at[gj.neuron_b]
+        full[a, b] += gj.weight
+        full[b, a] += gj.weight
+    idx = [at[n] for n in names154]
+    return full[np.ix_(idx, idx)], (full @ full)[np.ix_(idx, idx)]
+
+
+def main() -> None:
+    vector_path, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    assert sha(READING) == READING_SHA, "reading.py.txt changed"
+    assert sha(STAMS) == STAMS_SHA and sha(NAMES_PATH) == NAMES_SHA, "a measured input changed"
+    vector = json.loads(vector_path.read_text())
+    z = vector.get("z", vector.get("answer"))
+    assert len(z) == 137
+    shim = out_dir / "vector.json"
+    shim.write_text(json.dumps({"z": [float(v) for v in z]}))
+    run_reading(shim, out_dir)
+
+    from quantumnematode.connectome.neuron_classes import neuron_classes
+
+    names = json.loads(NAMES_PATH.read_text())
+    responses = np.load(out_dir / "responses.npz")
+    data = np.load(STAMS)
+    test = data["measured_stams.test.npy"].astype(float)
+    eye = np.eye(154, dtype=bool)
+    test[eye] = np.nan
+    answer = responses["c2_start_1"].copy()
+    box = responses["box_centre_start_1"].copy()
+    answer[eye] = np.nan
+    box[eye] = np.nan
+    m_a = json.loads((out_dir / "result.json").read_text())
+
+    classes = neuron_classes()
+    stim_class = [classes[n] for n in names]
+    class_names = sorted(set(stim_class))
+    class_of = np.array([class_names.index(c) for c in stim_class])
+    cols = np.broadcast_to(np.arange(154), (154, 154))  # entry [j, s] -> stimulated s
+    y = test.reshape(-1)
+    paired = {}
+    for label, unit_of_col, seed, n_units in (
+        ("classes", class_of, CLASS_SEED, len(class_names)),
+        ("neurons", np.arange(154), NEURON_SEED, 154),
+    ):
+        c = counts(n_units, seed)
+        unit = unit_of_col[cols].reshape(-1)
+        ra = resampled_r(y, answer.reshape(-1), unit, c)
+        rb = resampled_r(y, box.reshape(-1), unit, c)
+        lo, hi = interval(ra - rb)
+        paired[label] = {
+            "units": n_units,
+            "seed": seed,
+            "resamples": N_BOOT,
+            "d_interval95": [lo, hi],
+            "reading": named(lo, hi),
+            "self_check": self_check(y, answer.reshape(-1), unit, n_units),
+        }
+
+    point = m_a["readings"]
+    r_answer = point["c2/start/1"]["test"]["r"]
+    r_box = point["box_centre/start/1"]["test"]["r"]
+    c1, c2 = wiring(names)
+    import c2_fit as cf  # on the path since wiring()
+
+    assert (CLASS_SEED, NEURON_SEED) == (cf.NEURAL_CLASS_BOOTSTRAP_SEED, cf.NEURAL_NEURON_BOOTSTRAP_SEED)
+    assert len(class_names) == 74, "the stimulated neurons' classes changed"
+    wiring_r = {}
+    for label, w in (("C", c1), ("C.C", c2)):
+        w = w.astype(float).copy()
+        w[eye] = np.nan
+        r, ci = nan_corr(test.copy(), w)
+        wiring_r[label] = {"r": float(r), "ci95": [float(r - ci[0]), float(r + ci[1])]}
+    reaches = any(v["r"] >= r_box for v in wiring_r.values())
+    record = {
+        "description": __doc__,
+        "vector": {"path": str(vector_path), "sha256": sha(vector_path), "reading_input_sha256": sha(shim)},
+        "inputs": {"reading_sha256": READING_SHA, "measured_sha256": STAMS_SHA, "names_sha256": NAMES_SHA},
+        "answer": {
+            "r": r_answer,
+            "ci95": point["c2/start/1"]["test"]["ci95"],
+            "share_of_ceiling": r_answer / SQRT_REL_S["value"],
+            "ceiling_sqrt_rel_S": SQRT_REL_S,
+            "copy_training_animals_r": COPY_TRAIN_R,
+        },
+        "unfitted_floor": {"r": r_box, "ci95": point["box_centre/start/1"]["test"]["ci95"]},
+        "chance_97_5th": m_a["primary"]["null_97_5th_percentile"],
+        "paired": {"d": r_answer - r_box, "named_on": "classes", **paired},
+        "wiring_only": {
+            **wiring_r,
+            "reaches_unfitted_floor": reaches,
+            "reading": "grades the wiring more than the network" if reaches else "below the unfitted floor",
+        },
+        "sign_agreement": point["c2/start/1"]["sign_agreement_test"],
+        "checks": m_a["checks"],
+        "classes": {"stimulated_classes": len(class_names)},
+    }
+    (out_dir / "neural.json").write_text(json.dumps(record, indent=1))
+    print(json.dumps({k: record[k] for k in ("answer", "unfitted_floor", "chance_97_5th", "paired", "wiring_only")}, indent=1))
+
+
+if __name__ == "__main__":
+    main()

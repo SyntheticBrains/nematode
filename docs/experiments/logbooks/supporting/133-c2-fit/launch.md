@@ -1,6 +1,6 @@
 # Launch record: C.2 fitted to the wild type and its mutants by a staged procedure
 
-**Part A registered 2026-11-10**, change `fit-c2`. It is committed before the readiness pilot, F.0b-ii and the registered fit, and fixes every rule, threshold and seed in the change's design. Part B, added after the pilot and before F.0b-ii's preflight, records the pilot. Part C, added after F.0b-ii and before the registered fit, records the recovery. Neither changes a rule. A verdict registered here is never re-read under a different rule. Anything else is reported beside it as description.
+**Part A registered 2026-11-10**, change `fit-c2`. It is committed before the readiness pilot, F.0b-ii and the registered fit, and fixes every rule, threshold and seed in the change's design. Part B, added after the pilot and before F.0b-ii's preflight, records the pilot. Part C, added after F.0b-ii and before the registered fit, records the recovery. Part B changes no rule. Part C changes three, by the maintainer's decision after F.0b-ii failed: the gate's guard (with the gate failed, the fit runs once), the leave-one-out and the verdict map's branches (note below). A verdict registered here is never re-read under a different rule. Anything else is reported beside it as description.
 
 **Part A amended 2026-11-12,** the maintainer's decision, before any registered run. The first readiness pilot was stopped at 2a's end by its kill rule. The amendment changes the first half of the procedure only: stage 1's size, and up to six starts of the first half with one rule that keeps a start (*The first half's starts*, below). Everything seen before it is listed under *Disclosures*. No registered simulation had run, and no verdict, gate or bar after 2a changes.
 
@@ -32,6 +32,14 @@ Everything seen before it is listed under *Disclosures*. No registered simulatio
 Everything seen before it is listed under *Disclosures*. No registered simulation had run. No verdict, gate or bar changes; F.0b-ii's preflight gains a check, and its gate is unchanged.
 
 **Part B added 2026-11-21,** after the sixth readiness pilot and before F.0b-ii's preflight. The pilot passed its go rule: the wild type in 3 of 5 populations, tph-1 and tax-4 each in 5 of 5. Its stage-1 kill at the first start was overridden by the maintainer, as Part B's disclosures state. Part B records it and changes no rule (*Part B: the readiness pilot*, at the end).
+
+**Part C added 2026-11-24,** after F.0b-ii and before the registered fit. F.0b-ii failed its gate (gain 0.635 against 0.75). The maintainer decided on 2026-11-23 to run a serotonin-off probe first, and then, if it read "not found", to run the registered fit once, capped. The cap was approved on 2026-11-24, before the probe ran, and the probe read "not found". Part C:
+
+- lets `run`, `grade` and `read` proceed with the gate failed, and `run` only once;
+- drops the tax-4 leave-one-out;
+- narrows the verdict map's branches.
+
+No seed, threshold, procedure, grade or verdict rule changes (*Part C*, at the end).
 
 ## Part A: the rules
 
@@ -815,3 +823,217 @@ Populations 1 and 2 fail on one statistic, the on-lawn onset rate. Its z is −3
   - the onset rate's failing range now stands apart from its range over all 15.
 
   No count, pass or verdict changed.
+
+## Part C: F.0b-ii fails, and the maintainer's decision
+
+**Added 2026-11-24.** F.0b-ii's recovery ran at HEAD `a5ddb9dd`, manifest `79f185d3…`, on base 1,240,000,000 with CMA seeds 5801–5804 and restarts from 5831. It ran from 2026-11-21 12:05 to 2026-11-23 17:46 AEDT. Its record is `recovery.json`, bound with the preflight's `recovery_preflight.json`.
+
+This Part records:
+
+- that the gate failed;
+- what the recovery reached;
+- a diagnosis, and a probe the maintainer asked for before deciding;
+- the maintainer's decision.
+
+The decision lets the registered fit run once with the gate failed, drops the tax-4 leave-one-out and narrows the verdict map. This Part changes no seed, threshold, procedure, grade or verdict rule.
+
+### The gate: fails
+
+- **The starts.**
+  - Start 0 (CMA seeds 5801, 5802) and start 2 (5833, 5834) were dropped at the descent, at D_fit 4.85 and 5.29 against 4.25.
+  - Start 1 (5831, 5832) was dropped at the bar, at 2.92 against 2.5.
+  - **Start 3 (5835, 5836) was kept.**
+- **The gate.** The answer was re-simulated 10 times, and its median D_rec is **2.415**, against the gate line of 1.767. That is a gain of **0.635**, against 0.75, so **the gate fails.** Part A says that no registered fit runs until the maintainer decides.
+
+The median terms over the 10 re-simulations:
+
+| Term | Median |
+|---|---|
+| D_rec | 2.415 |
+| tph-1 | **5.25** |
+| chemotaxis | 2.08 |
+| local search | 1.90 |
+| tax-4 | 1.19 |
+| small lawn, uniform lawn, kinematics, activity | 1.18 or lower |
+| pdfr-1 | 0.62 |
+
+**The cost on 16 workers.**
+
+- **The kept start:** 0.95 h in stage 1, 7.51 h in 2a, 22.67 h in 2b and 5.71 h in the final stage. The final stage's plateau reading held from generation 40.
+- **The dropped starts:** 4.6 h, 7.6 h and 4.4 h.
+- **In all:** 53.7 h on the clock.
+
+### What the recovery reached, as description
+
+- **tph-1 alone keeps D_rec above the line.** Across the re-simulations the answer's tph-1 roaming difference runs from −0.003 to +0.006, against the truth's +0.27. With its term set to 0, D_rec would be 1.12. The gate is not re-read that way.
+- **The wild type is not recovered either.**
+  - On the six families alone, the answer's capped D against the truth is 1.37 (1.31–1.47 over the 10 re-simulations). The bands' centres score 1.59 on the same measure, so on it the answer is nearer the truth than the centres. (The preflight's wild-type reference, 1.135, is the whole D_rec with the mutant terms, and does not compare.)
+  - Its reversal share is 0.43, against the truth's 0.12; Roberts' is 0.173.
+  - Measured from the truth in band scales, its chemotaxis flip fraction is 3.6, its log early/late ratio −2.7 and its weathervane slope −2.6.
+  - Graded against the bands, it passes the wild type in 0 of 5 populations, pdfr-1 and tax-4 in 5 of 5, and tph-1 in 0. The truth passed the wild type in 3 of 5 (Part B).
+  - From the box centre, this recovery reached a different basin, one heavy in reversals. One recovery cannot say how often that happens.
+- **Its record under this Part A** is 1 run of 2 meeting its rule: the sixth pilot passed its go rule, and this recovery failed its gate. The seven runs so far span six versions of Part A, and pilots 1–3 stopped before 2b.
+- **Its distance from the truth**, as a share of the box, is 0.19–0.39 in every parameter block. Part A states that F.0b-ii does not test identification.
+
+### The diagnosis, as description
+
+- **The setting.** 2a fits the wild type alone, so it leaves the serotonin couples' strengths free.
+
+  - The truth's tph-1 response runs through the ser-5 couple, at the top of its box (2.98).
+  - The recovery's 2a left ser-5 at 0.0039. 2b, starting there, never found the response: of its 9,600 candidates, none had a tph-1 roaming difference above 0.035, the largest being 0.0350 (`probes/serotonin_2b_complete.json`).
+
+- **Across the four runs that reached 2b** (`probes/serotonin_history_complete.json`), the run that left ser-5 strongest at 2a's end found the response at once, and the run that left it weakest never did. The two between are out of order. The response counts as found at the first 2b generation where at least 10% of candidates show a tph-1 roaming difference of 0.05 or more.
+
+  | Run | ser-5 at 2a's end | First 2b generation with the response |
+  |---|---|---|
+  | sixth pilot | 2.31 | 2 |
+  | fifth pilot | 0.19 | 177 |
+  | fourth pilot | 0.052 | 81 |
+  | recovery | 0.0039 | none of 200 |
+
+  The fourth pilot's 2b found the response sooner than the fifth's although its 2a left ser-5 weaker. Its 2b raised the other serotonin couple from 0.137 to 0.65.
+
+- **A swap check** on the small lawn, on three fresh sets of 200 animals (`probes/serotonin_swap.json`):
+
+  | Vector | tph-1 roaming difference |
+  |---|---|
+  | the truth | +0.270 |
+  | the truth with the answer's ser-5 | −0.004; its wild type roams 0.475 instead of 0.20 |
+  | the answer | +0.001 |
+  | the answer with the truth's ser-5 | +0.048 |
+  | the answer with the truth's whole serotonin route | +0.046 |
+
+  ser-5 is necessary for the truth's response. In the answer it switches the response on at a sixth of the size, so the rest depends on the network downstream of it.
+
+- **The registered fit may be exposed to the same thing.** On these four runs, its tph-1 reading may depend on where its 2a leaves ser-5.
+
+### The serotonin-off probe, as description
+
+The maintainer asked first whether the wild type can pass, at the registered pass level, with tph-1 inert. The rule was that if it can, the fit does not run.
+
+The probe's design and rule were committed before it ran (`probes/serotonin_off_design.md`, `f73a7184`). It ran at that HEAD on 2026-11-24, from 06:16 to 07:40 AEDT, 1.39 h on 16 workers. Its record is `probes/serotonin_off.json`.
+
+- **P0** is the sixth pilot's answer with both serotonin couples at the bottom of their box.
+- **P1** refits the wild type from P0 for 60 generations, with those two couples frozen.
+
+**The rule reads "not found."**
+
+| | Wild type | tph-1 | tax-4 | pdfr-1 |
+|---|---|---|---|---|
+| P0 | 0 of 5 | 0 of 5 | 0 of 5 | 5 of 5 |
+| P1, the readout at generation 30 | 0 of 5 | 0 of 5 | 5 of 5 | 5 of 5 |
+
+- **P0** fails as predicted, on the small lawn's roaming fraction at z 7.7–8.4, among others. Every population also fails the roaming bouts on both lawns, the dwelling speeds, the 5-min roaming survival and the pause share.
+- **P1's readouts** fell from D_fit 4.79 at generation 0 to 2.18 at 10, 1.80 at 20 and 1.73 at 30. They then held at 1.73–1.76 to generation 60.
+- **P1's grade** fails the wild type in every population, on the on-lawn onset rate (z −3.80 to −4.03). Among its other failures:
+  - local search's presence in 4 of 5;
+  - the log early/late ratio in 3;
+  - the uniform lawn's roaming bout in 2, and the small lawn's pre-exit enrichment in 2.
+- **tph-1** fails in 5 of 5 in both, inert as designed.
+- **The rule is asymmetric.** "Not found" means only that the probe gives no reason to stop. A 60-generation search from one answer can miss an answer that exists.
+
+### The maintainer's decision: the fit runs once with F.0b-ii failed
+
+The maintainer took this decision on 2026-11-23, after the recovery, the diagnosis and an independent direction review. It was conditional on the serotonin-off probe reading "not found". **The cap below was approved on 2026-11-24, before the probe ran,** and the probe then read "not found".
+
+1. **The registered fit runs once.** It is the phase's last C.2 run, whatever it reads.
+2. **There is no repair of the procedure and no tax-4 leave-one-out.** `loo` is refused.
+3. **A pass enters C.4 as an in-sample result only**, and licenses nothing for W's arms. This replaces the pass branch of Part A's map, "W's arms run this procedure".
+4. **A fail is read against the failed F.0b-ii control.** It is not attributed to the model. The fail branch otherwise holds: the failing statistics and the readouts are the diagnosis, and no W arm registers on this procedure.
+
+**What follows from point 1:** the run is the last, so on a fail the C.2 risk row closes on its reading rather than returning to the maintainer.
+
+**The verdict and its rule are unchanged:**
+
+- the wild type in at least 3 of 5 registered populations, and tph-1 and tax-4 each in at least 3;
+- a fit that keeps no start has no answer, and fails;
+- it is in-sample.
+
+**Also unchanged:**
+
+- the procedure, every stage, guard, budget and reading;
+- the fit's seeds: base 1,280,000,000, CMA seeds 5811–5814, restarts from 5841. No simulation has used them;
+- the held-out reading, and the neural reading below;
+- everything Part A and Part B report beside the verdict.
+
+**Part A's description-only outcome for the leave-one-out**, "a pass with the leave-one-out's tax-4 failing", has no run to read and lapses.
+
+**The phase,** by the maintainer's decision with the cap: Phase 10 closes without W. C.3 waits for this fit's reading. If the fit passes, a single-seed timing pilot of C.3 comes first, and C.3 enters only if its 16 seeds fit in about a day.
+
+**The cost:** about 38 h with the first start kept, and about 55 h at the recovery's three dropped starts.
+
+### The guards, as amended
+
+- **`run`, `grade` and `read`** need this Part, with both recovery records bound. They also need one of:
+  - the gate passing;
+  - this Part carrying the heading above, "The maintainer's decision: the fit runs once with F.0b-ii failed", as a line of its own. The heading counts nowhere else in the record.
+- **`loo`** needs the gate passing. Under this decision it is refused.
+- **`run` runs once** under this decision: once `fit.json` exists, `run` is refused. A run that is interrupted resumes from its state, since `fit.json` is written only by `read`.
+- **`read`** writes the recovery's gate into `fit.json`, beside the verdict.
+- **The manifest** binds two more files, the neural reading's `neural.py.txt` and `investigation/spike/ma_c2/reading.py.txt`, so `run` refuses if either changes.
+  - It is remade for them and for the change to `c2_fit.py`: `0bd64048…f489`.
+  - Every other file's digest is unchanged.
+
+### The neural reading's new code
+
+- **`neural.py.txt`**, committed with this Part before `run`, is the reading's driver.
+  - It runs M-a's `reading.py.txt` unchanged but for two constants, its vector's file and its output directory.
+  - It first checks the SHA-256 of that script, the measured arrays and the 154 names against Part A's.
+  - It adds the paired test and the wiring-only control, to Part A's rules.
+- **The paired test** resamples the 74 stimulated classes on `default_rng(9811)`, the named interval. The stimulated neurons are resampled beside it on `default_rng(9812)`. Both generators are checked against `c2_fit.py`'s constants.
+- **The wiring-only control:** C and C·C are built from the encoded brain's own wiring, `emmons_2024_hermaphrodite`'s wild type.
+- **Each time it runs, it checks its resampled r** against `nan_corr`, and records the check: with every unit drawn once the two must agree, and with one unit drawn twice and one left out, the resampled r must equal `nan_corr` over the entries repeated that way.
+- **It was tested on Logbook 131's answer** (`probes/neural_check_131.json`).
+  - It reproduces M-a's r for the answer, 0.0534, and for the box centre, 0.0653, exactly.
+  - Every other field of M-a's record is equal too. Only the vector file's digest differs: it is the same z, written anew (`probes/neural_check_131_fields.json`, by `probes/neural_check_131.py.txt`).
+  - Its self-checks agree to within 3·10⁻¹⁷.
+  - On that answer, which earlier readings have read:
+    - d is −0.012, with a class interval of −0.029 to 0.0006, so **no detectable change**;
+    - the neuron interval is −0.027 to 0.0002;
+    - the wiring-only C reads 0.041 and C·C 0.023, both below the box centre's 0.065.
+
+### Seeds used since Part B
+
+These are all discarded seeds, now among the seed table's earlier blocks, so the tests check every registered block against them:
+
+- **The swap check:** 1,990,000,000 + 1000·k + i, for k = 0–2 and i < 200.
+- **The serotonin-off probe:**
+  - candidates 1,995,000,000–1,995,575,999;
+  - readouts 1,996,000,000–1,996,000,199;
+  - grade populations 1,996,100,000–1,996,100,999;
+  - its smoke 1,997,000,000–1,997,200,015;
+  - CMA seed 7311.
+
+The registered fit's seeds are those of Part A.
+
+### Disclosures
+
+- **What was seen before this Part:**
+
+  - the recovery's readouts as it ran, each reported to the maintainer;
+  - its gate and its answer's grade against the bands;
+  - the diagnosis, the swap check and the serotonin-off probe;
+  - an independent direction review with three reviewers.
+
+  The decision was taken after all of these. It does not re-read the gate, which stays failed. It sets what the one run may conclude.
+
+- **A correction to the draft PR's description of 2026-11-23,** which said the recovery "recovers the wild type, pdfr-1 and tax-4". The answer passes pdfr-1 and tax-4 against the bands, but it fails the wild type in 0 of 5 populations, where the truth passed in 3. It also sits far from the truth on the chemotaxis flip fraction, the log early/late ratio and the weathervane slope, and on its reversal share (above). So "recovers the wild type" was too strong.
+
+- **The diagnosis rests on four runs and one swap check.** The attribution to ser-5 is a pattern across the four runs, with two out of order, and the swap check confirms it in one answer.
+
+- **The scripts behind the diagnosis** ran in scratch on 2026-11-23 and are committed with this Part as they ran:
+
+  - `probes/serotonin_diagnosis.py.txt` and `probes/serotonin_history.py.txt` ran at about 07:23 AEDT, while the recovery's 2b was at about generation 160, ten hours before the recovery ended. Their records, `serotonin_diagnosis.json` and `serotonin_history.json`, cover 2b up to then.
+  - On the completed records, `serotonin_history.py.txt` was re-run unchanged (`serotonin_history_complete.json`), and `probes/serotonin_2b_complete.py.txt` reads every one of 2b's 9,600 candidates (`serotonin_2b_complete.json`). This Part's figures are from those.
+  - The mid-run reading had already shown no candidate above 0.035. The completed records confirm it.
+  - `probes/serotonin_swap.py.txt` ran after the recovery ended, at 17:52 (`serotonin_swap.json`).
+
+- **The independent review.** Before this Part was committed, a context-free reviewer read it and the code change, recomputing its figures from the records. It found:
+
+  - one false claim: the answer's wild type was compared with the bands' centres on two different measures;
+  - the diagnosis scripts' run time misstated, and their records covering 2b only to about generation 160;
+  - the cap's "runs once" not enforced in code;
+  - gaps in the tests, and the probes' seeds missing from the seed table;
+  - smaller numerical and wording errors.
+
+  Each is corrected above. A second pass confirmed the corrections, and its three remaining wording points were fixed.

@@ -252,23 +252,30 @@
   - no definedness flips;
   - the observation 0.984 on the lawn, D_fit 1.76, presence's bounds 0.0069 and 0.149;
   - the band-centre reference's gain 0.863, reported: the stated limit.
-- [ ] 5.2 `recovery` (about 30 h, and 2.3–8 h for each dropped start): the gate. Return to the maintainer if the gain is below 0.75.
-- [ ] 5.3 Part C, the recovery's result, committed.
+- [x] 5.2 `recovery` (about 30 h, and 2.3–8 h for each dropped start): the gate. Return to the maintainer if the gain is below 0.75. **Failed its gate** (2026-11-23, 53.7 h): gain 0.635 at median D_rec 2.415, with tph-1's term at 5.25; start 3 kept, three starts dropped. Returned to the maintainer, who decided (2026-11-23) on a serotonin-off probe first, then one capped fit if the probe read "not found".
+- [x] 5.2a The serotonin-off probe, with its design and rule committed before it ran (`f73a7184`). **Not found** (2026-11-24): P1 passes the wild type in 0 of 5, on the on-lawn onset rate.
+- [ ] 5.3 Part C, committed and pushed before `run`:
+  - the recovery's result, the diagnosis and the probe;
+  - the maintainer's decision and cap;
+  - the guard change, so `run`, `grade` and `read` proceed under the decision and `loo` refuses, with its tests;
+  - the neural reading's code bound in the manifest, and the manifest remade;
+  - an independent review.
 
 ## 6. The registered fit
 
 - [ ] 6.1 `run` (about 30 h, and 2.3–8 h for each dropped start), `grade` (5 + 10 populations) and `read`: `fit.json` with the verdict, the pass rate, the held-out reading, the restart spread against the pilot, and the cost.
 
-- [ ] 6.2 The neural reading's paired test and wiring-only control written to Part A's rules, tested on Logbook 131's answer and committed with Part B or Part C before `run`; then the reading on the registered answer, as Part A declares it: the answer's r and the box centre's, chance, the paired test, the wiring-only control and sign agreement, as description beside `fit.json`.
+- [ ] 6.2 The neural reading's paired test and wiring-only control written to Part A's rules, tested on Logbook 131's answer and committed with Part B or Part C before `run` (done with Part C: `neural.py.txt`, bound in the manifest; `probes/neural_check_131.json`); then the reading on the registered answer, as Part A declares it: the answer's r and the box centre's, chance, the paired test, the wiring-only control and sign agreement, as description beside `fit.json`.
 
 ## 7. The tax-4 leave-one-out
 
-- [ ] 7.1 `loo` (about 26 h), read beside the registered fit as description.
+- [ ] 7.1 ~~`loo` (about 26 h), read beside the registered fit as description.~~ Dropped by the maintainer's decision in Part C (2026-11-24): with F.0b-ii failed, `loo` is refused.
 
 ## 8. Close-out
 
 - [ ] 8.1 Docs:
   - Logbook 133;
+  - the roadmap's D37 and D38, for Part C's decision: W's arms do not inherit the procedure, and the leave-one-out is dropped;
   - the tracker (C.2, F.0, C.4, W.2's compute input, the seed table) and the logbook index row;
   - AGENTS.md;
   - `configs/README.md` (the option set by the registered arm);

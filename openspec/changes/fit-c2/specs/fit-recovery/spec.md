@@ -25,7 +25,7 @@ Before C.2's registered fit, the registered procedure SHALL recover one known tr
 #### Scenario: The recovery falls short
 
 - **WHEN** the recovery's gain is 0.70
-- **THEN** no registered C.2 fit SHALL run until the maintainer decides
+- **THEN** no registered C.2 fit SHALL run until the maintainer decides, and the decision SHALL be recorded in the launch record's Part C
 
 #### Scenario: A truth that does not hold the lawn
 

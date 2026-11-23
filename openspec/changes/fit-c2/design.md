@@ -326,6 +326,11 @@ The fifth readiness pilot (base 1,360,000,000; `pilot_fifth.json`, 47.1 h) dropp
 - **The verdict map:**
   - **pass:** C.2 enters C.4, and W's arms run this procedure, with W's compute decided from the measured cost before W registers;
   - **fail:** the failing statistics and each stage's readouts are the diagnosis. The roadmap's C.2 risk row goes to the maintainer, and no W arm registers on this procedure.
+  - **As amended in Part C (2026-11-24), after F.0b-ii's gate failed** (gain 0.635), by the maintainer's decision:
+    - the fit runs once, as the phase's last C.2 run, with no repair of the procedure and no leave-one-out;
+    - a pass enters C.4 as an in-sample result only and licenses nothing for W;
+    - a fail is read against the failed control, not attributed to the model, and the C.2 risk row closes on it;
+    - the verdict and its rule are unchanged.
 - **Reported beside, never re-read as the verdict:**
   - the answer on 10 more populations, a pass rate for the wild type and each mutant;
   - the held-out reading (decision 8);
@@ -337,7 +342,7 @@ The fifth readiness pilot (base 1,360,000,000; `pilot_fifth.json`, 47.1 h) dropp
   - **the restart spread:** the median over g < 15 of the capped D between the pilot's population g and the registered answer's population g, on W's fitted families (the small lawn, kinematics, activity) beside W's minimum, and on all six beside it.
 - **Description-only outcomes, named in advance:**
   - **a pass with a poor held-out reading** (the answer's median distance to a held-out half above the band-cohort reference's 95th percentile): C.2 passes, and C.4 states the held-out distance as a limit of the fit;
-  - **a pass with the leave-one-out's tax-4 failing:** C.2 passes, and C.4's tax-4 row reads as fitted, not predicted.
+  - **a pass with the leave-one-out's tax-4 failing:** C.2 passes, and C.4's tax-4 row reads as fitted, not predicted. *(Lapsed 2026-11-24 with the leave-one-out, Part C.)*
 
 ### 7. The readiness pilot
 
@@ -390,6 +395,7 @@ The fitted worm against held-out recording dates, on W's own rule (`benchmark_v4
 - tax-4 is read at every readout, and its answer is graded on 5 + 10 populations as a prediction, beside the registered fit's fitted tax-4.
 - **Description only:** it gates nothing and changes no verdict. It is the one mutant C.4 can read as predicted.
 - It needs about 26 h with its first start kept (27 h before the amendment of 2026-11-12), and runs after the registered fit's read.
+- **Dropped 2026-11-24** (Part C, the maintainer's decision after F.0b-ii failed): the leave-one-out does not run, and `loo` refuses. No C.2 mutant is read as predicted, so C.4's tax-4 row reads as fitted.
 
 ### 10. F.0b-ii, C.2's recovery control
 
@@ -544,6 +550,7 @@ The guards, through `cma_recovery.launch_committed`:
 - `recovery-preflight` needs Part B, with `pilot.json` bound and its go rule passing, and refuses if its record exists;
 - `recovery` needs the preflight's record committed, unchanged and passing;
 - `run`, `grade`, `read` and `loo` need Part C, with both recovery records bound and the gate passing;
+- *(amended 2026-11-24, Part C)* with the gate failed, `run`, `grade` and `read` proceed only if Part C carries the maintainer's decision's heading as a line of its own. Under it, `loo` refuses, and `run` refuses once `fit.json` exists. `read` records the recovery's gate beside the verdict;
 - `smoke` is unguarded, on discarded seeds. It runs the held-out reading's code on two band-cohort date sets, never the held-out ones.
 
 ### 13. The roadmap amendments
@@ -553,7 +560,7 @@ The guards, through `cma_recovery.launch_committed`:
   - The reason: wild-type data do not identify C.2's perturbation responses (Logbook 128).
   - Local search is no longer held out for C.2.
   - Both hold out Scheer's held-out recording dates, read beside the distance between two halves of them, and one tax-4 leave-one-out, as description.
-  - C.4's mutant rows compare fitted mutants, with tax-4's leave-one-out the one prediction.
+  - C.4's mutant rows compare fitted mutants, with tax-4's leave-one-out the one prediction. *(2026-11-24: C.2's leave-one-out is dropped, Part C; its tax-4 reads as fitted.)*
   - C.3 is unchanged: local search stays held out for it.
 - **D38**, a note of 2026-11-12 (decision 3a), the maintainer's decision:
   - C.2's stage 1 runs at 64 animals per evaluation, below D38's 200. It only finds 2a's starting point, and is started up to six times. Every later stage, every readout and every grade stays at 200.
@@ -594,7 +601,7 @@ The guards, through `cma_recovery.launch_committed`:
 - **[One recovery truth]**
   - It cannot show recovery across the box. It shows whether the procedure finds a known answer's behaviour from the box centre, near the wild type, where the fit works.
 - **[The mutants are fitted]**
-  - C.2's tph-1, pdfr-1 and tax-4 passes are fits, not predictions. Only the leave-one-out's tax-4 is predicted, and as description.
+  - C.2's tph-1, pdfr-1 and tax-4 passes are fits, not predictions. Only the leave-one-out's tax-4 is predicted, and as description. *(2026-11-24: the leave-one-out is dropped, Part C, so none is predicted.)*
   - C.4's mutant rows say so, as D37 amended states.
 - **[The stage-1 subset, the timescale and the bars were chosen on probes]**
   - They are disclosed in Part A.

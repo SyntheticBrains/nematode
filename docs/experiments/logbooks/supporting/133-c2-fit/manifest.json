@@ -1,6 +1,6 @@
 {
   "files": {
-    "scripts/analysis/c2_fit.py": "c01aec0e9a9df6a4793d04229a7924642affdd9dd573961d4382d66a7cd2a003",
+    "scripts/analysis/c2_fit.py": "0dffc7b5766bc45b622ee64b2143a02f2580a8060de6a1cc5f1895ffaf82888d",
     "scripts/analysis/c2_encoder_probe.py": "a2147d7c5c833032b31bf8cb42397357cab459626654fa5ab75ee2fadb72b8ce",
     "scripts/analysis/benchmark_grade.py": "829cf52399a23e658532ad7f14f6962a49e8f4ea1f3f93f0a5552a6da56487cb",
     "scripts/analysis/benchmark_bands.py": "7666dfe8d58f42e22e669d19f79b9bbdb2a9059e5943276630208b323ef9211b",
@@ -21,7 +21,9 @@
     "data/neuromodulators/layer.json": "b94756f65a460106cc3961c1d5c0128d776829b1cb32d67ea80e7a46d08d0335",
     "data/neuromodulators/receptor_signs.json": "e1ee51038996f3574ecd6253864a155dc20188d24d04979c38dbfd91e41b36e5",
     "data/neuromodulators/receptor_couplings.json": "3cc539001df8f1e6cf2ef9fa5032aa17b24c17aa9a963bae8d2a0ace27a3c47d",
-    "docs/experiments/logbooks/supporting/113-c1-fit/encodings.md": "d3aa1af865dc74fa1de33c11048fa56ca2dc004a50d40c39e50b7f35c8654ade"
+    "docs/experiments/logbooks/supporting/113-c1-fit/encodings.md": "d3aa1af865dc74fa1de33c11048fa56ca2dc004a50d40c39e50b7f35c8654ade",
+    "docs/experiments/logbooks/supporting/133-c2-fit/neural.py.txt": "cd019a815306c6c3e97fcd7bac0ce4843f1547f5abafd85f2d773e886d772d8b",
+    "investigation/spike/ma_c2/reading.py.txt": "dd6d8706e5162f2fad9ff457fea7df1f3f21b52138fc910a37f58bfb5cb3a9b0"
   },
   "package": "8c304510484ab230e10344a162e8a157a95621393824c36669c2842e2f0c28be"
 }

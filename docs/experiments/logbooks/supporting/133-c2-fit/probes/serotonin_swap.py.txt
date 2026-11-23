@@ -1,0 +1,81 @@
+"""Diagnostic probe: does the serotonin route carry the tph-1 response?
+
+Swaps serotonin-route entries between the recovery's answer and the truth (the sixth pilot's
+answer), then simulates the wild type and tph-1 on Scheer's small lawn and reads the roaming
+difference. Fresh animals, three sets of 200, disjoint from every registered seed block. A
+description beside the registered gate, which it does not change.
+"""
+
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/chriszaharia/projects/personal/nematode")
+sys.path.insert(0, str(REPO / "scripts" / "analysis"))
+import benchmark_grade as bg  # noqa: E402
+import c2_fit as cf  # noqa: E402
+
+SER5 = ["modulator.fixed.serotonin.ser-5"]
+COUPLES = [*SER5, "modulator.fixed.serotonin"]
+ROUTE = [*COUPLES, "modulator.drive.ingestion", "timescale.monoamine",
+         "sensory.ADF.concentration", "sensory.ADF.lateral", "sensory.ADF.derivative"]
+SETS = [list(range(1_990_000_000 + 1000 * k, 1_990_000_000 + 1000 * k + cf.ANIMALS)) for k in range(3)]
+
+
+def job(item: tuple[str, str, list[float], int]) -> tuple[str, str, int, dict]:
+    label, kind, z, k = item
+    bands = bg.load_bands_v4()
+    clf = bg.classifier(bands)
+    _, factory = cf.controller(z, None if kind == "wild" else kind)
+    populations, _ = bg.simulate_v2(cf.ARM, factory, SETS[k], bands, assays=("small_lawn",))
+    return label, kind, k, bg.family_values("small_lawn", populations["small_lawn"], clf)
+
+
+def main() -> None:
+    names = [e.name for e in cf.entries()]
+    rec = json.loads((cf.SUPPORT / "recovery.json").read_text())
+    pre = json.loads(cf.RECOVERY_PREFLIGHT_PATH.read_text())
+    answer, truth = list(rec["answer"]), list(pre["truth"])
+
+    def swap(base: list[float], donor: list[float], entries: list[str]) -> list[float]:
+        out = list(base)
+        for n in entries:
+            out[names.index(n)] = donor[names.index(n)]
+        return out
+
+    vectors = {
+        "answer": answer,
+        "answer + truth's ser-5": swap(answer, truth, SER5),
+        "answer + truth's couples": swap(answer, truth, COUPLES),
+        "answer + truth's route": swap(answer, truth, ROUTE),
+        "truth": truth,
+        "truth + answer's ser-5": swap(truth, answer, SER5),
+        "truth + answer's couples": swap(truth, answer, COUPLES),
+    }
+    items = [(lab, kind, z, k) for lab, z in vectors.items() for kind in ("wild", "tph-1") for k in range(len(SETS))]
+    t0 = time.time()
+    with cf._pool(int(sys.argv[2])) as pool:
+        results = list(pool.map(job, items))
+    print(f"{len(items)} small-lawn simulations in {time.time() - t0:.0f} s")
+    by: dict[str, dict[str, list[dict]]] = {}
+    for lab, kind, _k, vals in results:
+        by.setdefault(lab, {}).setdefault(kind, []).append(vals)
+    out = {}
+    print(f"\n{'vector':28s} {'wild roam':>10s} {'tph-1 roam':>11s} {'difference (3 sets)':>26s}  mean")
+    for lab in vectors:
+        w = [v.get("roaming_fraction") for v in by[lab]["wild"]]
+        t = [v.get("roaming_fraction") for v in by[lab]["tph-1"]]
+        d = [None if a is None or b is None else b - a for a, b in zip(w, t, strict=True)]
+        good = [x for x in d if x is not None]
+        out[lab] = {"wild": w, "tph1": t, "difference": d, "mean": float(np.mean(good)) if good else None}
+        print(f"{lab:28s} {np.nanmean(np.array(w, float)):10.3f} {np.nanmean(np.array(t, float)):11.3f} "
+              f"{'  '.join('nan' if x is None else f'{x:+.3f}' for x in d):>26s}  {out[lab]['mean']:+.3f}")
+    print("\ntruth's registered difference: +0.268")
+    Path(sys.argv[1]).write_text(json.dumps(out, indent=1))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,125 @@
+"""Read-only: the recovery's serotonin route against the truth's, from saved vectors and candidate logs.
+
+No simulation. Compares the encoder entries the tph-1 knockout acts through (the serotonin
+couples' strengths, the producers' drives, the monoamine timescale) between the truth (the sixth
+pilot's final answer), the pilot's stage answers, and the recovery's stage answers and current
+2b search distribution; then the distribution of every evaluated candidate's tph-1 roaming
+difference, generation by generation, in the recovery's 2b and the pilot's 2b.
+"""
+
+import json
+import pickle
+import sys
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/chriszaharia/projects/personal/nematode")
+sys.path.insert(0, str(REPO / "scripts" / "analysis"))
+import c2_fit as cf  # noqa: E402
+
+SCRATCH = Path(sys.argv[1])
+E = cf.entries()
+NAMES = [e.name for e in E]
+ROUTE = [
+    "modulator.fixed.serotonin",
+    "modulator.fixed.serotonin.ser-5",
+    "modulator.drive.ingestion",
+    "timescale.monoamine",
+    "sensory.ADF.concentration",
+    "sensory.ADF.lateral",
+    "sensory.ADF.derivative",
+    "wiring.unsigned.serotonin",
+    # context: the other fixed-sign monoamines and PDF, which share the timescale or the readout
+    "modulator.fixed.dopamine",
+    "modulator.fixed.octopamine",
+    "modulator.fixed.tyramine",
+    "modulator.fixed.pdf-1.pdfr-1",
+    "modulator.fixed.pdf-2.pdfr-1",
+    "wiring.excitatory",
+    "wiring.inhibitory",
+    "wiring.gap",
+]
+
+pre = json.loads(cf.RECOVERY_PREFLIGHT_PATH.read_text())
+truth = np.asarray(pre["truth"], float)
+pilot = pickle.load(open(REPO / "build/c2-fit/pilot/state.pkl", "rb"))
+rec = pickle.load(open(SCRATCH / "recovery_state.pkl", "rb"))
+assert np.allclose(truth, pilot["answers"]["final"]), "truth is not the pilot's final answer"
+
+es = rec["es"]
+mean = np.clip(np.asarray(es.mean, float), 0, 1)
+fav = np.clip(np.asarray(es.result.xfavorite, float), 0, 1)
+stds = np.asarray(es.stds, float)
+vec = {
+    "truth": truth,
+    "pilot 2a": np.asarray(pilot["answers"]["2a"], float),
+    "pilot 2b": np.asarray(pilot["answers"]["2b"], float),
+    "rec 2a": np.asarray(rec["answers"]["2a"], float),
+    "rec 2b mean": mean,
+}
+out = {"generation": len(rec["histories"]["2b"]["medians"]), "sigma": float(es.sigma), "entries": {}}
+print(f"recovery 2b at generation {out['generation']}, sigma {es.sigma:.4f}\n")
+print(f"{'entry':34s} " + " ".join(f"{k:>11s}" for k in vec) + "   (mean-truth)/std")
+for n in ROUTE:
+    i = NAMES.index(n)
+    e = E[i]
+    vals = {k: e.value(float(v[i])) for k, v in vec.items()}
+    gap = (mean[i] - truth[i]) / stds[i]
+    out["entries"][n] = {
+        **{k: {"unit": float(v[i]), "value": vals[k]} for k, v in vec.items()},
+        "std_unit": float(stds[i]),
+        "gap_in_std": float(gap),
+    }
+    print(f"{n:34s} " + " ".join(f"{vals[k]:11.4g}" for k in vec) + f"   {gap:+7.1f}")
+    print(f"{'  (unit)':34s} " + " ".join(f"{float(v[i]):11.3f}" for v in vec.values()) + f"   std {stds[i]:.4f}")
+
+print("\nmean |unit difference| from the truth, by block")
+blocks = sorted({e.block for e in E})
+print(f"{'block':10s} " + " ".join(f"{k:>11s}" for k in vec if k != "truth"))
+out["blocks"] = {}
+for b in blocks:
+    idx = [i for i, e in enumerate(E) if e.block == b]
+    row = {k: float(np.mean(np.abs(v[idx] - truth[idx]))) for k, v in vec.items() if k != "truth"}
+    out["blocks"][b] = row
+    print(f"{b:10s} " + " ".join(f"{row[k]:11.3f}" for k in row))
+gaps = (mean - truth) / stds
+order = np.argsort(-np.abs(gaps))[:15]
+print("\nthe recovery mean's 15 coordinates farthest from the truth, in search stds")
+out["farthest"] = []
+for i in order:
+    out["farthest"].append({"entry": NAMES[i], "gap_in_std": float(gaps[i]), "unit_diff": float(mean[i] - truth[i])})
+    print(f"  {NAMES[i]:34s} {gaps[i]:+7.1f}  (unit {mean[i] - truth[i]:+.3f})")
+
+
+def candidates(path: Path) -> dict[int, list[tuple[float | None, float | None]]]:
+    by: dict[int, list[tuple[float | None, float | None]]] = {}
+    with open(path) as f:
+        for line in f:
+            r = json.loads(line)
+            d = r.get("delta") or {}
+            t = (d.get("tph-1") or {}).get("roaming_fraction")
+            p = (d.get("pdfr-1") or {}).get("roaming_fraction")
+            by.setdefault(int(r["generation"]), []).append((t, p))
+    return by
+
+
+print("\nevery candidate's tph-1 roaming difference (truth +0.268), by window of 10 generations")
+print(f"{'run':9s} {'gens':>9s} {'n':>5s} {'median':>8s} {'p90':>8s} {'max':>8s} {'>=0.05':>7s} {'>=0.12':>7s}")
+out["candidates"] = {}
+for label, path in (("recovery", REPO / "build/c2-fit/recovery/stage_2b.jsonl"),
+                    ("pilot", REPO / "build/c2-fit/pilot/stage_2b.jsonl")):
+    by = candidates(path)
+    rows = []
+    for lo in range(1, max(by) + 1, 10):
+        t = np.array([x[0] for g in range(lo, lo + 10) for x in by.get(g, []) if x[0] is not None])
+        if not len(t):
+            continue
+        row = {"from": lo, "to": lo + 9, "n": int(len(t)), "median": float(np.median(t)),
+               "p90": float(np.percentile(t, 90)), "max": float(t.max()),
+               "share_005": float(np.mean(t >= 0.05)), "share_012": float(np.mean(t >= 0.12))}
+        rows.append(row)
+        print(f"{label:9s} {lo:4d}-{lo + 9:<4d} {len(t):5d} {row['median']:+8.3f} {row['p90']:+8.3f} "
+              f"{row['max']:+8.3f} {row['share_005']:7.2f} {row['share_012']:7.2f}")
+    out["candidates"][label] = rows
+(SCRATCH / "sero_diag.json").write_text(json.dumps(out, indent=1))

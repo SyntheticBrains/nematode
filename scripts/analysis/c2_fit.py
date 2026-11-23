@@ -1962,6 +1962,9 @@ MANIFEST_FILES: tuple[str, ...] = (
     "data/neuromodulators/receptor_signs.json",
     "data/neuromodulators/receptor_couplings.json",
     "docs/experiments/logbooks/supporting/113-c1-fit/encodings.md",
+    # The neural reading, read once on the answer after `read`, fixed before the answer exists.
+    "docs/experiments/logbooks/supporting/133-c2-fit/neural.py.txt",
+    "investigation/spike/ma_c2/reading.py.txt",
 )
 PACKAGE = "packages/quantum-nematode/quantumnematode"
 
@@ -2032,6 +2035,18 @@ def _part(name: str) -> bool:
 
 
 PART_A_BOUND: tuple[Path, ...] = (ENCODINGS_PATH, MANIFEST_PATH, SPEED_NOISE_PATH)
+GATE_DECISION = "### The maintainer's decision: the fit runs once with F.0b-ii failed"
+
+
+def _decided_despite_gate() -> bool:
+    """Return whether Part C itself carries the decision to run the fit with the gate failed.
+
+    The heading counts only as a line of its own between Part C's heading and the next part's.
+    """
+    if not _part("C"):
+        return False
+    part_c = LAUNCH_PATH.read_text().split("\n## Part C", 1)[1].split("\n## ", 1)[0]
+    return f"\n{GATE_DECISION}\n" in part_c
 
 
 def guard(stage: str) -> str | None:  # noqa: C901, PLR0911, PLR0912 - one refusal per condition
@@ -2062,8 +2077,14 @@ def guard(stage: str) -> str | None:  # noqa: C901, PLR0911, PLR0912 - one refus
     part_c = (*part_b, RECOVERY_PREFLIGHT_PATH, RECOVERY_PATH)
     if not (_part("C") and cr.launch_committed(part_c, launch_path=LAUNCH_PATH)):
         return "Part C, with the recovery's records, is uncommitted or changed"
-    if not _json(RECOVERY_PATH).get("gate", {}).get("passes"):
+    if _json(RECOVERY_PATH).get("gate", {}).get("passes"):
+        return None
+    if not _decided_despite_gate():
         return "F.0b-ii's gate has not passed"
+    if stage == "loo":
+        return "the leave-one-out was dropped when the fit was let run with F.0b-ii failed"
+    if stage == "run" and FIT_PATH.exists():
+        return "the fit runs once with F.0b-ii failed, and its record exists"
     return None
 
 
@@ -2202,9 +2223,15 @@ def _grade(workers: int) -> int:
 
 def _read() -> int:
     record = _json(BUILD / "fit_procedure.json")
+    recovery_gate = _json(RECOVERY_PATH).get("gate")
     if record.get("killed"):
         # No start was kept: the fit has no answer, and that is its verdict.
-        out = {"description": DESCRIPTION, **record, "verdict": no_answer(record["killed"])}
+        out = {
+            "description": DESCRIPTION,
+            **record,
+            "verdict": no_answer(record["killed"]),
+            "recovery_gate": recovery_gate,
+        }
         _write_json(FIT_PATH, out)
         print(json.dumps(nr._finite({"verdict": out["verdict"]})))
         return 0
@@ -2215,6 +2242,7 @@ def _read() -> int:
         "description": DESCRIPTION,
         **record,
         "verdict": verdict(grades),
+        "recovery_gate": recovery_gate,
         "in_sample": "every graded statistic and both resolved mutants are fitted",
         "pass_rates": pass_rates(grades),
         "held_out": held_out_reading(grades),

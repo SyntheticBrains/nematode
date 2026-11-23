@@ -197,7 +197,7 @@ Reported beside the verdict, and never read in its place:
 - the restart spread: the median capped D between the pilot's and the registered answer's populations g < 15, on W's fitted families and on all six;
 - the neural reading: the answer's in-silico single-neuron stimulation responses against Creamer et al.'s measured ones, with a paired test against the unfitted network and a wiring-only control, on rules fixed in Part A.
 
-A pass with a poor held-out reading, or with the leave-one-out's tax-4 failing, SHALL be read by the outcomes the launch record names in advance.
+A pass with a poor held-out reading, or with the leave-one-out's tax-4 failing, SHALL be read by the outcomes the launch record names in advance. If the fit runs under the maintainer's decision after a failed recovery gate, the verdict and its rule SHALL be unchanged, a pass SHALL be read as in-sample only, and a fail SHALL be read against the failed recovery, not attributed to the model.
 
 #### Scenario: A fitted mutant fails the verdict
 
@@ -236,7 +236,7 @@ The date sets SHALL be N2's 26 unread held-out dates, and PD1074's 24 held-out d
 
 ### Requirement: A tax-4 leave-one-out, as description
 
-After the registered fit, the same procedure SHALL run on its own seeds with tax-4 out of the objective. tph-1 and pdfr-1 SHALL then be together half of it, and the failure probability SHALL omit tax-4's statistics. Its answer's tax-4 SHALL be graded on 15 populations and reported beside the registered fit's. It SHALL gate nothing.
+After the registered fit, the same procedure SHALL run on its own seeds with tax-4 out of the objective, unless the fit ran under the maintainer's decision after a failed recovery gate, in which case it SHALL NOT run. tph-1 and pdfr-1 SHALL then be together half of it, and the failure probability SHALL omit tax-4's statistics. Its answer's tax-4 SHALL be graded on 15 populations and reported beside the registered fit's. It SHALL gate nothing.
 
 #### Scenario: tax-4 is never scored
 
@@ -251,17 +251,34 @@ Launch record 133 SHALL be committed in three dated parts:
 - **Part B, after the pilot:** its result;
 - **Part C, after the recovery:** its result.
 
-Parts B and C SHALL change no rule. Part A SHALL record SHA-256 digests of `c2_fit.py` and the scripts it imports, the arm's assay configs, `bands_v4.json`, `primitives.json`, the neuromodulator data files and the encoding table. Every stage SHALL check them at start and at each resume, refuse on a mismatch, and require v4's bands to be valid. The guards are:
+Part B SHALL change no rule. Part C SHALL change none either, with one exception: after a failed recovery gate, the maintainer's decision, recorded in Part C under its own heading, MAY let the registered fit run once with the gate failed, drop the leave-one-out and narrow the verdict map's branches. It SHALL change no seed, threshold, procedure or grade, and not the verdict's rule. Part A SHALL record SHA-256 digests of `c2_fit.py` and the scripts it imports, the arm's assay configs, `bands_v4.json`, `primitives.json`, the neuromodulator data files and the encoding table. Every stage SHALL check them at start and at each resume, refuse on a mismatch, and require v4's bands to be valid. The guards are:
 
 - `pilot` SHALL refuse unless Part A is committed and unchanged;
 - `recovery-preflight` SHALL refuse unless Part B is committed with the pilot's record bound and its go rule passing;
 - `recovery` SHALL refuse unless the preflight's record is committed, unchanged and passing;
-- `run`, `grade`, `read` and `loo` SHALL refuse unless Part C is committed with both recovery records bound and the gate passing.
+- `run`, `grade`, `read` and `loo` SHALL refuse unless Part C is committed with both recovery records bound and the gate passing;
+- with the gate failed, `run`, `grade` and `read` SHALL proceed only if Part C carries the maintainer's decision's heading as a line of its own, `loo` SHALL refuse, and `run` SHALL refuse once the fit's record exists;
+- `read` SHALL record the recovery's gate beside the verdict.
 
 #### Scenario: The fit refuses before the recovery is recorded
 
 - **WHEN** `run` is invoked while Part C is absent or the recovery record differs from its committed version
 - **THEN** it SHALL refuse and run nothing
+
+#### Scenario: The maintainer's decision lets the fit run with the gate failed
+
+- **WHEN** the recovery's gate failed and Part C carries the decision's heading
+- **THEN** `run`, `grade` and `read` SHALL proceed, and `loo` SHALL refuse
+
+#### Scenario: The fit runs once under the decision
+
+- **WHEN** `run` is invoked under the decision and the fit's record exists
+- **THEN** it SHALL refuse, and `grade` and `read` SHALL still proceed
+
+#### Scenario: The decision counts only in Part C
+
+- **WHEN** the recovery's gate failed and the decision's heading appears only outside Part C
+- **THEN** `run`, `grade`, `read` and `loo` SHALL refuse
 
 #### Scenario: A changed config stops a run
 

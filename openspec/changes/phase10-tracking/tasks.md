@@ -23,7 +23,10 @@ and go/no-go. Every Phase 10 milestone PR updates this checklist as part of its 
 
 Binding: nothing is fitted before B reads valid; nothing is fitted on real data before F.0 clears;
 nothing in W registers before C.2 has read. *(Amended 2026-10-25, the maintainer's decision: F.0
-clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-ii.)*
+clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-ii.)* *(Amended
+2026-11-24, the maintainer's decision of 2026-11-23: F.0b-ii failed its gate, and C.2's registered
+fit runs once with it failed, capped, as launch record 133's Part C records. Phase 10 closes
+without W.)*
 
 ## H — housekeeping (MUST, first)
 
@@ -533,7 +536,9 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
       registered in change `fit-c2`: one truth, the readiness pilot's answer, recovered by the
       registered procedure from the box centre, gate 0.75. The truth sits beside the wild type, so
       the gate tests reaching the region and the spread between runs, not identifying the truth; D38's
-      amendment states it.)*
+      amendment states it.)* *(2026-11-23: the preflight passed all seven checks, and **F.0b-ii
+      failed its gate**, with a gain of 0.635 against 0.75. tph-1 alone keeps it out; see C.2.
+      F.0 does not clear for C.2.)*
 
   *(2026-10-29: change `rerun-cma-recovery-v2`; [Logbook 116](../../../docs/experiments/logbooks/116-cma-recovery-v2.md).)*
   **F.0b-i on v2 fails its gate**, with a median gain of 0.690 against 0.75. sep-CMA recovers the two
@@ -919,6 +924,18 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
       dropped at 2a's lawn reading.
     - A run is about 38 h with its first start kept, and the chain about 110 h from here.
     - F.0b-ii's preflight is next. Its truth is the pilot's answer.
+  - *(2026-11-24, Part C.)* **F.0b-ii fails, and the registered fit runs once, capped.**
+    - The preflight passed all seven checks (2026-11-21).
+    - The recovery kept its fourth start and failed its gate: a gain of 0.635 at median D_rec 2.415, against 0.75 (53.7 h). Its answer's tph-1 is inert in every re-simulation. With that term zeroed, D_rec would be 1.12. Its wild type fails against the bands in 0 of 5 populations, where the truth passed in 3, and it is heavy in reversals (0.43, against the truth's 0.12).
+    - Diagnosis, as description: across four runs, how soon 2b found the tph-1 response may depend on how strong 2a left the ser-5 couple, with two runs out of order. The recovery's 2a left it near zero, and its 2b never found the response.
+    - A serotonin-off probe, with its rule fixed before it ran, read "not found": with tph-1 inert, a 60-generation wild-type refit passed the wild type in 0 of 5 populations, on the on-lawn onset rate.
+    - **The maintainer's decision** (2026-11-23, its cap approved 2026-11-24):
+      - the fit runs once, as the phase's last C.2 run;
+      - no repair of the procedure and no tax-4 leave-one-out;
+      - a pass enters C.4 in-sample only and licenses nothing for W;
+      - a fail is read against the failed control, not attributed to the model.
+    - The verdict and its rule are unchanged.
+    - **C.3** waits for the fit's reading, by the maintainer's decision with the cap: if the fit passes, a single-seed timing pilot comes first, and C.3 enters only if 16 seeds fit in about a day.
   - *(2026-11-16.)* **The neural reading follows Logbook 135:** the answer's share is of the
     readout's measured ceiling (0.423, not 0.173), the paired test resamples the stimulated
     neurons' classes, with the neuron resample beside it, on generators clear of Logbook 135's, and

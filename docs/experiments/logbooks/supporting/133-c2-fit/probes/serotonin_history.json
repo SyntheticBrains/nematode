@@ -1,0 +1,108 @@
+{
+ "fourth pilot": {
+  "1": {
+   "modulator.fixed.serotonin.ser-5": 0.0547722557505166,
+   "modulator.fixed.serotonin": 0.0547722557505166,
+   "modulator.drive.ingestion": 0.0547722557505166,
+   "timescale.monoamine": 173.2050807568876
+  },
+  "2a": {
+   "modulator.fixed.serotonin.ser-5": 0.052100490069971146,
+   "modulator.fixed.serotonin": 0.13733129536208646,
+   "modulator.drive.ingestion": 0.019999078812062428,
+   "timescale.monoamine": 141.0001803161903
+  },
+  "2b": {
+   "modulator.fixed.serotonin.ser-5": 0.20001547942356565,
+   "modulator.fixed.serotonin": 0.6513725883769824,
+   "modulator.drive.ingestion": 0.003522837924329118,
+   "timescale.monoamine": 73.54258067481933
+  },
+  "final": {
+   "modulator.fixed.serotonin.ser-5": 0.1354437418393894,
+   "modulator.fixed.serotonin": 0.6862978031798028,
+   "modulator.drive.ingestion": 0.0049752337243855575,
+   "timescale.monoamine": 43.768615961021005
+  },
+  "tph1_first_generation": 81,
+  "tph1_generation_1_p90": 0.012195980621196121
+ },
+ "fifth pilot": {
+  "1": {
+   "modulator.fixed.serotonin.ser-5": 0.0547722557505166,
+   "modulator.fixed.serotonin": 0.0547722557505166,
+   "modulator.drive.ingestion": 0.0547722557505166,
+   "timescale.monoamine": 173.2050807568876
+  },
+  "2a": {
+   "modulator.fixed.serotonin.ser-5": 0.18973029647190473,
+   "modulator.fixed.serotonin": 0.04755909137927467,
+   "modulator.drive.ingestion": 0.031979572757644216,
+   "timescale.monoamine": 474.94890720773003
+  },
+  "2b": {
+   "modulator.fixed.serotonin.ser-5": 1.0783018101902162,
+   "modulator.fixed.serotonin": 0.3279358614966327,
+   "modulator.drive.ingestion": 0.03476516149821996,
+   "timescale.monoamine": 489.6186453826835
+  },
+  "final": {
+   "modulator.fixed.serotonin.ser-5": 1.1760958746973378,
+   "modulator.fixed.serotonin": 0.3401596314909465,
+   "modulator.drive.ingestion": 0.04387895853555571,
+   "timescale.monoamine": 488.4467116315494
+  },
+  "tph1_first_generation": 177,
+  "tph1_generation_1_p90": 0.005587933825896204
+ },
+ "sixth pilot": {
+  "1": {
+   "modulator.fixed.serotonin.ser-5": 0.0547722557505166,
+   "modulator.fixed.serotonin": 0.0547722557505166,
+   "modulator.drive.ingestion": 0.0547722557505166,
+   "timescale.monoamine": 173.2050807568876
+  },
+  "2a": {
+   "modulator.fixed.serotonin.ser-5": 2.3075091615158505,
+   "modulator.fixed.serotonin": 0.017327715663860082,
+   "modulator.drive.ingestion": 0.001086460126347315,
+   "timescale.monoamine": 68.00666481558214
+  },
+  "2b": {
+   "modulator.fixed.serotonin.ser-5": 2.856234816067168,
+   "modulator.fixed.serotonin": 0.003245406912163073,
+   "modulator.drive.ingestion": 0.0024094074322892844,
+   "timescale.monoamine": 21.818339494093898
+  },
+  "final": {
+   "modulator.fixed.serotonin.ser-5": 2.9835025433937035,
+   "modulator.fixed.serotonin": 0.002719399166323044,
+   "modulator.drive.ingestion": 0.0021386085254651668,
+   "timescale.monoamine": 10.234890065436337
+  },
+  "tph1_first_generation": 2,
+  "tph1_generation_1_p90": 0.03635133158468843
+ },
+ "recovery": {
+  "1": {
+   "modulator.fixed.serotonin.ser-5": 0.0547722557505166,
+   "modulator.fixed.serotonin": 0.0547722557505166,
+   "modulator.drive.ingestion": 0.0547722557505166,
+   "timescale.monoamine": 173.2050807568876
+  },
+  "2a": {
+   "modulator.fixed.serotonin.ser-5": 0.003932623099337821,
+   "modulator.fixed.serotonin": 0.03153835150998604,
+   "modulator.drive.ingestion": 0.6519698168331303,
+   "timescale.monoamine": 36.242420025415015
+  },
+  "2b (mean now)": {
+   "modulator.fixed.serotonin.ser-5": 0.0103075009167766,
+   "modulator.fixed.serotonin": 0.006530497605572351,
+   "modulator.drive.ingestion": 0.07595086739754497,
+   "timescale.monoamine": 48.73416660253635
+  },
+  "tph1_first_generation": null,
+  "tph1_generation_1_p90": 0.006179791052794154
+ }
+}
