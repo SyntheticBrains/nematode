@@ -170,11 +170,13 @@ include = [
 ]
 # The first matching root wins. wormbench supports Python 3.10, so it is checked at 3.10. The old
 # module paths of wormbench's modules resolve through .pyi stubs with no source beside them, which
-# is by design, so that warning is off where those paths are imported.
+# is by design, so that warning is off where those paths are imported. An environment resolves
+# absolute imports from its own root, so the tests' and scripts' environments add the repository
+# root back, as `import scripts.campaigns._common` needs.
 executionEnvironments = [
   { root = "packages/wormbench", pythonVersion = "3.10" },
-  { root = "packages/quantum-nematode/tests", reportMissingModuleSource = "none" },
-  { root = "scripts", reportMissingModuleSource = "none" },
+  { root = "packages/quantum-nematode/tests", extraPaths = ["."], reportMissingModuleSource = "none" },
+  { root = "scripts", extraPaths = ["."], reportMissingModuleSource = "none" },
   { root = "packages/quantum-nematode" },
 ]
 exclude = [
