@@ -1,0 +1,64 @@
+gen 1: median 17.80 best 2.11 sigma 0.0473
+gen 2: median 19.22 best 2.25 sigma 0.0454
+gen 3: median 7.03 best 2.29 sigma 0.0440
+gen 4: median 10.89 best 2.38 sigma 0.0430
+gen 5: median 5.33 best 1.96 sigma 0.0424
+gen 6: median 8.64 best 2.23 sigma 0.0419
+gen 7: median 4.75 best 2.13 sigma 0.0414
+gen 8: median 4.51 best 1.86 sigma 0.0409
+gen 9: median 4.41 best 2.06 sigma 0.0405
+gen 10: median 4.84 best 2.06 sigma 0.0403 | readout D_fit 2.18 lawn 0.9832282444854893
+gen 11: median 4.13 best 1.89 sigma 0.0401
+gen 12: median 4.15 best 1.98 sigma 0.0400
+gen 13: median 3.40 best 2.09 sigma 0.0400
+gen 14: median 3.40 best 2.05 sigma 0.0400
+gen 15: median 4.83 best 1.99 sigma 0.0398
+gen 16: median 3.83 best 1.82 sigma 0.0397
+gen 17: median 3.74 best 1.83 sigma 0.0394
+gen 18: median 3.19 best 1.86 sigma 0.0390
+gen 19: median 3.02 best 1.95 sigma 0.0386
+gen 20: median 3.50 best 1.94 sigma 0.0385 | readout D_fit 1.80 lawn 0.981698902358761
+gen 21: median 3.96 best 1.94 sigma 0.0384
+gen 22: median 2.62 best 1.94 sigma 0.0385
+gen 23: median 3.26 best 1.72 sigma 0.0387
+gen 24: median 2.82 best 1.78 sigma 0.0388
+gen 25: median 3.77 best 1.87 sigma 0.0388
+gen 26: median 3.21 best 1.82 sigma 0.0390
+gen 27: median 2.83 best 1.72 sigma 0.0391
+gen 28: median 3.00 best 1.75 sigma 0.0391
+gen 29: median 3.03 best 1.59 sigma 0.0392
+gen 30: median 3.32 best 1.84 sigma 0.0395 | readout D_fit 1.73 lawn 0.9825097639667176
+gen 31: median 2.87 best 1.71 sigma 0.0397
+gen 32: median 2.81 best 1.76 sigma 0.0400
+gen 33: median 3.20 best 1.82 sigma 0.0403
+gen 34: median 3.33 best 1.91 sigma 0.0402
+gen 35: median 2.69 best 1.77 sigma 0.0398
+gen 36: median 2.79 best 1.84 sigma 0.0395
+gen 37: median 2.65 best 1.91 sigma 0.0393
+gen 38: median 2.81 best 1.76 sigma 0.0389
+gen 39: median 2.84 best 1.71 sigma 0.0387
+gen 40: median 2.79 best 1.73 sigma 0.0385 | readout D_fit 1.74 lawn 0.9687606256375383
+gen 41: median 2.55 best 1.69 sigma 0.0384
+gen 42: median 2.50 best 1.80 sigma 0.0384
+gen 43: median 2.33 best 1.69 sigma 0.0380
+gen 44: median 2.49 best 1.76 sigma 0.0377
+gen 45: median 2.42 best 1.74 sigma 0.0375
+gen 46: median 2.45 best 1.82 sigma 0.0375
+gen 47: median 2.58 best 1.61 sigma 0.0374
+gen 48: median 2.79 best 1.63 sigma 0.0373
+gen 49: median 2.43 best 1.69 sigma 0.0373
+gen 50: median 2.27 best 1.63 sigma 0.0372 | readout D_fit 1.76 lawn 0.9768311070526026
+gen 51: median 2.45 best 1.58 sigma 0.0373
+gen 52: median 2.45 best 1.58 sigma 0.0374
+gen 53: median 2.20 best 1.68 sigma 0.0377
+gen 54: median 2.22 best 1.55 sigma 0.0379
+gen 55: median 2.46 best 1.57 sigma 0.0380
+gen 56: median 2.57 best 1.65 sigma 0.0382
+gen 57: median 2.19 best 1.64 sigma 0.0382
+gen 58: median 2.78 best 1.67 sigma 0.0381
+gen 59: median 2.13 best 1.66 sigma 0.0380
+gen 60: median 2.09 best 1.59 sigma 0.0379 | readout D_fit 1.74 lawn 0.9752176682947548
+
+P0: wild type 0/5, mutants {'tph-1': 0, 'pdfr-1': 5, 'tax-4': 0}
+P1 (generation 30): wild type 0/5, mutants {'tph-1': 0, 'pdfr-1': 5, 'tax-4': 5}
+rule: not found
