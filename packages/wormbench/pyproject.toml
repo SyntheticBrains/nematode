@@ -1,0 +1,50 @@
+[project]
+name = "wormbench"
+version = "1.0.0.dev0"
+description = "Grade simulated or real C. elegans tracks against real-worm behaviour"
+readme = "README.md"
+license = "Apache-2.0 AND CC0-1.0 AND CC-BY-4.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Chris Julian Zaharia" }]
+maintainers = [{ name = "Chris Julian Zaharia" }]
+requires-python = ">=3.10"
+keywords = [
+    "c-elegans",
+    "nematode",
+    "behaviour",
+    "benchmark",
+    "foraging",
+    "chemotaxis",
+    "simulation",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/SyntheticBrains/nematode/tree/main/packages/wormbench"
+Repository = "https://github.com/SyntheticBrains/nematode"
+Issues = "https://github.com/SyntheticBrains/nematode/issues"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["wormbench"]
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+target-version = "py310"
