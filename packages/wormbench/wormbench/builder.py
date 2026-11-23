@@ -80,7 +80,9 @@ def per_date_tallies(
     return {d: np.vstack(v) for d, v in sorted(out.items())}
 
 
-def _band_dict(band: g.Band) -> dict[str, Any]:
+def _band_dict(  # pyright: ignore[reportUnusedFunction] - read by the band scripts
+    band: g.Band,
+) -> dict[str, Any]:
     return {"centre": band.centre, "scale": band.scale, "inflated": band.inflated}
 
 

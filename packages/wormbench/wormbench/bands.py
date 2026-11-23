@@ -102,7 +102,9 @@ def load_bands_v4(path: Path | None = None) -> dict[str, Any]:
     return json.loads(_bands_path(path, "bands_v4.json").read_text())
 
 
-def _v2_family_map(bands: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+def _v2_family_map(  # pyright: ignore[reportUnusedFunction] - read by wormbench.grade
+    bands: dict[str, Any],
+) -> dict[str, tuple[str, ...]]:
     return {f: tuple(st) for f, st in bands["families"].items()}
 
 

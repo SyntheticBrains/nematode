@@ -3,6 +3,8 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
+        # wormbench ships its worked example, about 1 MB, inside the package.
+        args: ["--maxkb=1200"]
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml

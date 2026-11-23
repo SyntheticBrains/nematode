@@ -128,6 +128,45 @@ def track_populations(
     return populations
 
 
+def simulated_track_populations(
+    manifest: Path,
+    model: Any,  # noqa: ANN401 - a measurement.TrackerModel
+    base: Path | None = None,
+) -> dict[str, list[list[BehaviourStep]]]:
+    """Read ``<family> <tracks>`` lines of simulated tracks, measured as the project's own are.
+
+    Each animal on Scheer's rig is measured on its own seed before it is windowed. Two animals
+    with the same seed would draw the same noise, so a seed used twice in the manifest is refused.
+    A relative file resolves against ``base``, by default the manifest's own directory.
+    """
+    from wormbench.track_import import import_simulated_population
+
+    root = Path(manifest).parent if base is None else Path(base)
+    populations: dict[str, list[list[BehaviourStep]]] = {}
+    seen: dict[int, str] = {}
+    for raw in manifest.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        family, path_text = line.split(maxsplit=1)
+        path = Path(path_text.strip())
+        found, animals = import_simulated_population(
+            path if path.is_absolute() else root / path,
+            model,
+        )
+        if found != family:
+            msg = f"{path} declares family {found!r}, but the manifest line names {family!r}"
+            raise ValueError(msg)
+        for seed, steps in animals:
+            if seed is not None:
+                if seed in seen:
+                    msg = f"seed {seed} is used twice, in {seen[seed]} and {path}"
+                    raise ValueError(msg)
+                seen[seed] = str(path)
+            populations.setdefault(family, []).append(steps)
+    return populations
+
+
 def _validated(version: str, validity: dict[str, Any] | None = None) -> bool:
     """Return whether a version's controls found VALID the very bands file now resolved.
 
@@ -476,3 +515,59 @@ def _finite(value: Any) -> Any:  # noqa: ANN401 - any JSON-shaped value
     if isinstance(value, np.bool_):
         return bool(value)
     return value
+
+
+BANDS_FILES = {
+    "v1": "bands.json",
+    "v2": "bands_v2.json",
+    "v3": "bands_v3.json",
+    "v4": "bands_v4.json",
+}
+
+
+def grade_track_manifest(
+    manifest: Path,
+    version: str,
+    base: Path | None = None,
+    *,
+    simulated: bool = False,
+) -> dict[str, Any]:
+    """Grade a manifest of tracks on one benchmark version; return the grading as JSON values.
+
+    Imported real tracks are graded on their positions as given. With ``simulated``, each animal on
+    Scheer's rig is first measured as the project measures its own simulated tracks, which needs a
+    version from v2, whose bands carry the measurement model. Chemotaxis is not graded for tracks,
+    since it needs the measured odour field that only a simulation reads, so D is undefined there.
+    """
+    from wormbench import bands as b
+
+    loaders = {
+        "v1": b.load_bands,
+        "v2": b.load_bands_v2,
+        "v3": b.load_bands_v3,
+        "v4": b.load_bands_v4,
+    }
+    if version not in loaders:
+        msg = f"unknown benchmark version {version!r}; expected one of {sorted(loaders)}"
+        raise ValueError(msg)
+    bands = loaders[version]()
+    if simulated:
+        if version == "v1":
+            msg = "v1's bands carry no measurement model: grade simulated tracks on v2 or later"
+            raise ValueError(msg)
+        from wormbench import measurement as mm
+
+        model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
+        populations = simulated_track_populations(manifest, model, base)
+        source: dict[str, Any] = {"source": "simulated tracks", "manifest": str(manifest)}
+    else:
+        populations = track_populations(manifest, base)
+        source = {"source": "tracks", "manifest": str(manifest)}
+    if version == "v1":
+        return _finite({**source, **grade_populations(populations, bands)})
+    grade = {
+        "v2": grade_populations_v2,
+        "v3": grade_populations_v3,
+        "v4": grade_populations_v4,
+    }[version]
+    return _finite({**source, "bands": version, **grade(populations, None, bands)})

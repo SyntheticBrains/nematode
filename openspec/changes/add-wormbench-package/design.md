@@ -345,7 +345,7 @@ project's captures path give byte-identical gradings.
   `numpy.random.default_rng(<seed recorded in the archive>)` from band-cohort rows with at least 90%
   finite positions. The builder calls `track_import_check.refuse_held_out` on its rows, so a
   held-out row cannot enter. The selection rule is fixed before any grading.
-- **Storage:** one compressed archive, about 0.9 MB. `wormbench example --out <dir>` writes its
+- **Storage:** one compressed archive, about 1 MB. `wormbench example --out <dir>` writes its
   CSVs, sidecars and manifest.
 - **The expected grading** is stored. The test compares statistics with
   `math.isclose(rel_tol=1e-9, abs_tol=1e-12)`, and every pass, flag and count exactly, since

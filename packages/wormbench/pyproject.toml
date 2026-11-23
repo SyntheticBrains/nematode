@@ -38,6 +38,9 @@ Homepage = "https://github.com/SyntheticBrains/nematode/tree/main/packages/wormb
 Repository = "https://github.com/SyntheticBrains/nematode"
 Issues = "https://github.com/SyntheticBrains/nematode/issues"
 
+[project.scripts]
+wormbench = "wormbench.cli:main"
+
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
@@ -48,3 +51,7 @@ packages = ["wormbench"]
 [tool.ruff]
 extend = "../../pyproject.toml"
 target-version = "py310"
+
+[tool.ruff.lint]
+# The command line reports to its user on standard output.
+extend-per-file-ignores = { "wormbench/cli.py" = ["T201"] }

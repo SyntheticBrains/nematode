@@ -357,14 +357,39 @@ RUNNERS = {
 # ---------------------------------------------------------------------------------------------
 
 
-def _compare(build: Path) -> dict[str, Any]:
+# Each case's outputs, by the prefix of their file names.
+CASE_OUTPUTS = {
+    "tracks": "tracks_",
+    "batched": "batched_",
+    "captures": "captures_",
+    "no_presence": "no_presence_",
+    "mutants": "mutants",
+    "builder": "builder",
+    "c1_record": "c1_record",
+}
+
+
+def _compare(build: Path, cases: list[str]) -> dict[str, Any]:
+    """Compare the run cases' outputs with the baseline's, byte for byte."""
     baseline, check = build / "baseline", build / "check"
+    prefixes = tuple(CASE_OUTPUTS[c] for c in cases)
     names = sorted(
-        str(p.relative_to(baseline)) for p in baseline.rglob("*.json") if p.name != "identity.json"
+        str(p.relative_to(baseline))
+        for p in baseline.rglob("*.json")
+        if p.name != "identity.json" and p.name.startswith(prefixes)
     )
-    differ = [n for n in names if (check / n).read_bytes() != (baseline / n).read_bytes()]
-    missing = [n for n in names if not (check / n).exists()]
-    return {"compared": len(names), "differ": differ, "missing": missing}
+    missing = [n for n in names if not (check / n).is_file()]
+    differ = [
+        n
+        for n in names
+        if n not in missing and (check / n).read_bytes() != (baseline / n).read_bytes()
+    ]
+    return {
+        "cases": cases,
+        "compared": len(names) - len(missing),
+        "differ": differ,
+        "missing": missing,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -415,7 +440,7 @@ def main(argv: list[str] | None = None) -> int:
     _write(out / "identity.json", {**identity, "cases": cases, "seconds": timings})
     if args.stage == "baseline":
         return 0
-    report = _compare(build)
+    report = _compare(build, cases)
     _write(build / "report.json", report)
     print(json.dumps(report, indent=1))
     return 1 if report["differ"] or report["missing"] else 0

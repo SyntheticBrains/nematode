@@ -80,6 +80,7 @@ from wormbench.grade import (  # noqa: F401 - re-exported: fits and probes reach
     grade_populations_v2,
     grade_populations_v3,
     grade_populations_v4,
+    grade_track_manifest,
     kinematic_values,
     v2_is_valid,
     v3_is_valid,
@@ -345,6 +346,15 @@ def main(argv: list[str] | None = None) -> int:
         args.bands = (
             "v4" if v4_is_valid() else "v3" if v3_is_valid() else "v2" if v2_is_valid() else "v1"
         )
+    if args.source == "tracks":
+        # Imported tracks are graded by the package's own function, which `wormbench grade` calls.
+        result = grade_track_manifest(args.manifest, args.bands, base=_REPO)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
+        print(
+            json.dumps({k: result[k] for k in ("family_passes", "wild_type_passes", "D", "D_fit")}),
+        )
+        return 0
     if args.bands in ("v2", "v3", "v4"):
         return _main_measured(args, int(args.bands[1]))
     bands = load_bands()
@@ -360,9 +370,6 @@ def main(argv: list[str] | None = None) -> int:
             "hazards_per_s": list(HAZARDS),
             **({"beta": PIROUETTE_BETA} if args.controller == "pirouette" else {}),
         }
-    elif args.source == "tracks":
-        populations = track_populations(args.manifest)
-        source = {"source": "tracks", "manifest": str(args.manifest)}
     else:
         populations = capture_populations(args.manifest)
         source = {"source": "captures", "manifest": str(args.manifest)}
@@ -406,9 +413,6 @@ def _main_measured(args: argparse.Namespace, version: int) -> int:
             "hazards_per_s": list(HAZARDS),
             **({"beta": PIROUETTE_BETA} if args.controller == "pirouette" else {}),
         }
-    elif args.source == "tracks":
-        populations = track_populations(args.manifest)
-        source = {"source": "tracks", "manifest": str(args.manifest)}
     else:
         model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
         populations = capture_populations(args.manifest, model)
