@@ -1,0 +1,11 @@
+{
+  "kappa": {
+    "roaming_fraction": 1.2485000899254048,
+    "roaming_bout_s": 1.193883750697487,
+    "dwelling_bout_s": 1.2325813032779147,
+    "exits_per_on_lawn_hour": 1.3016404540553168,
+    "pre_exit_enrichment": 1.2358472497488944,
+    "time_on_lawn": 1.2893233134390023
+  },
+  "source": "docs/experiments/logbooks/supporting/109-benchmark-grading/bands_record.json"
+}

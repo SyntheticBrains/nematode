@@ -15,9 +15,11 @@ source holds raises :class:`MissingDataError`, naming the file and the command t
 
 from __future__ import annotations
 
+import json
 import os
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 NAMESPACES = ("benchmark", "roaming_dwelling")
 ENVIRONMENT_VARIABLE = "WORMBENCH_DATA"
@@ -52,6 +54,20 @@ def _check_namespace(namespace: str) -> None:
 def package_directory() -> Path:
     """Return the directory of the files shipped inside the package."""
     return Path(str(resources.files("wormbench").joinpath("_data")))
+
+
+def package_record(name: str) -> Any:  # noqa: ANN401 - any JSON-shaped record
+    """Return a record shipped with the package, outside the namespaces, read from the package."""
+    return json.loads((package_directory() / name).read_text())
+
+
+def stored_path(text: str) -> Path:
+    """Resolve a path a bands file stores, ``data/<namespace>/<name>``, through the sources."""
+    parts = Path(text).parts
+    if len(parts) != 3 or parts[0] != "data":  # noqa: PLR2004 - data, the namespace and the name
+        msg = f"a stored reference path must read data/<namespace>/<name>, not {text!r}"
+        raise ValueError(msg)
+    return path(parts[1], parts[2])
 
 
 def cache_directory() -> Path:

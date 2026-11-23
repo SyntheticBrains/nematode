@@ -1,0 +1,20 @@
+{
+  "v2": {
+    "bands": "bands_v2.json",
+    "verdict": "VALID",
+    "bands_sha256": "21f591b864d497ee3ee305c217e3c9e197a8bc466298219d46841819b875f438",
+    "source": "docs/experiments/logbooks/supporting/115-benchmark-v2/controls_v2.json"
+  },
+  "v3": {
+    "bands": "bands_v3.json",
+    "verdict": "VALID",
+    "bands_sha256": "8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b",
+    "source": "docs/experiments/logbooks/supporting/120-benchmark-v3/controls_v3.json"
+  },
+  "v4": {
+    "bands": "bands_v4.json",
+    "verdict": "VALID",
+    "bands_sha256": "355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448",
+    "source": "docs/experiments/logbooks/supporting/124-benchmark-v4/controls_v4.json"
+  }
+}
