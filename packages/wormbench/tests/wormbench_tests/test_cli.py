@@ -74,8 +74,10 @@ def test_a_verdict_naming_another_versions_bands_validates_nothing() -> None:
     v4 = file_sha256(data.path("benchmark", "bands_v4.json"))
     own = {"v4": {"bands": "bands_v4.json", "verdict": "VALID", "bands_sha256": v4}}
     other = {"v4": {"bands": "bands_v3.json", "verdict": "VALID", "bands_sha256": v3}}
+    misnamed = {"v4": {"bands": "bands_v3.json", "verdict": "VALID", "bands_sha256": v4}}
     assert wg.v4_is_valid(own) is True
     assert wg.v4_is_valid(other) is False
+    assert wg.v4_is_valid(misnamed) is False
 
 
 def test_the_example_grades_as_recorded_with_no_download(example: Path, tmp_path: Path) -> None:
