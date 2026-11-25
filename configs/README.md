@@ -36,9 +36,11 @@ primitives (`*_s1_primitives.yml`) and the assay protocols (`*_s1_primitives_ass
 primitives a reversal that starts on a lawn takes the on-food kinematics. No config sets
 `continuous.reversal_kinematics`; set it to `off_food` only to reproduce a run from before
 2026-10-24. `continuous.on_food_reversal_speed: follows_run_speed` makes an on-food reversal's
-speed follow the worm's recent run speed, as a real worm's does (Logbook 132). It is unset in
-every config, which keeps the pooled speed; C.2's registered fit sets it. The benchmark grades three of
-them: `scheer_lawn`, `uniform_lawn_scheer` (Scheer's uniform well) and `food_removal_lopezcruz`.
+speed follow the worm's recent run speed, as a real worm's does (Logbook 132). Only C.2's
+registered arm sets it, in the six `*_encoded_s1_primitives_following_assay_*.yml` configs
+(`benchmark_grade.ARMS["connectome_c2_following"]`, Logbook 133). Every other config leaves it
+unset, which keeps the pooled speed. Of the assay protocols, the benchmark grades `scheer_lawn`,
+`uniform_lawn_scheer` (Scheer's uniform well), `food_removal_lopezcruz` and `chemotaxis_chen`.
 
 - **Frozen:** the thermal, predator, multi-agent and oxygen scenarios (`pursuit/`, `stationary/`, the
   `thermal_*`, `oxygen_*` and `multi_agent_*` directories, and `foraging_predator_thermal/`). They are

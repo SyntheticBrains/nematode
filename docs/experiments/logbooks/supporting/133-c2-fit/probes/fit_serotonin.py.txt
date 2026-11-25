@@ -1,0 +1,100 @@
+"""Read-only: the registered fit's serotonin route at each stage's end, and the tph-1 response in its candidates.
+
+The route's values come from `fit.json`'s stage answers, written through each parameter's own
+mapping. The candidates' tph-1 roaming differences come from the fit's candidate logs for 2b and the
+final stage (kept off-repo; their SHA-256 is recorded). The response counts as found at the first
+generation where at least 10% of candidates show a difference of 0.05 or more, the rule of
+`serotonin_history.py.txt`. No simulation.
+
+Usage: uv run python docs/experiments/logbooks/supporting/133-c2-fit/probes/fit_serotonin.py.txt
+       <dir holding stage_2b.jsonl and stage_final.jsonl> <out.json>
+Run from the repository root.
+"""
+
+import hashlib
+import json
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path.cwd()
+sys.path.insert(0, str(REPO / "scripts" / "analysis"))
+import c2_fit as cf  # noqa: E402
+
+FIT = REPO / "docs/experiments/logbooks/supporting/133-c2-fit/fit.json"
+SHOW = [
+    "modulator.fixed.serotonin.ser-5",
+    "modulator.fixed.serotonin",
+    "modulator.drive.ingestion",
+    "timescale.monoamine",
+]
+FOUND_AT = 0.05
+FOUND_SHARE = 0.1
+
+logs, out_path = Path(sys.argv[1]), Path(sys.argv[2])
+entries = cf.entries()
+names = [e.name for e in entries]
+fit = json.loads(FIT.read_text())
+
+route = {
+    stage: {n: entries[names.index(n)].value(float(v[names.index(n)])) for n in SHOW}
+    for stage, v in fit["answers"].items()
+}
+
+
+def candidates(path: Path) -> dict:
+    by: dict[int, list[float]] = defaultdict(list)
+    hits = []
+    for line in path.open():
+        r = json.loads(line)
+        t = ((r.get("delta") or {}).get("tph-1") or {}).get("roaming_fraction")
+        if t is None:
+            continue
+        g = int(r["generation"])
+        by[g].append(t)
+        if t >= FOUND_AT:
+            hits.append(
+                {
+                    "generation": g,
+                    "member": r.get("member"),
+                    "tph1_roaming_difference": t,
+                    "time_on_lawn": r.get("time_on_lawn"),
+                    "D_fit": r.get("D_fit"),
+                    "reversal_share": r.get("reversal_share"),
+                }
+            )
+    every = np.concatenate([np.asarray(v, float) for v in by.values()])
+    found = next(
+        (g for g in sorted(by) if np.mean(np.asarray(by[g]) >= FOUND_AT) >= FOUND_SHARE), None
+    )
+    return {
+        "log_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "generations": len(by),
+        "candidates": int(every.size),
+        "max": float(every.max()),
+        "at_or_above_0.05": hits,
+        "found_at_generation": found,
+        "by_generation": {
+            str(g): {
+                "n": len(v),
+                "median": float(np.median(v)),
+                "p90": float(np.percentile(v, 90)),
+                "max": float(np.max(v)),
+                "share_at_or_above_0.05": float(np.mean(np.asarray(v) >= FOUND_AT)),
+            }
+            for g, v in sorted(by.items())
+        },
+    }
+
+
+record = {
+    "description": __doc__.split("\n\n", 1)[0],
+    "fit_sha256": hashlib.sha256(FIT.read_bytes()).hexdigest(),
+    "route_at_stage_end": route,
+    "stage_2b": candidates(logs / "stage_2b.jsonl"),
+    "final": candidates(logs / "stage_final.jsonl"),
+}
+out_path.write_text(json.dumps(record, indent=1) + "\n")
+print(json.dumps({"route": route, **{k: {x: record[k][x] for x in ("candidates", "max", "found_at_generation")} for k in ("stage_2b", "final")}}, indent=1))

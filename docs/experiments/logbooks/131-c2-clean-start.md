@@ -1,6 +1,6 @@
 # 131: Phase 10 — C.2 From a Clean Start Passes the Wild Type and Every Mutant in 15 of 15 Populations, Once a Reversal Follows the Worm's Own Speed
 
-**Status**: completed, as description. No fit is registered. **C.2's encoded connectome reaches the benchmark from a clean start, with no imitation of C.1 in its lineage.** On 15 fresh populations graded with presence, its last answer passes all 24 wild-type statistics in every one, with tph-1, pdfr-1 and tax-4 passing in every one.
+**Status**: completed, as description. No fit is registered. **C.2's encoded connectome reaches the benchmark from a clean start, with no imitation of C.1 in its lineage.** On 15 fresh populations graded with presence, its last answer passes all 24 wild-type statistics in every one, with tph-1, pdfr-1 and tax-4 passing in every one. *(2026-11-25, [Logbook 133](133-c2-fit.md): the route fixed in advance as a procedure and run fresh from the box centre does not reliably reproduce its tph-1. Under the procedure's final rules, the sixth readiness pilot found tph-1's response, while F.0b-ii's recovery and the registered fit left it inert. The registered fit fails on tph-1 alone, with its wild type passing 15 of 15. This logbook's reading stands as read at its own route.)*
 
 Two things made the difference:
 

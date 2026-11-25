@@ -26,7 +26,9 @@ nothing in W registers before C.2 has read. *(Amended 2026-10-25, the maintainer
 clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-ii.)* *(Amended
 2026-11-24, the maintainer's decision of 2026-11-23: F.0b-ii failed its gate, and C.2's registered
 fit runs once with it failed, capped, as launch record 133's Part C records. Phase 10 closes
-without W.)*
+without W.)* *(2026-11-25, [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md): the fit
+failed on tph-1 alone. By the maintainer's decisions of 2026-11-25, C.3 is not run in Phase 10, and
+C.2 enters C.4 as a failing in-sample row.)*
 
 ## H — housekeeping (MUST, first)
 
@@ -494,7 +496,7 @@ without W.)*
 
 ## F.0 — the fitting methods' positive control (MUST)
 
-- [ ] **F.0** parameter recovery at known parameters, by sep-CMA on C.1's model and C.2's encoder
+- [x] **F.0** parameter recovery at known parameters, by sep-CMA on C.1's model and C.2's encoder
   (seeds 5401–5464). *(Amended 2026-10-25: C.1's half was first NPE's; D38 as amended.)* It reports recovery and spread, and the spread sizes W.
 
   *(2026-10-25, F.0a: change `add-npe-recovery`, archived as `2026-10-25-add-npe-recovery`;
@@ -538,7 +540,9 @@ without W.)*
       the gate tests reaching the region and the spread between runs, not identifying the truth; D38's
       amendment states it.)* *(2026-11-23: the preflight passed all seven checks, and **F.0b-ii
       failed its gate**, with a gain of 0.635 against 0.75. tph-1 alone keeps it out; see C.2.
-      F.0 does not clear for C.2.)*
+      F.0 does not clear for C.2.)* *(2026-11-25: **F.0 is read on both models.** C.1's half
+      passes and C.2's fails. The registered fit then failed on tph-1, as the recovery had
+      ([Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md)).)*
 
   *(2026-10-29: change `rerun-cma-recovery-v2`; [Logbook 116](../../../docs/experiments/logbooks/116-cma-recovery-v2.md).)*
   **F.0b-i on v2 fails its gate**, with a median gain of 0.690 against 0.75. sep-CMA recovers the two
@@ -678,7 +682,7 @@ without W.)*
     is decided then: a warm start needs a dated D38 amendment, since C.1's x₀ is set without search
     data; a box-centre design needs its odds measured first.
 
-- [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
+- [x] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
   and a plateau criterion.
@@ -839,7 +843,10 @@ without W.)*
     8 or 9 of 15 populations. It trades the on-lawn onset rate against the dwelling windows' speed.
     Real on-lawn reversals follow the speed just before them (held-out cohorts: v_rev = 0.0463 +
     0.603 × v_before). Patched into the evaluator in scripts, with the network refitted, every
-    statistic passes in 15 of 15.
+    statistic passes in 15 of 15. *(2026-11-25, [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md):
+    fixed in advance and run fresh from the box centre, the route does not reliably reproduce its
+    tph-1. Under the procedure's final rules, the sixth pilot found tph-1's response, while the
+    recovery and the registered fit left it inert.)*
   - **Next, in the maintainer's order:** the speed-following reversal as an option of the
     primitives; then the registered fit (Change B), its procedure fixed in advance; then W's compute
     at about 31 h a fit.
@@ -936,6 +943,25 @@ without W.)*
       - a fail is read against the failed control, not attributed to the model.
     - The verdict and its rule are unchanged.
     - **C.3** waits for the fit's reading, by the maintainer's decision with the cap: if the fit passes, a single-seed timing pilot comes first, and C.3 enters only if 16 seeds fit in about a day.
+  - *(2026-11-25; [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **The
+    registered fit fails, on tph-1 alone.**
+    - Its first start passed all three of 2a's readings, and the run took 36.75 h over its stages.
+    - **The verdict:** the wild type in 5 of 5 registered populations (15 of 15), tax-4 and pdfr-1
+      in every one, and tph-1 in none (roaming difference −0.007 to +0.008, z about −5.3).
+    - **tph-1:** 2b never found its response. One of 9,598 candidates reached a 0.05 difference,
+      a worm that left the lawn. 2a left ser-5 at 0.076 and 2b raised it to 1.28, above the fifth
+      pilot's 1.08, so ser-5's strength does not order the five runs that reached 2b, conditioning
+      Part C's diagnosis.
+    - **Beside the verdict:**
+      - the worm reverses 5.6% of the time, against 17.3%;
+      - on both held-out date sets it sits beyond the band reference's 95th percentile;
+      - the neural reading's paired class interval, 0.001 to 0.043, reads "fitting raised it"
+        (r 0.088 against 0.065).
+    - Read against the failed F.0b-ii, the fail is not attributed to the model. The C.2 risk row
+      closes on this reading.
+    - **The maintainer's decisions** (2026-11-25, after the read, not branches of the registration):
+      - C.3 is not run in Phase 10;
+      - C.2 enters C.4 as a failing in-sample row.
   - *(2026-11-16.)* **The neural reading follows Logbook 135:** the answer's share is of the
     readout's measured ceiling (0.423, not 0.173), the paired test resamples the stimulated
     neurons' classes, with the neuron resample beside it, on generators clear of Logbook 135's, and
@@ -949,9 +975,21 @@ without W.)*
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 
+  *(2026-11-25, the maintainer's decision after C.2's fit failed,
+  [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **C.3 is not run in Phase 10.**
+  Its entry was tied to a C.2 pass, and the fit was the phase's last C.2 run. Its status at the
+  synthesis is unreachable-with-reason. Its question, the C.2 architecture trained by reward, goes to
+  the Phase 11 plan review.
+
 - [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(Added 2026-11-25, the maintainer's decision after C.2's fit failed,
+  [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **C.2 enters as a failing
+  in-sample row:** its registered answer, with the wild type in 5 of 5 and tph-1 in 0 of 5, read
+  against the failed F.0b-ii. C.2 against C.1 is stated with that condition. Every C.2 mutant row is
+  fitted, and none is predicted, since the tax-4 leave-one-out was dropped. C.3 does not enter.
 
   *(Added 2026-11-05, B v4.)* **On v4, C.1's v3 answer fails the wild type** (0 of 5;
   [Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)). C.1 enters the table from
@@ -1180,6 +1218,19 @@ without W.)*
     fitted on its own has been read, and a low score for one would not separate its wiring from its
     physiology. W has no P3 beyond what every arm fixes from data, until a measurement pins a
     parameter that decides a verdict.
+
+  *(Added 2026-11-25, C.2's registered fit,
+  [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **The measured cost of one fit
+  by C.2's procedure** on 16 workers:
+
+  - **with its first start kept:** 36.75 h over its stages (stage 1 0.94 h, 2a 7.40 h, 2b 22.83 h,
+    the final stage 5.58 h);
+  - **with three dropped starts,** as in F.0b-ii's recovery: 53.5 h over its stages (`recovery.json`;
+    53.7 h on the clock), its kept start 36.85 h and its dropped starts 16.65 h.
+
+  Phase 10 closes without W (the maintainer's decision of 2026-11-23), and W's arms do not inherit
+  this procedure (D38's note of 2026-11-24). A later W registers its own procedure and cites these
+  figures only as the cost of this one.
 
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 

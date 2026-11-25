@@ -1,0 +1,69 @@
+"""Write the registered fit's per-population and per-readout tables from `fit.json`, as CSV.
+
+`populations.csv`: one row for each of the 15 graded populations (the verdict reads the first 5),
+with the wild type's pass, D, D_fit, time on the lawn, reversal share, presence, each mutant's
+graded difference, z and pass, and every statistic's value and z.
+
+`readouts.csv`: one row for each readout of each stage (every 10 generations, each stage's
+generation 0 and its last), with the same fields. No simulation.
+
+Usage: uv run python docs/experiments/logbooks/supporting/133-c2-fit/tables.py.txt
+Run from the repository root.
+"""
+
+import csv
+import json
+from pathlib import Path
+
+HERE = Path("docs/experiments/logbooks/supporting/133-c2-fit")
+FIT = json.loads((HERE / "fit.json").read_text())
+MUTANTS = ("tph-1", "pdfr-1", "tax-4")
+
+
+def row(record: dict) -> dict:
+    out = {
+        "wild_type_passes": record["wild_type_passes"],
+        "D": record["D"],
+        "D_fit": record["D_fit"],
+        "time_on_lawn": record["time_on_lawn"],
+        "reversal_share": record["reversal_share"],
+        "families_passing": sum(bool(v) for v in record["family_passes"].values()),
+        "local_search_present": record["local_search_presence"]["present"],
+        "chemotaxis_present": record["chemotaxis_presence"]["present"],
+    }
+    for m in MUTANTS:
+        reading = record["mutants"][m]
+        roaming = reading["statistics"]["roaming_fraction"]
+        leaving = reading["statistics"]["exits_per_on_lawn_hour"]
+        out[f"{m}_passes"] = reading["passes"]
+        out[f"{m}_roaming_difference"] = roaming["delta"]
+        out[f"{m}_roaming_z"] = roaming["z"]
+        out[f"{m}_leaving_difference"] = leaving["delta"]
+        out[f"{m}_leaving_z"] = leaving["z"]
+    for key, value in record["statistics"].items():
+        out[f"{key}"] = value
+        out[f"{key}:z"] = record["z"][key]
+        out[f"{key}:passes"] = record["passes"][key]
+    return out
+
+
+def write(path: Path, rows: list[dict]) -> None:
+    with path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+populations = [
+    {"population": g["population"], "in_verdict": i < 5, **row(g)}
+    for i, g in enumerate(FIT["grades"])
+]
+write(HERE / "populations.csv", populations)
+
+readouts = [
+    {"stage": stage, "generation": int(gen), **row(record)}
+    for stage, by_generation in FIT["readouts"].items()
+    for gen, record in sorted(by_generation.items(), key=lambda kv: int(kv[0]))
+]
+write(HERE / "readouts.csv", readouts)
+print(f"{len(populations)} populations, {len(readouts)} readouts")

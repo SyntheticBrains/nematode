@@ -100,7 +100,7 @@
 
 - [x] 3.1 Run `speed-noise-control` (about 30 min). Return to the maintainer if it fails.
 
-- [ ] 3.2 Launch record 133, Part A:
+- [x] 3.2 Launch record 133, Part A:
 
   - every rule, gate and seed in the design;
   - the go rule and the kill rules;
@@ -254,7 +254,7 @@
   - the band-centre reference's gain 0.863, reported: the stated limit.
 - [x] 5.2 `recovery` (about 30 h, and 2.3–8 h for each dropped start): the gate. Return to the maintainer if the gain is below 0.75. **Failed its gate** (2026-11-23, 53.7 h): gain 0.635 at median D_rec 2.415, with tph-1's term at 5.25; start 3 kept, three starts dropped. Returned to the maintainer, who decided (2026-11-23) on a serotonin-off probe first, then one capped fit if the probe read "not found".
 - [x] 5.2a The serotonin-off probe, with its design and rule committed before it ran (`f73a7184`). **Not found** (2026-11-24): P1 passes the wild type in 0 of 5, on the on-lawn onset rate.
-- [ ] 5.3 Part C, committed and pushed before `run`:
+- [x] 5.3 Part C, committed and pushed before `run` (`9090b2de`, 2026-11-24):
   - the recovery's result, the diagnosis and the probe;
   - the maintainer's decision and cap;
   - the guard change, so `run`, `grade` and `read` proceed under the decision and `loo` refuses, with its tests;
@@ -269,19 +269,20 @@
 
 ## 7. The tax-4 leave-one-out
 
-- [ ] 7.1 ~~`loo` (about 26 h), read beside the registered fit as description.~~ Dropped by the maintainer's decision in Part C (2026-11-24): with F.0b-ii failed, `loo` is refused.
+- [x] 7.1 ~~`loo` (about 26 h), read beside the registered fit as description.~~ Dropped by the maintainer's decision in Part C (2026-11-24): with F.0b-ii failed, `loo` is refused.
 
 ## 8. Close-out
 
-- [ ] 8.1 Docs:
-  - Logbook 133;
-  - the roadmap's D37 and D38, for Part C's decision: W's arms do not inherit the procedure, and the leave-one-out is dropped;
-  - the tracker (C.2, F.0, C.4, W.2's compute input, the seed table) and the logbook index row;
+- [x] 8.1 Docs:
+  - Logbook 133, with `populations.csv`, `readouts.csv` (by `tables.py.txt`) and `probes/fit_serotonin.json`;
+  - the roadmap's D37 and D38, for Part C's decision: W's arms do not inherit the procedure, and the leave-one-out is dropped; with dated notes on F.0's and C's rows, the exit criteria and the risk row "The connectome cannot be fitted";
+  - the tracker (C.2, F.0, C.3, C.4, W.2's compute input), the seed table's C.2 row (Part C's discarded seeds, the fit's use of its block, the leave-one-out's block unused) and the logbook index row;
   - AGENTS.md;
   - `configs/README.md` (the option set by the registered arm);
-  - the CHANGELOG.
-- [ ] 8.2 Checks and merge:
-  - the full suite;
+  - the CHANGELOG;
+  - dated notes at the sites citing Logbook 131's 15 of 15 (Logbook 131, the tracker, AGENTS.md) and Logbook 134's "no detectable gain" (Logbook 134, its index row, Logbook 135).
+- [x] 8.2 Checks and merge (2026-11-25):
+  - the full suite, after main (wormbench) was merged in: 9,496 passed;
   - `pre-commit run --all-files` after `git add -A`;
   - the privacy check on every diff (no off-repo archive path);
   - `openspec validate --strict`;
