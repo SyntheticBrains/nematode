@@ -27,9 +27,9 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from quantumnematode.benchmark import grading as g
-from quantumnematode.benchmark.references import boundary_distance
-from quantumnematode.report.behaviour import BehaviourStep
+from wormbench import grading as g
+from wormbench.records import BehaviourStep
+from wormbench.references import boundary_distance
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -393,4 +393,184 @@ def import_population(path: Path) -> tuple[str, list[list[BehaviourStep]]]:
             lawn = lawn_membership(x, y, on_column, metadata.lawn)
         steps = to_steps(x, y, lawn)
         animals.append(g.analysis_steps(steps, (start, len(steps)), samples))
+    return metadata.family, animals
+
+
+# ---------------------------------------------------------------------------------------------
+# Simulated tracks: measured before they are graded
+# ---------------------------------------------------------------------------------------------
+
+PRIMITIVE_LABELS = ("run", "reversal", "omega", "delta")
+# The families recorded on Scheer & Bargmann's rig, whose tracker the lawn model measures.
+MEASURED_FAMILIES = ("small_lawn", "uniform_lawn")
+
+
+@dataclass(frozen=True)
+class SimulatedTrack:
+    """One simulated animal at 1 s: its track, each second's primitive, and its noise seed."""
+
+    track: ImportedTrack
+    primitives: tuple[str, ...]
+    seed: int | None
+
+
+def _primitive_labels(animal: str, labels: list[Any]) -> tuple[str, ...]:
+    unknown = sorted({str(v) for v in labels} - set(PRIMITIVE_LABELS))
+    if unknown:
+        msg = f"{animal}: unknown primitive labels {unknown}; expected one of {PRIMITIVE_LABELS}"
+        raise ValueError(msg)
+    return tuple(str(v) for v in labels)
+
+
+def _require_one_second(track: ImportedTrack) -> None:
+    t = np.asarray(track.t_s, dtype=float)
+    if len(t) > 1 and not np.allclose(np.diff(t), 1.0, rtol=0.0, atol=TIME_EPS):
+        msg = f"{track.animal}: a simulated track is sampled every 1 s; labels do not interpolate"
+        raise ValueError(msg)
+
+
+def read_simulated_csv(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata]:
+    """Read a simulated CSV: the tracks as :func:`read_csv` reads them, with labels and seeds.
+
+    Each row also carries ``primitive`` (``run``, ``reversal``, ``omega`` or ``delta``) and
+    ``seed``, an integer constant within an animal, or empty for an animal that is never measured.
+    """
+    tracks, metadata = read_csv(path)
+    labels: dict[str, list[tuple[float, str]]] = {}
+    seeds: dict[str, set[str]] = {}
+    with path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        fields = set(reader.fieldnames or ())
+        missing = {"primitive", "seed"} - fields
+        if missing:
+            msg = f"{path}: a simulated track needs columns {sorted(missing)}"
+            raise ValueError(msg)
+        for row in reader:
+            labels.setdefault(row["animal"], []).append((float(row["t_s"]), row["primitive"]))
+            seeds.setdefault(row["animal"], set()).add(row["seed"].strip())
+    out = []
+    for track in tracks:
+        _require_one_second(track)
+        animal_seeds = seeds[track.animal] - {""}
+        if len(animal_seeds) > 1:
+            msg = f"{track.animal}: needs one seed, found {sorted(animal_seeds)}"
+            raise ValueError(msg)
+        ordered = [label for _, label in sorted(labels[track.animal], key=lambda s: s[0])]
+        out.append(
+            SimulatedTrack(
+                track=track,
+                primitives=_primitive_labels(track.animal, ordered),
+                seed=int(next(iter(animal_seeds))) if animal_seeds else None,
+            ),
+        )
+    return out, metadata
+
+
+def _wcon_seed(animal: str, value: object) -> int | None:
+    """Return a WCON record's ``@seed`` as an integer, as the CSV route parses its column.
+
+    An integer, or a string of one, is a seed; anything else, a fraction among them, is refused.
+    """
+    if value is None:
+        return None
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            pass
+    msg = f"{animal}: @seed must be an integer, not {value!r}"
+    raise ValueError(msg)
+
+
+def read_simulated_wcon(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata]:
+    """Read a simulated WCON file: each record carries ``@primitive`` per time, and ``@seed``.
+
+    ``@seed`` may be absent for an animal that is never measured. Records merged under one ``id``
+    must carry the same ``@seed``.
+    """
+    tracks, metadata = read_wcon(path)
+    document = json.loads(path.read_text())
+    records = document["data"] if isinstance(document["data"], list) else [document["data"]]
+    labels: dict[str, dict[float, str]] = {}
+    seeds: dict[str, set[int | None]] = {}
+    for record in records:
+        animal = str(record["id"])
+        timed = isinstance(record["t"], list)
+        t = record["t"] if timed else [record["t"]]
+        raw = record.get("@primitive")
+        if raw is None:
+            msg = f"{path}: record {animal} needs @primitive for a simulated track"
+            raise ValueError(msg)
+        primitive = raw if isinstance(raw, list) else [raw]
+        for ti, label in zip(t, primitive, strict=True):
+            labels.setdefault(animal, {})[float(ti)] = label
+        seeds.setdefault(animal, set()).add(_wcon_seed(animal, record.get("@seed")))
+    out = []
+    for track in tracks:
+        _require_one_second(track)
+        animal_seeds = seeds[track.animal]
+        if len(animal_seeds) > 1:
+            found = sorted(map(str, animal_seeds))
+            msg = f"{track.animal}: records merged under one id carry different seeds {found}"
+            raise ValueError(msg)
+        times = sorted(labels[track.animal])
+        out.append(
+            SimulatedTrack(
+                track=track,
+                primitives=_primitive_labels(
+                    track.animal,
+                    [labels[track.animal][t] for t in times],
+                ),
+                seed=next(iter(animal_seeds)),
+            ),
+        )
+    return out, metadata
+
+
+def read_simulated(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata]:
+    """Read a simulated CSV (with its sidecar) or WCON file, by its suffix."""
+    if path.suffix.lower() == ".csv":
+        return read_simulated_csv(path)
+    return read_simulated_wcon(path)
+
+
+def import_simulated_population(
+    path: Path,
+    model: Any,  # noqa: ANN401 - a measurement.TrackerModel
+) -> tuple[str, list[tuple[int | None, list[BehaviourStep]]]]:
+    """Return a simulated file's family and each animal's seed and measured, windowed steps.
+
+    As the project grades its own simulated tracks: lawn membership from the exact positions, then
+    the whole track measured on its own seed (on Scheer's rig only), then the family's window.
+    Local search is never measured.
+    """
+    from wormbench import measurement as mm
+
+    tracks, metadata = read_simulated(path)
+    samples = FAMILY_SAMPLES[metadata.family]
+    measured = metadata.family in MEASURED_FAMILIES
+    animals = []
+    for simulated in tracks:
+        track = simulated.track
+        x, y, on_column = track.x_mm, track.y_mm, track.on_lawn
+        offset = metadata.analysis_start_s - float(track.t_s[0])
+        if offset < -TIME_EPS:
+            msg = f"{track.animal}: its track starts after the analysis window"
+            raise ValueError(msg)
+        if metadata.family == "local_search":
+            lawn = np.zeros(len(x), dtype=bool)
+        else:
+            lawn = lawn_membership(x, y, on_column, metadata.lawn)
+        steps = to_steps(x, y, lawn)
+        for step, label in zip(steps, simulated.primitives, strict=True):
+            step.primitive = label
+        if measured:
+            if simulated.seed is None:
+                msg = f"{track.animal}: a measured family's simulated track needs a seed"
+                raise ValueError(msg)
+            steps = mm.measure(steps, simulated.seed, model)
+        window = g.analysis_steps(steps, (round(offset), len(steps)), samples)
+        animals.append((simulated.seed, window))
     return metadata.family, animals

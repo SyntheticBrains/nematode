@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -22,6 +22,10 @@ from quantumnematode.benchmark.readouts import OFF_FOOD_DETECTOR, reversal_onset
 from quantumnematode.report.behaviour import BehaviourStep
 
 _REPO = Path(__file__).resolve().parents[5]
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
 import benchmark_bands as bb  # noqa: E402  # pyright: ignore[reportMissingImports]
 import benchmark_grade as bg  # noqa: E402  # pyright: ignore[reportMissingImports]
@@ -234,18 +238,18 @@ def test_imported_tracks_carry_the_activity_family(tmp_path: Path) -> None:
 
 def test_v4_is_the_default_only_once_valid(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    benchmark_overrides: Path,
+    validity_record: Callable[[dict[str, Any]], None],
 ) -> None:
     """Covers "v4 becomes the default": a VALID verdict for v4's very bands makes it the default."""
-    bands = tmp_path / "bands_v4.json"
+    bands = benchmark_overrides / "bands_v4.json"
     bands.write_text(json.dumps(_bands_v4(), indent=2) + "\n")
-    monkeypatch.setattr(bg, "BANDS_V4_PATH", bands)
-    controls = tmp_path / "controls_v4.json"
-    monkeypatch.setattr(bg, "CONTROLS_V4_PATH", controls)
+    sha = mm.file_sha256(bands)
+    validity_record({})
     assert bg.v4_is_valid() is False
-    controls.write_text(json.dumps({"verdict": "VOID", "bands_sha256": mm.file_sha256(bands)}))
+    validity_record({"v4": {"bands": "bands_v4.json", "verdict": "VOID", "bands_sha256": sha}})
     assert bg.v4_is_valid() is False
-    controls.write_text(json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bands)}))
+    validity_record({"v4": {"bands": "bands_v4.json", "verdict": "VALID", "bands_sha256": sha}})
     assert bg.v4_is_valid() is True
     out = tmp_path / "grade.json"
     assert bg.main(["tracks", "--manifest", str(_track_manifest(tmp_path)), "--out", str(out)]) == 0

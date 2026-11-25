@@ -32,12 +32,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from quantumnematode.benchmark.references import BENCHMARK_DATA
+from wormbench import data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from quantumnematode.report.behaviour import BehaviourStep
+    from wormbench.records import BehaviourStep
 
 LAWN_STREAM = 2033
 CHEMOTAXIS_STREAM = 2037
@@ -135,7 +135,7 @@ def load_noise_library(name: str) -> NoiseLibrary:
 
     It is read once per version of the file: rewriting the file is seen within the same process.
     """
-    return _read_library(_stamp(BENCHMARK_DATA / name))
+    return _read_library(_stamp(data.path("benchmark", name)))
 
 
 def file_sha256(path: Path) -> str:
@@ -149,7 +149,7 @@ def _digest(stamp: tuple[str, int, int]) -> str:
 
 
 def _library_sha256(name: str) -> str:
-    return _digest(_stamp(BENCHMARK_DATA / name))
+    return _digest(_stamp(data.path("benchmark", name)))
 
 
 def checked_noise_library(model: TrackerModel) -> NoiseLibrary:

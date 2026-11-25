@@ -4,7 +4,18 @@
 importing a light submodule such as ``roaming_dwelling`` then pulls in none of the simulator.
 """
 
+# ruff: noqa: E402 - the classifier's alias below is registered before this package's imports.
+
 from __future__ import annotations
+
+# The roaming/dwelling classifier lives in the ``wormbench`` package. It is registered first, under
+# its old name and as the same module object, so ``quantumnematode.validation.roaming_dwelling``
+# resolves whichever path is imported first, and before this package's own imports run.
+import sys
+
+from wormbench import classifier as roaming_dwelling
+
+sys.modules[f"{__name__}.roaming_dwelling"] = roaming_dwelling
 
 from typing import TYPE_CHECKING, Any
 

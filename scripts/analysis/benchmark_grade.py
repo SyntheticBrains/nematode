@@ -37,14 +37,11 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import functools
 import json
-import math
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, overload
 
-import numpy as np
 import quantumnematode.brain  # noqa: F401  - registers the brains the configs name
 from quantumnematode.benchmark import grading as g
 from quantumnematode.evaluation.batched import BatchedEvaluator
@@ -54,7 +51,43 @@ from quantumnematode.evaluation.controllers import (
 )
 from quantumnematode.report.dtypes import BehaviourStep
 from quantumnematode.utils.config_loader import load_simulation_config
-from quantumnematode.validation import roaming_dwelling as rd
+from wormbench.bands import (  # noqa: F401 - re-exported: fits and probes reach them here
+    _activity_bands_at,
+    _band,
+    _builder,
+    _kinematic_bands_at,
+    _v2_family_map,
+    classifier,
+    family_bands,
+    family_bands_v2,
+    load_bands,
+    load_bands_v2,
+    load_bands_v3,
+    load_bands_v4,
+    mutant_bands,
+)
+from wormbench.grade import (  # noqa: F401 - re-exported: fits and probes reach them here
+    _chemotaxis_reading,
+    _finite,
+    _grade_measured,
+    _grade_with_share,
+    _small_lawn_derived,
+    _validated,
+    activity_values,
+    chemotaxis_fragments,
+    family_values,
+    grade_populations,
+    grade_populations_v2,
+    grade_populations_v3,
+    grade_populations_v4,
+    grade_track_manifest,
+    kinematic_values,
+    v2_is_valid,
+    v3_is_valid,
+    v4_is_valid,
+    window,
+)
+from wormbench.grade import track_populations as _track_populations
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -85,129 +118,9 @@ HAZARDS = (0.02, 0.01, 0.01)
 PIROUETTE_BETA = 3.0
 
 
-def load_bands(path: Path = BANDS_PATH) -> dict[str, Any]:
-    """Load the bands file."""
-    return json.loads(path.read_text())
-
-
-@functools.cache
-def _builder() -> Any:  # noqa: ANN401 - the bands script's builder, imported on first use
-    """Return the process's band builder, created once so its classified tallies are reused."""
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import benchmark_bands
-
-    return benchmark_bands.BandBuilder()
-
-
-def _band(entry: dict[str, Any]) -> g.Band:
-    return g.Band(
-        centre=float("nan") if entry["centre"] is None else float(entry["centre"]),
-        scale=float("nan") if entry["scale"] is None else float(entry["scale"]),
-        inflated=bool(entry["inflated"]),
-        direction=int(entry.get("direction", 0)),
-    )
-
-
-def family_bands(bands: dict[str, Any], family: str, n: int) -> dict[str, g.Band]:
-    """Return a family's bands at n: the vendored ones where built at n, else built now.
-
-    Local search's band does not depend on n.
-    """
-    if family == "local_search":
-        any_size = next(iter(bands["bands"].values()))
-        return {name: _band(entry) for name, entry in any_size[family].items()}
-    if str(n) in bands["bands"]:
-        return {name: _band(entry) for name, entry in bands["bands"][str(n)][family].items()}
-    builder = _builder()
-    return builder.small_lawn(n) if family == "small_lawn" else builder.uniform_lawn(n)
-
-
-def mutant_bands(bands: dict[str, Any], mutant: str, n: int) -> dict[str, g.Band]:
-    """Return a mutant's Δ bands at n, its directions resolved over its paired band dates."""
-    if str(n) in bands["bands"]:
-        entries = bands["bands"][str(n)]["mutants"][mutant]
-        return {name: _band(entry) for name, entry in entries.items()}
-    return _builder().mutant(mutant, n)[0]
-
-
-def classifier(bands: dict[str, Any]) -> rd.GaussianClassifier:
-    """Return the classifier the bands were read with."""
-    return rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(_REPO / bands["classifier"]))
-
-
-def family_values(
-    family: str,
-    animals: list[list[BehaviourStep]],
-    clf: rd.GaussianClassifier,
-) -> dict[str, float]:
-    """Return a family's statistics over a population, each animal already in its window."""
-    if family == "local_search":
-        return g.simulated_search(animals)
-    uniform = family == "uniform_lawn"
-    total = sum(
-        (g.tally(g.simulated_windows(steps, clf, uniform=uniform)) for steps in animals),
-        start=np.zeros(len(g.TALLY_FIELDS)),
-    )
-    return g.lawn_statistics(total)
-
-
-def window(
-    family: str,
-    steps: list[BehaviourStep],
-    analysis: tuple[int, int],
-) -> list[BehaviourStep]:
-    """Return one animal's steps over its family's registered window."""
-    samples = g.SEARCH_SAMPLES if family == "local_search" else g.LAWN_SAMPLES
-    return g.analysis_steps(steps, analysis, samples)
-
-
-def grade_populations(
-    populations: dict[str, list[list[BehaviourStep]]],
-    bands: dict[str, Any],
-) -> dict[str, Any]:
-    """Grade each family's population at its own size; return values, z, passes and distances."""
-    clf = classifier(bands)
-    bar = float(bands["bars"]["wild_type"])
-    readings: dict[str, dict[str, g.Reading]] = {}
-    sizes: dict[str, int] = {}
-    presence: dict[str, Any] | None = None
-    for family, animals in populations.items():
-        sizes[family] = len(animals)
-        values = family_values(family, animals, clf)
-        readings[family] = g.grade(values, family_bands(bands, family, len(animals)), bar)
-        if family == "local_search":
-            presence = g.simulated_search_presence(animals)
-    graded = list(readings)
-    complete = set(graded) == set(g.FAMILIES)
-    out: dict[str, Any] = {
-        "n": sizes,
-        "bar": bar,
-        "families": {
-            family: {
-                name: {
-                    "value": r.value,
-                    "centre": r.band.centre,
-                    "scale": r.band.scale,
-                    "z": r.z,
-                    "passes": r.passes,
-                }
-                for name, r in rs.items()
-            }
-            for family, rs in readings.items()
-        },
-        "family_passes": {f: all(r.passes for r in rs.values()) for f, rs in readings.items()},
-    }
-    if presence is not None:
-        # Local search passes only where it is present: early/late above 1 at its lower bound.
-        out["local_search_presence"] = presence
-        out["family_passes"]["local_search"] = bool(
-            out["family_passes"]["local_search"] and presence["present"],
-        )
-    out["wild_type_passes"] = complete and all(out["family_passes"].values())
-    out["D"] = g.distance(readings, list(g.FAMILIES)) if complete else None
-    fit = [f for f in g.FIT_FAMILIES if f in readings]
-    out["D_fit"] = g.distance(readings, fit) if set(fit) == set(g.FIT_FAMILIES) else None
-    return out
+def track_populations(manifest: Path) -> dict[str, list[list[BehaviourStep]]]:
+    """Read ``<family> <tracks>`` lines; a relative file resolves against the repository root."""
+    return _track_populations(manifest, base=_REPO)
 
 
 def batched_populations(arm: str, controller: str, seeds: list[int]) -> dict[str, Any]:
@@ -262,25 +175,6 @@ def capture_populations(
     return populations
 
 
-def track_populations(manifest: Path) -> dict[str, list[list[BehaviourStep]]]:
-    """Read ``<family> <tracks>`` lines: CSV (with its sidecar) or WCON files, imported tracks."""
-    from quantumnematode.benchmark.track_import import import_population
-
-    populations: dict[str, list[list[BehaviourStep]]] = {}
-    for raw in manifest.read_text().splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        family, path_text = line.split(maxsplit=1)
-        path = Path(path_text.strip())
-        found, animals = import_population(path if path.is_absolute() else _REPO / path)
-        if found != family:
-            msg = f"{path} declares family {found!r}, but the manifest line names {family!r}"
-            raise ValueError(msg)
-        populations.setdefault(family, []).extend(animals)
-    return populations
-
-
 # ---------------------------------------------------------------------------------------------
 # B v2: measured simulated tracks, the kinematics and chemotaxis families
 # ---------------------------------------------------------------------------------------------
@@ -297,43 +191,11 @@ CONTROLS_V2_PATH = (
 )
 
 
-def _validated(bands_path: Path, controls_path: Path) -> bool:
-    """Return whether a version's controls found VALID the very bands file now vendored."""
-    if not (bands_path.exists() and controls_path.exists()):
-        return False
-    try:
-        controls = json.loads(controls_path.read_text())
-    except (OSError, json.JSONDecodeError):
-        return False  # an unreadable verdict leaves the default where it was
-    if not isinstance(controls, dict) or controls.get("verdict") != "VALID":
-        return False
-    from quantumnematode.benchmark.measurement import file_sha256
-
-    try:
-        return controls.get("bands_sha256") == file_sha256(bands_path)
-    except OSError:
-        return False  # unreadable bands leave the default where it was
-
-
-def v2_is_valid() -> bool:
-    """Return whether B v2's controls found VALID the very bands file now vendored.
-
-    The verdict records the SHA-256 of the bands it validated; a bands file that differs from it, a
-    verdict that records none, or one that cannot be read, does not make v2 the default.
-    """
-    return _validated(BANDS_V2_PATH, CONTROLS_V2_PATH)
-
-
 CHEMOTAXIS_PROTOCOL = "chemotaxis_chen"
 # The families graded against Scheer's rig, whose tracker the lawn model measures. Local search is
 # graded against López-Cruz's reorientation counts from another rig, whose tracker no track
 # measures, so its simulated tracks stay exact.
 LAWN_MEASURED = ("small_lawn", "uniform_lawn")
-
-
-def load_bands_v2(path: Path = BANDS_V2_PATH) -> dict[str, Any]:
-    """Load B v2's bands, with its families, bar and measurement models."""
-    return json.loads(path.read_text())
 
 
 BANDS_V3_PATH = _REPO / "data" / "benchmark" / "bands_v3.json"
@@ -348,16 +210,6 @@ CONTROLS_V3_PATH = (
 )
 
 
-def v3_is_valid() -> bool:
-    """Return whether B v3's controls found VALID the very bands file now vendored."""
-    return _validated(BANDS_V3_PATH, CONTROLS_V3_PATH)
-
-
-def load_bands_v3(path: Path | None = None) -> dict[str, Any]:
-    """Load B v3's bands: v2's layout, with v3's families, bar and reported reference."""
-    return json.loads((BANDS_V3_PATH if path is None else path).read_text())
-
-
 BANDS_V4_PATH = _REPO / "data" / "benchmark" / "bands_v4.json"
 CONTROLS_V4_PATH = (
     _REPO
@@ -368,116 +220,6 @@ CONTROLS_V4_PATH = (
     / "124-benchmark-v4"
     / "controls_v4.json"
 )
-
-
-def v4_is_valid() -> bool:
-    """Return whether B v4's controls found VALID the very bands file now vendored."""
-    return _validated(BANDS_V4_PATH, CONTROLS_V4_PATH)
-
-
-def load_bands_v4(path: Path | None = None) -> dict[str, Any]:
-    """Load B v4's bands: v3's, with the on-lawn activity family."""
-    return json.loads((BANDS_V4_PATH if path is None else path).read_text())
-
-
-def _v2_family_map(bands: dict[str, Any]) -> dict[str, tuple[str, ...]]:
-    return {f: tuple(st) for f, st in bands["families"].items()}
-
-
-def family_bands_v2(bands: dict[str, Any], family: str, n: int) -> dict[str, g.Band]:
-    """Return a v2 family's bands at n; chemotaxis and local search do not depend on n."""
-    if family in ("chemotaxis", "local_search"):
-        any_size = next(iter(bands["bands"].values()))
-        return {name: _band(entry) for name, entry in any_size[family].items()}
-    if str(n) in bands["bands"]:
-        return {name: _band(entry) for name, entry in bands["bands"][str(n)][family].items()}
-    if family == "kinematics":
-        return _kinematic_bands_at(n)
-    if family == "activity":
-        return _activity_bands_at(n, tuple(sorted(bands["activity_kappa"].items())))
-    return family_bands(bands, family, n)
-
-
-@functools.cache
-def _kinematic_bands_at(n: int) -> dict[str, g.Band]:
-    import benchmark_bands as bb
-
-    builder = _builder()
-    per_date = bb.per_date_kinematic_tallies(builder.tracks, bb.WILD_TYPE, builder._classifier)
-    kappa = load_bands_v2()["kinematics_kappa"]
-    return bb.lawn_bands(
-        per_date,
-        g.KINEMATIC_STATISTICS,
-        n,
-        np.random.default_rng([bb.BAND_SEED, bb.KINEMATICS_INDEX, n]),
-        kappa=kappa,
-        statistic=g.kinematic_statistics,
-    )
-
-
-@functools.cache
-def _activity_bands_at(n: int, kappa: tuple[tuple[str, float], ...]) -> dict[str, g.Band]:
-    """Return the activity bands at n on the given bands' kappa, by the registered build's rule."""
-    import benchmark_bands as bb
-
-    builder = _builder()
-    per_date = bb.per_date_activity_tallies(builder.tracks, bb.WILD_TYPE)
-    return bb.lawn_bands(
-        per_date,
-        g.ACTIVITY_STATISTICS,
-        n,
-        np.random.default_rng([bb.BAND_SEED, bb.ACTIVITY_INDEX, n]),
-        kappa=dict(kappa),
-        statistic=g.activity_statistics,
-    )
-
-
-def activity_values(animals: list[list[BehaviourStep]]) -> dict[str, float]:
-    """Return the activity family's statistics for a small-lawn population, from its positions."""
-    total = np.zeros(len(g.ACTIVITY_FIELDS))
-    for steps in animals:
-        x = np.array([s.x for s in steps], dtype=float)
-        y = np.array([s.y for s in steps], dtype=float)
-        on = np.array([bool(s.on_lawn) for s in steps])
-        total += g.activity_tally(x, y, on)
-    return g.activity_statistics(total)
-
-
-def kinematic_values(
-    animals: list[list[BehaviourStep]],
-    clf: rd.GaussianClassifier,
-) -> dict[str, float]:
-    """Return the kinematics family's statistics for a small-lawn population."""
-    total = np.zeros(g.KINEMATIC_FIELDS)
-    for steps in animals:
-        x = np.array([s.x for s in steps], dtype=float)
-        y = np.array([s.y for s in steps], dtype=float)
-        on = np.array([bool(s.on_lawn) for s in steps])
-        total += g.kinematic_tally(g.simulated_windows(steps, clf), x, y, on)
-    return g.kinematic_statistics(total)
-
-
-def chemotaxis_fragments(
-    animals: list[list[BehaviourStep]],
-    field: Any,  # noqa: ANN401 - an OdourField
-) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Return a measured chemotaxis population's fragments in the field's frame.
-
-    Samples outside the measured field are missing, as a real worm's track ends when it leaves the
-    imaged field.
-    """
-    from quantumnematode.benchmark import chemotaxis as ch
-
-    out = []
-    for steps in animals:
-        xy = np.array([(s.x, s.y) for s in steps], dtype=float)
-        finite = np.isfinite(xy).all(axis=1)
-        inside = np.zeros(len(xy), dtype=bool)
-        inside[finite] = field.inside(xy[finite])
-        xy[~inside] = np.nan
-        local = xy - np.asarray(field.origin_mm)
-        out.extend(ch.split_fragments(local[:, 0], local[:, 1]))
-    return out
 
 
 @overload
@@ -567,272 +309,12 @@ def simulate_v2(
     return populations, chemotaxis
 
 
-def _chemotaxis_reading(
-    chemotaxis: list[list[BehaviourStep]],
-    bands: dict[str, Any],
-    bar: float,
-    *,
-    presence: bool,
-    version: int = 2,
-) -> tuple[dict[str, g.Reading], dict[str, Any] | None]:
-    """Return the chemotaxis family's readings, and its presence test where asked for.
-
-    v3 reads five statistics from the same samples, v2 three.
-    """
-    from quantumnematode.benchmark import chemotaxis as ch
-    from quantumnematode.benchmark.references import sample_field
-    from quantumnematode.evaluation.odour_field import chen_field
-
-    field = chen_field()
-
-    def concentration(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        return sample_field(field.field, field.cell_mm, x, y)
-
-    # One group per animal: presence resamples animals, as local search's does.
-    groups = [
-        ch.fragment_samples(chemotaxis_fragments([animal], field), concentration)
-        for animal in chemotaxis
-    ]
-    pooled = ch.pooled_statistics_v3 if version >= 3 else ch.pooled_statistics
-    readings = g.grade(
-        pooled([sample for group in groups for sample in group]),
-        family_bands_v2(bands, "chemotaxis", len(chemotaxis)),
-        bar,
-    )
-    return readings, (ch.chemotaxis_presence(groups) if presence else None)
-
-
-def grade_populations_v2(
-    populations: dict[str, list[list[BehaviourStep]]],
-    chemotaxis: list[list[BehaviourStep]] | None,
-    bands: dict[str, Any],
-    *,
-    presence: bool = True,
-) -> dict[str, Any]:
-    """Grade on B v2: v1's families, kinematics from the small lawn's animals, and chemotaxis.
-
-    Chemotaxis, like local search, passes only where it is present. With ``presence=False``, as a
-    fit's objective reads only statistics and distances, the presence tests are skipped: every
-    statistic, D and D_fit are unchanged, and the passes, which need presence, are not given.
-    """
-    return _grade_measured(populations, chemotaxis, bands, presence=presence, version=2)
-
-
-def grade_populations_v3(
-    populations: dict[str, list[list[BehaviourStep]]],
-    chemotaxis: list[list[BehaviourStep]] | None,
-    bands: dict[str, Any],
-    *,
-    presence: bool = True,
-) -> dict[str, Any]:
-    """Grade on B v3: v2's grading, with local search's log ratio and chemotaxis's five.
-
-    Presence is read as on v2. The share of seconds in a reversal bout, over the local-search and
-    chemotaxis windows, is reported beside the grade where the steps carry primitive labels, with
-    its real reference; it takes no part in any pass, z or distance.
-    """
-    return _grade_with_share(populations, chemotaxis, bands, presence=presence, version=3)
-
-
-def _grade_with_share(
-    populations: dict[str, list[list[BehaviourStep]]],
-    chemotaxis: list[list[BehaviourStep]] | None,
-    bands: dict[str, Any],
-    *,
-    presence: bool,
-    version: int,
-) -> dict[str, Any]:
-    """Grade on v3 or v4, with the share of seconds reversing reported beside the grade."""
-    out = _grade_measured(populations, chemotaxis, bands, presence=presence, version=version)
-    labelled = [*populations.get("local_search", []), *(chemotaxis or [])]
-    share = g.reversal_share(labelled)
-    out["reversal_share"] = (
-        None
-        if share is None
-        else {
-            "value": share,
-            "windows": [
-                w
-                for w, animals in (
-                    ("local_search", populations.get("local_search")),
-                    ("chemotaxis", chemotaxis),
-                )
-                if animals
-            ],
-            "reference": bands["reported"]["reversal_share"],
-        }
-    )
-    return out
-
-
-def grade_populations_v4(
-    populations: dict[str, list[list[BehaviourStep]]],
-    chemotaxis: list[list[BehaviourStep]] | None,
-    bands: dict[str, Any],
-    *,
-    presence: bool = True,
-) -> dict[str, Any]:
-    """Grade on B v4: v3's grading, with the on-lawn activity family from the small lawn's animals.
-
-    The activity statistics the bands grade are read on their bands; the onset rate, where the
-    bands report it rather than grade it, is reported beside the grade. Refuses bands whose onset
-    rate is not yet decided.
-    """
-    if bands.get("activity_graded") is None:
-        msg = (
-            "these v4 bands have not recorded whether the onset rate is graded; set it with "
-            "benchmark_bands.py --version v4 --onset once the oracle's check is read"
-        )
-        raise ValueError(msg)
-    return _grade_with_share(populations, chemotaxis, bands, presence=presence, version=4)
-
-
-def _small_lawn_derived(
-    animals: list[list[BehaviourStep]],
-    clf: rd.GaussianClassifier,
-    bands: dict[str, Any],
-    bar: float,
-    version: int,
-) -> tuple[dict[str, dict[str, g.Reading]], dict[str, float], dict[str, float] | None]:
-    """Return the families read from the small lawn's animals, and what is reported beside them.
-
-    Kinematics on every measured version, with the on-lawn reversal rate reported; from v4, the
-    activity family, its ungraded statistics reported.
-    """
-    kinematics = kinematic_values(animals, clf)
-    readings = {
-        "kinematics": g.grade(kinematics, family_bands_v2(bands, "kinematics", len(animals)), bar),
-    }
-    # Computed beside the graded kinematics and reported, never read on a band.
-    reported = {name: kinematics[name] for name in g.KINEMATIC_REPORTED}
-    if version < 4:
-        return readings, reported, None
-    activity = activity_values(animals)
-    graded = tuple(bands["families"]["activity"])
-    # The bands hold every activity statistic, graded or not: grade only the graded ones.
-    activity_bands = family_bands_v2(bands, "activity", len(animals))
-    readings["activity"] = g.grade(
-        {name: activity[name] for name in graded},
-        {name: activity_bands[name] for name in graded},
-        bar,
-    )
-    return readings, reported, {k: v for k, v in activity.items() if k not in graded}
-
-
-def _grade_measured(
-    populations: dict[str, list[list[BehaviourStep]]],
-    chemotaxis: list[list[BehaviourStep]] | None,
-    bands: dict[str, Any],
-    *,
-    presence: bool,
-    version: int,
-) -> dict[str, Any]:
-    """Grade on B v2 or v3, which differ only in local search's ratio and chemotaxis's statistics."""
-    clf = classifier(bands)
-    bar = float(bands["bars"]["wild_type"])
-    family_map = _v2_family_map(bands)
-    readings: dict[str, dict[str, g.Reading]] = {}
-    sizes: dict[str, int] = {}
-    search_presence: dict[str, Any] | None = None
-    reported: dict[str, float] | None = None
-    activity_reported: dict[str, float] | None = None
-    for family, animals in populations.items():
-        sizes[family] = len(animals)
-        values = family_values(family, animals, clf)
-        if family == "local_search" and version >= 3:
-            values = g.log_search_statistics(values)
-        readings[family] = g.grade(values, family_bands_v2(bands, family, len(animals)), bar)
-        if family == "local_search" and presence:
-            search_presence = g.simulated_search_presence(animals)
-        if family == "small_lawn":
-            derived, reported, activity_reported = _small_lawn_derived(
-                animals,
-                clf,
-                bands,
-                bar,
-                version,
-            )
-            readings.update(derived)
-            sizes.update(dict.fromkeys(derived, len(animals)))
-    chemotaxis_presence: dict[str, Any] | None = None
-    if chemotaxis is not None:
-        sizes["chemotaxis"] = len(chemotaxis)
-        readings["chemotaxis"], chemotaxis_presence = _chemotaxis_reading(
-            chemotaxis,
-            bands,
-            bar,
-            presence=presence,
-            version=version,
-        )
-    out: dict[str, Any] = {
-        "version": version,
-        "n": sizes,
-        "bar": bar,
-        "families": {
-            family: {
-                name: {
-                    "value": r.value,
-                    "centre": r.band.centre,
-                    "scale": r.band.scale,
-                    "z": r.z,
-                    "passes": r.passes,
-                }
-                for name, r in rs.items()
-            }
-            for family, rs in readings.items()
-        },
-        "family_passes": {f: all(r.passes for r in rs.values()) for f, rs in readings.items()},
-    }
-    out |= {
-        key: value
-        for key, value in (
-            ("kinematics_reported", reported),
-            ("activity_reported", activity_reported),
-        )
-        if value
-    }
-    if search_presence is not None:
-        out["local_search_presence"] = search_presence
-        out["family_passes"]["local_search"] = bool(
-            out["family_passes"]["local_search"] and search_presence["present"],
-        )
-    if chemotaxis_presence is not None:
-        # Chemotaxis passes only where it is present: drift and the log ratio above 0.
-        out["chemotaxis_presence"] = chemotaxis_presence
-        out["family_passes"]["chemotaxis"] = bool(
-            out["family_passes"]["chemotaxis"] and chemotaxis_presence["present"],
-        )
-    complete = set(readings) == set(family_map)
-    out["wild_type_passes"] = complete and all(out["family_passes"].values())
-    out["D"] = g.distance(readings, list(family_map), family_map) if complete else None
-    fit = list(bands["fit_families"])
-    out["D_fit"] = g.distance(readings, fit, family_map) if set(fit) <= set(readings) else None
-    if not presence:
-        # Passes need presence; a grading without it gives statistics and distances only.
-        out["family_passes"] = None
-        out["wild_type_passes"] = None
-        out["presence"] = None
-    return out
-
-
 def parse_seeds(text: str) -> list[int]:
     """Parse ``a-b`` or ``a,b,c`` into seeds."""
     if "-" in text:
         low, high = (int(v) for v in text.split("-"))
         return list(range(low, high + 1))
     return [int(v) for v in text.split(",")]
-
-
-def _finite(value: Any) -> Any:  # noqa: ANN401 - any JSON-shaped value
-    if isinstance(value, dict):
-        return {k: _finite(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_finite(v) for v in value]
-    if isinstance(value, (float, np.floating)):
-        return float(value) if math.isfinite(value) else None
-    if isinstance(value, np.bool_):
-        return bool(value)
-    return value
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -864,6 +346,15 @@ def main(argv: list[str] | None = None) -> int:
         args.bands = (
             "v4" if v4_is_valid() else "v3" if v3_is_valid() else "v2" if v2_is_valid() else "v1"
         )
+    if args.source == "tracks":
+        # Imported tracks are graded by the package's own function, which `wormbench grade` calls.
+        result = grade_track_manifest(args.manifest, args.bands, base=_REPO)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
+        print(
+            json.dumps({k: result[k] for k in ("family_passes", "wild_type_passes", "D", "D_fit")}),
+        )
+        return 0
     if args.bands in ("v2", "v3", "v4"):
         return _main_measured(args, int(args.bands[1]))
     bands = load_bands()
@@ -879,9 +370,6 @@ def main(argv: list[str] | None = None) -> int:
             "hazards_per_s": list(HAZARDS),
             **({"beta": PIROUETTE_BETA} if args.controller == "pirouette" else {}),
         }
-    elif args.source == "tracks":
-        populations = track_populations(args.manifest)
-        source = {"source": "tracks", "manifest": str(args.manifest)}
     else:
         populations = capture_populations(args.manifest)
         source = {"source": "captures", "manifest": str(args.manifest)}
@@ -925,9 +413,6 @@ def _main_measured(args: argparse.Namespace, version: int) -> int:
             "hazards_per_s": list(HAZARDS),
             **({"beta": PIROUETTE_BETA} if args.controller == "pirouette" else {}),
         }
-    elif args.source == "tracks":
-        populations = track_populations(args.manifest)
-        source = {"source": "tracks", "manifest": str(args.manifest)}
     else:
         model = mm.TrackerModel.from_dict(bands["measurement"]["lawn"])
         populations = capture_populations(args.manifest, model)

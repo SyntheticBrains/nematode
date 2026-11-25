@@ -80,10 +80,12 @@ BRAIN_CONFIGS = (
 )
 # Per-animal totals the trajectories return beside their per-step arrays.
 TOTALS = ("final_satiety", "total_intake")
-# What a record's source digest covers: the package that runs, the configs the jobs read, this
-# script and the harness it builds the brains with.
+# What a record's source digest covers: the packages that run (the batched evaluator reads the
+# grader's odour field), the configs the jobs read, this script and the harness it builds the
+# brains with.
 SOURCE_PATHS = (
     "packages/quantum-nematode/quantumnematode",
+    "packages/wormbench/wormbench",
     "configs/scenarios/foraging",
     "scripts/analysis/connectome_identity_check.py",
     "scripts/analysis/body_kinematics_eval.py",

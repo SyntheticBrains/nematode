@@ -1,10 +1,15 @@
 # Grading external tracks
 
-The benchmark grades any worm track that can be put on a 1-s grid, from a lab's tracker or from another simulator. The tracks go through the same windows, classifier, statistics and bands as the project's own references and simulations (`quantumnematode.benchmark.track_import`). Grading imported tracks runs no simulation. Importing the grader loads none of the simulator and no PyTorch, so the benchmark works without the `torch` extra.
+The benchmark grades any worm track that can be put on a 1-s grid, from a lab's tracker or from another simulator. The tracks go through the same windows, classifier, statistics and bands as the project's own references and simulations (`wormbench.track_import`). Grading imported tracks runs no simulation.
+
+The grader is the standalone package `wormbench` (`packages/wormbench/`: Python 3.10 or later, numpy and scipy only). Its README gives the contract an outside user needs. In this repository both routes call the same function and give the same grading:
 
 ```bash
+uv run wormbench grade --manifest <manifest.txt> --out <grade.json> [--bands v4] [--simulated]
 uv run python scripts/analysis/benchmark_grade.py tracks --manifest <manifest.txt> --out <grade.json>
 ```
+
+The command adds a `wormbench` block naming the package version and the bands' SHA-256. It reads a manifest's relative entries against the manifest's directory; the script reads them against the repository root.
 
 Each manifest line is `<family> <file>`. A file is a CSV with its metadata sidecar, or a WCON file. Each animal in a file is one member of the family's population, and the population is graded at its own size.
 
@@ -45,8 +50,8 @@ Each manifest line is `<family> <file>`. A file is a CSV with its metadata sidec
 
 **What v2 does not do for imported tracks:**
 
-- **They are never passed through a measurement model.** v2 adds the real tracker's noise and losses to *simulated* tracks only, so they are read the way real tracks are. An imported track is taken as measured.
-- **The chemotaxis family cannot be imported.** It is graded on Chen et al. 2025's measured butanone field, which an imported track does not carry. Imported populations are graded on the other families; their D, which needs all five, is not defined, and D_fit is.
+- **Imported real tracks are never passed through a measurement model.** v2 adds the real tracker's noise and losses to *simulated* tracks only, so they are read the way real tracks are. An imported track is taken as measured unless it is declared simulated: `wormbench grade --simulated` measures each animal on Scheer's rig exactly as the project measures its own captures. Scheer's rig means the small-lawn and uniform-well families. Every simulated file carries each second's primitive (`run`, `reversal`, `omega` or `delta`), as a `primitive` CSV column or a WCON record's `@primitive`. An animal on Scheer's rig also needs one seed, as a `seed` column or `@seed`. Local-search animals are never measured, so their seed may be left empty or omitted. A seed used twice is refused, and so is `--simulated` on v1.
+- **The chemotaxis family cannot be imported.** It is graded on Chen et al. 2025's measured butanone field, which an imported track does not carry. Imported populations are graded on the other families. Their D needs every family of its version, so it is never defined. D_fit is defined only when every family it covers is present: on v4, the small lawn, the uniform well, kinematics and activity. So a population with only small-lawn animals, such as the package's example, has no D_fit either.
 
 **Declared non-goals** of v2:
 

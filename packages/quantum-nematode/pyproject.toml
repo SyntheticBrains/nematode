@@ -43,6 +43,7 @@ dependencies = [
     "pandas>=2.2",
     "openpyxl>=3.1",
     "ncps>=1.0.1",
+    "wormbench",
 ]
 
 [project.urls]
@@ -115,7 +116,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["quantumnematode"]
+source = ["quantumnematode", "wormbench"]
 branch = true
 omit = [
     "*/tests/*",

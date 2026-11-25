@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use wormbench, please cite it as below, and cite the real-worm data it grades against (see the README)."
+type: software
+title: "wormbench: grading simulated and real C. elegans tracks against real-worm behaviour"
+authors:
+  - family-names: Zaharia
+    given-names: Chris Julian
+repository-code: "https://github.com/SyntheticBrains/nematode"
+url: "https://github.com/SyntheticBrains/nematode/tree/main/packages/wormbench"
+license: Apache-2.0
+version: 1.0.0.dev0
+keywords:
+  - C. elegans
+  - behaviour
+  - benchmark
+  - foraging
+  - roaming and dwelling
+  - local search
+  - chemotaxis
+abstract: >-
+  A grader for simulated or real C. elegans tracks on standard assays: Scheer and
+  Bargmann's small lawn and uniform well, the kinematics and activity of worms on a
+  lawn, López-Cruz et al.'s local search after food removal, and Chen et al.'s
+  butanone chemotaxis. Each statistic is graded against bands built from the spread
+  between real recording dates, at the population's own size.

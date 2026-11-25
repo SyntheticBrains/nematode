@@ -1,0 +1,11 @@
+{
+  "record": null,
+  "files": {
+    "benchmark/calhoun2014_tracks.npz": null,
+    "benchmark/chen2025_tracks.npz": null,
+    "benchmark/lopezcruz2019_reorientations.json": null,
+    "benchmark/roberts2016_tracks.npz": null,
+    "benchmark/scheer2023_split.json": null,
+    "benchmark/scheer2023_tracks.npz": null
+  }
+}

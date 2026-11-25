@@ -13,7 +13,7 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -24,6 +24,10 @@ from quantumnematode.benchmark import references as refs
 from quantumnematode.report.behaviour import BehaviourStep
 
 _REPO = Path(__file__).resolve().parents[5]
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 sys.path.insert(0, str(_REPO / "scripts" / "analysis"))
 import benchmark_bands as bb  # noqa: E402  # pyright: ignore[reportMissingImports]
 import benchmark_grade as bg  # noqa: E402  # pyright: ignore[reportMissingImports]
@@ -307,16 +311,16 @@ def _track_manifest(tmp_path: Path, animals: int = 64) -> Path:
     return manifest
 
 
-def _write_bands_v3(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    path = tmp_path / "bands_v3.json"
+def _write_bands_v3(overrides: Path) -> Path:
+    path = overrides / "bands_v3.json"
     path.write_text(json.dumps(_bands_v3(), indent=2) + "\n")
-    monkeypatch.setattr(bg, "BANDS_V3_PATH", path)
     return path
 
 
 def test_an_imported_track_reports_no_share(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    benchmark_overrides: Path,
 ) -> None:
     """Covers "An imported track reports no share": imported positions grade on v3 with no share."""
 
@@ -325,7 +329,7 @@ def test_an_imported_track_reports_no_share(
         raise AssertionError(msg)
 
     monkeypatch.setattr(mm, "measure", refuse)
-    _write_bands_v3(tmp_path, monkeypatch)
+    _write_bands_v3(benchmark_overrides)
     out = tmp_path / "grade.json"
     manifest = _track_manifest(tmp_path)
     assert bg.main(["tracks", "--manifest", str(manifest), "--out", str(out), "--bands", "v3"]) == 0
@@ -339,39 +343,38 @@ def test_an_imported_track_reports_no_share(
 
 
 def test_unreadable_bands_leave_the_default(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    benchmark_overrides: Path,
 ) -> None:
     """A bands file that cannot be hashed makes no version valid, so the default falls back."""
-    bands = _write_bands_v3(tmp_path, monkeypatch)
-    controls = tmp_path / "controls_v3.json"
-    controls.write_text(json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bands)}))
-    monkeypatch.setattr(bg, "CONTROLS_V3_PATH", controls)
+    bands = _write_bands_v3(benchmark_overrides)
+    sha = mm.file_sha256(bands)
+    record = {"v3": {"bands": "bands_v3.json", "verdict": "VALID", "bands_sha256": sha}}
 
     def unreadable(_path: Path) -> str:
         msg = "unreadable"
         raise PermissionError(msg)
 
     monkeypatch.setattr(mm, "file_sha256", unreadable)
-    assert bg.v3_is_valid() is False
+    assert bg.v3_is_valid(record) is False
 
 
 def test_v3_is_the_default_only_once_valid(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    benchmark_overrides: Path,
+    validity_record: Callable[[dict[str, Any]], None],
 ) -> None:
     """Covers "v3 becomes the default": a VALID verdict for v3's very bands makes it the default.
 
     v4 is ruled out, as it was before its controls read VALID.
     """
-    bands = _write_bands_v3(tmp_path, monkeypatch)
-    controls = tmp_path / "controls_v3.json"
-    monkeypatch.setattr(bg, "CONTROLS_V3_PATH", controls)
-    monkeypatch.setattr(bg, "CONTROLS_V4_PATH", tmp_path / "no_controls_v4.json")
+    bands = _write_bands_v3(benchmark_overrides)
+    sha = mm.file_sha256(bands)
+    validity_record({})
     assert bg.v3_is_valid() is False
-    controls.write_text(json.dumps({"verdict": "VOID", "bands_sha256": mm.file_sha256(bands)}))
+    validity_record({"v3": {"bands": "bands_v3.json", "verdict": "VOID", "bands_sha256": sha}})
     assert bg.v3_is_valid() is False
-    controls.write_text(json.dumps({"verdict": "VALID", "bands_sha256": mm.file_sha256(bands)}))
+    validity_record({"v3": {"bands": "bands_v3.json", "verdict": "VALID", "bands_sha256": sha}})
     assert bg.v3_is_valid() is True
     out = tmp_path / "grade.json"
     manifest = _track_manifest(tmp_path)
