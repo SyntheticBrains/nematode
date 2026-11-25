@@ -184,6 +184,16 @@ A shared seed and a held-out row are covered by direct tests. A missing stub sho
   - run the full suite, when no fit holds the cores, and pre-commit;
   - merge.
 
+**Done to the merge (2026-11-25).** #541's fit, grade and read finished, and its close-out runs no further `c2_fit.py` stage, so this change may merge first. #541 then resolves one conflict in `.pre-commit-config.yaml`, keeping both edits. `main` (3a4603bc, with numpy 2.5.5) came in by a merge commit, on a tree identical to the rebased one. Both baselines were re-taken there in freshly synced environments:
+
+- `wormbench_identity_check.py`: 23 of 23 outputs identical.
+- `speedup_identity_check.py`: 59 of 59 jobs identical.
+- No drift on `main`: C.1's v3 answer matches Logbook 124 in all 21 statistics of all 5 populations, and the builder reproduces the v1 bands at 64 and 200.
+- `wormbench_records.py check` passes.
+- The full suite passes (9,381 passed, 35 skipped, 2 xfailed), and so does `pre-commit run -a`.
+
+The merge waits for the maintainer.
+
 ## 8. Publishing (after the merge; each step confirmed with the maintainer first)
 
 - [ ] 8.1 A Zenodo deposit of the fetched files and `PROVENANCE.md`, with each file's licence. Its
