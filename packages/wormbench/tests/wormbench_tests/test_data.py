@@ -119,6 +119,22 @@ def test_a_tampered_copy_is_refused(tmp_path, monkeypatch):
         data.path("benchmark", "bands_v4.json")
 
 
+def test_a_refused_file_names_the_repair_for_its_source(tmp_path, monkeypatch):
+    """The refusal says how to repair the file where it was found, source by source."""
+    env = tmp_path / "env"
+    _make(env, "benchmark", "bands_v4.json", '{"tampered": true}\n')
+    monkeypatch.setenv(data.ENVIRONMENT_VARIABLE, str(env))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    data.set_root(None)
+    with pytest.raises(data.ChecksumError, match=rf"unset {data.ENVIRONMENT_VARIABLE}"):
+        data.path("benchmark", "bands_v4.json")
+    _make(data.cache_directory(), "benchmark", "scheer2023_split.json", "{}\n")
+    with pytest.raises(data.ChecksumError, match=r"run `wormbench data fetch`, which replaces it"):
+        data.path("benchmark", "scheer2023_split.json")
+    shipped = data.package_directory() / "benchmark" / "bands_v4.json"
+    assert "reinstall wormbench" in data._repair("benchmark", shipped)
+
+
 def test_the_host_root_is_read_as_given(tmp_path):
     """The host's root is the host's own: a listed file there is not checked."""
     host = tmp_path / "host"

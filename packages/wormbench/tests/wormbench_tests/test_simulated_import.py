@@ -115,6 +115,50 @@ def test_merged_wcon_records_with_different_seeds_are_refused(tmp_path: Path) ->
         ti.read_simulated(path)
 
 
+def _wcon(path: Path, seed: object) -> Path:
+    document = {
+        "units": {"t": "s", "x": "mm", "y": "mm"},
+        "data": [
+            {
+                "id": "w1",
+                "t": [0.0, 1.0],
+                "x": [0.0, 0.0],
+                "y": [0.0, 0.0],
+                "@primitive": ["run", "run"],
+                "@seed": seed,
+            },
+        ],
+        ti.METADATA_KEY: METADATA,
+    }
+    path.write_text(json.dumps(document))
+    return path
+
+
+@pytest.mark.parametrize("seed", [7.9, 7.0, True, "7.9"])
+def test_a_wcon_seed_that_is_not_an_integer_is_refused(tmp_path: Path, seed: object) -> None:
+    """A WCON @seed is an integer, as the CSV column is; a fraction is refused, not truncated."""
+    with pytest.raises(ValueError, match="@seed must be an integer"):
+        ti.read_simulated(_wcon(tmp_path / "w.wcon", seed))
+
+
+@pytest.mark.parametrize("seed", [7, "7"])
+def test_an_integer_wcon_seed_is_read_as_its_integer(tmp_path: Path, seed: object) -> None:
+    """An integer @seed, or a string of one, is the animal's seed."""
+    tracks, _ = ti.read_simulated(_wcon(tmp_path / "w.wcon", seed))
+    assert [t.seed for t in tracks] == [7]
+
+
+def test_a_cadence_off_one_second_beyond_the_time_tolerance_is_refused(tmp_path: Path) -> None:
+    """Samples are 1 s apart within the time tolerance alone: 5 µs off is refused."""
+    path = tmp_path / "drift.csv"
+    path.write_text(
+        "animal,t_s,x,y,primitive,seed\nw1,0.0,0.0,0.0,run,1\nw1,1.000005,0.0,0.0,run,1\n",
+    )
+    path.with_name(path.name + ".json").write_text(json.dumps(METADATA))
+    with pytest.raises(ValueError, match="every 1 s"):
+        ti.read_simulated(path)
+
+
 def test_local_search_needs_no_seed(tmp_path: Path) -> None:
     """Local search is never measured, so its simulated animals need no seed."""
     metadata = {"family": "local_search", "analysis_start_s": 0.0, "units": "mm"}

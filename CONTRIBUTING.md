@@ -243,9 +243,9 @@ Releases are tags on `main` plus a GitHub Release; there is no PyPI publication.
 
 1. Run `uv run python scripts/analysis/wormbench_records.py check` and `wormbench_example.py check`; both must pass, so the package's records, copies, manifest and example match the committed sources.
 2. Set the version in `packages/wormbench/pyproject.toml`, `wormbench/__init__.py` and `packages/wormbench/CITATION.cff`. A change of the default benchmark version is a major release.
-3. Build with `uv build --package wormbench`, install the wheel alone into a fresh Python 3.10 environment at the declared minimums, and run the package's tests with `-o addopts=""` (the CI job `wormbench alone` does the same).
-4. With the maintainer's confirmation: a TestPyPI upload, installed and graded on the example; then the PyPI upload, and the tag on the merge commit.
-5. When the data deposit changes, publish a new Zenodo version and write its per-file addresses into `wormbench/_data/urls.json`; `wormbench_records.py sync` never touches that file.
+3. If the data deposit has changed, then with the maintainer's confirmation, publish a new Zenodo version first. Write each file's address in that version into `wormbench/_data/urls.json` before building, since the wheel ships that file. `wormbench_records.py sync` never touches it. Check the addresses with `wormbench data fetch` and `wormbench data verify` from a clean cache.
+4. Build with `uv build --package wormbench`, install the wheel alone into a fresh Python 3.10 environment at the declared minimums, and run the package's tests with `-o addopts=""` (the CI job `wormbench alone` does the same).
+5. With the maintainer's confirmation: a TestPyPI upload, installed and graded on the example; then the PyPI upload, and the tag on the merge commit.
 
 ## Where help is wanted
 

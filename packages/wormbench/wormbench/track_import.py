@@ -424,7 +424,7 @@ def _primitive_labels(animal: str, labels: list[Any]) -> tuple[str, ...]:
 
 def _require_one_second(track: ImportedTrack) -> None:
     t = np.asarray(track.t_s, dtype=float)
-    if len(t) > 1 and not np.allclose(np.diff(t), 1.0, atol=TIME_EPS):
+    if len(t) > 1 and not np.allclose(np.diff(t), 1.0, rtol=0.0, atol=TIME_EPS):
         msg = f"{track.animal}: a simulated track is sampled every 1 s; labels do not interpolate"
         raise ValueError(msg)
 
@@ -466,6 +466,24 @@ def read_simulated_csv(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata]
     return out, metadata
 
 
+def _wcon_seed(animal: str, value: object) -> int | None:
+    """Return a WCON record's ``@seed`` as an integer, as the CSV route parses its column.
+
+    An integer, or a string of one, is a seed; anything else, a fraction among them, is refused.
+    """
+    if value is None:
+        return None
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            pass
+    msg = f"{animal}: @seed must be an integer, not {value!r}"
+    raise ValueError(msg)
+
+
 def read_simulated_wcon(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata]:
     """Read a simulated WCON file: each record carries ``@primitive`` per time, and ``@seed``.
 
@@ -476,7 +494,7 @@ def read_simulated_wcon(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata
     document = json.loads(path.read_text())
     records = document["data"] if isinstance(document["data"], list) else [document["data"]]
     labels: dict[str, dict[float, str]] = {}
-    seeds: dict[str, set[Any]] = {}
+    seeds: dict[str, set[int | None]] = {}
     for record in records:
         animal = str(record["id"])
         timed = isinstance(record["t"], list)
@@ -488,7 +506,7 @@ def read_simulated_wcon(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata
         primitive = raw if isinstance(raw, list) else [raw]
         for ti, label in zip(t, primitive, strict=True):
             labels.setdefault(animal, {})[float(ti)] = label
-        seeds.setdefault(animal, set()).add(record.get("@seed"))
+        seeds.setdefault(animal, set()).add(_wcon_seed(animal, record.get("@seed")))
     out = []
     for track in tracks:
         _require_one_second(track)
@@ -505,7 +523,7 @@ def read_simulated_wcon(path: Path) -> tuple[list[SimulatedTrack], AssayMetadata
                     track.animal,
                     [labels[track.animal][t] for t in times],
                 ),
-                seed=None if None in animal_seeds else int(next(iter(animal_seeds))),
+                seed=next(iter(animal_seeds)),
             ),
         )
     return out, metadata

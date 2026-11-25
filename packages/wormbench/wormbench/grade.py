@@ -179,7 +179,11 @@ def _validated(version: str, validity: dict[str, Any] | None = None) -> bool:
         return False  # an unreadable verdict leaves the default where it was
     if not isinstance(record, dict) or record.get("verdict") != "VALID":
         return False
-    bands_path = data.locate("benchmark", str(record.get("bands")))
+    # The verdict must name the version's own bands file; a record naming another version's file
+    # validates nothing here, whatever its digest.
+    if record.get("bands") != BANDS_FILES[version]:
+        return False
+    bands_path = data.locate("benchmark", BANDS_FILES[version])
     if bands_path is None:
         return False
     from wormbench.measurement import file_sha256

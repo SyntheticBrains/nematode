@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import functools
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +18,14 @@ from wormbench import builder as bb
 from wormbench import classifier as rd
 from wormbench import data
 from wormbench import grading as g
+from wormbench import references as refs
 from wormbench.builder import BandBuilder
+
+# The files a band built now reads: the classifier, the Scheer tracks and their cohort split.
+BUILDER_INPUTS = ("classifier.json", "scheer2023_tracks.npz", "scheer2023_split.json")
+
+# A resolved input file: its path, size in bytes and modification time in nanoseconds.
+Stamp = tuple[str, int, int]
 
 
 def _bands_path(path: Path | None, name: str) -> Path:
@@ -27,10 +33,19 @@ def _bands_path(path: Path | None, name: str) -> Path:
     return Path(path) if path is not None else data.path("benchmark", name)
 
 
-def _sources_key() -> tuple[str | None, str | None]:
-    """Return what decides where the tracks resolve, so a cache is kept per data sources."""
-    root = data.get_root()
-    return (None if root is None else str(root), os.environ.get(data.ENVIRONMENT_VARIABLE))
+def _inputs_key() -> tuple[Stamp, ...]:
+    """Return the builder's input files as resolved now, each by path, size and modification time.
+
+    A cache keyed by them reuses its bands while the same files resolve, and builds afresh when a
+    source is set, installed or changed. Resolving them raises for a missing file, naming it and the
+    fetch command.
+    """
+    out = []
+    for name in BUILDER_INPUTS:
+        target = data.path("benchmark", name)
+        status = target.stat()
+        out.append((str(target), status.st_size, status.st_mtime_ns))
+    return tuple(out)
 
 
 def load_bands(path: Path | None = None) -> dict[str, Any]:
@@ -39,16 +54,18 @@ def load_bands(path: Path | None = None) -> dict[str, Any]:
 
 
 def _builder() -> BandBuilder:
-    """Return the band builder for the current data sources, created once per sources.
+    """Return the band builder for the input files resolved now, created once per those files.
 
     Its classified tallies are reused across every band it builds.
     """
-    return _builder_for(_sources_key())
+    return _builder_for(_inputs_key())
 
 
 @functools.cache
-def _builder_for(_key: tuple[str | None, str | None]) -> BandBuilder:
-    return BandBuilder()
+def _builder_for(key: tuple[Stamp, ...]) -> BandBuilder:
+    classifier_path, tracks_path, split_path = (Path(stamp[0]) for stamp in key)
+    tracks = refs.load_scheer_tracks(tracks_path, split_path)
+    return BandBuilder(tracks=tracks, classifier_path=classifier_path)
 
 
 def _band(entry: dict[str, Any]) -> g.Band:
@@ -83,8 +100,14 @@ def mutant_bands(bands: dict[str, Any], mutant: str, n: int) -> dict[str, g.Band
 
 
 def classifier(bands: dict[str, Any]) -> rd.GaussianClassifier:
-    """Return the classifier the bands were read with."""
-    return rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(data.stored_path(bands["classifier"])))
+    """Return the classifier the bands were read with.
+
+    A stored ``data/<namespace>/<name>`` path resolves through the data sources, checked where due;
+    an absolute path is read as given.
+    """
+    stored = Path(bands["classifier"])
+    target = stored if stored.is_absolute() else data.stored_path(bands["classifier"])
+    return rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(target))
 
 
 def load_bands_v2(path: Path | None = None) -> dict[str, Any]:
@@ -123,40 +146,44 @@ def family_bands_v2(bands: dict[str, Any], family: str, n: int) -> dict[str, g.B
 
 
 def _kinematic_bands_at(n: int) -> dict[str, g.Band]:
-    return _kinematic_bands_for(n, _sources_key())
+    kappa = tuple(sorted(load_bands_v2()["kinematics_kappa"].items()))
+    return _kinematic_bands_for(n, kappa, _inputs_key())
 
 
 @functools.cache
-def _kinematic_bands_for(n: int, _key: tuple[str | None, str | None]) -> dict[str, g.Band]:
-    builder = _builder()
+def _kinematic_bands_for(
+    n: int,
+    kappa: tuple[tuple[str, float], ...],
+    key: tuple[Stamp, ...],
+) -> dict[str, g.Band]:
+    builder = _builder_for(key)
     per_date = bb.per_date_kinematic_tallies(
         builder.tracks,
         bb.WILD_TYPE,
         builder._classifier,  # noqa: SLF001 - the builder's own classifier, loaded once
     )
-    kappa = load_bands_v2()["kinematics_kappa"]
     return bb.lawn_bands(
         per_date,
         g.KINEMATIC_STATISTICS,
         n,
         np.random.default_rng([bb.BAND_SEED, bb.KINEMATICS_INDEX, n]),
-        kappa=kappa,
+        kappa=dict(kappa),
         statistic=g.kinematic_statistics,
     )
 
 
 def _activity_bands_at(n: int, kappa: tuple[tuple[str, float], ...]) -> dict[str, g.Band]:
     """Return the activity bands at n on the given bands' kappa, by the registered build's rule."""
-    return _activity_bands_for(n, kappa, _sources_key())
+    return _activity_bands_for(n, kappa, _inputs_key())
 
 
 @functools.cache
 def _activity_bands_for(
     n: int,
     kappa: tuple[tuple[str, float], ...],
-    _key: tuple[str | None, str | None],
+    key: tuple[Stamp, ...],
 ) -> dict[str, g.Band]:
-    builder = _builder()
+    builder = _builder_for(key)
     per_date = bb.per_date_activity_tallies(builder.tracks, bb.WILD_TYPE)
     return bb.lawn_bands(
         per_date,

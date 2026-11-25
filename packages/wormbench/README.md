@@ -96,9 +96,15 @@ wormbench data fetch
 wormbench data verify
 ```
 
-Nothing is downloaded otherwise. Every file is checked against the SHA-256 the package records.
-`WORMBENCH_DATA` can point at a directory holding the files instead. `wormbench info` shows where
-each file is read from.
+**Not yet available in this revision.** The tracks' data deposit is not published, so the package
+records no download addresses, and `wormbench data fetch` refuses with a message saying so. Until it
+is, grade populations of 64 or 200 animals, or point `WORMBENCH_DATA` at a directory holding the
+tracks, laid out as `benchmark/<file>`. The example in *A first grading* needs no download.
+
+Nothing is downloaded otherwise. Every file read from `WORMBENCH_DATA`, the package or the fetched
+cache is checked against the SHA-256 the package records. A program that sets its own data root
+(as the project this package comes from does for its repository's `data/`) has those files read as
+given. `wormbench info` shows where each file is read from.
 
 ## Citation
 

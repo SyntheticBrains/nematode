@@ -29,16 +29,68 @@ ALIASES = {
 }
 
 
+@pytest.mark.parametrize("old_first", [True, False], ids=["old-first", "new-first"])
 @pytest.mark.parametrize(("old", "new"), sorted(ALIASES.items()))
-def test_each_old_path_is_the_moved_module_whichever_is_imported_first(old: str, new: str) -> None:
-    """Imported first in a fresh interpreter, each old path is the very wormbench module."""
+def test_each_old_path_is_the_moved_module_whichever_is_imported_first(
+    old: str,
+    new: str,
+    *,
+    old_first: bool,
+) -> None:
+    """In a fresh interpreter, each old path is the very wormbench module, in either order."""
+    first, second = ("old", "new") if old_first else ("new", "old")
+    names = {"old": old, "new": new}
     code = (
-        f"import importlib; old = importlib.import_module({old!r}); "
-        f"new = importlib.import_module({new!r}); "
+        f"import importlib; {first} = importlib.import_module({names[first]!r}); "
+        f"{second} = importlib.import_module({names[second]!r}); "
         "assert old is new, (old, new); "
         "assert all(getattr(old, k) is getattr(new, k) for k in vars(new))"
     )
     subprocess.run([sys.executable, "-c", code], check=True)  # noqa: S603 - fixed argv
+
+
+def test_the_band_builder_is_keyed_by_the_input_files_it_reads(tmp_path: Path) -> None:
+    """A builder is reused while its input files resolve unchanged, and rebuilt when one changes."""
+    from wormbench import bands as wbands
+    from wormbench import data
+
+    saved = data.get_root()
+    host = tmp_path / "data"
+    (host / "benchmark").mkdir(parents=True)
+    for name in wbands.BUILDER_INPUTS:
+        (host / "benchmark" / name).symlink_to(_REPO / "data" / "benchmark" / name)
+    try:
+        data.set_root(host)
+        resolved = data.get_root()
+        assert resolved is not None
+        key = wbands._inputs_key()
+        assert [stamp[0] for stamp in key] == [
+            str(resolved / "benchmark" / name) for name in wbands.BUILDER_INPUTS
+        ]
+        first = wbands._builder()
+        assert wbands._builder() is first
+        assert first._tracks is not None  # loaded from the key's files when the builder is made
+        classifier = host / "benchmark" / "classifier.json"
+        text = classifier.read_text()
+        classifier.unlink()
+        classifier.write_text(text + "\n")  # the same model in other bytes
+        assert wbands._inputs_key() != key
+        assert wbands._builder() is not first
+    finally:
+        data.set_root(saved)
+        wbands._builder_for.cache_clear()
+
+
+def test_a_bands_file_may_name_its_classifier_by_an_absolute_path() -> None:
+    """An absolute classifier path is read as given, and a relative one must be a stored path."""
+    from wormbench import bands as wbands
+
+    absolute = str((_REPO / "data" / "benchmark" / "classifier.json").resolve())
+    stored = wbands.classifier({"classifier": "data/benchmark/classifier.json"})
+    given = wbands.classifier({"classifier": absolute})
+    assert type(given) is type(stored)
+    with pytest.raises(ValueError, match=r"data/<namespace>/<name>"):
+        wbands.classifier({"classifier": "elsewhere/classifier.json"})
 
 
 def test_the_project_reads_its_vendored_files() -> None:

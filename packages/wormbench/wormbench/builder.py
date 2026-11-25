@@ -3,7 +3,8 @@
 Each band is a centre and a scale. The centre is the band cohorts' pooled statistic. The scale is
 calibrated from the spread between recording dates, by cluster bootstrap over dates, at the
 population's own size. Each band draws from its own generator, seeded by the band and its size.
-Only band-cohort rows are read: the held-out dates are never touched.
+By default only band-cohort rows are read, and the held-out dates are never touched. A function
+given explicit ``rows`` reads exactly those rows.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from wormbench import references as refs
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 
 WILD_TYPE = "PD1074_od2_Data"
@@ -212,12 +214,13 @@ class BandBuilder:
         self,
         tracks: refs.ScheerTracks | None = None,
         kappa: dict[str, float] | None = None,
+        classifier_path: Path | None = None,
     ) -> None:
         self._tracks = tracks
         self._kappa = kappa
-        self._classifier = rd.GaussianClassifier(
-            hmm=rd.load_calibrated_hmm(data.path("benchmark", "classifier.json")),
-        )
+        if classifier_path is None:
+            classifier_path = data.path("benchmark", "classifier.json")
+        self._classifier = rd.GaussianClassifier(hmm=rd.load_calibrated_hmm(classifier_path))
         self._tallies: dict[tuple[str, bool], dict[int, np.ndarray]] = {}
         self._small: dict[int, dict[str, g.Band]] = {}
 

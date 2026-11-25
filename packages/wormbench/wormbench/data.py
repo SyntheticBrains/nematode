@@ -136,9 +136,25 @@ def verify(namespace: str, name: str, target: Path) -> None:
     if found != entry["sha256"]:
         msg = (
             f"the reference file {namespace}/{name} at {target} has SHA-256 {found}, not the "
-            f"package's {entry['sha256']}; replace it, for example with `{FETCH_COMMAND}`"
+            f"package's {entry['sha256']}; {_repair(namespace, target)}"
         )
         raise ChecksumError(msg)
+
+
+def _repair(namespace: str, target: Path) -> str:
+    """Return how to repair a refused file, by the source it was resolved from."""
+    parent = target.parent.resolve()
+    if parent == (package_directory() / namespace).resolve():
+        return "the installed package is damaged: reinstall wormbench"
+    environment = os.environ.get(ENVIRONMENT_VARIABLE)
+    if environment and parent == (Path(environment) / namespace).resolve():
+        return (
+            f"replace it with the package's version, or remove it or unset {ENVIRONMENT_VARIABLE} "
+            "so the package's or the fetched copy is read"
+        )
+    if parent == (cache_directory() / namespace).resolve():
+        return f"run `{FETCH_COMMAND}`, which replaces it"
+    return f"replace it, for example with `{FETCH_COMMAND}`"
 
 
 def directory(namespace: str) -> Path:

@@ -12,11 +12,14 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import shlex
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from wormbench import cli, data
+from wormbench import grade as wg
+from wormbench.measurement import file_sha256
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,6 +52,30 @@ def example(tmp_path: Path) -> Path:
     out = tmp_path / "example"
     assert cli.main(["example", "--out", str(out)]) == 0
     return out
+
+
+def test_the_example_prints_a_command_a_shell_reads_back(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The printed grading command quotes its paths, so a path with a space survives a shell."""
+    data.set_root(None)
+    out = tmp_path / "with space"
+    assert cli.main(["example", "--out", str(out)]) == 0
+    line = capsys.readouterr().out.splitlines()[-1].strip()
+    manifest, grade = str(out / "manifest.txt"), str(out / "grade.json")
+    assert shlex.split(line) == ["wormbench", "grade", "--manifest", manifest, "--out", grade]
+
+
+def test_a_verdict_naming_another_versions_bands_validates_nothing() -> None:
+    """v4's verdict must name v4's bands file; v3's file and digest leave v4 unvalidated."""
+    data.set_root(None)
+    v3 = file_sha256(data.path("benchmark", "bands_v3.json"))
+    v4 = file_sha256(data.path("benchmark", "bands_v4.json"))
+    own = {"v4": {"bands": "bands_v4.json", "verdict": "VALID", "bands_sha256": v4}}
+    other = {"v4": {"bands": "bands_v3.json", "verdict": "VALID", "bands_sha256": v3}}
+    assert wg.v4_is_valid(own) is True
+    assert wg.v4_is_valid(other) is False
 
 
 def test_the_example_grades_as_recorded_with_no_download(example: Path, tmp_path: Path) -> None:

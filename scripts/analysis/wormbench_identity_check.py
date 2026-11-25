@@ -318,6 +318,10 @@ def _case_builder(out: Path, _inputs: Path, modules: dict[str, Any]) -> None:
             )
             record[f"reproduces/{n}/{family}"] = built == vendored
     _write(out / "builder.json", bg._finite(record))
+    differ = [k for k, v in record.items() if k.startswith("reproduces/") and v is not True]
+    if differ:
+        msg = f"the builder does not reproduce the vendored bands: {differ} (see builder.json)"
+        raise SystemExit(msg)
 
 
 def _case_c1_record(out: Path, _inputs: Path, modules: dict[str, Any]) -> None:
@@ -327,18 +331,29 @@ def _case_c1_record(out: Path, _inputs: Path, modules: dict[str, Any]) -> None:
     committed = json.loads(LOGBOOK_124_READ.read_text())["c1_v3_answer"]
     base = int(committed["base"])
     record: dict[str, Any] = {"base": base, "populations": [], "matches_logbook_124": []}
+    unmatched = []
     for k in range(C1_POPULATIONS):
         graded = c1.grade_answer(k, z, base)
         record["populations"].append(graded)
         reference = committed["populations"][k]["families"]
         matches = {}
+        # Each statistic this tree grades (v3's 21) is compared with its committed value, which
+        # Logbook 124 read on v4; a graded statistic with no committed value fails too.
         for family, readings in graded.get("families", {}).items():
             for stat, reading in readings.items():
                 ref = reference.get(family, {}).get(stat)
-                if ref is not None:
-                    matches[f"{family}/{stat}"] = reading.get("value") == ref.get("value")
+                if ref is None:
+                    unmatched.append(f"{k}:{family}/{stat} has no committed value")
+                    continue
+                matches[f"{family}/{stat}"] = reading.get("value") == ref.get("value")
         record["matches_logbook_124"].append(matches)
+        unmatched += [f"{k}:{name}" for name, same in matches.items() if not same]
+        if not matches:
+            unmatched.append(f"{k}: no statistic compared")
     _write(out / "c1_record.json", bg._finite(record))
+    if unmatched:
+        msg = f"C.1's v3 answer differs from Logbook 124's committed values: {unmatched}"
+        raise SystemExit(msg)
 
 
 RUNNERS = {
@@ -369,26 +384,38 @@ CASE_OUTPUTS = {
 }
 
 
-def _compare(build: Path, cases: list[str]) -> dict[str, Any]:
-    """Compare the run cases' outputs with the baseline's, byte for byte."""
-    baseline, check = build / "baseline", build / "check"
-    prefixes = tuple(CASE_OUTPUTS[c] for c in cases)
-    names = sorted(
-        str(p.relative_to(baseline))
-        for p in baseline.rglob("*.json")
+def _outputs(stage: Path, prefixes: tuple[str, ...]) -> set[str]:
+    return {
+        str(p.relative_to(stage))
+        for p in stage.rglob("*.json")
         if p.name != "identity.json" and p.name.startswith(prefixes)
-    )
-    missing = [n for n in names if not (check / n).is_file()]
+    }
+
+
+def _compare(build: Path, cases: list[str]) -> dict[str, Any]:
+    """Compare the run cases' outputs with the baseline's, byte for byte.
+
+    Every case run must have baseline outputs, and the two stages must write the same files: a case
+    with none, a file only one stage wrote, or a differing file fails the check.
+    """
+    baseline, check = build / "baseline", build / "check"
+    expected = _outputs(baseline, tuple(CASE_OUTPUTS[c] for c in cases))
+    written = _outputs(check, tuple(CASE_OUTPUTS[c] for c in cases))
+    no_baseline = [c for c in cases if not _outputs(baseline, (CASE_OUTPUTS[c],))]
+    missing = sorted(expected - written)
+    extra = sorted(written - expected)
     differ = [
         n
-        for n in names
-        if n not in missing and (check / n).read_bytes() != (baseline / n).read_bytes()
+        for n in sorted(expected & written)
+        if (check / n).read_bytes() != (baseline / n).read_bytes()
     ]
     return {
         "cases": cases,
-        "compared": len(names) - len(missing),
+        "compared": len(expected & written),
         "differ": differ,
         "missing": missing,
+        "extra": extra,
+        "no_baseline": no_baseline,
     }
 
 
@@ -443,7 +470,8 @@ def main(argv: list[str] | None = None) -> int:
     report = _compare(build, cases)
     _write(build / "report.json", report)
     print(json.dumps(report, indent=1))
-    return 1 if report["differ"] or report["missing"] else 0
+    failed = any(report[k] for k in ("differ", "missing", "extra", "no_baseline"))
+    return 1 if failed or report["compared"] == 0 else 0
 
 
 if __name__ == "__main__":

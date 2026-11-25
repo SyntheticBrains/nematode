@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shlex
 import shutil
 import sys
 import urllib.request
@@ -64,8 +65,16 @@ def _example(args: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive) as bundle:
         bundle.extractall(out)
+    command = [
+        "wormbench",
+        "grade",
+        "--manifest",
+        str(out / "manifest.txt"),
+        "--out",
+        str(out / "grade.json"),
+    ]
     print(f"wrote the example to {out}; grade it with:")
-    print(f"  wormbench grade --manifest {out / 'manifest.txt'} --out {out / 'grade.json'}")
+    print(f"  {shlex.join(command)}")
     return 0
 
 

@@ -76,8 +76,8 @@
       "in_package": true
     },
     "roaming_dwelling/PROVENANCE.md": {
-      "sha256": "103530abb6f10688d5bb14c4d8badd1ade41cdd51e315733bfef5d2e83ecf45a",
-      "size": 7715,
+      "sha256": "6ec0049416b96bd5d041d63762a18878e45799bb38c39fa25e13dc7bcdd7ac97",
+      "size": 7711,
       "in_package": true
     },
     "roaming_dwelling/calibration_retry.json": {

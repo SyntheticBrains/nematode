@@ -88,7 +88,7 @@ def validity() -> dict[str, Any]:
             "bands": bands_name,
             "verdict": controls.get("verdict"),
             "bands_sha256": controls.get("bands_sha256"),
-            "source": str(record.relative_to(_REPO)),
+            "source": record.relative_to(_REPO).as_posix(),
         }
     return out
 
@@ -98,7 +98,7 @@ def kappa_v1() -> dict[str, Any]:
     record = json.loads(KAPPA_RECORD.read_text())
     return {
         "kappa": record["calibration"]["kappa"],
-        "source": str(KAPPA_RECORD.relative_to(_REPO)),
+        "source": KAPPA_RECORD.relative_to(_REPO).as_posix(),
     }
 
 

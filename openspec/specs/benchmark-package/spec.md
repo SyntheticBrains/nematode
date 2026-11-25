@@ -126,14 +126,17 @@ resolved when it is used, file by file, from the first of these sources that hol
 4. the fetched cache.
 
 `wormbench` SHALL ship a manifest giving each file's SHA256 and size. It SHALL refuse a file loaded
-through the resolver whose SHA256 differs from the manifest's. It SHALL NOT download anything except
+through the resolver from `WORMBENCH_DATA`, the wheel or the fetched cache whose SHA256 differs from
+the manifest's. A file from the host's root is the host's own and SHALL be read as given, unchecked,
+as an explicit path is. It SHALL NOT download anything except
 on `wormbench data fetch`. A grading that needs a file no source holds SHALL fail with an error
 naming the file and the fetch command. `quantum-nematode` SHALL set this repository's `data/` as the
 host root.
 
 #### Scenario: A tampered file is refused
 
-- **WHEN** a file loaded through the resolver has a SHA256 that differs from the manifest's
+- **WHEN** a file loaded through the resolver from `WORMBENCH_DATA`, the wheel or the fetched cache
+  has a SHA256 that differs from the manifest's
 - **THEN** loading it SHALL raise an error naming the file, and nothing SHALL be graded
 
 #### Scenario: Grading at an unvendored size without the tracks
