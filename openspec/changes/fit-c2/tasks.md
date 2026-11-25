@@ -263,9 +263,9 @@
 
 ## 6. The registered fit
 
-- [ ] 6.1 `run` (about 30 h, and 2.3–8 h for each dropped start), `grade` (5 + 10 populations) and `read`: `fit.json` with the verdict, the pass rate, the held-out reading, the restart spread against the pilot, and the cost.
+- [x] 6.1 `run` (about 30 h, and 2.3–8 h for each dropped start), `grade` (5 + 10 populations) and `read`: `fit.json` with the verdict, the pass rate, the held-out reading, the restart spread against the pilot, and the cost. Done 2026-11-25: start 0 kept, 36.8 h. **The verdict fails**: the wild type in 5 of 5, tph-1 in 0 of 5, tax-4 in 5 of 5 (pdfr-1 5 of 5); over all 15 populations, the wild type, pdfr-1 and tax-4 15 of 15 and tph-1 0 of 15.
 
-- [ ] 6.2 The neural reading's paired test and wiring-only control written to Part A's rules, tested on Logbook 131's answer and committed with Part B or Part C before `run` (done with Part C: `neural.py.txt`, bound in the manifest; `probes/neural_check_131.json`); then the reading on the registered answer, as Part A declares it: the answer's r and the box centre's, chance, the paired test, the wiring-only control and sign agreement, as description beside `fit.json`.
+- [x] 6.2 The neural reading's paired test and wiring-only control written to Part A's rules, tested on Logbook 131's answer and committed with Part B or Part C before `run` (done with Part C: `neural.py.txt`, bound in the manifest; `probes/neural_check_131.json`); then the reading on the registered answer, as Part A declares it: the answer's r and the box centre's, chance, the paired test, the wiring-only control and sign agreement, as description beside `fit.json`. Done 2026-11-25: `neural.json`, with M-a's own record in `neural_ma_result.json`.
 
 ## 7. The tax-4 leave-one-out
 

@@ -1,0 +1,122 @@
+{
+ "description": "C.2's neural reading on a fitted answer: M-a's responses, then the paired test and the wiring-only control.\n\nLaunch record 133's *The neural reading*. The responses, the metric, chance and sign agreement are\nM-a's own: `reading.py.txt` (SHA-256 checked) is executed unchanged except for two constants, the\nvector's file and the output directory. The paired test and the wiring-only control are added here,\nto that record's rules:\n\n- the paired test: d = r(answer) - r(box centre) against the test matrix, with a 95% percentile\n  interval from 10,000 resamples of the stimulated neurons' classes with replacement\n  (`default_rng(9811)`), the classes being each stimulated neuron's class among the 302 neurons'.\n  A drawn class brings every stimulated neuron in it, and a class drawn c times counts c times; each\n  resample keeps the same drawn columns for both networks and the measured matrix, so r is a\n  weighted Pearson correlation over the drawn columns' entries, repeats kept. Beside it, the same\n  from 10,000 resamples of the 154 stimulated neurons (`default_rng(9812)`).\n- the wiring-only control: C[j, s], the count of chemical synapses from s to j plus gap junctions\n  between s and j, from the wiring the encoded brain is built on, unsigned, scored by the same\n  metric, with C.C (two-contact paths, over all 302) beside it.\n\nThe reading sets torch to 8 threads. Run it with nothing else running.\n\nUsage: uv run python docs/experiments/logbooks/supporting/133-c2-fit/neural.py.txt\n       <vector.json, with \"z\" or \"answer\"> <out dir>\nRun from the repository root.\n",
+ "vector": {
+  "path": "docs/experiments/logbooks/supporting/133-c2-fit/fit.json",
+  "sha256": "e6cd923b599a5f2f55021f8a6c7b94cd3354b84063420f9253003e748b0a077c",
+  "reading_input_sha256": "fc8f5a104d2b5c09eb04c3ace97965f825bed01e56d03f27282358d8bf256d13"
+ },
+ "inputs": {
+  "reading_sha256": "dd6d8706e5162f2fad9ff457fea7df1f3f21b52138fc910a37f58bfb5cb3a9b0",
+  "measured_sha256": "1c98ae81f5422ac5f9cc35bbd375ac7ea7815c59e3cf0d5545d08e3898237b28",
+  "names_sha256": "bbf27cd51bccee9e91a56df9d57508776d530f12b258492c354d81f02174e244"
+ },
+ "answer": {
+  "r": 0.0882393801732971,
+  "ci95": [
+   0.06967481517069374,
+   0.1067428474465879
+  ],
+  "share_of_ceiling": 0.20860373563427212,
+  "ceiling_sqrt_rel_S": {
+   "value": 0.423,
+   "interval": [
+    0.369,
+    0.471
+   ]
+  },
+  "copy_training_animals_r": 0.173
+ },
+ "unfitted_floor": {
+  "r": 0.06527048652383569,
+  "ci95": [
+   0.0466479531957472,
+   0.08384766544219308
+  ]
+ },
+ "chance_97_5th": 0.02500201297011115,
+ "paired": {
+  "d": 0.02296889364946142,
+  "named_on": "classes",
+  "classes": {
+   "units": 74,
+   "seed": 9811,
+   "resamples": 10000,
+   "d_interval95": [
+    0.001007024041270281,
+    0.043370387541463024
+   ],
+   "reading": "fitting raised it",
+   "self_check": {
+    "once": 0.08823938017329715,
+    "nan_corr": 0.0882393801732971,
+    "unit_0_twice_unit_1_out": 0.08756997974580015,
+    "entries_repeated": 0.08756997974580011
+   }
+  },
+  "neurons": {
+   "units": 154,
+   "seed": 9812,
+   "resamples": 10000,
+   "d_interval95": [
+    0.002865852138509516,
+    0.04053360646470316
+   ],
+   "reading": "fitting raised it",
+   "self_check": {
+    "once": 0.08823938017329709,
+    "nan_corr": 0.0882393801732971,
+    "unit_0_twice_unit_1_out": 0.08839346308488107,
+    "entries_repeated": 0.08839346308488104
+   }
+  }
+ },
+ "wiring_only": {
+  "C": {
+   "r": 0.04137472393705095,
+   "ci95": [
+    0.02271287053435678,
+    0.06000775379100626
+   ]
+  },
+  "C.C": {
+   "r": 0.022821316376716198,
+   "ci95": [
+    0.004143675613243011,
+    0.04148303979264371
+   ]
+  },
+  "reaches_unfitted_floor": false,
+  "reading": "below the unfitted floor"
+ },
+ "sign_agreement": {
+  "entries": 5505,
+  "median_abs_measured": 0.8901681042039895,
+  "agreement": 0.49155313351498636,
+  "model_zero_entries": 411
+ },
+ "checks": {
+  "c2": {
+   "parity_and_unit_test_1_max_abs": 5.960464477539062e-07,
+   "unit_test_1_passes": true,
+   "unit_test_2_max_abs": 4.76837158203125e-07,
+   "unit_test_2_passes": true,
+   "unit_test_2_held_current_max_abs": 21.067691802978516,
+   "sensory_drive_max_abs": 4.830265045166016,
+   "held_current_at_rest_max_abs": 0.0,
+   "rest_settled_max_abs": 0.0
+  },
+  "box_centre": {
+   "parity_and_unit_test_1_max_abs": 0.0,
+   "unit_test_1_passes": true,
+   "unit_test_2_max_abs": 0.0,
+   "unit_test_2_passes": true,
+   "unit_test_2_held_current_max_abs": 0.22101062536239624,
+   "sensory_drive_max_abs": 0.0,
+   "held_current_at_rest_max_abs": 0.0,
+   "rest_settled_max_abs": 0.0
+  }
+ },
+ "classes": {
+  "stimulated_classes": 74
+ }
+}
