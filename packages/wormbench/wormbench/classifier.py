@@ -28,6 +28,8 @@ from pathlib import Path
 
 import numpy as np
 
+from wormbench import data as _data
+
 STEP_SECONDS = 5.0
 WINDOW_STEPS = 2
 WINDOW_SECONDS = STEP_SECONDS * WINDOW_STEPS
@@ -37,9 +39,27 @@ OFF_FOOD = -1
 DWELLING = 0
 ROAMING = 1
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-REFERENCE_HMM_PATH = _PROJECT_ROOT / "data" / "roaming_dwelling" / "reference_hmm.json"
-CALIBRATED_HMM_PATH = _PROJECT_ROOT / "data" / "roaming_dwelling" / "calibration_retry.json"
+NAMESPACE = "roaming_dwelling"
+# The model files by name in the ``roaming_dwelling`` namespace. ``REFERENCE_HMM_PATH`` and
+# ``CALIBRATED_HMM_PATH`` are resolved when they are read, by ``__getattr__`` below, so that
+# importing this module reads no path.
+_FILES = {
+    "REFERENCE_HMM_PATH": "reference_hmm.json",
+    "CALIBRATED_HMM_PATH": "calibration_retry.json",
+}
+
+
+def __getattr__(name: str) -> Path:
+    """Resolve a module-level model path when it is read."""
+    if name in _FILES:
+        return _data.expected_path(NAMESPACE, _FILES[name])
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
+def _resolve(path: Path | None, constant: str) -> Path:
+    """Return an explicit path as given, or the named model file from the data sources."""
+    return Path(path) if path is not None else _data.path(NAMESPACE, _FILES[constant])
 
 
 def step_measures(
@@ -356,9 +376,9 @@ def last_window_before_exits(states: np.ndarray, exits: list[int]) -> np.ndarray
     return np.asarray(out, dtype=int)
 
 
-def load_reference_hmm(path: Path = REFERENCE_HMM_PATH) -> CategoricalHMM:
+def load_reference_hmm(path: Path | None = None) -> CategoricalHMM:
     """Load the vendored reference model's parameters (see its provenance beside it)."""
-    data = json.loads(path.read_text())
+    data = json.loads(_resolve(path, "REFERENCE_HMM_PATH").read_text())
     return CategoricalHMM(
         log_pi0=np.asarray(data["log_pi0"], dtype=float),
         log_transitions=np.asarray(data["log_transitions"], dtype=float),
@@ -366,9 +386,9 @@ def load_reference_hmm(path: Path = REFERENCE_HMM_PATH) -> CategoricalHMM:
     )
 
 
-def load_calibrated_hmm(path: Path = CALIBRATED_HMM_PATH) -> GaussianHMM:
+def load_calibrated_hmm(path: Path | None = None) -> GaussianHMM:
     """Load the Gaussian-emission model calibrated on real worms at the 5 s step."""
-    params = json.loads(path.read_text())["parameters"]
+    params = json.loads(_resolve(path, "CALIBRATED_HMM_PATH").read_text())["parameters"]
     return GaussianHMM(
         log_pi0=np.asarray(params["log_pi0"], dtype=float),
         log_transitions=np.asarray(params["log_transitions"], dtype=float),

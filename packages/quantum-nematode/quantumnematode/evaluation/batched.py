@@ -75,8 +75,9 @@ from quantumnematode.utils.config_loader import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from wormbench.odour_field import OdourField
+
     from quantumnematode.evaluation.controllers import BatchedController
-    from quantumnematode.evaluation.odour_field import OdourField
     from quantumnematode.utils.config_loader import SimulationConfig
 
 # Codes for the primitive running on a step, in the primitives' own order.

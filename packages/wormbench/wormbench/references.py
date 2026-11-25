@@ -24,14 +24,37 @@ from typing import Any, Literal
 
 import numpy as np
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-BENCHMARK_DATA = _PROJECT_ROOT / "data" / "benchmark"
-SCHEER_TRACKS_PATH = BENCHMARK_DATA / "scheer2023_tracks.npz"
-SCHEER_SPLIT_PATH = BENCHMARK_DATA / "scheer2023_split.json"
-CALHOUN_TRACKS_PATH = BENCHMARK_DATA / "calhoun2014_tracks.npz"
-ROBERTS_TRACKS_PATH = BENCHMARK_DATA / "roberts2016_tracks.npz"
-LOPEZCRUZ_PATH = BENCHMARK_DATA / "lopezcruz2019_reorientations.json"
-CHEN_TRACKS_PATH = BENCHMARK_DATA / "chen2025_tracks.npz"
+from wormbench import data
+
+NAMESPACE = "benchmark"
+# Each reference file by its name in the ``benchmark`` namespace. The module-level names
+# (``SCHEER_TRACKS_PATH`` and the rest, and ``BENCHMARK_DATA`` for the namespace's directory) are
+# resolved when they are read, by ``__getattr__`` below, so that importing this module reads no
+# path and a data root set afterwards is honoured.
+_FILES = {
+    "SCHEER_TRACKS_PATH": "scheer2023_tracks.npz",
+    "SCHEER_SPLIT_PATH": "scheer2023_split.json",
+    "CALHOUN_TRACKS_PATH": "calhoun2014_tracks.npz",
+    "ROBERTS_TRACKS_PATH": "roberts2016_tracks.npz",
+    "LOPEZCRUZ_PATH": "lopezcruz2019_reorientations.json",
+    "CHEN_TRACKS_PATH": "chen2025_tracks.npz",
+}
+
+
+def __getattr__(name: str) -> Path:
+    """Resolve a module-level data path when it is read."""
+    if name == "BENCHMARK_DATA":
+        return data.directory(NAMESPACE)
+    if name in _FILES:
+        return data.expected_path(NAMESPACE, _FILES[name])
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
+def _resolve(path: Path | None, constant: str) -> Path:
+    """Return an explicit path as given, or the named reference file from the data sources."""
+    return Path(path) if path is not None else data.path(NAMESPACE, _FILES[constant])
+
 
 SCHEER_FRAMES_PER_SECOND = 3.0
 SCHEER_BIN_SECONDS = 10.0
@@ -104,18 +127,18 @@ class ScheerTracks:
         return np.flatnonzero(self.genotype == self.genotypes.index(name))
 
 
-def scheer_split(path: Path = SCHEER_SPLIT_PATH) -> dict[int, str]:
+def scheer_split(path: Path | None = None) -> dict[int, str]:
     """Return each recording date's side, ``bands`` or ``held_out``."""
-    record = json.loads(path.read_text())
+    record = json.loads(_resolve(path, "SCHEER_SPLIT_PATH").read_text())
     return {int(date): side for date, side in record["sides"].items()}
 
 
 def load_scheer_tracks(
-    path: Path = SCHEER_TRACKS_PATH,
-    split_path: Path = SCHEER_SPLIT_PATH,
+    path: Path | None = None,
+    split_path: Path | None = None,
 ) -> ScheerTracks:
     """Load Scheer & Bargmann 2023's tracks with their cohort fields and split side."""
-    with np.load(path) as store:
+    with np.load(_resolve(path, "SCHEER_TRACKS_PATH")) as store:
         data = {key: store[key] for key in store.files}
     sides = scheer_split(split_path)
     return ScheerTracks(
@@ -171,7 +194,7 @@ class SearchTracks:
 def load_search_tracks(source: Literal["calhoun2014", "roberts2016"]) -> SearchTracks:
     """Load one set of off-food search tracks."""
     if source == "calhoun2014":
-        with np.load(CALHOUN_TRACKS_PATH) as store:
+        with np.load(_resolve(None, "CALHOUN_TRACKS_PATH")) as store:
             n = store["x_cpx"].shape[0]
             return SearchTracks(
                 source=source,
@@ -184,7 +207,7 @@ def load_search_tracks(source: Literal["calhoun2014", "roberts2016"]) -> SearchT
                 flag_names=tuple(str(f) for f in store["flag_names"]),
             )
     if source == "roberts2016":
-        with np.load(ROBERTS_TRACKS_PATH) as store:
+        with np.load(_resolve(None, "ROBERTS_TRACKS_PATH")) as store:
             return SearchTracks(
                 source=source,
                 x=dequantise(store["x_um"], 1000.0),
@@ -201,9 +224,9 @@ def load_search_tracks(source: Literal["calhoun2014", "roberts2016"]) -> SearchT
     raise ValueError(msg)
 
 
-def load_lopezcruz(path: Path = LOPEZCRUZ_PATH) -> dict[str, Any]:
+def load_lopezcruz(path: Path | None = None) -> dict[str, Any]:
     """Load López-Cruz 2019's reorientations per 2-min bin, every genotype row of the sheet."""
-    return json.loads(path.read_text())
+    return json.loads(_resolve(path, "LOPEZCRUZ_PATH").read_text())
 
 
 @dataclass(frozen=True)
@@ -264,9 +287,9 @@ def sample_field(field: np.ndarray, cell_mm: float, x: np.ndarray, y: np.ndarray
     )
 
 
-def load_chen_tracks(path: Path = CHEN_TRACKS_PATH) -> ChenTracks:
+def load_chen_tracks(path: Path | None = None) -> ChenTracks:
     """Load Chen 2025's naive N2 chemotaxis fragments and the measured odour field."""
-    with np.load(path) as store:
+    with np.load(_resolve(path, "CHEN_TRACKS_PATH")) as store:
         return ChenTracks(
             x=dequantise(store["x_um"], 1000.0),
             y=dequantise(store["y_um"], 1000.0),

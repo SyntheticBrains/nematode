@@ -3,8 +3,10 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
-        # C.2's fit records (pilot, recovery, fit) keep every readout's statistics and run past
-        # 500 KB; the fit's guards bind each as one committed file.
+        # wormbench ships its worked example, about 1 MB, inside the package.
+        args: ["--maxkb=1200"]
+        # C.2's fit records (pilot, recovery, fit) keep every readout's statistics and run to
+        # about 1.8 MB, past that limit; the fit's guards bind each as one committed file.
         exclude: ^docs/experiments/logbooks/supporting/133-c2-fit/
       - id: end-of-file-fixer
       - id: check-yaml

@@ -167,12 +167,10 @@ def test_a_changed_library_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_a_rewritten_library_is_refused_without_clearing_a_cache(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    benchmark_overrides: Path,
 ) -> None:
     """A library rewritten on disk is seen at once: its digest no longer matches its model's."""
-    monkeypatch.setattr(mm, "BENCHMARK_DATA", tmp_path)
-    path = tmp_path / "lib.npz"
+    path = benchmark_overrides / "lib.npz"
     mm.save_noise_library(path, np.array([0.001, 0.002, 0.003]), np.zeros(3), np.array([3]))
     model = mm.TrackerModel(
         jitter_mm=0.0,

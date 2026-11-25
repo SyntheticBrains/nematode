@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from quantumnematode.benchmark.readouts import OFF_FOOD_DETECTOR, reversal_onsets
+from wormbench.readouts import OFF_FOOD_DETECTOR, reversal_onsets
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence

@@ -1,0 +1,20 @@
+wormbench
+=========
+
+The code is licensed under the Apache License, Version 2.0 (LICENSE).
+
+The reference data shipped with the package, or fetched by `wormbench data fetch`, are derived from
+public deposits and keep their deposits' licences. Each file's source, licence and derivation are in
+its namespace's PROVENANCE.md.
+
+- Scheer, E. & Bargmann, C. I. (2023). Sensory neurons couple arousal and foraging decisions in
+  Caenorhabditis elegans. eLife 12:RP88657. Dryad doi:10.5061/dryad.47d7wm3jf. CC0-1.0.
+- Calhoun, A. J., et al. (2014). Maximally informative foraging by Caenorhabditis elegans. eLife
+  3:e04220. Dryad doi:10.5061/dryad.3j2j9. CC0-1.0.
+- Roberts, W. M., et al. (2016). A stochastic neuronal model predicts random search behaviors at
+  multiple spatial scales in C. elegans. eLife 5:e12572. Dryad doi:10.5061/dryad.35qv6. CC0-1.0.
+- López-Cruz, A., et al. (2019). Parallel multimodal circuits control an innate foraging behavior.
+  Neuron 102:407-419. Mendeley Data doi:10.17632/prdtw5jgcd.1. CC BY 4.0.
+- Chen, K. S., et al. (2025). Navigation strategies in Caenorhabditis elegans are differentially
+  altered by learning. PLoS Biology, doi:10.1371/journal.pbio.3003005. figshare
+  doi:10.6084/m9.figshare.24764403. CC BY 4.0.

@@ -29,7 +29,7 @@ against dwelling's 1%. The authors' code orders states so roaming is the higher-
 `midbody speed × 450 > midbody angular speed`. This is `decision_slope = 450` in
 `LawnLeavingAnalysis/preProcessing.py` of github.com/BargmannLab/Scheer_Bargmann2023 (MIT). This
 project recalibrates the slope at its own 5-second step and keeps the model; see
-`quantumnematode/validation/roaming_dwelling.py`.
+`packages/wormbench/wormbench/classifier.py`.
 
 ## `ji2021_readings.json`
 

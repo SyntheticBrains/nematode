@@ -1015,6 +1015,15 @@ without W.)*
   prediction, W.2's outcome "the nulls pass too" has a structural reading for the class-preserving
   null. Whether W carries the two readings is the registration's decision.
 
+  *(Added 2026-11-21, from digest #537: Betancourt et al. 2026.)* **Weight noise and the nulls.**
+  Real neurons in several connectomes score higher than comparable nulls on robustness: a statistic
+  of a neuron's incoming strengths that sets its error rate under synaptic noise in minimal models,
+  and that a broader spread raises at a fixed number of inputs. The degree-preserving null keeps
+  each neuron's in-degree, but its counts travel with their edges, so each neuron's incoming counts
+  change. The weight-noise check above is the wild type's. If the registration applies the noise to
+  the counts and extends the check to the null arms, each arm's robustness statistic is reported
+  beside it, since a null could be more fragile through its count spread alone.
+
 - [ ] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
   both directions. Draws per arm are sized from F.0 and the cost pilot. Every outcome is named,
   including "the nulls pass too" and "a null beats the wild type".
@@ -1128,6 +1137,49 @@ without W.)*
     4.8 h, so its cost is piloted before it registers.
   - **A pilot gate.** The wild type and the degree-preserving null, three fits each, before the full
     panel; the stopping rule on draws is preflighted on it.
+
+  *(Added 2026-11-21, from digest #537: Liu 2026.)* **What W's comparison estimates.** Liu names
+  three comparisons: physiology tuned on the real wiring and carried to the nulls (P1), each wiring
+  tuned on its own (P2), and P2 held to the physiology independent data allow (P3). W is P2 for the
+  encoder's parameters, every arm from the box centre with no warm start. The kinematics are fixed
+  from data in every arm, the modulator layer and its signs in every arm but the receptor-placement
+  null, and on rewired arms the sign overrides travel with their edges. For the registration:
+
+  - **The procedure was chosen on the real wiring.** From its stage-1 design to the hinge and
+    presence terms of its fifth amendment, it was developed and amended on the real wiring, with its
+    mutants, until it passed: P1 at the level of the procedure. Its direction for W is not known. The
+    procedure was chosen on a behavioural pass rule, not on W's own statistic, and under Liu's
+    Proposition 2 the bias then takes the sign of a covariance between that rule and W's comparison,
+    which W has not measured (positive in all six of Liu's placebo families, which are not W's). It
+    may also lift any arm that responds alike and reorder the nulls, so no outcome is protected from
+    it. The registration names the bias beside every outcome, and each arm's stage-by-stage readouts
+    show where a null falls behind.
+  - **The null arms' estimand.** W.1 draws a fresh rewiring per fit, so a null arm's fits sample
+    the family (a wiring draw and a fit each), while the wild type's sample fits of one fixed wiring.
+    A null arm's statistic is then family-level: how the family fits, not how its best wiring fits.
+    Best of k is not fair there, even at equal k: a null arm's best is taken over wiring draws as
+    well as fits, and the extra spread raises its expected best. Under this design the primary
+    statistic is family-level and does not reward spread, such as the share of fits reaching the
+    basin or the median D. The alternative is a per-wiring P2: each drawn wiring fitted as many times
+    as the wild type, from its own pool, and the wild type compared with each draw's best, at that
+    many times the null arms' cost. The registration picks one. (This project's inference, not
+    Liu's.)
+  - **Stopping.** With the share primary, every arm runs a fixed number of draws, or the stopping
+    rule is a named sequential design whose estimator and error control are registered with it. The
+    raw observed share is not primary when stopping depends on outcomes, since stopping on what has
+    been seen biases it.
+  - **A ranking is a ranking at its budget.** In one flyvis member retrained for 100,000 iterations
+    from the real wiring's solution, the ranking depended on which checkpoint was reported. W does
+    not warm-start, but the sixth readiness pilot's plateau never held. Grading each arm's answer at
+    a registered earlier checkpoint as well as at the end, as description, would show a ranking that
+    depends on the budget; whether W carries it is the registration's decision.
+  - **The neural reading is not a P3.** Its measured responses are the real animal's, so they grade
+    the network, wiring included. Unfitted, the 19 degree-preserving rewirings read a median r of
+    0.005 against the real wiring's 0.065, and 0.0047 carrying Logbook 131's answer
+    ([Logbook 134](../../../docs/experiments/logbooks/134-fit-first-neural-readings.md)). No null
+    fitted on its own has been read, and a low score for one would not separate its wiring from its
+    physiology. W has no P3 beyond what every arm fixes from data, until a measurement pins a
+    parameter that decides a verdict.
 
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 

@@ -32,7 +32,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from quantumnematode.benchmark.readouts import (
+from wormbench import classifier as rd
+from wormbench.readouts import (
     GAMMA_GRID_MAX_PER_MIN,
     GAMMA_GRID_MIN_PER_MIN,
     OFF_FOOD_DETECTOR,
@@ -40,13 +41,12 @@ from quantumnematode.benchmark.readouts import (
     local_search_curve,
     reversal_onsets,
 )
-from quantumnematode.benchmark.references import boundary_distance
-from quantumnematode.validation import roaming_dwelling as rd
+from wormbench.references import boundary_distance
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
-    from quantumnematode.report.dtypes import BehaviourStep
+    from wormbench.records import BehaviourStep
 
 SAMPLE_S = 1.0
 WINDOW_S = rd.WINDOW_SECONDS
@@ -436,7 +436,7 @@ def activity_tally(x: np.ndarray, y: np.ndarray, on_lawn: np.ndarray) -> np.ndar
     below :data:`PAUSE_FLOOR_MM`. Direction flips are counted on the track with every off-lawn
     sample blanked, by the chemotaxis rule; reversal onsets by :func:`on_lawn_reversals`.
     """
-    from quantumnematode.benchmark import chemotaxis as ch
+    from wormbench import chemotaxis as ch
 
     x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
     on = np.asarray(on_lawn, dtype=bool)
