@@ -996,9 +996,24 @@ C.2 enters C.4 as a failing in-sample row.)*
   synthesis is unreachable-with-reason. Its question, the C.2 architecture trained by reward, goes to
   the Phase 11 plan review.
 
-- [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
+- [x] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(2026-11-27: change `add-fidelity-table`;
+  [Logbook 137](../../../docs/experiments/logbooks/137-fidelity-table.md).)* **Read, and the table
+  published** (`supporting/137-fidelity-table/fidelity_table.md`).
+
+  - **C.1 (v3)'s predicted mutants,** the one new registered reading, both fail at restarts 0, 4 and 6,
+    0 of 5 each, on a wild type that reproduces its committed grades exactly. tph-1 lowers roaming,
+    the wrong way, and tax-4 leaves the lawn.
+  - **C.1 (v3)'s wild type** fails v4 in 0 of 5 at all three restarts, on activity.
+  - **C.2** passes the wild type and its fitted tax-4 and pdfr-1 in 5 of 5. Its tph-1 fails, and its
+    recovery control failed.
+  - **B v4's eight negatives** each fail in 5 of 5, and the real-worm controls pass.
+  - **C.3** is not run. C.1's held-out cell is not read. C.2 against C.1 is description.
+  - **A stated deviation:** the negatives have no mutant encodings, so they enter on the wild type
+    alone.
 
   *(Added 2026-11-25, the maintainer's decision after C.2's fit failed,
   [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **C.2 enters as a failing

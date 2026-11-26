@@ -1,0 +1,2195 @@
+{
+ "description": "C.1 (v3)'s predicted tph-1 and tax-4 under the registered encoding table, on its wild-type-passing restarts' registered populations, with the chosen restart on 10 more.",
+ "arm": "mlp",
+ "restarts": [
+  0,
+  4,
+  6
+ ],
+ "chosen": 6,
+ "threshold": "3 of 5",
+ "bound": {
+  "docs/experiments/logbooks/supporting/121-c1-v3-fit/fit.json": "8e66efed6b64f3c5ab20af816fa762306b53b4a02ac626adc87c8878ddf12286",
+  "docs/experiments/logbooks/supporting/121-c1-v3-fit/recovery.json": "abe621a90612a3cf43682103e337209fb1b2f915928375d532d6b07f2fa0c7b9",
+  "docs/experiments/logbooks/supporting/133-c2-fit/fit.json": "e6cd923b599a5f2f55021f8a6c7b94cd3354b84063420f9253003e748b0a077c",
+  "docs/experiments/logbooks/supporting/124-benchmark-v4/read.json": "bece13586ac0e909e4fdf24d3ba9b1ff375822182e09ded8cd93058094b9d913",
+  "docs/experiments/logbooks/supporting/110-benchmark-controls/controls.json": "8e0b0299e76a2ae986c389568c6b2e48e83e70d784aa03a6634872e2b15e9184",
+  "docs/experiments/logbooks/supporting/136-c1-v4-fit/pilot.json": "1436b1dced91e9fe92aa82a9a4fc3d5f27170c9bd9ce100206bd77a9b096dabc",
+  "docs/experiments/logbooks/supporting/113-c1-fit/encodings.md": "d3aa1af865dc74fa1de33c11048fa56ca2dc004a50d40c39e50b7f35c8654ade",
+  "data/benchmark/bands_v4.json": "355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448",
+  "data/benchmark/bands_v3.json": "8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b",
+  "data/benchmark/classifier.json": "e4a059de3d5b826d4fa2a99e61b3ed0f0cdefb3790ccfc4c8e38eefbb23b8239",
+  "data/locomotion/primitives.json": "8356a09a1078d887b75109b1215157c0fddb93f53c4c678128e020046637a625",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_chemotaxis_chen.yml": "a3339c8bd7a5a2c87dc175a889d43983c68febbeb8d7615cd4ffa91b378c5118",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_food_removal_calhoun.yml": "db9d27911a5f87e036864bd1574eec13097978f43df8cfcf34bc492a43583bfe",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_food_removal_lopezcruz.yml": "10e67edc7e87d0c970ead8a082e5aece1ebd32358cc5a2fdfa4d59dbd80bd081",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_scheer_lawn.yml": "4520aa9f2279357263e3bee383c4b65600ce960a322c7de6c29898a08458de72",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_uniform_lawn_flavell.yml": "6e7e1cf798fdd3551f61a75d47a72c493e7a6457044813c9e40eb557faabc016",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_uniform_lawn_scheer.yml": "d009f153ad330d7f5d6ecdfaf4e963020ce2c6e140a9b168c7d213d08514e2e1"
+ },
+ "reproduction": {
+  "reproduced": true,
+  "mismatches": [],
+  "repeat_identical": true
+ },
+ "wild_type": [
+  {
+   "restart": 0,
+   "g": 0,
+   "base": 525000000,
+   "v3": {
+    "D": 1.8101942955147976,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.10472046454836,
+    "D_fit": 2.0596387877971223,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06953666666666666
+   }
+  },
+  {
+   "restart": 0,
+   "g": 1,
+   "base": 525000000,
+   "v3": {
+    "D": 1.7208130486289193,
+    "wild_type_passes": false
+   },
+   "v4": {
+    "D": 2.007001452554337,
+    "D_fit": 2.0973923286708533,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": false,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06731222222222222
+   }
+  },
+  {
+   "restart": 0,
+   "g": 2,
+   "base": 525000000,
+   "v3": {
+    "D": 1.7011825725562288,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0191332381140827,
+    "D_fit": 2.0485754320783145,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06650333333333333
+   }
+  },
+  {
+   "restart": 0,
+   "g": 3,
+   "base": 525000000,
+   "v3": {
+    "D": 1.5947296700983613,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9443911866438424,
+    "D_fit": 2.0001397201462345,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06844666666666667
+   }
+  },
+  {
+   "restart": 0,
+   "g": 4,
+   "base": 525000000,
+   "v3": {
+    "D": 1.6028823610091925,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9358589388490368,
+    "D_fit": 2.0593754026241644,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.0676588888888889
+   }
+  },
+  {
+   "restart": 4,
+   "g": 0,
+   "base": 525000000,
+   "v3": {
+    "D": 1.0730424618061098,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9988225780709021,
+    "D_fit": 2.4139239388033444,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.02712888888888889
+   }
+  },
+  {
+   "restart": 4,
+   "g": 1,
+   "base": 525000000,
+   "v3": {
+    "D": 1.239718905124667,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0989500225448263,
+    "D_fit": 2.5332399136327837,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027724444444444444
+   }
+  },
+  {
+   "restart": 4,
+   "g": 2,
+   "base": 525000000,
+   "v3": {
+    "D": 0.8965812855270279,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9748629938861841,
+    "D_fit": 2.3859309167730722,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027626666666666667
+   }
+  },
+  {
+   "restart": 4,
+   "g": 3,
+   "base": 525000000,
+   "v3": {
+    "D": 1.0373603626658274,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0065872907360243,
+    "D_fit": 2.4202052656421698,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027493333333333335
+   }
+  },
+  {
+   "restart": 4,
+   "g": 4,
+   "base": 525000000,
+   "v3": {
+    "D": 1.1775635791537087,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.051445614655108,
+    "D_fit": 2.477358552446274,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027746666666666666
+   }
+  },
+  {
+   "restart": 6,
+   "g": 0,
+   "base": 525000000,
+   "v3": {
+    "D": 1.061255768520512,
+    "wild_type_passes": false
+   },
+   "v4": {
+    "D": 2.0028752715348523,
+    "D_fit": 2.3773732371882708,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": false,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03403
+   }
+  },
+  {
+   "restart": 6,
+   "g": 1,
+   "base": 525000000,
+   "v3": {
+    "D": 1.143527142941806,
+    "wild_type_passes": false
+   },
+   "v4": {
+    "D": 2.049933949087942,
+    "D_fit": 2.4227792892055464,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": false,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03258
+   }
+  },
+  {
+   "restart": 6,
+   "g": 2,
+   "base": 525000000,
+   "v3": {
+    "D": 1.034456023321683,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.066026028843763,
+    "D_fit": 2.4702121462243314,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03500222222222222
+   }
+  },
+  {
+   "restart": 6,
+   "g": 3,
+   "base": 525000000,
+   "v3": {
+    "D": 1.038006545945594,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.076745034226347,
+    "D_fit": 2.447968730280196,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03373333333333333
+   }
+  },
+  {
+   "restart": 6,
+   "g": 4,
+   "base": 525000000,
+   "v3": {
+    "D": 1.08430418149097,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0554444311903435,
+    "D_fit": 2.459024942632064,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.033166666666666664
+   }
+  }
+ ],
+ "populations": [
+  {
+   "restart": 0,
+   "g": 0,
+   "base": 525000000,
+   "v3": {
+    "D": 1.8101942955147976,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.10472046454836,
+    "D_fit": 2.0596387877971223,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06953666666666666
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.19150929879951925,
+     "exits_per_on_lawn_hour": -0.24661598605330487
+    },
+    "tax-4": {
+     "roaming_fraction": -0.06017555896004245,
+     "exits_per_on_lawn_hour": 5.853635554054651
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.19150929879951925,
+       "z": -9.020597543231847,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.24661598605330487,
+       "z": -1.139177514525249,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.06017555896004245,
+       "z": 1.253482350363526,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 5.853635554054651,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 0,
+   "g": 1,
+   "base": 525000000,
+   "v3": {
+    "D": 1.7208130486289193,
+    "wild_type_passes": false
+   },
+   "v4": {
+    "D": 2.007001452554337,
+    "D_fit": 2.0973923286708533,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": false,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06731222222222222
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.19974791004218323,
+     "exits_per_on_lawn_hour": -0.24683038769592502
+    },
+    "tax-4": {
+     "roaming_fraction": -0.07654532540273351,
+     "exits_per_on_lawn_hour": 6.060267320227391
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.19974791004218323,
+       "z": -9.181456474642495,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.24683038769592502,
+       "z": -1.1399439669867044,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.07654532540273351,
+       "z": 0.8863023082331861,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 6.060267320227391,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 0,
+   "g": 2,
+   "base": 525000000,
+   "v3": {
+    "D": 1.7011825725562288,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0191332381140827,
+    "D_fit": 2.0485754320783145,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06650333333333333
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.1861444232763434,
+     "exits_per_on_lawn_hour": -0.2876754769461676
+    },
+    "tax-4": {
+     "roaming_fraction": -0.07365087831844538,
+     "exits_per_on_lawn_hour": 5.848281031872617
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.1861444232763434,
+       "z": -8.915848318102713,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.2876754769461676,
+       "z": -1.2859587960320122,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.07365087831844538,
+       "z": 0.9512258492057255,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 5.848281031872617,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 0,
+   "g": 3,
+   "base": 525000000,
+   "v3": {
+    "D": 1.5947296700983613,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9443911866438424,
+    "D_fit": 2.0001397201462345,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.06844666666666667
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.1943041105964375,
+     "exits_per_on_lawn_hour": -0.3510822781874813
+    },
+    "tax-4": {
+     "roaming_fraction": -0.06242416525908748,
+     "exits_per_on_lawn_hour": 6.269366205141418
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.1943041105964375,
+       "z": -9.075166259475917,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.3510822781874813,
+       "z": -1.5126282295797733,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.06242416525908748,
+       "z": 1.203045262057569,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 6.269366205141418,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 0,
+   "g": 4,
+   "base": 525000000,
+   "v3": {
+    "D": 1.6028823610091925,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9358589388490368,
+    "D_fit": 2.0593754026241644,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.0676588888888889
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.18731406727933667,
+     "exits_per_on_lawn_hour": -0.4222755962687818
+    },
+    "tax-4": {
+     "roaming_fraction": -0.05117574738520353,
+     "exits_per_on_lawn_hour": 5.737575536123539
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.18731406727933667,
+       "z": -8.93868562391926,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.4222755962687818,
+       "z": -1.7671332474320134,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.05117574738520353,
+       "z": 1.455351522094435,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 5.737575536123539,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 4,
+   "g": 0,
+   "base": 525000000,
+   "v3": {
+    "D": 1.0730424618061098,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9988225780709021,
+    "D_fit": 2.4139239388033444,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.02712888888888889
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.14059783853823837,
+     "exits_per_on_lawn_hour": -0.5746818461926134
+    },
+    "tax-4": {
+     "roaming_fraction": -0.04481882755520769,
+     "exits_per_on_lawn_hour": 15.81569598090322
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.14059783853823837,
+       "z": -8.026550991820926,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.5746818461926134,
+       "z": -2.3119618409435962,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.04481882755520769,
+       "z": 1.59793963409766,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 15.81569598090322,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 4,
+   "g": 1,
+   "base": 525000000,
+   "v3": {
+    "D": 1.239718905124667,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0989500225448263,
+    "D_fit": 2.5332399136327837,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027724444444444444
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.13603456642214096,
+     "exits_per_on_lawn_hour": -0.6633395785227288
+    },
+    "tax-4": {
+     "roaming_fraction": -0.02700102790663235,
+     "exits_per_on_lawn_hour": 14.844508855173581
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.13603456642214096,
+       "z": -7.937453077778064,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.6633395785227288,
+       "z": -2.6288994181983596,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.02700102790663235,
+       "z": 1.9975996077776716,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 14.844508855173581,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 4,
+   "g": 2,
+   "base": 525000000,
+   "v3": {
+    "D": 0.8965812855270279,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9748629938861841,
+    "D_fit": 2.3859309167730722,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027626666666666667
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.11782875289489798,
+     "exits_per_on_lawn_hour": -0.6688931746554401
+    },
+    "tax-4": {
+     "roaming_fraction": -0.0156191371690413,
+     "exits_per_on_lawn_hour": 15.266935702349908
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.11782875289489798,
+       "z": -7.581984465023509,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.6688931746554401,
+       "z": -2.64875265893769,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0156191371690413,
+       "z": 2.252899714543555,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 15.266935702349908,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 4,
+   "g": 3,
+   "base": 525000000,
+   "v3": {
+    "D": 1.0373603626658274,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0065872907360243,
+    "D_fit": 2.4202052656421698,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027493333333333335
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.13474794553900568,
+     "exits_per_on_lawn_hour": -0.7020600011194479
+    },
+    "tax-4": {
+     "roaming_fraction": -0.014109764478588499,
+     "exits_per_on_lawn_hour": 15.123694403262562
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.13474794553900568,
+       "z": -7.912331797710862,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.7020600011194479,
+       "z": -2.7673188950510985,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.014109764478588499,
+       "z": 2.286755513892378,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 15.123694403262562,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 4,
+   "g": 4,
+   "base": 525000000,
+   "v3": {
+    "D": 1.1775635791537087,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.051445614655108,
+    "D_fit": 2.477358552446274,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.027746666666666666
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.13758079409048937,
+     "exits_per_on_lawn_hour": -0.6733432772213935
+    },
+    "tax-4": {
+     "roaming_fraction": -0.036208038018683664,
+     "exits_per_on_lawn_hour": 15.700167056162224
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.13758079409048937,
+       "z": -7.967643181804345,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.6733432772213935,
+       "z": -2.6646610821368863,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.036208038018683664,
+       "z": 1.791082894624022,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 15.700167056162224,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 0,
+   "base": 525000000,
+   "v3": {
+    "D": 1.061255768520512,
+    "wild_type_passes": false
+   },
+   "v4": {
+    "D": 2.0028752715348523,
+    "D_fit": 2.3773732371882708,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": false,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03403
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.1894714963088544,
+     "exits_per_on_lawn_hour": -0.4371708798680669
+    },
+    "tax-4": {
+     "roaming_fraction": -0.03479854036330271,
+     "exits_per_on_lawn_hour": 13.928298282353584
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.1894714963088544,
+       "z": -8.980809438001588,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.4371708798680669,
+       "z": -1.8203815651185284,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.03479854036330271,
+       "z": 1.8226984592258293,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.928298282353584,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 1,
+   "base": 525000000,
+   "v3": {
+    "D": 1.143527142941806,
+    "wild_type_passes": false
+   },
+   "v4": {
+    "D": 2.049933949087942,
+    "D_fit": 2.4227792892055464,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": false,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03258
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.19977751061600793,
+     "exits_per_on_lawn_hour": -0.3999764303240665
+    },
+    "tax-4": {
+     "roaming_fraction": -0.05289463653334833,
+     "exits_per_on_lawn_hour": 13.541646235575527
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.19977751061600793,
+       "z": -9.182034426014921,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.3999764303240665,
+       "z": -1.68741720413187,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.05289463653334833,
+       "z": 1.4167961894913244,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.541646235575527,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 2,
+   "base": 525000000,
+   "v3": {
+    "D": 1.034456023321683,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.066026028843763,
+    "D_fit": 2.4702121462243314,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03500222222222222
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.17879743804279605,
+     "exits_per_on_lawn_hour": -0.29106385003118856
+    },
+    "tax-4": {
+     "roaming_fraction": -0.024310316826486572,
+     "exits_per_on_lawn_hour": 13.244107097468058
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.17879743804279605,
+       "z": -8.772398389595576,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.29106385003118856,
+       "z": -1.298071701789664,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.024310316826486572,
+       "z": 2.057953273251599,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.244107097468058,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 3,
+   "base": 525000000,
+   "v3": {
+    "D": 1.038006545945594,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.076745034226347,
+    "D_fit": 2.447968730280196,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03373333333333333
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.17422985797023532,
+     "exits_per_on_lawn_hour": -0.41725579477442365
+    },
+    "tax-4": {
+     "roaming_fraction": -0.023482435582911854,
+     "exits_per_on_lawn_hour": 13.82911950602234
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.17422985797023532,
+       "z": -8.683216362678245,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.41725579477442365,
+       "z": -1.7491882393418245,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.023482435582911854,
+       "z": 2.0765229621325547,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.82911950602234,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 4,
+   "base": 525000000,
+   "v3": {
+    "D": 1.08430418149097,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0554444311903435,
+    "D_fit": 2.459024942632064,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.033166666666666664
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.1847782176367637,
+     "exits_per_on_lawn_hour": -0.36799238647365057
+    },
+    "tax-4": {
+     "roaming_fraction": -0.01888866309567952,
+     "exits_per_on_lawn_hour": 14.132884827688331
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.1847782176367637,
+       "z": -8.889173145212904,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.36799238647365057,
+       "z": -1.5730792315451563,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.01888866309567952,
+       "z": 2.179563013516567,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 14.132884827688331,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 0,
+   "base": 555000000,
+   "v3": {
+    "D": 1.156920175015199,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.102185834636634,
+    "D_fit": 2.475373442928642,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03285222222222222
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.18831981109634496,
+     "exits_per_on_lawn_hour": -0.3622876041618599
+    },
+    "tax-4": {
+     "roaming_fraction": -0.0494505199511687,
+     "exits_per_on_lawn_hour": 13.582425842244195
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.18831981109634496,
+       "z": -8.958322777671466,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.3622876041618599,
+       "z": -1.552685523775455,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0494505199511687,
+       "z": 1.4940490248432396,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.582425842244195,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 1,
+   "base": 555000000,
+   "v3": {
+    "D": 0.9724638545594292,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.003644081532095,
+    "D_fit": 2.368943761071411,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.034854444444444445
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.18993818183698472,
+     "exits_per_on_lawn_hour": -0.2957389105811095
+    },
+    "tax-4": {
+     "roaming_fraction": -0.0437897004479216,
+     "exits_per_on_lawn_hour": 13.738301963375475
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.18993818183698472,
+       "z": -8.989921475594903,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.2957389105811095,
+       "z": -1.3147843147256024,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0437897004479216,
+       "z": 1.621023343687145,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.738301963375475,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 2,
+   "base": 555000000,
+   "v3": {
+    "D": 1.0352291249835806,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.062440652881505,
+    "D_fit": 2.442144605001186,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.028712222222222222
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.17192852198962844,
+     "exits_per_on_lawn_hour": -0.37725784192104483
+    },
+    "tax-4": {
+     "roaming_fraction": -0.025337096200832465,
+     "exits_per_on_lawn_hour": 13.768463523773647
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.17192852198962844,
+       "z": -8.638282764556724,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.37725784192104483,
+       "z": -1.6062017909032595,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.025337096200832465,
+       "z": 2.0349222241984086,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.768463523773647,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 3,
+   "base": 555000000,
+   "v3": {
+    "D": 0.9320287583409052,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 1.9723527819309634,
+    "D_fit": 2.3311448899503437,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03138111111111111
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.18890369290056425,
+     "exits_per_on_lawn_hour": -0.5487325948402891
+    },
+    "tax-4": {
+     "roaming_fraction": -0.032985991806516846,
+     "exits_per_on_lawn_hour": 13.571525675912433
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.18890369290056425,
+       "z": -8.969723073222546,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.5487325948402891,
+       "z": -2.2191973111160395,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.032985991806516846,
+       "z": 1.8633546077282457,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.571525675912433,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 4,
+   "base": 555000000,
+   "v3": {
+    "D": 1.0764554590937634,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0599337141940537,
+    "D_fit": 2.4431663203981704,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.029238888888888887
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.18362841806943764,
+     "exits_per_on_lawn_hour": -0.3116987121758779
+    },
+    "tax-4": {
+     "roaming_fraction": -0.04691446312960029,
+     "exits_per_on_lawn_hour": 12.569448004798486
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.18362841806943764,
+       "z": -8.866723302115721,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.3116987121758779,
+       "z": -1.3718381183586377,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.04691446312960029,
+       "z": 1.5509337369036362,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 12.569448004798486,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 5,
+   "base": 555000000,
+   "v3": {
+    "D": 0.9857576958322556,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.0465012211850366,
+    "D_fit": 2.4351918030931876,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03176222222222222
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.1698958220331211,
+     "exits_per_on_lawn_hour": -0.44184467540606887
+    },
+    "tax-4": {
+     "roaming_fraction": -0.02756607783504947,
+     "exits_per_on_lawn_hour": 14.126500648334938
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.1698958220331211,
+       "z": -8.598594286334936,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.44184467540606887,
+       "z": -1.837089655833988,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.02756607783504947,
+       "z": 1.9849253245343343,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 14.126500648334938,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 6,
+   "base": 555000000,
+   "v3": {
+    "D": 1.1246344954580147,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.130673525692959,
+    "D_fit": 2.4939856164228558,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.033133333333333334
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.1748778851647733,
+     "exits_per_on_lawn_hour": -0.3952392329784258
+    },
+    "tax-4": {
+     "roaming_fraction": -0.028320047681169247,
+     "exits_per_on_lawn_hour": 12.796359938047368
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.1748778851647733,
+       "z": -8.695869097340442,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.3952392329784258,
+       "z": -1.670482461834214,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.028320047681169247,
+       "z": 1.9680134962054168,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 12.796359938047368,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 7,
+   "base": 555000000,
+   "v3": {
+    "D": 1.2808291145239195,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.051632682530984,
+    "D_fit": 2.347800243156364,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03219111111111111
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.20171236650729113,
+     "exits_per_on_lawn_hour": -0.3185244796532837
+    },
+    "tax-4": {
+     "roaming_fraction": -0.0472172947990043,
+     "exits_per_on_lawn_hour": 12.461030187330069
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.20171236650729113,
+       "z": -9.219812498306238,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.3185244796532837,
+       "z": -1.3962391734086155,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.0472172947990043,
+       "z": 1.5441411082171217,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 12.461030187330069,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 8,
+   "base": 555000000,
+   "v3": {
+    "D": 1.1203251626642767,
+    "wild_type_passes": true
+   },
+   "v4": {
+    "D": 2.08678352428652,
+    "D_fit": 2.479129056168751,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": true,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03202555555555556
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.17784450093490559,
+     "exits_per_on_lawn_hour": -0.3303771208565553
+    },
+    "tax-4": {
+     "roaming_fraction": -0.020554970121601318,
+     "exits_per_on_lawn_hour": 13.494379808721334
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.17784450093490559,
+       "z": -8.753792287139497,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.3303771208565553,
+       "z": -1.4386105186743332,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.020554970121601318,
+       "z": 2.142187117768633,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.494379808721334,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  },
+  {
+   "restart": 6,
+   "g": 9,
+   "base": 555000000,
+   "v3": {
+    "D": 1.1338032284485335,
+    "wild_type_passes": false
+   },
+   "v4": {
+    "D": 2.037090030504555,
+    "D_fit": 2.4354521900152886,
+    "wild_type_passes": false,
+    "family_passes": {
+     "small_lawn": false,
+     "kinematics": true,
+     "activity": false,
+     "uniform_lawn": true,
+     "local_search": true,
+     "chemotaxis": true
+    },
+    "reversal_share": 0.03182111111111111
+   },
+   "delta": {
+    "tph-1": {
+     "roaming_fraction": -0.1836265542366072,
+     "exits_per_on_lawn_hour": -0.36180906616905306
+    },
+    "tax-4": {
+     "roaming_fraction": -0.03491743917351872,
+     "exits_per_on_lawn_hour": 13.60507341619663
+    }
+   },
+   "mutants": {
+    "tph-1": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.1836265542366072,
+       "z": -8.866686910769097,
+       "graded": true,
+       "passes": false
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": -0.36180906616905306,
+       "z": -1.5509748250233166,
+       "graded": false,
+       "passes": null
+      }
+     },
+     "passes": false
+    },
+    "tax-4": {
+     "statistics": {
+      "roaming_fraction": {
+       "delta": -0.03491743917351872,
+       "z": 1.8200315140194208,
+       "graded": true,
+       "passes": true
+      },
+      "exits_per_on_lawn_hour": {
+       "delta": 13.60507341619663,
+       "z": 10.0,
+       "graded": true,
+       "passes": false
+      }
+     },
+     "passes": false
+    }
+   }
+  }
+ ],
+ "predictions": {
+  "tph-1": {
+   "passes": {
+    "0": 0,
+    "4": 0,
+    "6": 0
+   },
+   "by_population": {
+    "0": [
+     false,
+     false,
+     false,
+     false,
+     false
+    ],
+    "4": [
+     false,
+     false,
+     false,
+     false,
+     false
+    ],
+    "6": [
+     false,
+     false,
+     false,
+     false,
+     false
+    ]
+   },
+   "restart_passes": {
+    "0": false,
+    "4": false,
+    "6": false
+   },
+   "prediction": "fail"
+  },
+  "tax-4": {
+   "passes": {
+    "0": 0,
+    "4": 0,
+    "6": 0
+   },
+   "by_population": {
+    "0": [
+     false,
+     false,
+     false,
+     false,
+     false
+    ],
+    "4": [
+     false,
+     false,
+     false,
+     false,
+     false
+    ],
+    "6": [
+     false,
+     false,
+     false,
+     false,
+     false
+    ]
+   },
+   "restart_passes": {
+    "0": false,
+    "4": false,
+    "6": false
+   },
+   "prediction": "fail"
+  }
+ },
+ "more_populations": {
+  "populations": 15,
+  "wild_type_v4": 0.0,
+  "tph-1": 0.0,
+  "tax-4": 0.0,
+  "more": {
+   "populations": 10,
+   "wild_type_v4": 0,
+   "tph-1": 0,
+   "tax-4": 0
+  }
+ }
+}

@@ -15,12 +15,12 @@
 
 ## 3. The reading
 
-- [ ] 3.1 `grade`: `grade.json`.
-- [ ] 3.2 `table`: `fidelity_table.json` and `fidelity_table.md`.
+- [x] 3.1 `grade`: `grade.json`. *(2026-11-27, 4.2 min: reproduced, 0 mismatches, the repeat identical. tph-1 `fail` and tax-4 `fail`, every restart 0 of 5.)*
+- [x] 3.2 `table`: `fidelity_table.json` and `fidelity_table.md`.
 
 ## 4. Close-out
 
-- [ ] 4.1 Logbook 137 and its index row. Update:
+- [x] 4.1 Logbook 137 and its index row. Update:
   - the roadmap: the C row, the exit criterion, and the D37 note of 2026-11-27, whose "carries no prediction" for C.1's tax-4 row is corrected, since C.1's rows are its v3 answer's predictions;
   - the tracker (C.4);
   - AGENTS.md;
