@@ -1,0 +1,98 @@
+{
+  "description": "Description, discarded seeds: the second truth's separation from the registered start, the mutants' direction at each, and the cost per evaluation.",
+  "base": 647000000,
+  "truth_floor": 0.784052096599071,
+  "start_D": 1.6920941408017733,
+  "separation": 0.9080420442027023,
+  "separation_bar": 1.0,
+  "band_reference_D": 6.0792382596874575,
+  "band_reference_gain_from_start": -4.831432803023757,
+  "start_wild_D": [
+    1.811848159804278,
+    1.8370519191200778,
+    1.8632905058238742,
+    1.936994399723008,
+    1.8772900403563255,
+    1.8155112944948715,
+    1.9102078184806033,
+    1.8750333363552942,
+    1.8211884720697884,
+    1.8781867165837993
+  ],
+  "truth_wild_D": [
+    1.3167172498570625,
+    1.3164994835540025,
+    1.3497307936274445,
+    1.367165979805083,
+    1.3388901681246719,
+    1.3519959336330827,
+    1.592651003613113,
+    1.3005865431601127,
+    1.358032666030044,
+    1.3548265124044336,
+    1.3151875474043428
+  ],
+  "mutants_at_start": {
+    "tph-1": {
+      "passes": 0,
+      "of": 10,
+      "graded": {
+        "roaming_fraction": {
+          "delta_median": -0.1897069608797232,
+          "z_median": -8.985406885088164
+        }
+      }
+    },
+    "tax-4": {
+      "passes": 0,
+      "of": 10,
+      "graded": {
+        "roaming_fraction": {
+          "delta_median": -0.04127786644993932,
+          "z_median": 1.6773647286685631
+        },
+        "exits_per_on_lawn_hour": {
+          "delta_median": 12.588547859970852,
+          "z_median": 10.0
+        }
+      }
+    }
+  },
+  "mutants_at_truth": {
+    "tph-1": {
+      "passes": 0,
+      "of": 11,
+      "graded": {
+        "roaming_fraction": {
+          "delta_median": -0.2177738334802467,
+          "z_median": -9.53341273238181
+        }
+      }
+    },
+    "tax-4": {
+      "passes": 0,
+      "of": 11,
+      "graded": {
+        "roaming_fraction": {
+          "delta_median": -0.03612221720325362,
+          "z_median": 1.793007887917945
+        },
+        "exits_per_on_lawn_hour": {
+          "delta_median": 10.620245567163199,
+          "z_median": 10.0
+        }
+      }
+    }
+  },
+  "mutant_band_centres": {
+    "tph-1": {
+      "roaming_fraction": 0.2704930014985987,
+      "exits_per_on_lawn_hour": 0.0720489574793502
+    },
+    "tax-4": {
+      "roaming_fraction": -0.11605880685237357,
+      "exits_per_on_lawn_hour": 0.30577071242499354
+    }
+  },
+  "seconds_per_evaluation": 35.25733691640198
+}

@@ -3,9 +3,10 @@
 
 Each assay reproduces its reference's arena, lawn, start, food history, duration and analysis window,
 on the 1-second primitives arms: the MLP reading internal state, food contact and locomotor state,
-the connectome with serotonin and PDF, the data-layer connectome under the compact encoder, and that
-encoded arm with on-food reversals backing at a speed that follows the worm's recent run speed
-(``encoded_following``, C.2's registered body).
+the connectome with serotonin and PDF, the data-layer connectome under the compact encoder, and two
+following arms: the encoded arm and the MLP arm, each with on-food reversals backing at a speed that
+follows the worm's recent run speed (``encoded_following``, C.2's registered body, and
+``internal_following``, the body C.1's mechanistic controller is refitted on).
 
 | Protocol | Reference | Arena | Lawn | Phases | Analysis |
 |---|---|---|---|---|---|
@@ -47,7 +48,20 @@ import generate_lawn_configs as lawn_gen
 FORAGING = lawn_gen.FORAGING
 # The encoded arm with ``continuous.on_food_reversal_speed: follows_run_speed``, its only difference.
 FOLLOWING_ARM = "encoded_following"
-ARMS: tuple[str, ...] = ("internal", "modulated", lawn_gen.ENCODED_STEM_ARM, FOLLOWING_ARM)
+# The MLP arm with the same single difference.
+INTERNAL_FOLLOWING_ARM = "internal_following"
+# Each following arm and the arm it is derived from.
+FOLLOWING_BASES: dict[str, str] = {
+    FOLLOWING_ARM: lawn_gen.ENCODED_STEM_ARM,
+    INTERNAL_FOLLOWING_ARM: "internal",
+}
+ARMS: tuple[str, ...] = (
+    "internal",
+    "modulated",
+    lawn_gen.ENCODED_STEM_ARM,
+    FOLLOWING_ARM,
+    INTERNAL_FOLLOWING_ARM,
+)
 REFERENCE_STEP_S = 5.0
 # Satiety empties over 12 h of basal decay: 300 over 43,200 s, written per 5-s reference step.
 INITIAL_SATIETY = 300.0
@@ -130,16 +144,21 @@ PROTOCOLS: dict[str, dict[str, Any]] = {
 }
 
 
+def _base_arm(arm: str) -> str:
+    """Return the arm an assay arm's settings come from: itself, or a following arm's base."""
+    return FOLLOWING_BASES.get(arm, arm)
+
+
 def _base_stem(arm: str) -> str:
     """Return the stem of the primitives arm config an assay arm is derived from."""
-    if arm in (lawn_gen.ENCODED_STEM_ARM, FOLLOWING_ARM):
+    if _base_arm(arm) == lawn_gen.ENCODED_STEM_ARM:
         return lawn_gen.encoded_stem()
-    return lawn_gen.primitives_stem(arm)
+    return lawn_gen.primitives_stem(_base_arm(arm))
 
 
 def _arm_stem(arm: str) -> str:
-    if arm == FOLLOWING_ARM:
-        return f"{lawn_gen.encoded_stem()}_following"
+    if arm in FOLLOWING_BASES:
+        return f"{_base_stem(arm)}_following"
     return _base_stem(arm)
 
 
@@ -154,10 +173,11 @@ def derive(arm: str, protocol: str) -> tuple[Path, str]:
         msg = f"unknown arm {arm!r} or protocol {protocol!r}"
         raise ValueError(msg)
     spec = PROTOCOLS[protocol]
+    base = _base_arm(arm)
     _, text = (
         lawn_gen.derive_encoded()
-        if arm in (lawn_gen.ENCODED_STEM_ARM, FOLLOWING_ARM)
-        else lawn_gen.derive_primitives(arm)
+        if base == lawn_gen.ENCODED_STEM_ARM
+        else lawn_gen.derive_primitives(base)
     )
     data: dict[str, Any] = yaml.safe_load(text)
     total_s = sum(phase["duration_s"] for phase in spec["phases"])
@@ -172,7 +192,7 @@ def derive(arm: str, protocol: str) -> tuple[Path, str]:
     environment["continuous"].update(
         {"world_size_mm": spec["world_size_mm"], "arena_shape": spec["arena_shape"]},
     )
-    if arm == FOLLOWING_ARM:
+    if arm in FOLLOWING_BASES:
         environment["continuous"]["on_food_reversal_speed"] = "follows_run_speed"
     environment["foraging"]["lawns"].update(
         {
@@ -206,7 +226,7 @@ def derive(arm: str, protocol: str) -> tuple[Path, str]:
         + (
             "# On-food reversals back at a speed that follows the worm's recent run speed\n"
             "# (continuous.on_food_reversal_speed: follows_run_speed), the arm's only difference.\n"
-            if arm == FOLLOWING_ARM
+            if arm in FOLLOWING_BASES
             else ""
         )
         + (
