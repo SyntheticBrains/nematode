@@ -1,0 +1,102 @@
+"""After the pilot: what keeps C.1's worm on the small lawn, and so whether tax-4 can pass.
+
+Description, discarded seeds (641,000,000 + 200·k + i, k 0-15), run after the pilot's no-go and
+before any decision, on the speed-following arm with both mutants. Sixteen points, each graded
+once with presence by the fit script's own `grade_answer`:
+
+- the pilot's answer (A) and the registered start (S), as they are (k 0 and 8);
+- each with `edge`, the response to falling food contact that tax-4's encoding keeps, raised to
+  unit 0.5, 0.75 and 1.0 (its box maximum, 5.0);
+- each with the dC/dt reversal and omega gains (beta_reversal, beta_omega), which tax-4 zeroes,
+  set to 0, alone and with edge at 0.5 and 1.0;
+- each with edge at 1.0, both betas at 0 and the weathervane gain at 0, so the wild type is
+  tax-4's encoding except for the off-food gain.
+
+It records every point's full grading, with tax-4's and tph-1's graded differences.
+
+Run from the repository root:
+
+    uv run python docs/experiments/logbooks/supporting/136-c1-v4-fit/probes/tax4_retention.py.txt <out.json>
+"""
+
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+sys.path.insert(0, "scripts/analysis")
+import c1_v4_fit as fit
+
+BASE = 641_000_000
+PILOT = Path("docs/experiments/logbooks/supporting/136-c1-v4-fit/pilot.json")
+INDEX = {"edge": 14, "beta_reversal": 13, "beta_omega": 17, "kappa_weathervane": 10}
+WORKERS = 16
+
+
+def point(base: list[float], **units: float) -> list[float]:
+    """Return a copy of a unit-box point with some coordinates replaced."""
+    z = list(base)
+    for name, u in units.items():
+        z[INDEX[name]] = u
+    return z
+
+
+def job(args: tuple[int, str, list[float]]) -> dict:
+    """Grade one point with presence, with each mutant's graded differences."""
+    k, label, z = args
+    g = fit.grade_answer(k, z, BASE)
+    bands = fit._bands()
+    g["label"] = label
+    g["tax4"] = fit.mutant_reading("tax-4", g["delta"]["tax-4"], bands)
+    g["tph1"] = fit.mutant_reading("tph-1", g["delta"]["tph-1"], bands)
+    return g
+
+
+def main() -> None:
+    """Grade the sixteen points and write the record."""
+    out = Path(sys.argv[1])
+    a = list(json.loads(PILOT.read_text())["answer"])
+    s = list(fit.start_point())
+    # kappa_weathervane's box is [-50, 50], so unit 0.5 is a zero gain; the betas' boxes start at 0.
+    zero = {"beta_reversal": 0.0, "beta_omega": 0.0}
+    points = []
+    for name, base in (("A", a), ("S", s)):
+        points += [
+            (name, base),
+            (f"{name} edge0.5", point(base, edge=0.5)),
+            (f"{name} edge1", point(base, edge=1.0)),
+            (f"{name} beta0", point(base, **zero)),
+            (f"{name} edge0.5 beta0", point(base, edge=0.5, **zero)),
+            (f"{name} edge1 beta0", point(base, edge=1.0, **zero)),
+            (f"{name} edge1 beta0 kw0", point(base, edge=1.0, kappa_weathervane=0.5, **zero)),
+            (f"{name} edge0.75", point(base, edge=0.75)),
+        ]
+    jobs = [(k, label, z) for k, (label, z) in enumerate(points)]
+    with ProcessPoolExecutor(max_workers=WORKERS) as pool:
+        results = list(pool.map(job, jobs))
+    record = {
+        "description": (
+            "Description, discarded seeds, after the pilot: the wild type's lawn retention in C.1's "
+            "model and tax-4's graded lawn-exit difference, at the pilot's answer and the start."
+        ),
+        "base": BASE,
+        "tax4_exits_band_centre": fit.band_truth(fit._bands())["delta"]["tax-4"][
+            "exits_per_on_lawn_hour"
+        ],
+        "tax4_exits_scale": fit.mutant_scales(fit._bands())["tax-4"]["exits_per_on_lawn_hour"],
+        "points": results,
+    }
+    out.write_text(json.dumps(record, indent=1, default=float) + "\n")
+    for g in results:
+        fails = sorted(k for k, p in g["passes"].items() if p is False)
+        t4 = g["tax4"]["statistics"]["exits_per_on_lawn_hour"]
+        print(
+            f"{g['label']:20s} WT pass={g['wild_type_passes']!s:5s} D={g['D']:.2f} "
+            f"exits={g['statistics']['small_lawn/exits_per_on_lawn_hour']:.2f} "
+            f"tax-4 dExits={t4['delta']:.2f} z={t4['z']:.2f} tax-4 pass={g['tax4']['passes']} "
+            f"tph-1 pass={g['tph1']['passes']} fails={fails}"
+        )
+
+
+if __name__ == "__main__":
+    main()

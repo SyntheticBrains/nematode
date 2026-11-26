@@ -41,25 +41,25 @@
 
   An independent review, then commit.
 
-- [ ] 3.4 `pilot`: the restart, its 5 grades, the go rule, the preflight's check on its answer, the cost bar and the cap. Stop and return to the maintainer if any part fails.
+- [x] 3.4 `pilot`: the restart, its 5 grades, the go rule, the preflight's check on its answer, the cost bar and the cap. Stop and return to the maintainer if any part fails. *(2026-11-27, 1.34 h: it stopped on its plateau at generation 113, and the check and the cost bar (20.1 h) held. **It failed the go rule:** the wild type 0 of 5 (roaming windows' speed median), tph-1 5 of 5, tax-4 0 of 5 (exits per on-lawn hour); `pilot.json`. It returned to the maintainer. A probe on discarded seeds (`probes/tax4_retention`) finds tax-4 out of reach for C.1's model. The maintainer closed the refit as a no-go.)*
 
-- [ ] 3.5 Part B: the pilot's result, the cap, the truth bound, the measured cost. Commit.
+- [x] 3.5 Part B: the pilot's result, the cap, the truth bound, the measured cost. Commit. *(2026-11-27: Part B records the no-go, the probes seen after it and the maintainer's decision. It changes no rule.)*
 
 ## 4. The recovery
 
-- [ ] 4.1 `recovery-preflight`: the observation, floor, oracle, start D, prior D, band reference, gate line and checks. Stop if a check fails.
-- [ ] 4.2 `recovery`: 2 fits, the gain, the gate. Return to the maintainer if the gain is below 0.75.
-- [ ] 4.3 Part C: the recovery's result. Commit.
+- [x] 4.1 *(Not run: the pilot's go is false, 2026-11-27.)* `recovery-preflight`: the observation, floor, oracle, start D, prior D, band reference, gate line and checks. Stop if a check fails.
+- [x] 4.2 *(Not run.)* `recovery`: 2 fits, the gain, the gate. Return to the maintainer if the gain is below 0.75.
+- [x] 4.3 *(Not written.)* Part C: the recovery's result. Commit.
 
 ## 5. The fit, the verdict and the leave-one-out
 
-- [ ] 5.1 `run` (12 restarts), `select`, `grade` (every restart on 15 registered populations) and `read`: `fit.json`, with the verdict, the mutant rows and the held-out reading.
-- [ ] 5.2 `loo`: the leave-one-out and its 15 grades, `loo.json`.
+- [x] 5.1 *(Not run: no registered fit, verdict or held-out reading.)* `run` (12 restarts), `select`, `grade` (every restart on 15 registered populations) and `read`: `fit.json`, with the verdict, the mutant rows and the held-out reading.
+- [x] 5.2 *(Not run.)* `loo`: the leave-one-out and its 15 grades, `loo.json`.
 
 ## 6. Close-out
 
-- [ ] 6.1 Logbook 136 and its index row. Update:
-  - the roadmap (C.1, C.4, the C.1 risk row if it fails);
+- [x] 6.1 Logbook 136 and its index row. Update:
+  - the roadmap (C.1, C.4, the C.1 risk row, D37 and D38);
   - the tracker (C.1 on v4);
   - AGENTS.md;
   - the CHANGELOG.

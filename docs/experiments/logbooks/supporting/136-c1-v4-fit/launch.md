@@ -241,3 +241,43 @@ Everything seen before this part was written:
 - **The projection:** at a 200-generation route the registered compute is about 31 h: 15 restarts × 200 × 38 s.
 - **The extras:** the pilot adds about 2 h, the preflight about 30 min and the grading under 30 min.
 - The cost bar is read in Part B.
+
+## Part B: the pilot, and the refit closed (2026-11-27)
+
+Recorded after the pilot, before anything else registered. It changes no rule, and it is committed together with `pilot.json`.
+
+### The pilot
+
+- **The run** (CMA 9467, 696 M): it stopped on the plateau at generation 113, median 3.39 and σ 0.041, in 1.34 h at 42.7 s a generation. The registered cap would have been 300.
+
+- **The preflight check on its own answer passed** (698.1 M and 698.2 M). On the combined distance, the floor is 0.68 and the start's D 5.10; the oracle's gain is 1.01. On the wild type's distance, the floor is 0.43 and the start's D 2.15; the oracle's gain is 0.96. No statistic's definedness flipped.
+
+- **The cost bar held:** a projected 20.1 h, against 48 h, and 53.4 h at the cap.
+
+- **The go rule failed:**
+
+  | | Populations passing (of 5) | What fails |
+  |---|---|---|
+  | the wild type | **0** | the roaming windows' speed median in every population (z −7.06 to −7.41), and the on-lawn onset rate in one (−3.10) |
+  | tph-1 | 5 | — |
+  | tax-4 | **0** | exits per on-lawn hour in every population: Δ +12.5 to +14.5 against the bands' +0.31, z at the cap of 10 |
+
+- **So `go` is false,** and under Part A nothing further registers. The refit returned to the maintainer.
+
+### Seen before the decision
+
+Both are description on discarded seeds, committed under `probes/`:
+
+- **`pilot_reading`** reads `pilot.json` alone. At the pilot's answer, tax-4's term carries 86–88% of the squared score. It sat at its cap from the start, so the search had no signal from it.
+- **`tax4_retention`** (641 M) grades 16 points around the pilot's answer and the start. The wild type stays on the lawn through its weathervane gain, which tax-4's encoding removes.
+  - With `edge`, the response tax-4 keeps, at its box's maximum, tax-4 still exits 7.6 to 9.6 more times an hour, at the z cap.
+  - Zeroing both betas barely moves it: 13.1 to 13.2 at the pilot's answer, and 12.1 to 12.6 at the start.
+  - Zeroing the weathervane gain as well closes the exits difference (−0.2 and +1.3). But then the wild type itself exits 8.8 and 9.6 times an hour and spends 61–67% of its time on the lawn, so it fails the small lawn. tax-4 then fails on its roaming fraction instead, since the two worms barely differ.
+
+### The maintainer's decision
+
+**The refit closes as a no-go** (2026-11-27). No recovery, registered fit, held-out reading or leave-one-out runs, so none of their seeds is used and the held-out dates stay unread.
+
+- C.1 enters C.4 as a failing row, through its v3 answer, which fails v4 (Logbooks 124 and 125).
+- Its tax-4 row is a structural miss under the registered encoding.
+- tph-1 is shown reachable, as description.
