@@ -279,5 +279,5 @@ Both are description on discarded seeds, committed under `probes/`:
 **The refit closes as a no-go** (2026-11-27). No recovery, registered fit, held-out reading or leave-one-out runs, so none of their seeds is used and the held-out dates stay unread.
 
 - C.1 enters C.4 as a failing row, through its v3 answer, which fails v4 (Logbooks 124 and 125).
-- Its tax-4 row is a structural miss under the registered encoding.
-- tph-1 is shown reachable, as description.
+- That answer was fitted to the wild type alone, so its mutant rows are predictions. tax-4 failed at every point the probe tested, but no bound over the registered box is established.
+- tph-1 is shown reachable by fitting, as description.

@@ -129,7 +129,7 @@ The new statistics SHALL be validated on N2's held-out dates that no reading has
 #### Scenario: A registered fit reads the held-out dates once
 
 - **WHEN** C.1's v4 refit reads its held-out reading in `read`, under launch record 136
-- **THEN** it SHALL read N2's and PD1074's held-out dates as description, and no other stage of that fit SHALL load a held-out row
+- **THEN** it SHALL read N2's and PD1074's held-out dates as description, and no other stage of that fit SHALL pass a held-out row to any computation
 
 ### Requirement: W's minimum v2 is recorded on both family sets
 

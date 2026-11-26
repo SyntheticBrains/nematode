@@ -692,7 +692,8 @@ C.2 enters C.4 as a failing in-sample row.)*
   - **The wild type passes 0 of 5,** on the roaming windows' speed median (z −7.06 to −7.41).
   - **tax-4 passes 0 of 5:** 12.5 to 14.5 extra exits an hour, against a real +0.31.
   - **A probe on discarded seeds** finds that C.1's worm holds the lawn through the weathervane gain
-    tax-4's encoding removes. Within the registered box, tax-4 is out of reach.
+    tax-4's encoding removes. tax-4 fails at all 16 probed points, though no bound over the box is
+    established.
   - **The maintainer's decision:** close as a no-go. No recovery, registered fit, held-out reading or
     leave-one-out ran. C.1 enters C.4 as a failing row through its v3 answer.
 
@@ -1010,12 +1011,16 @@ C.2 enters C.4 as a failing in-sample row.)*
   row through its v3 answer**, which fails v4's wild type in 0 of 5. Its refit on v4 closed at its
   pilot, so it has no v4 answer.
 
-  - **Its tax-4 row is a structural miss** under the registered encoding: its worm holds the lawn
-    by the weathervane steering tax-4 removes.
-  - **Its tph-1** is reachable from the v3 answer, as description on discarded seeds.
-  - **It carries no tax-4 prediction,** since the leave-one-out did not run.
-  - **C.2 against C.1** is a mirror: C.2 holds tax-4 and cannot move tph-1. Both controllers' mutants
-    are fitted, and both rows are in-sample.
+  - **Its mutant rows are predictions,** not fits: the v3 answer was fitted to the wild type alone.
+    On discarded seeds, tph-1 and tax-4 both fail at it (0 of 10 each).
+  - **Its tax-4** failed at every point the refit's probe tested, where the worm holds the lawn by the
+    weathervane steering tax-4 removes. No bound over the box is established.
+  - **Its tph-1** is reachable from the v3 answer by fitting, as description on discarded seeds.
+  - **There is no leave-one-out prediction** from a v4 answer, since the refit stopped at its pilot.
+  - **C.2 against C.1:** the two rows differ in kind. C.2's mutant rows are fitted and in-sample.
+    C.1's are not: its v3 answer was fitted to the wild type alone, and its v4 refit stopped at the
+    pilot. As description, the pilot's fitted answer mirrors C.2: it moves tph-1 and fails tax-4,
+    where C.2 holds tax-4 and cannot move tph-1.
 
   *(Added 2026-11-05, B v4.)* **On v4, C.1's v3 answer fails the wild type** (0 of 5;
   [Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)). C.1 enters the table from

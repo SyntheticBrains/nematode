@@ -536,7 +536,7 @@ Twelve restarts SHALL run from the registered start (CMA seeds 9451–9462). Eve
 
 ### Requirement: C.1's v4 reads beside its verdict
 
-On the chosen restart's 15 registered populations, the held-out reading SHALL apply C.2's rule to N2's 26 and PD1074's 24 held-out recording dates, authorised by D37 as amended and launch record 136, as description. Only `read` SHALL load a held-out row. After the reading, one tax-4 leave-one-out restart SHALL run from the registered start with tax-4 out of the objective, and its answer SHALL be graded on 15 populations of its own. Its tax-4 SHALL be reported as "prediction passed" when it passes in at least 3 of its first 5 populations and "prediction failed" otherwise, both always shown, with a cap or a wild-type failure stated. Neither reading SHALL change the verdict.
+On the chosen restart's 15 registered populations, the held-out reading SHALL apply C.2's rule to N2's 26 and PD1074's 24 held-out recording dates, authorised by D37 as amended and launch record 136, as description. Only `read` SHALL use a held-out row: a stage that loads Scheer's tracks file, which holds every cohort, SHALL select band-cohort rows before passing any row to a computation. After the reading, one tax-4 leave-one-out restart SHALL run from the registered start with tax-4 out of the objective, and its answer SHALL be graded on 15 populations of its own. Its tax-4 SHALL be reported as "prediction passed" when it passes in at least 3 of its first 5 populations and "prediction failed" otherwise, both always shown, with a cap or a wild-type failure stated. Neither reading SHALL change the verdict.
 
 #### Scenario: The leave-one-out gates nothing
 
