@@ -1,0 +1,267 @@
+{
+ "description": "Description, no simulation: the pilot's graded populations scored by the fit's objective and split into its terms, and every parameter at the start and the answer.",
+ "families": 6,
+ "mutant_weight": 3.0,
+ "populations": [
+  {
+   "k": 0,
+   "score": 3.3531698706120783,
+   "wild_type_distance": 1.7432304109627361,
+   "terms": {
+    "tph-1": 0.2024961085772497,
+    "tax-4": 6.233480850963042
+   },
+   "tax4_share_of_score_squared": 0.8639530807075342
+  },
+  {
+   "k": 1,
+   "score": 3.3491979579181437,
+   "wild_type_distance": 1.6628572120606702,
+   "terms": {
+    "tph-1": 0.20402252816975686,
+    "tax-4": 6.268707557215212
+   },
+   "tax4_share_of_score_squared": 0.8758190616318932
+  },
+  {
+   "k": 2,
+   "score": 3.3728969906964092,
+   "wild_type_distance": 1.685089654638899,
+   "terms": {
+    "tph-1": 0.2148219583513054,
+    "tax-4": 6.3071811197446666
+   },
+   "tax4_share_of_score_squared": 0.8741872297846053
+  },
+  {
+   "k": 3,
+   "score": 3.389303115066938,
+   "wild_type_distance": 1.7175904816329186,
+   "terms": {
+    "tph-1": 0.41518535440474075,
+    "tax-4": 6.314815074054474
+   },
+   "tax4_share_of_score_squared": 0.8678415938485371
+  },
+  {
+   "k": 4,
+   "score": 3.3337409220701892,
+   "wild_type_distance": 1.6616170776519534,
+   "terms": {
+    "tph-1": 0.08454302702338518,
+    "tax-4": 6.2390883943917705
+   },
+   "tax4_share_of_score_squared": 0.8756258896011025
+  }
+ ],
+ "parameters": [
+  {
+   "index": 0,
+   "name": "a0",
+   "unit_start": 0.028962135558530673,
+   "unit_answer": 4.084978858281973e-06,
+   "start": -9.010277027181145,
+   "answer": -9.210312153941908
+  },
+  {
+   "index": 1,
+   "name": "a_intake",
+   "unit_start": 0.9023207061609887,
+   "unit_answer": 0.9487990076839729,
+   "start": 4.023207061609886,
+   "answer": 4.487990076839729
+  },
+  {
+   "index": 2,
+   "name": "a_satiety",
+   "unit_start": 0.46446440019053836,
+   "unit_answer": 0.41753229003432885,
+   "start": -0.35535599809461615,
+   "answer": -0.8246770996567117
+  },
+  {
+   "index": 3,
+   "name": "b0",
+   "unit_start": 0.9955794562425216,
+   "unit_answer": 0.8352551755558154,
+   "start": -2.3331211274707373,
+   "answer": -3.440602023733346
+  },
+  {
+   "index": 4,
+   "name": "b_intake",
+   "unit_start": 0.538889529929796,
+   "unit_answer": 0.39050564128189863,
+   "start": 0.3888952992979604,
+   "answer": -1.0949435871810138
+  },
+  {
+   "index": 5,
+   "name": "b_satiety",
+   "unit_start": 0.19585644757196768,
+   "unit_answer": 0.28572876512747264,
+   "start": -3.041435524280323,
+   "answer": -2.1427123487252735
+  },
+  {
+   "index": 6,
+   "name": "v_dwell",
+   "unit_start": 0.03688958916297553,
+   "unit_answer": 0.1359430098128012,
+   "start": 0.012193469886780228,
+   "answer": 0.03150888691349623
+  },
+  {
+   "index": 7,
+   "name": "v_roam",
+   "unit_start": 0.28039276510134786,
+   "unit_answer": 0.08813608296787465,
+   "start": 0.05967658919476283,
+   "answer": 0.022186536178735557
+  },
+  {
+   "index": 8,
+   "name": "sigma_dwell",
+   "unit_start": 0.09903562404146275,
+   "unit_answer": 0.4447883494576856,
+   "start": 10.446959322280453,
+   "answer": 29.463359220172705
+  },
+  {
+   "index": 9,
+   "name": "sigma_roam",
+   "unit_start": 0.8545841913734985,
+   "unit_answer": 0.7897652558206542,
+   "start": 52.00213052554242,
+   "answer": 48.437089070135976
+  },
+  {
+   "index": 10,
+   "name": "kappa_weathervane",
+   "unit_start": 0.06864841225085705,
+   "unit_answer": 0.07087607840203244,
+   "start": -43.135158774914295,
+   "answer": -42.91239215979675
+  },
+  {
+   "index": 11,
+   "name": "r_dwell",
+   "unit_start": 0.09311879422474179,
+   "unit_answer": 0.06579749752674002,
+   "start": 0.0017837124041110218,
+   "answer": 0.0015051697175597865
+  },
+  {
+   "index": 12,
+   "name": "r_roam",
+   "unit_start": 0.7258433152127077,
+   "unit_answer": 0.7314877522312493,
+   "start": 0.09099747372852546,
+   "answer": 0.09424612476329228
+  },
+  {
+   "index": 13,
+   "name": "beta_reversal",
+   "unit_start": 0.6521701128818438,
+   "unit_answer": 0.815381801739169,
+   "start": 3.260850564409219,
+   "answer": 4.076909008695845
+  },
+  {
+   "index": 14,
+   "name": "edge",
+   "unit_start": 0.24915424844429918,
+   "unit_answer": 0.01260070062019772,
+   "start": 1.245771242221496,
+   "answer": 0.06300350310098861
+  },
+  {
+   "index": 15,
+   "name": "o_dwell",
+   "unit_start": 0.4662025798798464,
+   "unit_answer": 0.16117864730931228,
+   "start": 0.01812453107037264,
+   "answer": 0.0027228037146356018
+  },
+  {
+   "index": 16,
+   "name": "o_roam",
+   "unit_start": 0.5609629826478902,
+   "unit_answer": 0.8510411474468415,
+   "start": 0.0326604574828085,
+   "answer": 0.19812283299630654
+  },
+  {
+   "index": 17,
+   "name": "beta_omega",
+   "unit_start": 0.2643816010172436,
+   "unit_answer": 0.7009889238046881,
+   "start": 1.3219080050862182,
+   "answer": 3.5049446190234406
+  },
+  {
+   "index": 18,
+   "name": "search_amplitude",
+   "unit_start": 0.9266114488180714,
+   "unit_answer": 0.9987989071627366,
+   "start": 18.53222897636143,
+   "answer": 19.975978143254732
+  },
+  {
+   "index": 19,
+   "name": "search_tau_s",
+   "unit_start": 0.6487614513903208,
+   "unit_answer": 0.710828325311732,
+   "start": 404.63251695849925,
+   "answer": 576.511471130798
+  },
+  {
+   "index": 20,
+   "name": "v_off_food",
+   "unit_start": 0.8143085948514603,
+   "unit_answer": 0.6903921958920507,
+   "start": 0.16379017599603476,
+   "answer": 0.13962647819894988
+  },
+  {
+   "index": 21,
+   "name": "sigma_off_food",
+   "unit_start": 0.43123983967256796,
+   "unit_answer": 0.16711254736555617,
+   "start": 28.718191181991237,
+   "answer": 14.191190105105589
+  },
+  {
+   "index": 22,
+   "name": "speed_log_sd_dwell",
+   "unit_start": 0.3544270002926078,
+   "unit_answer": 0.5597049278979226,
+   "start": 0.5316405004389118,
+   "answer": 0.8395573918468839
+  },
+  {
+   "index": 23,
+   "name": "speed_log_sd_roam",
+   "unit_start": 0.31913242489689503,
+   "unit_answer": 0.20045524259554237,
+   "start": 0.47869863734534257,
+   "answer": 0.30068286389331356
+  },
+  {
+   "index": 24,
+   "name": "kappa_off_food",
+   "unit_start": 0.4834760325651065,
+   "unit_answer": 0.47684448542434427,
+   "start": -1.6523967434893478,
+   "answer": -2.315551457565576
+  },
+  {
+   "index": 25,
+   "name": "r_dwell_on_food",
+   "unit_start": 0.5,
+   "unit_answer": 0.7914512252072488,
+   "start": 0.022360679774997897,
+   "answer": 0.13680536109057145
+  }
+ ]
+}

@@ -1,0 +1,99 @@
+"""After the pilot: its objective's terms and its parameters' moves, read from `pilot.json` alone.
+
+Description, no simulation. For each of the pilot's 5 graded populations it scores the record with
+the fit's own objective and splits it into the wild type's distance and each mutant's term, with
+tax-4's share of the squared score. It lists every parameter at the registered start and at the
+pilot's answer, in unit coordinates and in model units.
+
+Run from the repository root:
+
+    uv run python docs/experiments/logbooks/supporting/136-c1-v4-fit/probes/pilot_reading.py.txt <out.json>
+"""
+
+import json
+import math
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "scripts/analysis")
+import c1_v4_fit as fit
+
+PILOT = Path("docs/experiments/logbooks/supporting/136-c1-v4-fit/pilot.json")
+
+
+def terms(objective: fit.Objective, record: dict) -> dict[str, float]:
+    """Return each fitted mutant's term: the RMS of its compressed, capped z."""
+    out = {}
+    for m in objective.mutants:
+        zs = [
+            fit.mutant_z(objective.truth, record, objective.mscales[m][s], m, s)
+            for s in fit.GRADED[m]
+        ]
+        compressed = [10.0 * math.asinh(z / 10.0) for z in zs]
+        out[m] = math.sqrt(sum(c * c for c in compressed) / len(compressed))
+    return out
+
+
+def main() -> None:
+    """Write the reading."""
+    out = Path(sys.argv[1])
+    pilot = json.loads(PILOT.read_text())
+    objective = fit.band_objective()
+    wild = fit.band_objective(mutants=())
+    families = len(objective.family_map)
+    weight = families / len(objective.mutants)
+    populations = []
+    for g in pilot["grades"]:
+        score = objective(g)
+        t = terms(objective, g)
+        populations.append(
+            {
+                "k": g["k"],
+                "score": score,
+                "wild_type_distance": wild(g),
+                "terms": t,
+                "tax4_share_of_score_squared": weight
+                * t["tax-4"] ** 2
+                / ((families + weight * len(t)) * score**2),
+            },
+        )
+    x0 = list(fit.start_point())
+    xa = list(pilot["answer"])
+    start, answer = fit.parameters(x0), fit.parameters(xa)
+    moves = [
+        {
+            "index": i,
+            "name": name,
+            "unit_start": x0[i],
+            "unit_answer": xa[i],
+            "start": start[name],
+            "answer": answer[name],
+        }
+        for i, name in enumerate(start)
+    ]
+    record = {
+        "description": (
+            "Description, no simulation: the pilot's graded populations scored by the fit's "
+            "objective and split into its terms, and every parameter at the start and the answer."
+        ),
+        "families": families,
+        "mutant_weight": weight,
+        "populations": populations,
+        "parameters": moves,
+    }
+    out.write_text(json.dumps(record, indent=1) + "\n")
+    for p in populations:
+        print(
+            f"k {p['k']}: score {p['score']:.3f} wild {p['wild_type_distance']:.3f} "
+            f"tph-1 {p['terms']['tph-1']:.3f} tax-4 {p['terms']['tax-4']:.3f} "
+            f"tax-4 share {p['tax4_share_of_score_squared']:.3f}"
+        )
+    for m in moves:
+        print(
+            f"{m['index']:2d} {m['name']:20s} unit {m['unit_start']:.3f} -> {m['unit_answer']:.3f}  "
+            f"{m['start']:.4g} -> {m['answer']:.4g}"
+        )
+
+
+if __name__ == "__main__":
+    main()

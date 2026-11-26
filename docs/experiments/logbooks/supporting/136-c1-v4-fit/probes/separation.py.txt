@@ -1,0 +1,86 @@
+"""Before Part A: the second truth's separation from the start, the mutants' direction, the cost.
+
+Description, discarded seeds (647,000,000 + 200·k + i): the registered start re-simulated 10 times
+(k 0-9), and Logbook 125's on-food-dwelling answer, the recovery's second truth, as an observation
+(k 100) and 10 re-simulations (k 101-110), all on the speed-following arm with both mutants.
+
+It reads, with the fit script's own functions:
+
+- the truth's floor and the start's distance to it, against the preflight's separation of 1.0;
+- each mutant's graded differences and z against v4's mutant bands, at the start and at the truth;
+- seconds per evaluation with the mutants.
+
+Run from the repository root:
+
+    uv run python docs/experiments/logbooks/supporting/136-c1-v4-fit/probes/separation.py.txt <out.json>
+"""
+
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import c1_v4_fit as fit
+import npe_recovery as nr
+
+BASE = 647_000_000
+STORE = Path("build/c1-v4-fit/probes/separation.jsonl")
+
+
+def main() -> None:
+    out = Path(sys.argv[1])
+    jobs = [(q, fit.start_point()) for q in range(10)]
+    jobs += [(100 + q, fit.probe_truth()) for q in range(11)]
+    runs = fit.run_jobs(jobs, BASE, STORE, workers=16)
+    observation = runs[100]
+    floor_runs = [runs[101 + q] for q in range(10)]
+    start_runs = [runs[q] for q in range(10)]
+    floor = float(np.median([fit.recovery_distance(observation, r) for r in floor_runs]))
+    start = float(np.median([fit.recovery_distance(observation, r) for r in start_runs]))
+    bands = fit._bands()
+    reference = fit.recovery_distance(observation, fit.band_truth(bands))
+
+    def mutants(records):
+        rows = {}
+        for m in fit.MUTANTS:
+            readings = [fit.mutant_reading(m, r["delta"][m], bands) for r in records]
+            rows[m] = {
+                "passes": sum(x["passes"] for x in readings),
+                "of": len(readings),
+                "graded": {
+                    s: {
+                        "delta_median": float(np.median([x["statistics"][s]["delta"] for x in readings if x["statistics"][s]["delta"] is not None])) if any(x["statistics"][s]["delta"] is not None for x in readings) else None,
+                        "z_median": float(np.median([x["statistics"][s]["z"] for x in readings])),
+                    }
+                    for s in fit.GRADED[m]
+                },
+            }
+        return rows
+
+    centres = {m: {s: b.centre for s, b in fit.bg.mutant_bands(bands, m, 200).items()} for m in fit.MUTANTS}
+    record = {
+        "description": "Description, discarded seeds: the second truth's separation from the "
+        "registered start, the mutants' direction at each, and the cost per evaluation.",
+        "base": BASE,
+        "truth_floor": floor,
+        "start_D": start,
+        "separation": start - floor,
+        "separation_bar": fit.SEPARATION,
+        "band_reference_D": reference,
+        "band_reference_gain_from_start": fit.gain_from_start(start, reference, floor),
+        "start_wild_D": [r["D"] for r in start_runs],
+        "truth_wild_D": [r["D"] for r in [observation, *floor_runs]],
+        "mutants_at_start": mutants(start_runs),
+        "mutants_at_truth": mutants([observation, *floor_runs]),
+        "mutant_band_centres": centres,
+        "seconds_per_evaluation": float(np.median([r["seconds"] for r in runs.values()])),
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(nr._finite(record), indent=2) + "\n")
+    print(json.dumps(nr._finite({k: v for k, v in record.items() if k not in ("description",)}), indent=2))
+
+
+if __name__ == "__main__":
+    main()

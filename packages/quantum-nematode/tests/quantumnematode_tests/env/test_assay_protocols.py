@@ -315,12 +315,17 @@ def test_the_committed_assay_configs_are_the_generators(arm: str, protocol: str)
     assert lawns.movement_cost_per_mm == 0.0
 
 
+@pytest.mark.parametrize("arm", list(gen.FOLLOWING_BASES))
 @pytest.mark.parametrize("protocol", list(gen.PROTOCOLS))
-def test_the_following_arm_differs_only_in_the_reversal_speed(protocol: str) -> None:
-    """Covers the controller-fit scenario "The arm differs only in the reversal speed"."""
-    _, encoded = gen.derive("encoded", protocol)
-    path, following = gen.derive(gen.FOLLOWING_ARM, protocol)
-    base, variant = yaml.safe_load(encoded), yaml.safe_load(following)
+def test_the_following_arm_differs_only_in_the_reversal_speed(arm: str, protocol: str) -> None:
+    """Covers the controller-fit scenario "The arm differs only in the reversal speed".
+
+    Both following arms: C.2's (``encoded_following``) and C.1's v4 refit's
+    (``internal_following``), each against the arm it is derived from.
+    """
+    _, original = gen.derive(gen.FOLLOWING_BASES[arm], protocol)
+    path, following = gen.derive(arm, protocol)
+    base, variant = yaml.safe_load(original), yaml.safe_load(following)
     assert variant["environment"]["continuous"].pop("on_food_reversal_speed") == "follows_run_speed"
     assert "on_food_reversal_speed" not in base["environment"]["continuous"]
     assert variant == base

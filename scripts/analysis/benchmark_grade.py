@@ -110,6 +110,10 @@ ARMS = {
         "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives"
         "_following"
     ),
+    # The MLP arm's environment with the same body, for controllers that replace its brain.
+    "mlp_following": (
+        "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_following"
+    ),
 }
 PROTOCOLS = {
     "small_lawn": "scheer_lawn",
