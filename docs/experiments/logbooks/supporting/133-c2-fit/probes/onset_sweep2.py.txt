@@ -1,0 +1,79 @@
+"""The sweep's follow-up: more reversals with a slower dwelling worm (description; discarded)
+
+``onset_sweep.py`` (2026-11-18) found no single move at the fifth pilot's answer that opens the
+on-lawn onset rate: every move raising it by at least 1 in z took the dwelling speeds over their
+bars. The reversal readout's bias +0.10 matched Logbook 131's answer on the onset rate (1.693 a
+minute against 1.694) and the pause share (0.470 against 0.473), but dwelt faster (median 0.0159
+mm/s against 0.0141, 90th percentile 0.0327 against 0.0307). This asks whether a second move,
+slowing the dwelling worm, closes that gap: the reversal bias +0.10 with each of the speed
+readout's bias -0.02 and -0.04, the speed output's noise -0.10 and -0.20, CEP's food-contact gain
+at 0.10, and the speed readout's VA weight -0.20.
+
+**The reading, fixed before it runs** (2026-11-18): the first sweep's. A point opens a direction
+when, in all three populations, the onset rate's z is at least -3.0781, every other D_fit statistic
+passes, and tph-1 passes. If some point does, a two-parameter move the search did not take exists
+at the answer; if none does, the coupling holds at two parameters too.
+
+**Seeds (discarded).** The first sweep's: population p's animals 1,430,000,000 + 200 p + i.
+
+Run from the repository root: ``onset_sweep2.py [workers]``.
+"""
+
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-fit")
+import benchmark_grade as bg
+import c2_fit as fit
+import onset_sweep as first
+
+OUT = Path("build/c2-fit/onset_sweep2.json")
+
+
+def points() -> list[tuple[str, list[float]]]:
+    names = [e.name for e in fit.entries()]
+    idx = {n: i for i, n in enumerate(names)}
+    z0 = np.asarray(json.loads(first.PILOT.read_text())["answer"], dtype=float)
+    base = z0.copy()
+    base[idx["readout.reversal.bias"]] = np.clip(base[idx["readout.reversal.bias"]] + 0.10, 0, 1)
+
+    def also(name: str, *, by: float | None = None, to: float | None = None) -> list[float]:
+        z = base.copy()
+        z[idx[name]] = np.clip(to if to is not None else z[idx[name]] + by, 0.0, 1.0)
+        return z.tolist()
+
+    out = [(f"rev+0.10,speed.bias{d:+.2f}", also("readout.speed.bias", by=d)) for d in (-0.02, -0.04)]
+    out += [(f"rev+0.10,noise.speed{d:+.2f}", also("noise.speed", by=d)) for d in (-0.10, -0.20)]
+    out += [("rev+0.10,CEP=0.10", also("sensory.CEP.contact", to=0.10))]
+    out += [("rev+0.10,speed.VA-0.20", also("readout.speed.VA", by=-0.20))]
+    return out
+
+
+def main() -> int:
+    workers = int(sys.argv[1]) if len(sys.argv) > 1 else 16
+    bands = bg.load_bands_v4()
+    pts = points()
+    jobs = [(z, first.seeds(p), False) for _, z in pts for p in range(first.POPULATIONS)]
+    print(f"{len(pts)} points x {first.POPULATIONS} populations = {len(jobs)} jobs", flush=True)
+    start = time.perf_counter()
+    with fit._pool(workers) as pool:
+        results = list(pool.map(fit._point_job, jobs))
+    n = first.POPULATIONS
+    records = {
+        name: {"vector": fit.vector_digest(z),
+               "populations": [fit.grade_record(r, bands) for r in results[i * n : (i + 1) * n]]}
+        for i, (name, z) in enumerate(pts)
+    }
+    OUT.write_text(json.dumps({"description": __doc__, "seeds": "onset_sweep.py's",
+                               "seconds": time.perf_counter() - start, "points": records}, indent=1))
+    print(f"done in {time.perf_counter() - start:.0f} s -> {OUT}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

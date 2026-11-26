@@ -1,0 +1,650 @@
+{
+ "gain": {
+  "pilot3 (stall)": -1.4916287522799572,
+  "rep3 (stall)": -1.360432294895531,
+  "rep0 (bar 290)": 0.03894465878754527,
+  "half (bar 120)": 0.8891995222662401,
+  "probe (bar 220)": 0.8416876189177982
+ },
+ "rows": [
+  [
+   "pilot3 (stall)",
+   "as_is",
+   0,
+   {
+    "D_fit": 3.8017038572726327,
+    "time_on_lawn": 0.9699970440437482,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 9.58637170188104,
+    "activity/pause_share": 7.34178438439095,
+    "activity/onset_rate_per_min": -5.857452862927929
+   }
+  ],
+  [
+   "pilot3 (stall)",
+   "mirrored",
+   0,
+   {
+    "D_fit": 7.036846157186951,
+    "time_on_lawn": 0.6021546564519991,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -4.585367386818996,
+    "activity/onset_rate_per_min": 0.15595052193448258
+   }
+  ],
+  [
+   "pilot3 (stall)",
+   "as_is",
+   1,
+   {
+    "D_fit": 3.8745306088760527,
+    "time_on_lawn": 0.9721744302130462,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 9.72784485826468,
+    "activity/pause_share": 7.43464859649893,
+    "activity/onset_rate_per_min": -5.922001428071222
+   }
+  ],
+  [
+   "pilot3 (stall)",
+   "mirrored",
+   1,
+   {
+    "D_fit": 7.031263047007319,
+    "time_on_lawn": 0.5829722029353317,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -4.544011080776191,
+    "activity/onset_rate_per_min": 0.16159630505396352
+   }
+  ],
+  [
+   "pilot3 (stall)",
+   "as_is",
+   2,
+   {
+    "D_fit": 3.8440437895844513,
+    "time_on_lawn": 0.9782309467844059,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 9.630588763109916,
+    "activity/pause_share": 7.253054362125217,
+    "activity/onset_rate_per_min": -5.793990161412229
+   }
+  ],
+  [
+   "pilot3 (stall)",
+   "mirrored",
+   2,
+   {
+    "D_fit": 7.0307244274209975,
+    "time_on_lawn": 0.5980242435811778,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -4.504970830207097,
+    "activity/onset_rate_per_min": 0.1426239095511805
+   }
+  ],
+  [
+   "pilot3 (stall)",
+   "as_is",
+   3,
+   {
+    "D_fit": 3.803777078479292,
+    "time_on_lawn": 0.9743285353910076,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 9.573404455892744,
+    "activity/pause_share": 7.449594023123835,
+    "activity/onset_rate_per_min": -5.946173464566049
+   }
+  ],
+  [
+   "pilot3 (stall)",
+   "mirrored",
+   3,
+   {
+    "D_fit": 7.0395691223148535,
+    "time_on_lawn": 0.5944453779495427,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -4.557718272761416,
+    "activity/onset_rate_per_min": 0.17479570331501024
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "as_is",
+   0,
+   {
+    "D_fit": 4.2247419111680244,
+    "time_on_lawn": 0.9671463538149899,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": 4.163478682986865,
+    "activity/onset_rate_per_min": -3.542755842149436
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "mirrored",
+   0,
+   {
+    "D_fit": 9.049986428802594,
+    "time_on_lawn": 0.9866728620609543,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": -10.0
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "as_is",
+   1,
+   {
+    "D_fit": 4.2491894552458795,
+    "time_on_lawn": 0.968054375531011,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": 4.092789275291649,
+    "activity/onset_rate_per_min": -3.532346919721901
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "mirrored",
+   1,
+   {
+    "D_fit": 8.87678347534754,
+    "time_on_lawn": 0.994938216465684,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": -10.0
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "as_is",
+   2,
+   {
+    "D_fit": 4.258738579536369,
+    "time_on_lawn": 0.9677296404522933,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": 4.096162346926428,
+    "activity/onset_rate_per_min": -3.6412977674849873
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "mirrored",
+   2,
+   {
+    "D_fit": 8.412286238919053,
+    "time_on_lawn": 0.9920518852928085,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": -10.0
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "as_is",
+   3,
+   {
+    "D_fit": 4.219168214312262,
+    "time_on_lawn": 0.9716039418910882,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": 4.149694734494442,
+    "activity/onset_rate_per_min": -3.61562914163344
+   }
+  ],
+  [
+   "rep3 (stall)",
+   "mirrored",
+   3,
+   {
+    "D_fit": 8.411729073949168,
+    "time_on_lawn": 0.9946430849028528,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": -10.0
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "as_is",
+   0,
+   {
+    "D_fit": 2.2295480000589603,
+    "time_on_lawn": 0.9842763977121631,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 2.79511376895142,
+    "activity/pause_share": 1.6018434234994101,
+    "activity/onset_rate_per_min": -3.8441247486423227
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "mirrored",
+   0,
+   {
+    "D_fit": 2.23052782490504,
+    "time_on_lawn": 0.9837041415122219,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 3.2158083191964004,
+    "activity/pause_share": 1.2876365146541275,
+    "activity/onset_rate_per_min": -3.706341699060171
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "as_is",
+   1,
+   {
+    "D_fit": 2.177344145255317,
+    "time_on_lawn": 0.9886076218410593,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 3.0153469953760887,
+    "activity/pause_share": 1.6384530519850231,
+    "activity/onset_rate_per_min": -3.8675012297221696
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "mirrored",
+   1,
+   {
+    "D_fit": 2.1842825251833373,
+    "time_on_lawn": 0.9828073530974392,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 2.9313965856799116,
+    "activity/pause_share": 1.3592660675022894,
+    "activity/onset_rate_per_min": -3.82192491845343
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "as_is",
+   2,
+   {
+    "D_fit": 2.155185620658077,
+    "time_on_lawn": 0.9879321660703322,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 2.872595745138377,
+    "activity/pause_share": 1.5148254386721933,
+    "activity/onset_rate_per_min": -3.771053478704689
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "mirrored",
+   2,
+   {
+    "D_fit": 2.316438190456725,
+    "time_on_lawn": 0.9838989873310453,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 3.132929294203192,
+    "activity/pause_share": 1.1945922026763147,
+    "activity/onset_rate_per_min": -3.579043978258629
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "as_is",
+   3,
+   {
+    "D_fit": 2.2289727332637814,
+    "time_on_lawn": 0.9859119015745522,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 2.8893080191253606,
+    "activity/pause_share": 1.5955393423739175,
+    "activity/onset_rate_per_min": -3.863047009484049
+   }
+  ],
+  [
+   "rep0 (bar 290)",
+   "mirrored",
+   3,
+   {
+    "D_fit": 2.3264943072774726,
+    "time_on_lawn": 0.983177927401712,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 3.1598165640730915,
+    "activity/pause_share": 1.1741712867604057,
+    "activity/onset_rate_per_min": -3.6477836451942554
+   }
+  ],
+  [
+   "half (bar 120)",
+   "as_is",
+   0,
+   {
+    "D_fit": 1.786769347686158,
+    "time_on_lawn": 0.9823012587648897,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 1.1089939577179226,
+    "activity/pause_share": -1.5163478505720764,
+    "activity/onset_rate_per_min": -3.065664666249939
+   }
+  ],
+  [
+   "half (bar 120)",
+   "mirrored",
+   0,
+   {
+    "D_fit": 8.631838136236096,
+    "time_on_lawn": 0.11992651096000338,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": 10.0
+   }
+  ],
+  [
+   "half (bar 120)",
+   "as_is",
+   1,
+   {
+    "D_fit": 1.9150302495999818,
+    "time_on_lawn": 0.98796768707483,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 1.2769958546960505,
+    "activity/pause_share": -1.8470833790941548,
+    "activity/onset_rate_per_min": -2.7728003952971427
+   }
+  ],
+  [
+   "half (bar 120)",
+   "mirrored",
+   1,
+   {
+    "D_fit": 8.631004529995932,
+    "time_on_lawn": 0.11748569970442511,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": 10.0
+   }
+  ],
+  [
+   "half (bar 120)",
+   "as_is",
+   2,
+   {
+    "D_fit": 1.9303195978897074,
+    "time_on_lawn": 0.9819344727534575,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 1.4146104603504523,
+    "activity/pause_share": -2.0360960716272096,
+    "activity/onset_rate_per_min": -2.644916244687445
+   }
+  ],
+  [
+   "half (bar 120)",
+   "mirrored",
+   2,
+   {
+    "D_fit": 8.623625289873155,
+    "time_on_lawn": 0.11898053007351539,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": 10.0
+   }
+  ],
+  [
+   "half (bar 120)",
+   "as_is",
+   3,
+   {
+    "D_fit": 1.8861786896090482,
+    "time_on_lawn": 0.9861285449864903,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 1.2151930577630328,
+    "activity/pause_share": -1.5494484497789562,
+    "activity/onset_rate_per_min": -2.9950004461921402
+   }
+  ],
+  [
+   "half (bar 120)",
+   "mirrored",
+   3,
+   {
+    "D_fit": 8.867060161642518,
+    "time_on_lawn": 0.12395413038861754,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": 10.0
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "as_is",
+   0,
+   {
+    "D_fit": 2.2579434400904965,
+    "time_on_lawn": 0.9847358031492448,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 0.4977084887084188,
+    "activity/pause_share": -0.06730235358999136,
+    "activity/onset_rate_per_min": -3.3031989609628685
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "mirrored",
+   0,
+   {
+    "D_fit": 7.759880851785584,
+    "time_on_lawn": 0.6364729631061289,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": -7.361240258353144,
+    "activity/pause_share": 10.0,
+    "activity/onset_rate_per_min": -9.471412219723488
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "as_is",
+   1,
+   {
+    "D_fit": 2.104332071227334,
+    "time_on_lawn": 0.9824254289991938,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 0.7556492133016165,
+    "activity/pause_share": -0.03184175840338075,
+    "activity/onset_rate_per_min": -3.227206490837772
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "mirrored",
+   1,
+   {
+    "D_fit": 7.937161523387915,
+    "time_on_lawn": 0.6919873324367707,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": -7.249559926817329,
+    "activity/pause_share": 9.981196469604301,
+    "activity/onset_rate_per_min": -9.349311996228522
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "as_is",
+   2,
+   {
+    "D_fit": 2.3211990175976496,
+    "time_on_lawn": 0.9903923691910698,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 0.6591447166973354,
+    "activity/pause_share": -0.20325176387619778,
+    "activity/onset_rate_per_min": -3.204903699535259
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "mirrored",
+   2,
+   {
+    "D_fit": 7.859156987921414,
+    "time_on_lawn": 0.678990636127841,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": -7.519664692265129,
+    "activity/pause_share": 10.0,
+    "activity/onset_rate_per_min": -9.452356471723993
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "as_is",
+   3,
+   {
+    "D_fit": 2.3420314811779,
+    "time_on_lawn": 0.990835147210448,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": 0.5053968849703494,
+    "activity/pause_share": -0.1463405437058784,
+    "activity/onset_rate_per_min": -3.1451597862374894
+   }
+  ],
+  [
+   "probe (bar 220)",
+   "mirrored",
+   3,
+   {
+    "D_fit": 7.757564449992989,
+    "time_on_lawn": 0.6644581989364484,
+    "reversal_share": null,
+    "kinematics/dwelling_speed_p90": -7.341207956521256,
+    "activity/pause_share": 9.936319352317446,
+    "activity/onset_rate_per_min": -9.361913425036665
+   }
+  ]
+ ],
+ "effects": {
+  "pilot3 (stall)": {
+   "as_is": {
+    "D_fit": 3.831013833553107,
+    "kinematics/dwelling_speed_p90": 9.629552444787095,
+    "activity/pause_share": 7.369770341534732,
+    "activity/onset_rate_per_min": -5.879904479244357,
+    "time_on_lawn": 0.973682739108052
+   },
+   "mirrored": {
+    "D_fit": 7.034600688482531,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -4.548016892640925,
+    "activity/onset_rate_per_min": 0.1587416099636592,
+    "time_on_lawn": 0.5943991202295128
+   },
+   "effect": {
+    "D_fit": 3.2035868549294237,
+    "kinematics/dwelling_speed_p90": 0.3704475552129054,
+    "activity/pause_share": -11.917787234175657,
+    "activity/onset_rate_per_min": 6.038646089208016,
+    "time_on_lawn": -0.37928361887853923
+   }
+  },
+  "rep3 (stall)": {
+   "as_is": {
+    "D_fit": 4.237959540065634,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": 4.125531259924846,
+    "activity/onset_rate_per_min": -3.583007417747441,
+    "time_on_lawn": 0.9686335779223456
+   },
+   "mirrored": {
+    "D_fit": 8.687696304254588,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": -10.0,
+    "time_on_lawn": 0.9920765121805749
+   },
+   "effect": {
+    "D_fit": 4.4497367641889545,
+    "kinematics/dwelling_speed_p90": 0.0,
+    "activity/pause_share": -14.125531259924845,
+    "activity/onset_rate_per_min": -6.4169925822525595,
+    "time_on_lawn": 0.023442934258229298
+   }
+  },
+  "rep0 (bar 290)": {
+   "as_is": {
+    "D_fit": 2.197762624809034,
+    "kinematics/dwelling_speed_p90": 2.8930911321478114,
+    "activity/pause_share": 1.587665314132636,
+    "activity/onset_rate_per_min": -3.8364316166383077,
+    "time_on_lawn": 0.9866820217995267
+   },
+   "mirrored": {
+    "D_fit": 2.2644357119556435,
+    "kinematics/dwelling_speed_p90": 3.1099876907881487,
+    "activity/pause_share": 1.2539165178982845,
+    "activity/onset_rate_per_min": -3.6887735602416214,
+    "time_on_lawn": 0.9833971023356045
+   },
+   "effect": {
+    "D_fit": 0.06667308714660969,
+    "kinematics/dwelling_speed_p90": 0.2168965586403373,
+    "activity/pause_share": -0.3337487962343515,
+    "activity/onset_rate_per_min": 0.14765805639668628,
+    "time_on_lawn": -0.0032849194639221757
+   }
+  },
+  "half (bar 120)": {
+   "as_is": {
+    "D_fit": 1.879574471196224,
+    "kinematics/dwelling_speed_p90": 1.2539483326318646,
+    "activity/pause_share": -1.7372439377680993,
+    "activity/onset_rate_per_min": -2.869595438106667,
+    "time_on_lawn": 0.9845829908949169
+   },
+   "mirrored": {
+    "D_fit": 8.688382029436927,
+    "kinematics/dwelling_speed_p90": 10.0,
+    "activity/pause_share": -10.0,
+    "activity/onset_rate_per_min": 10.0,
+    "time_on_lawn": 0.12008671778164036
+   },
+   "effect": {
+    "D_fit": 6.808807558240702,
+    "kinematics/dwelling_speed_p90": 8.746051667368135,
+    "activity/pause_share": -8.262756062231901,
+    "activity/onset_rate_per_min": 12.869595438106668,
+    "time_on_lawn": -0.8644962731132765
+   }
+  },
+  "probe (bar 220)": {
+   "as_is": {
+    "D_fit": 2.256376502523345,
+    "kinematics/dwelling_speed_p90": 0.60447482591943,
+    "activity/pause_share": -0.11218410489386207,
+    "activity/onset_rate_per_min": -3.220117234393347,
+    "time_on_lawn": 0.9870971871374891
+   },
+   "mirrored": {
+    "D_fit": 7.828440953271976,
+    "kinematics/dwelling_speed_p90": -7.367918208489214,
+    "activity/pause_share": 9.979378955480437,
+    "activity/onset_rate_per_min": -9.408748528178169,
+    "time_on_lawn": 0.6679772826517973
+   },
+   "effect": {
+    "D_fit": 5.5720644507486305,
+    "kinematics/dwelling_speed_p90": -7.972393034408644,
+    "activity/pause_share": 10.091563060374298,
+    "activity/onset_rate_per_min": -6.188631293784821,
+    "time_on_lawn": -0.3191199044856917
+   }
+  }
+ },
+ "reading": "not a one-parameter switch at the answer",
+ "seconds": 98.14929604530334
+}

@@ -1,0 +1,49 @@
+{
+ "description": "Would other near-wild-type answers clear the stand-in gate? (description; discarded seeds)\n\nThe stand-in preflight's gate line is D_rec <= 1.87 to the stand-in truth's observation. Scored here,\neach re-simulated twice under the speed-following body: B02's answer (from Logbook 129's imitation\nlineage, fitted on the pooled body) and the third continuation's (hinge3, the truth's own lineage,\npooled body). Seeds 887,100,000 + 200 q + i (q < 4), discarded.\n",
+ "rows": {
+  "B020": {
+   "D_rec": 1.5709413729340327,
+   "wild": 1.833088290105528,
+   "mutants": [
+    1.0285752645480055,
+    0.9029150270277372,
+    1.6891655112322939
+   ],
+   "gain": 0.7993334868886305,
+   "D_bands": 1.7980166600735017
+  },
+  "B021": {
+   "D_rec": 1.510952516116702,
+   "wild": 1.757602684128889,
+   "mutants": [
+    1.0193526306045417,
+    0.9362561441733656,
+    1.5857831178828814
+   ],
+   "gain": 0.8092471017206568,
+   "D_bands": 1.7689165342518058
+  },
+  "hinge30": {
+   "D_rec": 0.5715375793438879,
+   "wild": 0.7382727080239562,
+   "mutants": [
+    0.31249583191333796,
+    0.35050868342167163,
+    0.32292641771361213
+   ],
+   "gain": 0.9644925647068356,
+   "D_bands": 1.6322748855862932
+  },
+  "hinge31": {
+   "D_rec": 0.5473066741283273,
+   "wild": 0.7198271555025846,
+   "mutants": [
+    0.12982415336924286,
+    0.16787468308589487,
+    0.4447223311870119
+   ],
+   "gain": 0.9684969060809324,
+   "D_bands": 1.5380859396675264
+  }
+ }
+}

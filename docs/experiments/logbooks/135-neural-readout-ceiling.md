@@ -20,7 +20,7 @@ extended edge), cannot detect a true anatomical model at the data's reliability,
 unreadable, not null. **Condition on an earlier result:** Logbook 134's
 "data ceiling" of 0.173 was r(training, test), a reference, not a ceiling; its shares of the
 ceiling become about 15% and 13%, and its "no detectable gain" from behaviour fitting holds
-paired.
+paired. *(2026-11-25, [Logbook 133](133-c2-fit.md): that is at Logbook 131's answer. On C.2's registered answer the unfitted-floor reading's paired class interval lies just above 0, 0.001 to 0.043, as description.)*
 
 **Date**: 2026-11-16. Registered 2026-11-15, amended twice before the registered reading (see
 [Corrections](#corrections-made-in-the-open)). Before it, S's values entered only § 3's summaries.

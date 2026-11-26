@@ -1,0 +1,114 @@
+"""Does the dopamine wiring sign hold the stalled 2a answers where they are? (description; discarded)
+
+Five guarded 2a runs, each from its own start, held the lawn. Three reached the bar (the guarded
+first half at generation 120, the lawn-guard probe at 220, guard_rep 0 at 290) and two stalled near
+D_fit 4 (guard_rep 3 at 4.22; the third pilot's start 0, killed at 3.83). Both stalls fail the same
+statistics: the dwelling-speed tail far too fast (z about 10), the on-lawn pause share too high
+(z 4-7) and the on-lawn onset rate too low (z -4 to -6). Both ended with the dopaminergic synapses'
+signed gain (`wiring.unsigned.dopamine`, gain = 4u - 2 on [-2, 2]) strongly inhibitory, -1.49 and
+-1.36; the three that reached the bar ended at +0.04, +0.89 and +0.84. That is two against three,
+among 137 parameters, and an earlier prediction on this gain failed as stated.
+
+Check, at the answers (no search): each answer as it is, and with only that gain mirrored (u -> 1 - u,
+g -> -g), on the same four populations of 200 animals, the fit assays (D_fit's families).
+
+**The rules, fixed before it runs** (2026-11-14, 06:20):
+- an answer's effect is the mean over the four populations of (mirrored - as is), for D_fit and the
+  z of kinematics/dwelling_speed_p90, activity/pause_share and activity/onset_rate_per_min;
+- the sign **holds the stalls** if mirroring lowers both stalls' D_fit by at least 1.0 and their
+  dwelling p90 z by at least 3; it **separates the basins both ways** if, in addition, mirroring
+  raises at least two of the three reachers' D_fit by at least 1.0;
+- otherwise it is not a one-parameter switch at the answer. The gain may still steer which basin
+  stage 1 enters (each answer's other parameters co-adapted to its sign), which this cannot read.
+
+Seeds (discarded): population p's animal i is 1,170,000,000 + 1,000 p + i, p = 0..3, the same for
+every answer and arm. 16 workers. Run from the repository root: ``dopamine_flip.py``.
+"""
+
+import json
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import c2_fit as fit
+
+BASE, POPULATIONS, WORKERS, K = 1_170_000_000, 4, 16, 3
+P = "docs/experiments/logbooks/supporting/133-c2-fit/probes/"
+SIGNATURE = (
+    "kinematics/dwelling_speed_p90",
+    "activity/pause_share",
+    "activity/onset_rate_per_min",
+)
+
+
+def answers():
+    def answer_of(path):
+        p = json.load(open(path))
+        if p.get("answer") is not None:
+            return p["answer"]
+        a = p["answers"]
+        return a["2a"] if isinstance(a, dict) and "2a" in a else (list(a.values())[-1] if isinstance(a, dict) else a[-1])
+
+    import pickle
+
+    state = pickle.load(open("build/c2-fit/pilot/state.pkl", "rb"))
+    return {
+        "pilot3 (stall)": list(state["x"]),
+        "rep3 (stall)": answer_of("build/c2-fit/guard_rep_3.json"),
+        "rep0 (bar 290)": answer_of(P + "guard_rep_0.json"),
+        "half (bar 120)": answer_of(P + "guarded_first_half.json"),
+        "probe (bar 220)": answer_of(P + "guard_probe.json"),
+    }
+
+
+def job(item):
+    name, arm, p, z = item
+    seeds = [BASE + 1_000 * p + i for i in range(fit.ANIMALS)]
+    r = fit.simulate_point(z, seeds, assays=fit.FIT_ASSAYS, mutants=())
+    return name, arm, p, {
+        "D_fit": r["D_fit"],
+        "time_on_lawn": r["time_on_lawn"],
+        "reversal_share": r["reversal_share"],
+        **{k: r["z"].get(k) for k in SIGNATURE},
+    }
+
+
+def main():
+    t0 = time.time()
+    A = answers()
+    items = []
+    for name, z in A.items():
+        mirrored = list(z)
+        mirrored[K] = 1.0 - z[K]
+        for p in range(POPULATIONS):
+            items.append((name, "as_is", p, list(z)))
+            items.append((name, "mirrored", p, mirrored))
+    with ProcessPoolExecutor(WORKERS) as pool:
+        rows = list(pool.map(job, items))
+    out = {"gain": {n: 4 * z[K] - 2 for n, z in A.items()}, "rows": rows}
+    keys = ("D_fit", *SIGNATURE, "time_on_lawn")
+    effects = {}
+    for name in A:
+        arm = {a: [r for (n, aa, _, r) in rows if n == name and aa == a] for a in ("as_is", "mirrored")}
+        mean = {a: {k: float(np.mean([r[k] for r in arm[a] if r[k] is not None])) for k in keys} for a in arm}
+        effects[name] = {"as_is": mean["as_is"], "mirrored": mean["mirrored"],
+                         "effect": {k: mean["mirrored"][k] - mean["as_is"][k] for k in keys}}
+    out["effects"] = effects
+    stalls = [n for n in A if "stall" in n]
+    reach = [n for n in A if "stall" not in n]
+    holds = all(effects[n]["effect"]["D_fit"] <= -1.0 and effects[n]["effect"][SIGNATURE[0]] <= -3 for n in stalls)
+    both = holds and sum(effects[n]["effect"]["D_fit"] >= 1.0 for n in reach) >= 2
+    out["reading"] = "separates the basins both ways" if both else ("holds the stalls" if holds else "not a one-parameter switch at the answer")
+    out["seconds"] = time.time() - t0
+    json.dump(out, open("build/c2-fit/dopamine_flip.json", "w"), indent=1)
+    for n, e in effects.items():
+        print(f"{n:16s} gain {out['gain'][n]:+.2f}  " + "  ".join(
+            f"{k.split('/')[-1]} {e['as_is'][k]:.2f}->{e['mirrored'][k]:.2f}" for k in keys))
+    print("reading:", out["reading"], f"({out['seconds']:.0f} s)")
+
+
+if __name__ == "__main__":
+    main()

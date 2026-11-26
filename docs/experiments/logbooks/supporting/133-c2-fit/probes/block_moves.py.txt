@@ -1,0 +1,53 @@
+"""Which parameter blocks moved in 2a, per lineage (description; no simulation).
+
+For each lineage, the start of 2a (its stage-1 answer with the speed noise's timescale at 1 s) against
+its 2a answer at generation 100, as RMS displacement in the unit box per block.
+"""
+import json
+import pickle
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import c2_fit as fit
+from quantumnematode.connectome import encoder as enc
+
+names = fit.entries()
+blocks = sorted({e.block for e in names})
+ts = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
+
+
+def at_2a(z):
+    z = list(z)
+    z[ts] = names[ts].unit(1.0)
+    return np.array(z)
+
+
+pairs = {}
+b04 = json.loads(Path("build/c2-change-b/B04.json").read_text())["stages"][0]["answer"]
+rep = json.loads(Path("build/c2-fit/replay/run.json").read_text())
+pairs["replay (good)"] = (at_2a(b04), np.array(rep["answer"]))
+seed_state = Path("build/c2-fit/replay_seed/state.pkl")
+if seed_state.exists():
+    s = pickle.loads(seed_state.read_bytes())
+    pairs[f"seed test gen {len(s['medians'])}"] = (at_2a(b04), np.clip(s["es"].result.xfavorite, 0, 1))
+pilot = json.loads(Path("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json").read_text())
+pairs["pilot (dithers)"] = (at_2a(pilot["answers"]["1"]), np.array(pilot["answers"]["2a"]))
+for n in ("a", "b"):
+    sc = json.loads(Path(f"build/c2-fit/screens/{n}.json").read_text())
+    pairs[f"screen {n} (no reversals)"] = (at_2a(sc["answers"]["0"]), np.array(sc["answers"]["1"]))
+
+print(f"{'lineage':28s} " + " ".join(f"{b:>10s}" for b in blocks) + f" {'all':>8s}")
+for tag, (x0, x1) in pairs.items():
+    d = x1 - x0
+    row = [float(np.sqrt(np.mean(d[[i for i, e in enumerate(names) if e.block == b]] ** 2))) for b in blocks]
+    print(f"{tag:28s} " + " ".join(f"{v:10.3f}" for v in row) + f" {float(np.sqrt(np.mean(d ** 2))):8.3f}")
+print("block sizes:", {b: sum(e.block == b for e in names) for b in blocks})
+tag, (x0, x1) = "replay (good)", pairs["replay (good)"]
+d = x1 - x0
+order = np.argsort(-np.abs(d))[:25]
+print("\nlargest moves in the replay's 2a (unit box):")
+for i in order:
+    print(f"  {names[i].name:44s} {names[i].block:10s} {x0[i]:.3f} -> {x1[i]:.3f}  ({d[i]:+.3f})")

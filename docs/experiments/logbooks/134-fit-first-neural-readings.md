@@ -6,7 +6,7 @@ Established on Creamer et al.'s measured responses to single-neuron stimulation:
 - C.2's encoder at the box's centre, on the true wiring, beats all 19 degree-preserving rewirings by
   about 5.5 times the registered minimum;
 - C.2's behaviour-fitted answer shows no detectable gain over that unfitted network: their
-  intervals overlap, and no paired test was run. *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)*
+  intervals overlap, and no paired test was run. *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)* *(2026-11-25, [Logbook 133](133-c2-fit.md): on C.2's registered answer, the same reading with a paired class resample gives r 0.088 against the box centre's 0.065, d +0.023 with an interval of 0.001 to 0.043, so fitting raised it, the interval clearing 0 by 0.001. That is one answer, as description. The reading here, at Logbook 131's answer, stands.)*
 
 Unresolved:
 
@@ -166,7 +166,7 @@ answer is `z`.
   stimulation with no fitting at all. It reaches about 38% of the data's own ceiling *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): of r(training, test), a reference; about 15% of the reliability ceiling of 0.423)*, against
   essentially nothing for 19 degree-preserving rewirings of it.
 - Behaviour fitting, at Logbook 131's answer, shows no detectable gain over it. Their
-  independent-entry intervals overlap, and no paired test was run. *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)*
+  independent-entry intervals overlap, and no paired test was run. *(2026-11-16, [Logbook 135](135-neural-readout-ceiling.md): paired, C.2 − H0 is −0.012 to −0.013 on each split, with the interval including 0 on the governing split, held-out stimulations, and just below 0 on the other two, which score the same two predictions.)* *(2026-11-25, [Logbook 133](133-c2-fit.md): on C.2's registered answer, the same reading with a paired class resample gives r 0.088 against the box centre's 0.065, d +0.023 with an interval of 0.001 to 0.043, so fitting raised it, the interval clearing 0 by 0.001. That is one answer, as description. The reading here, at Logbook 131's answer, stands.)*
 - Unlike the two earlier wiring effects in this project, this one is not degree statistics.
 
 **Leaves unresolved.**

@@ -315,6 +315,19 @@ def test_the_committed_assay_configs_are_the_generators(arm: str, protocol: str)
     assert lawns.movement_cost_per_mm == 0.0
 
 
+@pytest.mark.parametrize("protocol", list(gen.PROTOCOLS))
+def test_the_following_arm_differs_only_in_the_reversal_speed(protocol: str) -> None:
+    """Covers the controller-fit scenario "The arm differs only in the reversal speed"."""
+    _, encoded = gen.derive("encoded", protocol)
+    path, following = gen.derive(gen.FOLLOWING_ARM, protocol)
+    base, variant = yaml.safe_load(encoded), yaml.safe_load(following)
+    assert variant["environment"]["continuous"].pop("on_food_reversal_speed") == "follows_run_speed"
+    assert "on_food_reversal_speed" not in base["environment"]["continuous"]
+    assert variant == base
+    config = load_simulation_config(str(path))
+    assert config.environment.continuous.on_food_reversal_speed == "follows_run_speed"  # type: ignore[union-attr]
+
+
 @pytest.mark.parametrize("seed", range(5991, 6011))
 def test_random_lawns_keep_clear_of_a_kept_worm(tmp_path: Path, seed: int) -> None:
     """A later phase's random lawns are placed clear of the worm it keeps where it was."""

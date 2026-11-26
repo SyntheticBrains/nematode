@@ -1,0 +1,24 @@
+"""Read-only: the neural driver's run of M-a's reading on Logbook 131's answer, field by field.
+
+`neural.py.txt` re-runs M-a's `reading.py.txt` with the answer's vector written to its own file.
+This compares that run's `result.json` with M-a's committed one, key by key. The vector file's
+digest is expected to differ (the same z, written anew); every other key should be equal.
+
+Usage: neural_check_131.py.txt <the driver's out dir> <out.json>   (run from the repository root)
+"""
+
+import json
+import sys
+from pathlib import Path
+
+committed = json.loads(Path("investigation/spike/ma_c2/result.json").read_text())
+rerun = json.loads((Path(sys.argv[1]) / "result.json").read_text())
+differ = sorted(k for k in set(committed) | set(rerun) if committed.get(k) != rerun.get(k))
+out = {
+    "description": __doc__,
+    "keys": len(set(committed) | set(rerun)),
+    "differ": differ,
+    "equal_but_the_vector_digest": differ == ["hinge4_sha256"],
+}
+Path(sys.argv[2]).write_text(json.dumps(out, indent=1) + "\n")
+print(json.dumps({k: v for k, v in out.items() if k != "description"}))

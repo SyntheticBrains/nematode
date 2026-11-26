@@ -105,6 +105,11 @@ ARMS = {
     "connectome_c2": (
         "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives"
     ),
+    # C.2's registered body: that arm with on-food reversals following the worm's run speed.
+    "connectome_c2_following": (
+        "connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives"
+        "_following"
+    ),
 }
 PROTOCOLS = {
     "small_lawn": "scheer_lawn",

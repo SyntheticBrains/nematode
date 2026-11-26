@@ -1,0 +1,77 @@
+"""Does the amended final stage score what the presence screen scored? (description; no simulation)
+
+The presence screen (``presence_screen.py``) scored each candidate with the final stage's objective
+at the fifth pilot's noise SDs, plus a hinge and a presence term written in the screen's script.
+The amendment of 2026-11-19 puts both terms in ``c2_fit.Objective``. This re-scores every one of the
+screen's 2,400 stored candidates with the amended final stage's objective (``hinge=True``,
+``presence=True``) and with the screen's own, and compares each score, each generation's best, and
+the hinge and presence terms of each generation's best against the screen's record.
+
+The candidate store (``build/c2-fit/presence_screen/candidates.jsonl``) is kept off the repository;
+its SHA-256 is recorded.
+
+Run from the repository root: ``objective_parity.py``.
+"""
+
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "build/c2-fit")
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+import presence_screen as ps
+
+STORE = Path("build/c2-fit/presence_screen/candidates.jsonl")
+RECORD = Path("docs/experiments/logbooks/supporting/133-c2-fit/probes/presence_screen.json")
+OUT = Path("build/c2-fit/objective_parity.json")
+
+
+def main() -> int:
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    pilot = json.loads((fit.SUPPORT / "pilot_fifth.json").read_text())
+    sd = ps.presence_scales(pilot)
+    screen = ps.PresenceObjective(truth, bands, families=None, mutants=fit.MUTANTS,
+                                  sd=pilot["noise"]["sd"], presence_sd=sd)
+    amended = fit.Objective(truth, bands, families=None, mutants=fit.MUTANTS,
+                            sd=pilot["noise"]["sd"], hinge=True, presence=True)
+    raw = STORE.read_bytes()
+    records = [json.loads(line) for line in raw.decode().splitlines()]
+    diffs = [abs(screen(r) - amended(r)) for r in records]
+    by_generation: dict[int, list[dict]] = {}
+    for r in records:
+        by_generation.setdefault(r["generation"], []).append(r)
+    stored = json.loads(RECORD.read_text())
+    best, hinge, presence = [], [], []
+    for g in sorted(by_generation):
+        rs = sorted(by_generation[g], key=lambda r: r["member"])
+        scores = [amended(r) for r in rs]
+        b = int(np.argmin(scores))
+        best.append(scores[b])
+        hinge.append(amended.hinge(rs[b]))
+        presence.append(fit.Objective.presence(rs[b]))
+    result = {
+        "description": __doc__,
+        "store_sha256": hashlib.sha256(raw).hexdigest(),
+        "candidates": len(records),
+        "generations": len(by_generation),
+        "scales_equal": sd == fit.PRESENCE_SD,
+        "max_score_difference": max(diffs),
+        "best_max_difference": float(np.max(np.abs(np.subtract(best, stored["best"])))),
+        "hinge_best_max_difference": float(np.max(np.abs(np.subtract(hinge, stored["hinge_best"])))),
+        "presence_best_max_difference": float(
+            np.max(np.abs(np.subtract(presence, stored["presence_best"])))
+        ),
+    }
+    OUT.write_text(json.dumps(result, indent=1) + "\n")
+    print(json.dumps({k: v for k, v in result.items() if k != "description"}, indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

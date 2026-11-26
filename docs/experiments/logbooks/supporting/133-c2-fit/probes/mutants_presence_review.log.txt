@@ -1,0 +1,11 @@
+[presence] the procedure drops the hinge flag                               caught ['test_the_procedure_scores_the_final_stages_hinge', 'test_each_generation_records_its_best_candidates_terms']
+[presence] the procedure drops the presence flag                            caught ['test_the_procedure_scores_the_final_stages_hinge', 'test_each_stage_scores_its_own_terms']
+[presence] the hinge recorded at the first candidate                        MISSED []
+[presence] presence recorded at the first candidate                         caught ['test_each_generation_records_its_best_candidates_terms']
+[presence] the hinge wired to presence's flag                               caught ['test_the_procedure_scores_the_final_stages_hinge', 'test_each_generation_records_its_best_candidates_terms']
+[presence] the hinge in every stage's objective                             caught ['test_the_procedure_scores_the_final_stages_hinge', 'test_each_generation_records_its_best_candidates_terms']
+[presence] presence in every stage's objective                              caught ['test_each_stage_scores_its_own_terms']
+{'caught': 6, 'MISSED': 1, 'n/a': 0}
+[presence] the hinge recorded at the first candidate                        caught ['test_each_generation_records_its_best_candidates_terms']
+[presence] presence recorded at the first candidate                         caught ['test_each_generation_records_its_best_candidates_terms']
+{'caught': 2, 'MISSED': 0, 'n/a': 0}

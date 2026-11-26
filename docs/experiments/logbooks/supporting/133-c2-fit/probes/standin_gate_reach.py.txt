@@ -1,0 +1,40 @@
+"""Would other near-wild-type answers clear the stand-in gate? (description; discarded seeds)
+
+The stand-in preflight's gate line is D_rec <= 1.87 to the stand-in truth's observation. Scored here,
+each re-simulated twice under the speed-following body: B02's answer (from Logbook 129's imitation
+lineage, fitted on the pooled body) and the third continuation's (hinge3, the truth's own lineage,
+pooled body). Seeds 887,100,000 + 200 q + i (q < 4), discarded.
+"""
+import json
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "build/c2-fit")
+import standin_preflight as S
+
+if __name__ == "__main__":
+    pre = json.loads(Path("build/c2-fit/standin_preflight.json").read_text())
+    obs, summary = pre["records"]["truth0"], pre["summary"]
+    answers = {"B02": json.loads(Path("build/c2-change-b/B02.json").read_text())["stages"][0]["answer"],
+               "hinge3": json.loads(Path("build/c2-change-b/hinge3.json").read_text())["z"]}
+    names = {f"{a}{q}": (z, 887_100_000 + 200 * (2 * i + q)) for i, (a, z) in enumerate(answers.items()) for q in range(2)}
+    jobs = [(n, kind, z, base) for n, (z, base) in names.items() for kind in ("wild", *S.p.MUTANTS)]
+    out = {}
+    with ProcessPoolExecutor(max_workers=16, initializer=S.init) as pool:
+        for n, kind, r in pool.map(S.job, jobs):
+            out.setdefault(n, {})[kind] = r
+    bands = S.bg.load_bands_v4()
+    scales = S.v2.band_scales_v2(bands)
+    family_map = {f: tuple(s) for f, s in bands["families"].items()}
+    mscales = {m: {s: S.bg.mutant_bands(bands, m, S.ANIMALS)[s].scale for s in S.GRADED[m]} for m in S.GRADED}
+    rows = {}
+    for n, parts in out.items():
+        wild = parts["wild"]
+        delta = {m: {s: parts[m][s] - wild["small_lawn"][s] for s in S.GRADED[m]} for m in S.GRADED}
+        d, dw, terms = S.d_rec(obs, {"statistics": wild["statistics"], "delta": delta}, scales, family_map, mscales)
+        rows[n] = {"D_rec": d, "wild": dw, "mutants": terms, "gain": S.gain(summary["prior"], d, summary["floor"]), "D_bands": wild["D"]}
+        print(n, {k: (round(v, 3) if isinstance(v, float) else [round(x, 2) for x in v]) for k, v in rows[n].items()}, flush=True)
+    Path("build/c2-fit/standin_gate_reach.json").write_text(json.dumps(S.nr._finite({"description": __doc__, "rows": rows}), indent=1) + "\n")

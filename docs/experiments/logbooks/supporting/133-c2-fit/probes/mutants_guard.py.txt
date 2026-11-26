@@ -1,0 +1,61 @@
+"""Deliberate bugs in the lawn guard, its record and the third pilot's seeds: does test_c2_fit.py catch each? (run from the worktree's root)."""
+import subprocess
+import sys
+from pathlib import Path
+
+SOURCE = Path("scripts/analysis/c2_fit.py")
+TEST = "packages/quantum-nematode/tests/quantumnematode_tests/benchmark/test_c2_fit.py"
+PAID = "        return LAWN_PENALTY * (LAWN_GUARD_BELOW - lawn) / LAWN_GUARD_BELOW"
+SHARE = "        history[\"lawn_guarded\"].append(float(np.mean([lawn_guard(r) > 0 for r in records])))"
+SHARE = "    " + SHARE
+PILOT = "(9591, 9592, 9593, 9594), 9651"
+MUTANTS = {
+    "no lawn guard": (PAID, "        return 0.0"),
+    "an undefined time costs nothing": ("    lawn = 0.0 if lawn is None else float(lawn)", "    lawn = 1.0 if lawn is None else float(lawn)"),
+    "the guard unscaled": (PAID, "        return LAWN_PENALTY * (LAWN_GUARD_BELOW - lawn)"),
+    "the guard a step": (PAID, "        return LAWN_PENALTY"),
+    "the guard on another statistic": (
+        '    lawn = record["statistics"].get(LAWN_STATISTIC)',
+        '    lawn = record["statistics"].get("small_lawn/roaming_fraction")',
+    ),
+    "the guard replaces the others": ("        return penalty + lawn_guard(record)", "        return lawn_guard(record)"),
+    "the lawn guard left out of the guards": ("        return penalty + lawn_guard(record)", "        return penalty"),
+    "the guard only off the lawn entirely": ("    if lawn < LAWN_GUARD_BELOW:", "    if lawn <= 0.0:"),
+    "a weaker guard": ("LAWN_PENALTY = 300.0", "LAWN_PENALTY = 30.0"),
+    "a lower guard bar": ("LAWN_GUARD_BELOW = 0.95", "LAWN_GUARD_BELOW = 0.9"),
+    "the guards outside the objective": (
+        "        return self.distance(record) + self.guards(record) + self.failure(record)",
+        "        return self.distance(record) + self.failure(record)",
+    ),
+    "a changed guard resumes": ('        "lawn_guard": [LAWN_GUARD_BELOW, LAWN_PENALTY],\n', ""),
+    "a changed guard weight resumes": ('        "lawn_guard": [LAWN_GUARD_BELOW, LAWN_PENALTY],', '        "lawn_guard": [LAWN_GUARD_BELOW],'),
+    "the share is never recorded": (SHARE + "\n", ""),
+    "the share counts every candidate": (SHARE, SHARE.replace("lawn_guard(r) > 0", "lawn_guard(r) >= 0")),
+    "the share inverted": (SHARE, SHARE.replace("lawn_guard(r) > 0", "lawn_guard(r) == 0")),
+    "the pilot on the second pilot's animals": ("Layout(1_140_000_000), (9591,", "Layout(1_100_000_000), (9591,"),
+    "the pilot on the guarded probe's animals": ("Layout(1_140_000_000), (9591,", "Layout(1_130_000_000), (9591,"),
+    "the pilot on a probe's CMA seed": (PILOT, "(9581, 9592, 9593, 9594), 9651"),
+    "the pilot's restarts on the second pilot's": (PILOT, "(9591, 9592, 9593, 9594), 9541"),
+    "the pilot's restarts on the sign calibration's": (PILOT, "(9591, 9592, 9593, 9594), 9601"),
+    "the pilot's later stages on the second pilot's": (PILOT, "(9591, 9592, 9533, 9534), 9651"),
+}
+
+only = sys.argv[1:]
+original = SOURCE.read_text()
+rows = []
+try:
+    for name, (old, new) in MUTANTS.items():
+        if only and name not in only:
+            continue
+        assert original.count(old) == 1, (name, original.count(old))
+        SOURCE.write_text(original.replace(old, new))
+        result = subprocess.run([sys.executable, "-m", "pytest", TEST, "-q", "-m", "not slow", "-n", "0", "--no-cov",
+                                 "-p", "no:cacheprovider", "-x"], capture_output=True, text=True)
+        caught = result.returncode != 0
+        failed = [l.split("::")[-1].split(" ")[0] for l in result.stdout.splitlines() if l.startswith("FAILED")]
+        rows.append((name, caught, failed))
+        print(f"{name:48s} {'caught' if caught else 'MISSED'} {failed}", flush=True)
+finally:
+    SOURCE.write_text(original)
+assert SOURCE.read_text() == original
+print(f"{sum(c for _, c, _ in rows)} of {len(rows)} caught")

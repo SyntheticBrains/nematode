@@ -1,0 +1,75 @@
+"""Deliberate bugs in the start loop of c2_fit.py: does test_c2_fit.py catch each? (run from the worktree's root)."""
+import subprocess
+import sys
+from pathlib import Path
+
+SOURCE = Path("scripts/analysis/c2_fit.py")
+TEST = "packages/quantum-nematode/tests/quantumnematode_tests/benchmark/test_c2_fit.py"
+MUTANTS = {
+    "the reading is the last readout": ('for g in generations]))\n    return {\n        "generations"', 'for g in generations[-1:]]))\n    return {\n        "generations"'),
+    "every start holds": ('        "holds": lawn >= bar - 1e-12,', '        "holds": True,'),
+    "the bar is strict": ('        "holds": lawn >= bar - 1e-12,', '        "holds": lawn > bar + 1e-9,'),
+    "the next start keeps the answer": ('    state["x"] = [0.5] * len(state["x"])\n', ""),
+    "starts share CMA seeds": ("        if start == 0 or stage >= len(FIRST_HALF):", "        if True:"),
+    "2b takes a start's CMA seed": ("        if start == 0 or stage >= len(FIRST_HALF):", "        if start == 0:"),
+    "a start's two stages share a CMA seed": ("        return self.restart_seed + len(FIRST_HALF) * (start - 1) + stage", "        return self.restart_seed + len(FIRST_HALF) * (start - 1)"),
+    "the fit's restarts on the recovery's seeds": ('(5811, 5812, 5813, 5814), 5841)', '(5811, 5812, 5813, 5814), 5831)'),
+    "starts share stage 1's animals": ("first = self.base + self.start_stride * start + self.first_animals * k", "first = self.base + self.first_animals * k"),
+    "starts share 2a's animals": ("own = self.base + self.early + self.early_stride * start", "own = self.base + self.early"),
+    "the kept start stays on its early seeds": ("        if stage == 1 and generation <= self.early_generations:", "        if stage == 1:"),
+    "the candidates are on start 0": ('                state["start"] if first_half else 0,', "                0,"),
+    "the job ignores the start": ("seeds = run.layout.candidate_seeds(stage, generation, member, first_half_start)", "seeds = run.layout.candidate_seeds(stage, generation, member)"),
+    "the store ignores the start": ("            todo.append((run.name, stage, generation, m, z, first_half_start))", "            todo.append((run.name, stage, generation, m, z, 0))"),
+    "stage 1 at the run's population": ("        return self.first_popsize if stage == 0 else self.popsize", "        return self.popsize"),
+    "the reading is never taken": ('and state["kept"] is None and done >= hold_at:', "and False:"),
+    "the run goes on with no start": ('    if state["start"] >= run.starts:\n', "    if False:\n"),
+    "stage 1's bar stops every run": ('        if run.kill_rules and state["checkpoints"][stage.name]["kill"]:', '        if state["checkpoints"][stage.name]["kill"]:'),
+    "a fit with no answer passes": ('        "passes": False,\n        "no_answer": reason,', '        "passes": True,\n        "no_answer": reason,'),
+    "a recovery with no answer passes": ('gate = {"D": None, "gain": None, "passes": False, "no_answer": record["killed"]}', 'gate = {"D": None, "gain": None, "passes": True, "no_answer": record["killed"]}'),
+    "a dropped start is not recorded": ('    state["starts"].append(record)\n', ""),
+    "a dropped start keeps its histories in the run": ('        record[key] = {n: state[key].pop(n) for n in FIRST_HALF if n in state[key]}', '        record[key] = {n: state[key][n] for n in FIRST_HALF if n in state[key]}'),
+    "a changed bar resumes": ('        "hold_bars": list(run.hold_bars),\n', ""),
+    "a reading without a readout runs": ("    if any(g % READOUT_EVERY and g != run.generations[1] for g in run.hold_readouts):", "    if False:"),
+    "five starts": ("STARTS = 6", "STARTS = 5"),
+    "a lower bar": ("HOLD_BAR = 0.95", "HOLD_BAR = 0.9"),
+    "earlier readouts": ("HOLD_READOUTS: tuple[int, ...] = (40, 50, 60)", "HOLD_READOUTS: tuple[int, ...] = (30, 40, 50)"),
+    "stage 1 at 200 animals": ("STAGE1_ANIMALS = 64", "STAGE1_ANIMALS = 200"),
+    "the dropped start runs 2a on": ("                    not_holding = holding\n                    break\n", "                    not_holding = holding\n"),
+    # From the independent review (2026-11-12): bugs the first tests would have passed.
+    "the timescale is reset for the first start only": ('            if stage.name == "2a":\n                x[timescale]', '            if stage.name == "2a" and state["start"] == 0:\n                x[timescale]'),
+    "every start is read against the first bar": ('run.hold_bars[state["start"]])', "run.hold_bars[0])"),
+    "the mean at the drop is the start point": ("            _drop(state, run, not_holding, answer)", '            _drop(state, run, not_holding, list(state["x"]))'),
+    "the pilot's stage-1 kill is the first start's": ('        if run.kill_rules and state["checkpoints"][stage.name]["kill"]:', '        if run.kill_rules and state["start"] == 0 and state["checkpoints"][stage.name]["kill"]:'),
+    "the leave-one-out grades no answer": ('        if record["answer"] is None:\n            _write_json(\n                LOO_PATH,', '        if False:\n            _write_json(\n                LOO_PATH,'),
+    "the smoke grades no answer": ('        if record["answer"] is None:\n            print(f"the smoke reached no answer', '        if False:\n            print(f"the smoke reached no answer'),
+    "the pilot grades no answer": ('            if record["killed"]\n            else grade(pool, run, record["answer"], run.layout.grade_populations)', '            if False\n            else grade(pool, run, record["answer"], run.layout.grade_populations)'),
+    "a stored candidate at another vector is reused": ('        elif record["vector"] != vector_digest(z):', "        elif False:"),
+    "a resume starts over": ("    if state_path.exists():\n        state = pickle.loads(state_path.read_bytes())  # noqa: S301 - this run's own state\n        if state[\"settings\"] != expected:", "    if False:\n        state = pickle.loads(state_path.read_bytes())  # noqa: S301 - this run's own state\n        if state[\"settings\"] != expected:"),
+    "a fit with no answer stops at its grade": ('        print(f"nothing to grade, the fit has no answer: {record[\'killed\']}", file=sys.stderr)\n        return 0', '        print(f"nothing to grade, the fit has no answer: {record[\'killed\']}", file=sys.stderr)\n        return 1'),
+    "a truth off the lawn passes the preflight": ('        "holds_lawn": lawn >= HOLD_BAR,', '        "holds_lawn": True,'),
+    "the kept decision is taken twice": ('                state["kept"] = state["start"]\n', ""),
+    "the 2a checkpoint stops every run": ('        if run.kill_rules and state["checkpoints"][stage.name]["kill"]:', '        if stage.name == "2a" and state["checkpoints"][stage.name]["kill"]:'),
+    "overlapping blocks": ('"recovery": Run("recovery", Layout(920_000_000)', '"recovery": Run("recovery", Layout(905_000_000)'),
+    "the pilot on its first seeds": ('Layout(1_100_000_000), (9531, 9532, 9533, 9534)', 'Layout(900_000_000), (9531, 9532, 9533, 9534)'),
+    "a changed restart seed resumes": ('        "restart_seed": run.restart_seed,\n', ""),
+}
+
+only = sys.argv[1:]
+original = SOURCE.read_text()
+rows = []
+try:
+    for name, (old, new) in MUTANTS.items():
+        if only and name not in only:
+            continue
+        assert original.count(old) == 1, (name, original.count(old))
+        SOURCE.write_text(original.replace(old, new))
+        result = subprocess.run([sys.executable, "-m", "pytest", TEST, "-q", "-m", "not slow", "-n", "0", "--no-cov",
+                                 "-p", "no:cacheprovider", "-x"], capture_output=True, text=True)
+        caught = result.returncode != 0
+        failed = [l.split("::")[-1].split(" ")[0] for l in result.stdout.splitlines() if l.startswith("FAILED")]
+        rows.append((name, caught, failed))
+        print(f"{name:44s} {'caught' if caught else 'MISSED'} {failed}", flush=True)
+finally:
+    SOURCE.write_text(original)
+assert SOURCE.read_text() == original
+print(f"{sum(c for _, c, _ in rows)} of {len(rows)} caught")

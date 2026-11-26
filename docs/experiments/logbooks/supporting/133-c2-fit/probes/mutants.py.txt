@@ -1,0 +1,45 @@
+"""Deliberate bugs in c2_fit.py: does test_c2_fit.py catch each? (run from the repository root)."""
+import shutil, subprocess, sys
+from pathlib import Path
+
+SOURCE = Path("scripts/analysis/c2_fit.py")
+BACKUP = Path("build/c2-fit/c2_fit.py.orig")
+TEST = "packages/quantum-nematode/tests/quantumnematode_tests/benchmark/test_c2_fit.py"
+MUTANTS = {
+    "mutants weigh 1 each": ("        w = n_f / n_m\n        combined", "        w = 1.0\n        combined"),
+    "tph-1 graded on leaving": ('    "tph-1": ("roaming_fraction",),', '    "tph-1": ("roaming_fraction", "exits_per_on_lawn_hour"),'),
+    "isotropic hand-off": ('        "CMA_stds": stds.tolist(),\n', ""),
+    "stage 1 fits everything": ("        if e.block in STAGE1_BLOCKS or e.name.startswith(\"readout.centre.\")", "        if True"),
+    "wrong wild-type bar": ('self.wild_bar = float(bands["bars"]["wild_type"])', 'self.wild_bar = float(bands["bars"]["tph-1"])'),
+    "no Part C guard": ('    if not (_part("C") and cr.launch_committed(part_c, launch_path=LAUNCH_PATH)):', "    if False:"),
+    "no SD floor": ("        return max(float(np.std(zs, ddof=1)), SD_FLOOR)", "        return float(np.std(zs, ddof=1))"),
+    "timescale not set": ("                x[timescale] = names[timescale].unit(TIMESCALE_AT_2A_S)", "                pass"),
+    "plateau stops": ('        while len(history["medians"]) < generations:', '        while len(history["medians"]) < generations and not cr.plateau_reached(history["medians"]):'),
+    "first readout at CMA's mean": ("readouts[0] = readout(pool, full(es.result.xfavorite)", "readouts[0] = readout(pool, full(es.mean)"),
+    "kill on the last readout": ("    last = [readouts[g] for g in sorted(readouts)[-KILL_READOUTS:]]", "    last = [readouts[g] for g in sorted(readouts)[-1:]]"),
+    "pdfr-1 in the verdict": ('VERDICT_MUTANTS: tuple[str, ...] = ("tph-1", "tax-4")', "VERDICT_MUTANTS: tuple[str, ...] = MUTANTS"),
+    "no resume check": ('        if state["settings"] != expected:', "        if False:"),
+    "a weaker gate": ('    return {"D": d, "gain": value, "passes": value >= GAIN_GATE}', '    return {"D": d, "gain": value, "passes": value >= 0.6}'),
+    "no stability check": ("    return sorted(set().union(*(seen ^ defined(r) for r in repeats)))", "    return []"),
+    "another split seed": ("    rng = np.random.default_rng(v2c.W_FITTED_SEED)\n    sims", "    rng = np.random.default_rng(1)\n    sims"),
+    "tax-4 in the leave-one-out": ('mutants=("tph-1", "pdfr-1")', "mutants=MUTANTS"),
+    "overlapping blocks": ('"recovery": Run("recovery", Layout(920_000_000)', '"recovery": Run("recovery", Layout(905_000_000)'),
+}
+
+shutil.copy(SOURCE, BACKUP)
+original = SOURCE.read_text()
+rows = []
+try:
+    for name, (old, new) in MUTANTS.items():
+        assert original.count(old) == 1, name
+        SOURCE.write_text(original.replace(old, new))
+        result = subprocess.run(["uv", "run", "pytest", TEST, "-q", "-p", "no:randomly", "--no-cov", "-x"],
+                                capture_output=True, text=True)
+        caught = result.returncode != 0
+        failed = [l.split("::")[-1].split(" ")[0] for l in result.stdout.splitlines() if l.startswith("FAILED")]
+        rows.append((name, caught, failed))
+        print(f"{name:32s} {'caught' if caught else 'MISSED'} {failed}", flush=True)
+finally:
+    SOURCE.write_text(original)
+assert SOURCE.read_text() == BACKUP.read_text()
+print(f"{sum(c for _, c, _ in rows)} of {len(rows)} caught")

@@ -1,0 +1,65 @@
+"""Records for the two probes stopped when the pilot launched (description; discarded seeds).
+
+``restart_c.py`` and ``guard_probe.py`` write their records when they end. Both were stopped by hand
+on 2026-11-12, to free the machine for the readiness pilot, before either reached its bar or its last
+generation. This writes each one's record from its saved state, in the script's own format, with the
+generation it was stopped at. Neither's arrival rule was read: the mean of its last three readouts is
+given as description. Their states stay in ``build/c2-fit/`` and resume exactly.
+
+Run from the repository root after both have stopped.
+"""
+
+import json
+import pickle
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-fit")
+import npe_recovery as nr
+from continue_screen import BAR, reading
+
+import guard_probe
+import restart_c
+
+BUILD = Path("build/c2-fit")
+
+
+def last_three(readouts):
+    gens = sorted(readouts)[-3:]
+    return {**reading(readouts, gens), "verdict": "stopped, not read"}
+
+
+def main():
+    state = pickle.loads((BUILD / "restart_c" / "state.pkl").read_bytes())
+    done = len(state["medians"][1])
+    record = {
+        "description": restart_c.__doc__, "base": restart_c.BASE, "cma": restart_c.CMA, "stage1": restart_c.STAGE1,
+        "bar": BAR, "holds_bar": restart_c.HOLDS, "holds": state["holds"],
+        "stopped": f"by hand at 2a's generation {done} of {restart_c.GENERATIONS[1]}, for the pilot's launch",
+        "reading": last_three(state["readouts"][1]), "rule_supported": None,
+        "medians": state["medians"], "readouts": {str(k): v for k, v in state["readouts"].items()},
+        "answers": state["answers"], "mean_when_stopped": list(map(float, np.clip(state["es"].result.xfavorite, 0, 1))),
+    }
+    (BUILD / "restart_c.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print("restart c:", record["stopped"], record["holds"], {k: v for k, v in record["reading"].items()})
+
+    state = pickle.loads((BUILD / "guard_probe" / "state.pkl").read_bytes())
+    done = len(state["medians"])
+    record = {
+        "description": guard_probe.__doc__, "base": guard_probe.BASE, "cma": guard_probe.CMA, "bar": BAR,
+        "holds_bar": guard_probe.HOLDS, "guard": {"weight": guard_probe.GUARD, "below": guard_probe.GUARD_BELOW},
+        "holds": state["holds"],
+        "stopped": f"by hand at generation {done} of {guard_probe.LAST}, for the pilot's launch",
+        "reading": last_three(state["readouts"]), "medians": state["medians"], "guarded_share": state["guarded"],
+        "readouts": {str(k): v for k, v in state["readouts"].items()},
+        "answer": list(map(float, np.clip(state["es"].result.xfavorite, 0, 1))),
+    }
+    (BUILD / "guard_probe.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print("guard probe:", record["stopped"], record["holds"], {k: v for k, v in record["reading"].items()})
+
+
+if __name__ == "__main__":
+    main()

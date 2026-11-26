@@ -1,0 +1,49 @@
+"""Do the stage-1 answers reverse when the food signal falls? (description; discarded seeds 890,000,000 + i)
+
+Each stage-1 answer on Scheer's small lawn, 200 animals: the rate at which reversals start on run
+seconds where the sensed concentration is falling (dC/dt < 0) against rising, on the lawn, and the
+mean depth inside the lawn. B04's answer is the one start whose 2a reached the passing basin.
+"""
+import json, sys
+import numpy as np
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+
+A = {
+ "B04 (works)": json.load(open("build/c2-change-b/B04.json"))["stages"][0]["answer"],
+ "pilot": json.load(open("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json"))["answers"]["1"],
+ "screen a": json.load(open("build/c2-fit/screens/a.json"))["answers"]["0"],
+ "screen b": json.load(open("build/c2-fit/screens/b.json"))["answers"]["0"],
+ "Logbook 131 final": json.load(open("docs/experiments/logbooks/supporting/131-c2-clean-start/probes/hinge4.json"))["z"],
+}
+fit.nr._worker_setup()
+bands = bg.load_bands_v4()
+seeds = list(range(890_000_000, 890_000_200))
+out = {}
+print("answer".ljust(20), "rev/min falling  rising   ratio   speed falling/rising   depth mm  on-lawn")
+for name, z in A.items():
+    _, factory = fit.controller(z)
+    pops, _ = bg.simulate_v2(fit.ARM, factory, seeds, bands, assays=("small_lawn",))
+    fall = rise = fall_n = rise_n = 0
+    sp_f, sp_r, depth, on_all = [], [], [], []
+    for animal in pops["small_lawn"]:
+        prim = [s.primitive for s in animal]
+        dc = np.array([s.dc_dt for s in animal]); on = np.array([bool(s.on_lawn) for s in animal])
+        x = np.array([s.x for s in animal]); y = np.array([s.y for s in animal])
+        d = np.hypot(np.diff(x), np.diff(y))
+        depth.append((1.5 - np.hypot(x - 5, y - 5))[on]); on_all.append(on.mean())
+        for t in range(len(animal) - 1):
+            if prim[t] != "run" or not on[t]:
+                continue
+            start = prim[t + 1] == "reversal"
+            if dc[t] < 0:
+                fall_n += 1; fall += start; sp_f.append(d[t])
+            elif dc[t] > 0:
+                rise_n += 1; rise += start; sp_r.append(d[t])
+    rf, rr = 60 * fall / max(fall_n, 1), 60 * rise / max(rise_n, 1)
+    out[name] = {"reversals_per_min_falling": rf, "rising": rr, "ratio": rf / rr if rr else None,
+                 "speed_falling": float(np.mean(sp_f)), "speed_rising": float(np.mean(sp_r)),
+                 "depth_mm": float(np.mean(np.concatenate(depth))), "seconds_on_lawn": float(np.mean(on_all))}
+    print(name.ljust(20), f"{rf:10.2f} {rr:9.2f} {rf / rr if rr else float('nan'):7.2f}   {np.mean(sp_f):.4f} / {np.mean(sp_r):.4f}          {out[name]['depth_mm']:.2f}    {out[name]['seconds_on_lawn']:.3f}", flush=True)
+json.dump({"description": __doc__, "rows": out}, open("build/c2-fit/klinokinesis_check.json", "w"), indent=1)

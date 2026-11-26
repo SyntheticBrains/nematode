@@ -1,0 +1,8 @@
+[presence] the procedure drops the hinge flag                               caught ['test_the_procedure_scores_the_final_stages_hinge']
+[presence] the hinge at half weight                                         caught ['test_the_presence_term', 'test_the_hinge']
+[presence] the hinge at the bar itself                                      caught ['test_the_hinge']
+[presence] the hinge one-sided                                              caught ['test_the_hinge']
+[presence] the hinge uncompressed                                           caught ['test_the_hinge']
+[presence] the hinge not squared                                            caught ['test_the_hinge']
+[presence] the hinge skips nothing undefined                                caught ['test_the_hinge']
+{'caught': 7, 'MISSED': 0, 'n/a': 0}

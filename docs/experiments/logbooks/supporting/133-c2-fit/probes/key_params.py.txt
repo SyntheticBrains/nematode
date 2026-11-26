@@ -1,0 +1,51 @@
+"""Readout biases, centres, noise and wiring per lineage, at 2a's start and its generation 100 (no simulation)."""
+import json
+import pickle
+import sys
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import c2_fit as fit
+from quantumnematode.connectome import encoder as enc
+
+names = fit.entries()
+ts = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
+
+
+def at_2a(z):
+    z = list(z)
+    z[ts] = names[ts].unit(1.0)
+    return np.array(z)
+
+
+cols = {}
+b04 = json.loads(Path("build/c2-change-b/B04.json").read_text())["stages"][0]["answer"]
+rep = json.loads(Path("build/c2-fit/replay/run.json").read_text())
+cur = json.loads(Path("build/c2-change-b/curriculum.json").read_text())
+cols["B04 start"] = at_2a(b04)
+cols["replay 100"] = np.array(rep["answer"])
+s = pickle.loads(Path("build/c2-fit/replay_seed/run/state.pkl").read_bytes()) if Path("build/c2-fit/replay_seed/run/state.pkl").exists() else None
+if s:
+    cols[f"seed {len(s['medians'])}"] = np.clip(s["es"].result.xfavorite, 0, 1)
+pilot = json.loads(Path("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json").read_text())
+cols["pilot start"] = at_2a(pilot["answers"]["1"])
+cols["pilot 2a"] = np.array(pilot["answers"]["2a"])
+for n in ("a", "b"):
+    sc = json.loads(Path(f"build/c2-fit/screens/{n}.json").read_text())
+    cols[f"{n} start"] = at_2a(sc["answers"]["0"])
+    cols[f"{n} 2a"] = np.array(sc["answers"]["1"])
+print("curriculum keys:", list(cur.keys()))
+keep = [i for i, e in enumerate(names) if e.block in ("wiring", "noise", "timescale") or ".bias" in e.name or ".centre." in e.name]
+print(f"{'parameter':36s} " + " ".join(f"{c:>11s}" for c in cols))
+for i in keep:
+    print(f"{names[i].name:36s} " + " ".join(f"{v[i]:11.3f}" for v in cols.values()))
+print("\nin natural units (value()):")
+for i in keep:
+    e = names[i]
+    try:
+        print(f"{e.name:36s} " + " ".join(f"{e.value(v[i]):11.3f}" for v in cols.values()))
+    except Exception as ex:  # noqa: BLE001
+        print(e.name, "no value()", type(ex).__name__)
+        break

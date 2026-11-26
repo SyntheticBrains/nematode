@@ -1,0 +1,26 @@
+"""2a from B04's stage-1 answer with a different CMA seed: seed luck, or a good start? (description)
+
+The curriculum's 2a (CMA seed 9497) reached the lawn-holding, reversing basin from B04's stage-1
+answer; three other lineages did not. This is that 2a again on the speed-following arm with CMA seed
+9520 and its own candidate animals (1,030,000,000 + 200*(48*(g - 1) + m) + i), every other setting
+the replay's: the same start, sigma0 0.1, population 48, objective and readout animals (841,000,000 + i).
+
+**The rule, fixed before it runs** (the maintainer's choice, 2026-11-11), as the screens': it keeps
+pace when the mean of its readouts at generations 80, 90 and 100 has time on the lawn at least 0.97
+and D_fit at most 3.1. Read with the replay (same start, seed 9497):
+- both keep pace: the start matters, and the remedy is in stage 1;
+- the replay keeps pace and this does not: seed luck, and the remedy is several first-half restarts
+  selected at 2a's end;
+- the replay fails: the body changes 2a's landscape, whatever this reads.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "build/c2-fit")
+import replay as R
+
+if __name__ == "__main__":
+    R.__doc__ = __doc__
+    R.BASE, R.CMA_SEED = 1_030_000_000, 9520
+    R.OUT = Path("build/c2-fit/replay_seed")
+    R.main("run")

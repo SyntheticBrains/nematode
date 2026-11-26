@@ -1,0 +1,8 @@
+{
+ "description": "Read-only: the neural driver's run of M-a's reading on Logbook 131's answer, field by field.\n\n`neural.py.txt` re-runs M-a's `reading.py.txt` with the answer's vector written to its own file.\nThis compares that run's `result.json` with M-a's committed one, key by key. The vector file's\ndigest is expected to differ (the same z, written anew); every other key should be equal.\n\nUsage: neural_check_131.py.txt <the driver's out dir> <out.json>   (run from the repository root)\n",
+ "keys": 15,
+ "differ": [
+  "hinge4_sha256"
+ ],
+ "equal_but_the_vector_digest": true
+}

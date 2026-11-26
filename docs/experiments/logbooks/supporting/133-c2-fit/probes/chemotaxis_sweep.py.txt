@@ -1,0 +1,124 @@
+"""Where does the hinge screen's answer lose chemotaxis presence? (description; discarded)
+
+The hinge screen (2026-11-19) passed its rule: with Logbook 131's hinge added to the final stage,
+the readouts at generations 30-50 averaged an on-lawn onset rate z of -3.01, no other wild-type
+statistic failed and every mutant passed. Its answer's described grade on five fresh populations
+passed the onset rate in all five (z -2.73 to -2.97) but the wild type in only two: chemotaxis
+presence failed in three, the log quintile ratio's lower bound below 0 (-0.04, -0.09, -0.04).
+The ratio's value fell from the pilot's 0.097 to 0.048 while its z barely moved (-1.69 to -1.76;
+the band's scale is wide), so neither the objective nor the screen's rule saw it. Presence already
+failed in 5 of the pilot's 15 grade populations, hidden behind the onset rate. Logbook 131's
+answer, on the same encoder and body, has a ratio of 0.39.
+
+This asks whether the encoder's sensory gains carry the difference: 131's sensory gains (or a
+block of them) written into the screen's answer, everything else held. Every point is simulated on
+all six assays and the three mutants, with presence, on the same three populations.
+
+**The points.** The screen's answer; 131's answer; the screen's answer with 131's whole sensory
+block (odour and food contact), its odour block alone, its lateral gains, its derivative gains,
+its concentration gains, AWC's three gains, AWA's three gains, and the odour block moved halfway
+to 131's.
+
+**The reading, fixed before it runs** (2026-11-19). A point **restores chemotaxis** when, in all
+three populations, chemotaxis is present, the onset rate's z is at least -3.0781, every other
+wild-type statistic passes, and every mutant passes. Then:
+
+- **Some point restores it:** a move in the sensory gains exists from the screen's answer; the
+  amendment adds a presence term to the final stage beside the hinge, and a screen tests it.
+- **None does, but some point is present in all three:** the move exists but costs other
+  statistics; the failing statistics name the coupling, and a screen with the presence term tests
+  whether the search resolves it.
+- **No point is present in all three:** the screen's answer does not get chemotaxis from its
+  sensory gains alone, and the fix acts earlier, where the search still moves the network.
+
+**Reported beside it, never selected on:** every point's statistics, z, lower bounds and mutants.
+
+**Seeds (discarded).** Population p's animals 1,450,000,000 + 200 p + i, i < 200, p < 3.
+
+Run from the repository root: ``chemotaxis_sweep.py [workers]``.
+"""
+
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+
+OUT = Path("build/c2-fit/chemotaxis_sweep.json")
+SCREEN = Path("build/c2-fit/hinge_screen.json")
+BASE = 1_450_000_000
+POPULATIONS = 3
+
+
+def seeds(p: int) -> list[int]:
+    return list(range(BASE + fit.ANIMALS * p, BASE + fit.ANIMALS * (p + 1)))
+
+
+def points() -> list[tuple[str, list[float]]]:
+    names = [e.name for e in fit.entries()]
+    h = np.asarray(json.loads(SCREEN.read_text())["answer"], dtype=float)
+    a = np.asarray(fit.answer_131(), dtype=float)
+    sensory = [i for i, n in enumerate(names) if n.startswith("sensory.")]
+    odour = [i for i in sensory if not n_contact(names[i])]
+
+    def take(idx: list[int], t: float = 1.0) -> list[float]:
+        z = h.copy()
+        z[idx] = h[idx] + t * (a[idx] - h[idx])
+        return z.tolist()
+
+    def kind(k: str) -> list[int]:
+        return [i for i in odour if names[i].endswith("." + k)]
+
+    def cls(c: str) -> list[int]:
+        return [i for i in odour if names[i].startswith(f"sensory.{c}.")]
+
+    return [
+        ("screen", h.tolist()),
+        ("answer_131", a.tolist()),
+        ("131_sensory", take(sensory)),
+        ("131_odour", take(odour)),
+        ("131_lateral", take(kind("lateral"))),
+        ("131_derivative", take(kind("derivative"))),
+        ("131_concentration", take(kind("concentration"))),
+        ("131_AWC", take(cls("AWC"))),
+        ("131_AWA", take(cls("AWA"))),
+        ("131_odour_half", take(odour, 0.5)),
+    ]
+
+
+def n_contact(name: str) -> bool:
+    return name.endswith(".contact")
+
+
+def main() -> int:
+    workers = int(sys.argv[1]) if len(sys.argv) > 1 else 16
+    bands = bg.load_bands_v4()
+    pts = points()
+    jobs = [(z, seeds(p), True) for _, z in pts for p in range(POPULATIONS)]
+    print(f"{len(pts)} points x {POPULATIONS} populations = {len(jobs)} jobs on {workers}", flush=True)
+    start = time.perf_counter()
+    with fit._pool(workers) as pool:
+        results = list(pool.map(fit._point_job, jobs))
+    records = {}
+    for i, (name, z) in enumerate(pts):
+        rs = results[i * POPULATIONS : (i + 1) * POPULATIONS]
+        records[name] = {"vector": fit.vector_digest(z),
+                         "populations": [fit.grade_record(r, bands) | {
+                             "chemotaxis_presence": r.get("chemotaxis_presence"),
+                             "local_search_presence": r.get("local_search_presence"),
+                             "wild_type_passes": r.get("wild_type_passes"),
+                         } for r in rs]}
+    OUT.write_text(json.dumps(
+        {"description": __doc__, "seeds": {"base": BASE, "populations": POPULATIONS},
+         "seconds": time.perf_counter() - start, "points": records}, indent=1))
+    print(f"done in {time.perf_counter() - start:.0f} s -> {OUT}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,76 @@
+"""Where does the pilot's 2a worm spend its off-lawn time? (description; discarded seeds)
+
+2a's mean at the pilot's saved state, on Scheer's small lawn, 200 animals at 890,000,000 + i, through
+the grader's own path (simulate_v2: windowed and measured). Per animal: the share of seconds on the
+lawn, the seconds before the first entry, and each later excursion's length. Beside it, the same
+from PD1074's band-cohort tracks on their real lawn boundaries.
+"""
+import json, pickle, sys
+import numpy as np
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+from quantumnematode.benchmark import grading as g
+from quantumnematode.benchmark import references as refs
+
+
+def decompose(on):
+    on = np.asarray(on, dtype=bool)
+    n = len(on)
+    first = int(np.argmax(on)) if on.any() else n
+    after = on[first:]
+    runs, length = [], 0
+    for v in after:
+        if not v:
+            length += 1
+        elif length:
+            runs.append(length); length = 0
+    if length:
+        runs.append(length)
+    return {"share": float(on.mean()), "before_first_s": first, "excursions": runs, "seconds": n}
+
+
+def summarise(rows):
+    shares = np.array([r["share"] for r in rows])
+    first = np.array([r["before_first_s"] for r in rows])
+    exc = [e for r in rows for e in r["excursions"]]
+    secs = sum(r["seconds"] for r in rows)
+    off = secs - sum(r["share"] * r["seconds"] for r in rows)
+    before = float(first.sum())
+    return {
+        "animals": len(rows),
+        "time_on_lawn_mean": float(shares.mean()),
+        "never_on_lawn": int(sum(r["before_first_s"] == r["seconds"] for r in rows)),
+        "off_lawn_share_before_first_entry": before / off if off else None,
+        "first_entry_s_median": float(np.median(first)),
+        "first_entry_s_p90": float(np.percentile(first, 90)),
+        "excursions_per_animal": len(exc) / len(rows),
+        "excursion_s_median": float(np.median(exc)) if exc else None,
+        "excursion_s_p90": float(np.percentile(exc, 90)) if exc else None,
+        "excursions_over_60s_share_of_excursion_time": float(sum(e for e in exc if e > 60) / sum(exc)) if exc else None,
+        "share_quantiles": [float(np.quantile(shares, q)) for q in (0.1, 0.25, 0.5, 0.75, 0.9)],
+    }
+
+
+if __name__ == "__main__":
+    nr = fit.nr; nr._worker_setup()
+    state = pickle.loads(open("build/c2-fit/pilot/state.pkl", "rb").read())
+    z = list(np.clip(state["es"].result.xfavorite, 0.0, 1.0))
+    bands = bg.load_bands_v4()
+    seeds = list(range(890_000_000, 890_000_200))
+    _, factory = fit.controller(z)
+    pops, _ = bg.simulate_v2(fit.ARM, factory, seeds, bands, assays=("small_lawn",))
+    sim = [decompose([bool(s.on_lawn) for s in animal]) for animal in pops["small_lawn"]]
+    tracks = refs.load_scheer_tracks()
+    import benchmark_bands as bb
+    rows = tracks.arm(bb.WILD_TYPE)
+    rows = rows[tracks.side[rows] == refs.BANDS]
+    real = []
+    for i in rows:
+        on = g.real_on_lawn(tracks.x[i], tracks.y[i], tracks.boundary_radius[i])
+        finite = np.isfinite(np.asarray(tracks.x[i], dtype=float))
+        real.append(decompose(np.asarray(on)[finite]))
+    out = {"description": __doc__, "generation": len(state["histories"]["2a"]["medians"]),
+           "simulated": summarise(sim), "real_band_cohorts": summarise(real)}
+    json.dump(nr._finite(out), open("build/c2-fit/lawn_time_check.json", "w"), indent=1)
+    print(json.dumps(nr._finite({k: v for k, v in out.items() if k != "description"}), indent=1))

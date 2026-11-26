@@ -1,0 +1,60 @@
+"""Read-only: the serotonin route's values at each kept start's stage ends, in every pilot and the recovery.
+
+Also the first 2b generation in which a tenth of the candidates show a tph-1 roaming difference of
+at least 0.05, from each run's candidate log. No simulation.
+"""
+
+import json
+import pickle
+import sys
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/chriszaharia/projects/personal/nematode")
+sys.path.insert(0, str(REPO / "scripts" / "analysis"))
+import c2_fit as cf  # noqa: E402
+
+SCRATCH = Path(sys.argv[1])
+E = cf.entries()
+NAMES = [e.name for e in E]
+SHOW = ["modulator.fixed.serotonin.ser-5", "modulator.fixed.serotonin", "modulator.drive.ingestion",
+        "timescale.monoamine"]
+RUNS = {
+    "fourth pilot": REPO / "build/c2-fit/pilot_fourth",
+    "fifth pilot": REPO / "build/c2-fit/pilot_fifth",
+    "sixth pilot": REPO / "build/c2-fit/pilot",
+    "recovery": SCRATCH,
+}
+out = {}
+for label, d in RUNS.items():
+    s = pickle.load(open(d / ("recovery_state.pkl" if label == "recovery" else "state.pkl"), "rb"))
+    answers = dict(s["answers"])
+    if label == "recovery" and s.get("es") is not None:
+        answers["2b (mean now)"] = list(np.clip(np.asarray(s["es"].mean, float), 0, 1))
+    row = {}
+    for stage, v in answers.items():
+        if v is None or len(v) != len(E):
+            continue
+        row[stage] = {n: E[NAMES.index(n)].value(float(v[NAMES.index(n)])) for n in SHOW}
+    log = (REPO / "build/c2-fit/recovery" if label == "recovery" else d) / "stage_2b.jsonl"
+    first = None
+    if log.exists():
+        by: dict[int, list[float]] = {}
+        for line in open(log):
+            r = json.loads(line)
+            t = ((r.get("delta") or {}).get("tph-1") or {}).get("roaming_fraction")
+            if t is not None:
+                by.setdefault(int(r["generation"]), []).append(t)
+        for g in sorted(by):
+            if np.mean(np.asarray(by[g]) >= 0.05) >= 0.1:
+                first = g
+                break
+        row["tph1_first_generation"] = first
+        row["tph1_generation_1_p90"] = float(np.percentile(by[min(by)], 90))
+    out[label] = row
+    print(f"\n{label}: kept start {s.get('kept')}; 2b generation where 10% of candidates show tph-1 >= 0.05: {first}")
+    for stage, vals in row.items():
+        if isinstance(vals, dict):
+            print(f"  {stage:14s} " + "  ".join(f"{n.split('.', 1)[1]} {x:.4g}" for n, x in vals.items()))
+(SCRATCH / "sero_history.json").write_text(json.dumps(out, indent=1))

@@ -1,0 +1,207 @@
+"""Is it the mutants, or the carried state? 2b again from the fourth pilot's 2a answer (description; discarded)
+
+The fourth readiness pilot failed its go rule (the wild type 0 of 5). Its kept start reached 2a's
+bar (D_fit 1.85), but in 2b local search's log early/late ratio sat at z -3.6 to -3.8 for all 200
+generations, and chemotaxis's flip fraction at +4.4 to +5.0. Logbook 131's 2b moved the same two
+from almost the same point: log early/late from -3.70 to passing by generation 70-100, the flip
+fraction by 150. The pilot's 2b differs from 131's in two ways at once: it fits the mutants at half
+the objective from its first generation, and it carries 2a's search state, where 131's restarted
+isotropically at sigma0 0.05 without the mutants. This separates them.
+
+**The arms.** Each runs from the pilot's 2a answer (``pilot.json``'s ``answers["2a"]``, 2b's own
+start), with fresh isotropic sep-CMA at sigma0 0.05, population 48, 200 animals a candidate, the
+registered arm, and the registered objective (``c2_fit.Objective``, with the saturation,
+responsiveness and lawn guards), for 60 generations:
+
+- **A:** all six families, no mutants (131's 2b, on this procedure's body and guards);
+- **B:** all six families plus tph-1, pdfr-1 and tax-4 at half (the registered 2b's objective).
+
+Readouts at generation 0 and every 10 generations, on the pilot's own readout animals, so each
+compares with the pilot's 2b readout at the same generation. Generation 0 reproduces the pilot's 2b
+generation-0 readout, a check on this setup.
+
+**The rule, fixed before either runs** (2026-11-16). L is the mean z of local search's log
+early/late ratio over the readouts at generations 40, 50 and 60. An arm **moves** when L >= -3.45.
+(The pilot's 2b read -3.64 and -3.62 at 40 and 60; 131's 2b read a mean of -3.28 over 40-60; the
+ratio's SD of z between populations is 0.065 on the pilot's noise step.)
+
+- **B moves:** a fresh start at 0.05 is enough with the mutants in 2b. The amendment restarts 2b
+  isotropically at sigma0 0.05 and keeps the mutants there.
+- **A moves and B does not:** the mutants in 2b hold local search back. The amendment returns to
+  131's order: 2b on the six families alone at sigma0 0.05, then a stage adding the mutants at
+  half, then the final stage.
+- **Neither moves:** neither change is enough from this 2a answer. Back to the maintainer.
+
+**Reported beside it, never selected on:** every readout's statistics, z and mutant readings;
+each generation's median and best score, step size, share of candidates with local search's gamma
+defined, and share paying the lawn guard.
+
+**Seeds (discarded).** Candidates base + 200 x (48 x (g - 1) + m) + i, with base 1,400,000,000 for
+A and 1,410,000,000 for B (60 generations: 576,000 animals each). Readouts on the pilot's
+1,216,000,000 + i, i < 200, reused for reading only. CMA 9922 (A) and 9923 (B).
+
+Run from the repository root: ``two_b_screen.py <a|b> [workers]``. Every candidate's record is
+stored as it completes, and the strategy after every generation, so a resume continues exactly,
+on any number of workers.
+"""
+
+import json
+import os
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+
+ARMS = {
+    "a": {"base": 1_400_000_000, "cma": 9922, "mutants": ()},
+    "b": {"base": 1_410_000_000, "cma": 9923, "mutants": fit.MUTANTS},
+}
+SIGMA0, POPSIZE, ANIMALS, GENERATIONS, EVERY = 0.05, 48, 200, 60, 10
+READING = (40, 50, 60)
+MOVES = -3.45
+RATIO = "local_search/log_early_late_ratio"
+GAMMA = "local_search/gamma_per_min"
+PILOT = Path("docs/experiments/logbooks/supporting/133-c2-fit/pilot.json")
+READOUT_SEEDS = fit.RUNS["pilot"].layout.readout_seeds()
+
+
+def _job(item):
+    generation, member, seeds, z, mutants = item
+    began = time.perf_counter()
+    record = fit.simulate_point(z, seeds, assays=None, mutants=tuple(mutants))
+    return {"generation": generation, "member": member, "vector": fit.vector_digest(z), **record,
+            "seconds": time.perf_counter() - began}
+
+
+def _save(path, state):
+    tmp = path.with_suffix(".tmp")
+    tmp.write_bytes(pickle.dumps(state))
+    os.replace(tmp, path)
+
+
+def _stored(path):
+    out = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:  # a torn last line from an interrupted write
+                continue
+            out[r["generation"], r["member"]] = r
+    return out
+
+
+def seeds_of(base, g, m):
+    first = base + ANIMALS * (POPSIZE * (g - 1) + m)
+    return list(range(first, first + ANIMALS))
+
+
+def reading(readouts):
+    zs = [readouts[g]["z"].get(RATIO) for g in READING]
+    if any(z is None for z in zs):
+        return {"generations": list(READING), "z": zs, "L": None, "moves": False}
+    L = float(np.mean(zs))
+    return {"generations": list(READING), "z": zs, "L": L, "moves": L >= MOVES}
+
+
+def main(arm, workers):
+    cfg = ARMS[arm]
+    out = Path(f"build/c2-fit/two_b_screen_{arm}")
+    out.mkdir(parents=True, exist_ok=True)
+    state_path, store = out / "state.pkl", out / "candidates.jsonl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    objective = fit.Objective(truth, bands, families=None, mutants=tuple(cfg["mutants"]))
+    pilot = json.loads(PILOT.read_text())
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        x0 = [float(v) for v in pilot["answers"]["2a"]]
+        assert len(x0) == len(fit.entries()) == 137
+        state = {"es": fit.fresh(x0, SIGMA0, cfg["cma"], POPSIZE), "medians": [], "best": [],
+                 "sigmas": [], "gamma_defined": [], "lawn_guarded": [], "readouts": {}, "seconds": 0.0}
+        _save(state_path, state)
+    es = state["es"]
+
+    def read(g):
+        z = list(map(float, np.clip(es.result.xfavorite, 0, 1)))
+        r = state["readouts"][g] = fit.readout(pool, z, READOUT_SEEDS, truth)
+        mz = {m: r["mutants"][m]["statistics"]["roaming_fraction"]["z"] for m in fit.MUTANTS}
+        print(f"screen {arm} readout {g}: D_fit {r['D_fit']:.2f} D {r['D']:.2f} lawn {r['time_on_lawn']:.3f} "
+              f"logEL {r['z'].get(RATIO)} flip {r['z'].get('chemotaxis/flip_fraction')} "
+              f"weathervane {r['z'].get('chemotaxis/weathervane_deg_s')} mutants {mz}", flush=True)
+
+    with ProcessPoolExecutor(max_workers=workers, initializer=nr._worker_setup) as pool:
+        if 0 not in state["readouts"]:
+            read(0)
+            pilot0 = pilot["readouts"]["2b"]["0"]["statistics"]
+            mine = state["readouts"][0]["statistics"]
+            same = all(
+                (pilot0[k] is None and mine.get(k) is None)
+                or (pilot0[k] is not None and mine.get(k) is not None and abs(pilot0[k] - mine[k]) <= 1e-9 * max(1.0, abs(pilot0[k])))
+                for k in pilot0
+            )
+            state["reproduces_pilot_2b_generation_0"] = bool(same)
+            print(f"screen {arm}: generation-0 readout reproduces the pilot's 2b generation 0: {same}", flush=True)
+            _save(state_path, state)
+        while len(state["medians"]) < GENERATIONS:
+            g = len(state["medians"]) + 1
+            began = time.time()
+            points = es.ask()
+            candidates = [list(map(float, np.clip(p, 0, 1))) for p in points]
+            stored = _stored(store)
+            records, todo = {}, []
+            for m, z in enumerate(candidates):
+                r = stored.get((g, m))
+                if r is None:
+                    todo.append((g, m, seeds_of(cfg["base"], g, m), z, list(cfg["mutants"])))
+                elif r["vector"] != fit.vector_digest(z):
+                    raise ValueError(f"{store}: generation {g} member {m} is stored at another vector")
+                else:
+                    records[m] = r
+            if todo:
+                with store.open("a") as handle:
+                    for r in pool.map(_job, todo):
+                        handle.write(json.dumps(nr._finite(r), allow_nan=False) + "\n")
+                        handle.flush()
+                        records[r["member"]] = r
+            records = [records[m] for m in range(len(candidates))]
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            state["medians"].append(float(np.median(scores)))
+            state["best"].append(float(min(scores)))
+            state["sigmas"].append(float(es.sigma))
+            state["gamma_defined"].append(float(np.mean([r["statistics"].get(GAMMA) is not None for r in records])))
+            state["lawn_guarded"].append(float(np.mean([fit.lawn_guard(r) > 0 for r in records])))
+            if g % EVERY == 0:
+                read(g)
+            state["seconds"] += time.time() - began
+            print(f"screen {arm} gen {g}: median {state['medians'][-1]:.2f} best {state['best'][-1]:.2f} "
+                  f"sigma {es.sigma:.4f} gamma defined {state['gamma_defined'][-1]:.2f} "
+                  f"{time.time() - began:.0f} s", flush=True)
+            _save(state_path, state)
+    result = reading(state["readouts"])
+    record = {
+        "description": __doc__, "arm": arm, "base": cfg["base"], "cma": cfg["cma"],
+        "mutants": list(cfg["mutants"]), "sigma0": SIGMA0, "generations": GENERATIONS,
+        "readout_seeds": [READOUT_SEEDS[0], READOUT_SEEDS[-1]], "rule": {"readouts": list(READING), "moves_at": MOVES},
+        "reading": result, "reproduces_pilot_2b_generation_0": state.get("reproduces_pilot_2b_generation_0"),
+        "medians": state["medians"], "best": state["best"], "sigmas": state["sigmas"],
+        "gamma_defined": state["gamma_defined"], "lawn_guarded": state["lawn_guarded"],
+        "readouts": {str(g): v for g, v in sorted(state["readouts"].items())},
+        "answer": list(map(float, np.clip(es.result.xfavorite, 0, 1))), "seconds": state["seconds"],
+    }
+    Path(f"build/c2-fit/two_b_screen_{arm}.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"screen {arm} done: {result}", flush=True)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 8)

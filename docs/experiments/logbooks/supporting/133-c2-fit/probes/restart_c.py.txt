@@ -1,0 +1,138 @@
+"""A third first half at B04's stage-1 settings, to test the lawn-holding rule ahead of time (description; discarded)
+
+Of five 2a lineages on four from-scratch starts, those that reached the basin all held the small lawn
+early in 2a, and those that did not never did. Mean time on the lawn over 2a's readouts at generations
+40, 50 and 60: the curriculum 0.993, the replay 0.997, the seed test 0.982 and screen (b) 0.975, which
+arrive (the seed test still running, near the bar); the pilot 0.854 and screen (a) 0.912, which do
+not. Both starts whose stage 1 ran at 64 animals and population 24 (B04's, screen b's) are of the
+first kind, and both at 200 and 48 (the pilot's, screen a's) of the second. That rule was read off
+the runs it describes. This is a new start it has not seen:
+
+- stage 1 as screen (b)'s: 77 parameters from the box centre, sigma0 0.2, 64 animals, population 24,
+  150 generations, the registered arm and objective (c2_fit's);
+- 2a as registered: all 137 from stage 1's answer with the speed noise's timescale at 1 s, sigma0
+  0.1, 200 animals, population 48, up to 300 generations; the search state is kept.
+
+**The rules, fixed before it runs** (2026-11-12):
+- it **holds the lawn** when the mean time on the lawn at 2a's generations 40, 50 and 60 is at least
+  0.95 (between the 0.975 of the lowest that arrived and the 0.912 of the highest that did not);
+- it **arrives** when the mean of three consecutive 2a readouts has time on the lawn at least 0.97
+  and D_fit at most 2.5, the registered bar at 2a's end, and stops there; otherwise it is read at
+  generation 300;
+- the lawn-holding rule is supported if the two agree (holds and arrives, or neither), and fails as a
+  selector if they disagree.
+
+Seeds (discarded): 1,040,000,000; stage 1 at + 0, 2a at + 2,000,000 (+ animals x (popsize x (g - 1)
++ m) + i), readouts at + 5,000,000 + i. CMA 9523, 9524. Run from the repository root, 8 workers.
+"""
+
+import json
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-fit")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+from continue_screen import BAR, reading
+from quantumnematode.connectome import encoder as enc
+
+BASE, CMA, STAGE1 = 1_040_000_000, (9523, 9524), (64, 24)
+GENERATIONS, STRIDE, READOUT, WORKERS = (150, 300), 2_000_000, 5_000_000, 8
+HOLDS = 0.95
+OUT = Path("build/c2-fit/restart_c")
+
+
+def _job(item):
+    seeds, z = item
+    return fit.simulate_point(z, seeds, assays=fit.FIT_ASSAYS, mutants=())
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path = OUT / "state.pkl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    names = fit.entries()
+    subset = fit.subset_indices(names)
+    timescale = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
+    objective = fit.Objective(truth, bands, families=fit.FIT_FAMILIES, mutants=())
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        state = {"stage": 0, "x": [0.5] * len(names), "es": None, "medians": {}, "readouts": {}, "answers": {},
+                 "holds": None, "verdict": None}
+    readout_seeds = list(range(BASE + READOUT, BASE + READOUT + 200))
+    t0 = time.time()
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        while state["stage"] < 2:
+            s = state["stage"]
+            animals, popsize = STAGE1 if s == 0 else (200, 48)
+            idx = subset if s == 0 else list(range(len(names)))
+            if state["es"] is None:
+                x = list(state["x"])
+                if s == 1:
+                    x[timescale] = names[timescale].unit(fit.TIMESCALE_AT_2A_S)
+                    state["x"] = x
+                state["es"] = fit.fresh([x[i] for i in idx], fit.STAGES[s].sigma0, CMA[s], popsize)
+                state["medians"][s], state["readouts"][s] = [], {}
+            es, medians, readouts = state["es"], state["medians"][s], state["readouts"][s]
+
+            def full(point, x=state["x"], idx=idx):
+                out_ = list(x)
+                for j, i in enumerate(idx):
+                    out_[i] = float(np.clip(point[j], 0.0, 1.0))
+                return out_
+
+            if 0 not in readouts:
+                readouts[0] = fit.readout(pool, full(es.result.xfavorite), readout_seeds, truth)
+            while len(medians) < GENERATIONS[s] and state["verdict"] is None:
+                g = len(medians) + 1
+                points = es.ask()
+                jobs = []
+                for m, p in enumerate(points):
+                    start = BASE + STRIDE * s + animals * (popsize * (g - 1) + m)
+                    jobs.append((list(range(start, start + animals)), full(p)))
+                records = list(pool.map(_job, jobs))
+                scores = [objective(r) for r in records]
+                es.tell(points, scores)
+                medians.append(float(np.median(scores)))
+                if g % 10 == 0:
+                    r = readouts[g] = fit.readout(pool, full(es.result.xfavorite), readout_seeds, truth)
+                    print(f"restart c stage {s} readout {g}: D_fit {r['D_fit']:.2f} on-lawn {r['time_on_lawn']:.3f} "
+                          f"rev {r['spread']['reversal']:.2f}", flush=True)
+                    if s == 1 and g == 60:
+                        lawn = float(np.mean([readouts[k]["time_on_lawn"] for k in (40, 50, 60)]))
+                        state["holds"] = {"time_on_lawn": lawn, "holds": lawn >= HOLDS}
+                        print(f"restart c lawn-holding at 40-60: {state['holds']}", flush=True)
+                    if s == 1 and g >= 30:
+                        three = reading(readouts, (g - 20, g - 10, g))
+                        if three["arrives"]:
+                            state["verdict"] = {**three, "verdict": "arrives"}
+                print(f"restart c stage {s} gen {g}: median {medians[-1]:.2f} sigma {es.sigma:.4f} {time.time() - t0:.0f} s", flush=True)
+                state_path.write_bytes(pickle.dumps(state))
+            state["answers"][s] = full(es.result.xfavorite)
+            if s == 0:
+                state["x"], state["es"] = state["answers"][s], None
+            state["stage"] = s + 1
+            state_path.write_bytes(pickle.dumps(state))
+    if state["verdict"] is None:
+        g = len(state["medians"][1])
+        state["verdict"] = {**reading(state["readouts"][1], (g - 20, g - 10, g)), "verdict": "does not arrive"}
+    agree = state["holds"] is not None and state["holds"]["holds"] == (state["verdict"]["verdict"] == "arrives")
+    record = {"description": __doc__, "base": BASE, "cma": CMA, "stage1": STAGE1, "bar": BAR, "holds_bar": HOLDS,
+              "holds": state["holds"], "reading": state["verdict"], "rule_supported": agree,
+              "medians": state["medians"], "readouts": {str(k): v for k, v in state["readouts"].items()},
+              "answers": state["answers"]}
+    (OUT.parent / "restart_c.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"restart c done: holds {state['holds']} reading {state['verdict']} rule supported {agree}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

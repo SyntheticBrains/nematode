@@ -1,0 +1,29 @@
+{
+  "files": {
+    "scripts/analysis/c2_fit.py": "0dffc7b5766bc45b622ee64b2143a02f2580a8060de6a1cc5f1895ffaf82888d",
+    "scripts/analysis/c2_encoder_probe.py": "a2147d7c5c833032b31bf8cb42397357cab459626654fa5ab75ee2fadb72b8ce",
+    "scripts/analysis/benchmark_grade.py": "829cf52399a23e658532ad7f14f6962a49e8f4ea1f3f93f0a5552a6da56487cb",
+    "scripts/analysis/benchmark_bands.py": "7666dfe8d58f42e22e669d19f79b9bbdb2a9059e5943276630208b323ef9211b",
+    "scripts/analysis/benchmark_v2_controls.py": "4bdd0eceeed29b6b6fff0f4be3eec7e8e5f16851171e1c8c73159bd3bb1958c8",
+    "scripts/analysis/benchmark_v3_controls.py": "0106d2dbe60ec04886a5414d0159451280076d1fb8d21dce86d1ad6c3a950d72",
+    "scripts/analysis/benchmark_v4_controls.py": "4ec60d19dd91858bb2c79c060bafeff7d4a9348618c70c256e778be8ec5e916d",
+    "scripts/analysis/body_kinematics_eval.py": "1baa8de1bef9e13b29af485873ded0e925383dc4ee226c91c20378f577be18ee",
+    "scripts/analysis/cma_recovery.py": "b7c3a6784fe43bed38f1e81d74417d9bdd118592a84db9e37132a653f8ce3337",
+    "scripts/analysis/cma_recovery_v2.py": "1a39af5a7fad22fb97fc877224687f96ac6d3cc4182adf6e3d71dadf428a62e0",
+    "scripts/analysis/npe_recovery.py": "4656e636517fdfafb18584d70bb5245ec9aa89c2e24a7de14af6c635d9f1265d",
+    "scripts/analysis/npe_region_check.py": "a2c6eb8ca46a4efb7eee22559dc153fe8656b836b8ff7e65a3fb4976d115d834",
+    "configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives_following_assay_scheer_lawn.yml": "b1acc3337b1c7f4b29868abe8e9d71a441fce47cbe01aab5533cac289f9382e5",
+    "configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives_following_assay_uniform_lawn_scheer.yml": "7e168711a0ffdf3058b2ed4740e0c9e8454db96a348ed6acec18713c2aba8f45",
+    "configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives_following_assay_food_removal_lopezcruz.yml": "ee7fe5b6573b78d8fbde43c4e39857c9190a90493b4350ed83d26f4da89e10fb",
+    "configs/scenarios/foraging/connectomeppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_encoded_s1_primitives_following_assay_chemotaxis_chen.yml": "3fa3bf81b425b93940ec3f4fe39185901bf34d76e5fee452e0f2af60a83c52b0",
+    "data/benchmark/bands_v4.json": "355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448",
+    "data/locomotion/primitives.json": "8356a09a1078d887b75109b1215157c0fddb93f53c4c678128e020046637a625",
+    "data/neuromodulators/layer.json": "b94756f65a460106cc3961c1d5c0128d776829b1cb32d67ea80e7a46d08d0335",
+    "data/neuromodulators/receptor_signs.json": "e1ee51038996f3574ecd6253864a155dc20188d24d04979c38dbfd91e41b36e5",
+    "data/neuromodulators/receptor_couplings.json": "3cc539001df8f1e6cf2ef9fa5032aa17b24c17aa9a963bae8d2a0ace27a3c47d",
+    "docs/experiments/logbooks/supporting/113-c1-fit/encodings.md": "d3aa1af865dc74fa1de33c11048fa56ca2dc004a50d40c39e50b7f35c8654ade",
+    "docs/experiments/logbooks/supporting/133-c2-fit/neural.py.txt": "cd019a815306c6c3e97fcd7bac0ce4843f1547f5abafd85f2d773e886d772d8b",
+    "investigation/spike/ma_c2/reading.py.txt": "dd6d8706e5162f2fad9ff457fea7df1f3f21b52138fc910a37f58bfb5cb3a9b0"
+  },
+  "package": "8c304510484ab230e10344a162e8a157a95621393824c36669c2842e2f0c28be"
+}

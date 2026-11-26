@@ -1,0 +1,30 @@
+{
+  "description": "C.2's readiness pilot: the registered procedure on discarded seeds.",
+  "run": "pilot",
+  "head": "df7e666541de93470eee5a2c8a9938891ba3e66f",
+  "manifest": "fcc870c87e748acb10358d29bfb70508cee1d735c80241cb40b114b0657a1124",
+  "killed": "no start of 6 held the lawn",
+  "start": 6,
+  "kept": null,
+  "starts": [
+    "start_0.json",
+    "start_1.json",
+    "start_2.json",
+    "start_3.json",
+    "start_4.json",
+    "start_5.json"
+  ],
+  "answer": null,
+  "answers": {},
+  "histories": {},
+  "readouts": {},
+  "checkpoints": {},
+  "noise": null,
+  "plateau_generation": null,
+  "seconds": {},
+  "verdict": null,
+  "go": false,
+  "pass_rates": null,
+  "grades": [],
+  "split": "The pilot's record, split to keep each file under the repository's 500 KB limit: replace each entry of 'starts' with the contents of the file it names to restore the record as written."
+}

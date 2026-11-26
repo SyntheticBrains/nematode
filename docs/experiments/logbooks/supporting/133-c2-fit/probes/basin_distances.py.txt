@@ -1,0 +1,58 @@
+"""How far apart are the stage-1 answers? (description; no simulation)
+
+Each start of the first half begins at the box's centre with its own CMA seeds and animals. These are
+the Euclidean distances, in the encoder's unit coordinates, between every stage-1 answer on record:
+Logbook 131's B04 (its stage 1), and every start of the second to fifth readiness pilots (the first
+pilot ran stage 1 at another size). It reports the range over all pairs, and over B04 with the starts
+each pilot kept.
+
+Run from the repository root: ``basin_distances.py``.
+"""
+
+import itertools
+import json
+from pathlib import Path
+
+import numpy as np
+
+SUPPORT = Path("docs/experiments/logbooks/supporting/133-c2-fit")
+B04 = Path("docs/experiments/logbooks/supporting/131-c2-clean-start/probes/B04.json")
+OUT = Path("build/c2-fit/basin_distances.json")
+
+
+def answers() -> dict[str, tuple[list[float], bool]]:
+    out = {"131 B04": (json.loads(B04.read_text())["stages"][0]["answer"], True)}
+    for path in sorted((SUPPORT / "pilot_second").glob("start_*.json")):
+        s = json.loads(path.read_text())
+        out[f"second {s['start']}"] = (s["answers"]["1"], bool(s.get("kept")))
+    for name in ("third", "fourth", "fifth"):
+        p = json.loads((SUPPORT / f"pilot_{name}.json").read_text())
+        for s in p["starts"]:
+            z = (s.get("answers") or {}).get("1") or (p["answers"]["1"] if s["kept"] else None)
+            out[f"{name} {s['start']}"] = (z, bool(s["kept"]))
+    return out
+
+
+def main() -> int:
+    named = answers()
+    assert all(len(z) == 137 for z, _ in named.values())
+    pairs = {
+        f"{a} | {b}": float(np.linalg.norm(np.asarray(named[a][0]) - np.asarray(named[b][0])))
+        for a, b in itertools.combinations(named, 2)
+    }
+    kept = [n for n, (_, k) in named.items() if k]
+    kept_pairs = [d for p, d in pairs.items() if all(x in kept for x in p.split(" | "))]
+    record = {
+        "description": __doc__,
+        "answers": {n: {"kept": k} for n, (_, k) in named.items()},
+        "all_pairs": {"n": len(pairs), "min": min(pairs.values()), "max": max(pairs.values())},
+        "kept_and_b04": {"answers": kept, "n": len(kept_pairs), "min": min(kept_pairs), "max": max(kept_pairs)},
+        "pairs": pairs,
+    }
+    OUT.write_text(json.dumps(record, indent=1) + "\n")
+    print(json.dumps({k: record[k] for k in ("all_pairs", "kept_and_b04")}, indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

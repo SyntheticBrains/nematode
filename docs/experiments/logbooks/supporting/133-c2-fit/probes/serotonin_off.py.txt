@@ -1,0 +1,195 @@
+"""The serotonin-off probe: can the wild type pass, at the registered pass level, with tph-1 inert?
+
+P0 switches serotonin off in the sixth pilot's answer: both serotonin couple strengths at the bottom
+of their box. P1 refits the wild type alone from there, with those two entries frozen and every other
+parameter free: 2a's objective (the four fitted families and the guards, against the bands' centres),
+a fresh sep-CMA at sigma0 0.05, population 48, 200 animals a candidate. Its mean is read out every 10
+generations on fixed animals, and the readout with the lowest D_fit among generations 10 onward is
+graded with P0 on five discarded populations by the registered grade. Description beside the launch
+record; it changes no registered rule. Design: serotonin_off_design.md, committed before the run.
+
+Usage: serotonin_off.py <out.json> <state dir> <workers> [smoke]
+"""
+
+import json
+import pickle
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/chriszaharia/projects/personal/nematode")
+sys.path.insert(0, str(REPO / "scripts" / "analysis"))
+import benchmark_grade as bg  # noqa: E402
+import c2_fit as cf  # noqa: E402
+
+OFF = ("modulator.fixed.serotonin", "modulator.fixed.serotonin.ser-5")
+FULL = {
+    "animals": cf.ANIMALS,
+    "popsize": cf.POPSIZE,
+    "generations": 60,
+    "every": 10,
+    "populations": 5,
+    "candidates": 1_995_000_000,
+    "readout": 1_996_000_000,
+    "grade": 1_996_100_000,
+}
+SMOKE = {
+    "animals": 8,
+    "popsize": 4,
+    "generations": 2,
+    "every": 1,
+    "populations": 2,
+    "candidates": 1_997_000_000,
+    "readout": 1_997_100_000,
+    "grade": 1_997_200_000,
+}
+SIGMA0 = 0.05
+CMA_SEED = 7311
+
+
+def candidate_seeds(p: dict, generation: int, member: int) -> list[int]:
+    first = p["candidates"] + p["animals"] * (p["popsize"] * (generation - 1) + member)
+    return list(range(first, first + p["animals"]))
+
+
+def readout_seeds(p: dict) -> list[int]:
+    return list(range(p["readout"], p["readout"] + p["animals"]))
+
+
+def grade_seeds(p: dict, k: int) -> list[int]:
+    first = p["grade"] + p["animals"] * k
+    return list(range(first, first + p["animals"]))
+
+
+def candidate_job(item: tuple[list[float], list[int]]) -> dict:
+    """2a's candidate: the wild type on the two lawns, its four fitted families and guards."""
+    z, seeds = item
+    record = cf.simulate_point(z, seeds, assays=cf.FIT_ASSAYS, mutants=(), presence=False)
+    return {"vector": cf.vector_digest(z), **record}
+
+
+def main() -> None:  # noqa: C901, PLR0915 - one probe, its stages in order
+    out_path, state_dir, workers = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])
+    p = SMOKE if len(sys.argv) > 4 and sys.argv[4] == "smoke" else FULL
+    state_dir.mkdir(parents=True, exist_ok=True)
+    bands = bg.load_bands_v4()
+    truth = cf.band_truth(bands)
+    names = cf.entries()
+    off = [i for i, e in enumerate(names) if e.name in OFF]
+    assert len(off) == len(OFF), off
+    free = [i for i in range(len(names)) if i not in off]
+
+    pilot = json.loads(cf.PILOT_PATH.read_text())
+    answer = list(pilot["answer"])
+    assert answer == json.loads(cf.RECOVERY_PREFLIGHT_PATH.read_text())["truth"]
+    p0 = list(answer)
+    for i in off:
+        p0[i] = 0.0
+    off_values = {names[i].name: names[i].value(0.0) for i in off}
+
+    def full(point: list[float]) -> list[float]:
+        z = list(p0)
+        for j, i in enumerate(free):
+            z[i] = float(np.clip(point[j], 0.0, 1.0))
+        return z
+
+    objective = cf.Objective(truth, bands, families=cf.FIT_FAMILIES, mutants=())
+    state_path = state_dir / "state.pkl"
+    store = state_dir / "candidates.jsonl"
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())  # noqa: S301 - this probe's own state
+        assert state["p"] == p
+    else:
+        state = {
+            "p": p,
+            "es": cf.fresh([p0[i] for i in free], SIGMA0, CMA_SEED, p["popsize"]),
+            "history": {"medians": [], "best": [], "sigmas": []},
+            "readouts": {},
+            "seconds": 0.0,
+        }
+    es = state["es"]
+    with cf._pool(workers) as pool:
+        if 0 not in state["readouts"]:
+            state["readouts"][0] = cf.readout(pool, p0, readout_seeds(p), truth)
+            state_path.write_bytes(pickle.dumps(state))
+        while len(state["history"]["medians"]) < p["generations"]:
+            g = len(state["history"]["medians"]) + 1
+            began = time.time()
+            points = es.ask()
+            candidates = [full(list(x)) for x in points]
+            jobs = [(z, candidate_seeds(p, g, m)) for m, z in enumerate(candidates)]
+            records = list(pool.map(candidate_job, jobs))
+            with store.open("a") as handle:
+                for m, r in enumerate(records):
+                    handle.write(json.dumps({"generation": g, "member": m, **cf.nr._finite(r)}) + "\n")
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            state["history"]["medians"].append(float(np.median(scores)))
+            state["history"]["best"].append(float(min(scores)))
+            state["history"]["sigmas"].append(float(es.sigma))
+            if g % p["every"] == 0 or g == p["generations"]:
+                state["readouts"][g] = cf.readout(pool, full(list(es.result.xfavorite)), readout_seeds(p), truth)
+                state.setdefault("means", {})[g] = full(list(es.result.xfavorite))
+            state["seconds"] += time.time() - began
+            state_path.write_bytes(pickle.dumps(state))
+            r = state["readouts"].get(g)
+            extra = "" if r is None else f" | readout D_fit {r['D_fit']:.2f} lawn {r['time_on_lawn']}"
+            print(
+                f"gen {g}: median {state['history']['medians'][-1]:.2f} "
+                f"best {state['history']['best'][-1]:.2f} sigma {es.sigma:.4f}{extra}",
+                flush=True,
+            )
+
+        read_gens = [g for g in state["readouts"] if g > 0]
+        chosen = min(read_gens, key=lambda g: state["readouts"][g]["D_fit"] if state["readouts"][g]["D_fit"] is not None else float("inf"))
+        p1 = state["means"][chosen]
+        if "grades" not in state:
+            jobs = [(z, grade_seeds(p, k), True) for z in (p0, p1) for k in range(p["populations"])]
+            results = list(pool.map(cf._point_job, jobs))
+            n = p["populations"]
+            state["grades"] = {
+                "P0": [cf.nr._finite({"population": k, **cf.grade_record(r, bands)}) for k, r in enumerate(results[:n])],
+                "P1": [cf.nr._finite({"population": k, **cf.grade_record(r, bands)}) for k, r in enumerate(results[n:])],
+            }
+            state_path.write_bytes(pickle.dumps(state))
+
+    def read(grades: list[dict]) -> dict:
+        wild = sum(bool(g["wild_type_passes"]) for g in grades)
+        mutants = {m: sum(bool(g["mutants"][m]["passes"]) for g in grades) for m in cf.MUTANTS}
+        return {"wild_type_passes": wild, "mutant_passes": mutants, "diagnosis": cf.diagnosis(grades)}
+
+    p0_read, p1_read = read(state["grades"]["P0"]), read(state["grades"]["P1"])
+    found = p1_read["wild_type_passes"] >= cf.PASS_NEEDED and (
+        p["populations"] - p1_read["mutant_passes"]["tph-1"] >= cf.PASS_NEEDED
+    )
+    record = {
+        "description": __doc__,
+        "head": cf.head(),
+        "settings": {**p, "sigma0": SIGMA0, "cma_seed": CMA_SEED, "objective": "2a: four fitted families and guards, bands' centres"},
+        "off": off_values,
+        "start": {"source": "pilot.json answer (the sixth pilot's)", "digest": cf.vector_digest(answer)},
+        "P0": {"vector": p0, "read": p0_read, "grades": state["grades"]["P0"]},
+        "P1": {
+            "chosen_generation": chosen,
+            "vector": p1,
+            "read": p1_read,
+            "grades": state["grades"]["P1"],
+        },
+        "rule": {
+            "found": "P1 passes the wild type in >= 3 of 5 populations and tph-1 fails in >= 3 of 5",
+            "result": "found" if found else "not found",
+        },
+        "history": state["history"],
+        "readouts": {str(g): r for g, r in sorted(state["readouts"].items())},
+        "seconds": state["seconds"],
+    }
+    out_path.write_text(json.dumps(cf.nr._finite(record), indent=1, allow_nan=False))
+    print(f"\nP0: wild type {p0_read['wild_type_passes']}/{p['populations']}, mutants {p0_read['mutant_passes']}")
+    print(f"P1 (generation {chosen}): wild type {p1_read['wild_type_passes']}/{p['populations']}, mutants {p1_read['mutant_passes']}")
+    print(f"rule: {record['rule']['result']}")
+
+
+if __name__ == "__main__":
+    main()

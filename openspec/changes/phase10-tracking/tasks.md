@@ -23,7 +23,12 @@ and go/no-go. Every Phase 10 milestone PR updates this checklist as part of its 
 
 Binding: nothing is fitted before B reads valid; nothing is fitted on real data before F.0 clears;
 nothing in W registers before C.2 has read. *(Amended 2026-10-25, the maintainer's decision: F.0
-clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-ii.)*
+clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-ii.)* *(Amended
+2026-11-24, the maintainer's decision of 2026-11-23: F.0b-ii failed its gate, and C.2's registered
+fit runs once with it failed, capped, as launch record 133's Part C records. Phase 10 closes
+without W.)* *(2026-11-25, [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md): the fit
+failed on tph-1 alone. By the maintainer's decisions of 2026-11-25, C.3 is not run in Phase 10, and
+C.2 enters C.4 as a failing in-sample row.)*
 
 ## H — housekeeping (MUST, first)
 
@@ -491,7 +496,7 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
 
 ## F.0 — the fitting methods' positive control (MUST)
 
-- [ ] **F.0** parameter recovery at known parameters, by sep-CMA on C.1's model and C.2's encoder
+- [x] **F.0** parameter recovery at known parameters, by sep-CMA on C.1's model and C.2's encoder
   (seeds 5401–5464). *(Amended 2026-10-25: C.1's half was first NPE's; D38 as amended.)* It reports recovery and spread, and the spread sizes W.
 
   *(2026-10-25, F.0a: change `add-npe-recovery`, archived as `2026-10-25-add-npe-recovery`;
@@ -529,7 +534,15 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     - **For C.1:** keep at least two restarts. The registered plateau rule carries over.
     - **Still open:** F.0b-ii, C.2's encoder and its recovery. *(2026-11-04: the encoder is built,
       [Logbook 122](../../../docs/experiments/logbooks/122-c2-encoder.md); F.0b-ii waits for its
-      staged procedure and the readiness restarts that give it truths.)*
+      staged procedure and the readiness restarts that give it truths.)* *(2026-11-10: F.0b-ii is
+      registered in change `fit-c2`: one truth, the readiness pilot's answer, recovered by the
+      registered procedure from the box centre, gate 0.75. The truth sits beside the wild type, so
+      the gate tests reaching the region and the spread between runs, not identifying the truth; D38's
+      amendment states it.)* *(2026-11-23: the preflight passed all seven checks, and **F.0b-ii
+      failed its gate**, with a gain of 0.635 against 0.75. tph-1 alone keeps it out; see C.2.
+      F.0 does not clear for C.2.)* *(2026-11-25: **F.0 is read on both models.** C.1's half
+      passes and C.2's fails. The registered fit then failed on tph-1, as the recovery had
+      ([Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md)).)*
 
   *(2026-10-29: change `rerun-cma-recovery-v2`; [Logbook 116](../../../docs/experiments/logbooks/116-cma-recovery-v2.md).)*
   **F.0b-i on v2 fails its gate**, with a median gain of 0.690 against 0.75. sep-CMA recovers the two
@@ -669,7 +682,7 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     is decided then: a warm start needs a dated D38 amendment, since C.1's x₀ is set without search
     data; a box-centre design needs its odds measured first.
 
-- [ ] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
+- [x] **C.2 The connectome controller**: on the primitives, with the data-derived neuromodulator layer.
   Its slow variable is stated and its feasibility for a 9-minute decay checked. It is fitted by
   sep-CMA on the benchmark's distance at ≥ 200 animals per evaluation, with the budget pre-registered
   and a plateau criterion.
@@ -830,17 +843,153 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     8 or 9 of 15 populations. It trades the on-lawn onset rate against the dwelling windows' speed.
     Real on-lawn reversals follow the speed just before them (held-out cohorts: v_rev = 0.0463 +
     0.603 × v_before). Patched into the evaluator in scripts, with the network refitted, every
-    statistic passes in 15 of 15.
+    statistic passes in 15 of 15. *(2026-11-25, [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md):
+    fixed in advance and run fresh from the box centre, the route does not reliably reproduce its
+    tph-1. Under the procedure's final rules, the sixth pilot found tph-1's response, while the
+    recovery and the registered fit left it inert.)*
   - **Next, in the maintainer's order:** the speed-following reversal as an option of the
     primitives; then the registered fit (Change B), its procedure fixed in advance; then W's compute
     at about 31 h a fit.
 
+  *(Added 2026-11-10: change `fit-c2`; launch record 133, Part A.)* **C.2's fit is registered,**
+  its procedure fixed in advance on the speed-following arm.
+
+  - **The procedure:** stage 1 (the 77 sense-to-output parameters, 150 generations), 2a (all 137 on
+    the fitted families, 300), 2b (all six families with the mutants at half the objective, 200), a
+    noise step (30 populations), then the final stage, which adds each statistic's chance of failing
+    a population (50). The search state is carried from 2a, and every stage runs its full count.
+  - **The mutants** are graded on the encoding table's statistics, so tph-1 is graded on its roaming
+    fraction alone.
+  - **The order:** the readiness pilot on discarded seeds (go: the wild type, tph-1 and tax-4 each in
+    3 of 5), F.0b-ii at one truth (the pilot's answer, its limit stated), the registered fit (the
+    same verdict), then a full tax-4 leave-one-out as description. About 124 h.
+  - *(2026-11-12, Part A amended before any registered run.)* **The first pilot was stopped at
+    2a** by its kill rule (D_fit 3.13 against 2.5): its worm never held the lawn. On discarded
+    seeds, 2 of 5 stage-1 answers led to a 2a that holds the lawn, and every 2a that held it by
+    generation 60 reached the bar. **The first half is now started up to six times,** stage 1 at
+    64 animals and population 24 (D38's note). A start is dropped when its mean time on the lawn
+    at 2a's generations 40, 50 and 60 is below 0.95, and the first kept start runs on. A run that
+    keeps no start has no answer: the registered fit fails, and the recovery's gate is not met.
+    About 114 h with every first start kept, and about 127 h at 2 starts in 5. **For W:** every
+    arm needs the same starts, and each arm's count of dropped starts is a reading.
+  - *(2026-11-13, Part A amended again before any registered run.)* **The second pilot kept no
+    start** (all six dropped at 2a's generation 60, 15.8 h). **The objective now carries a lawn
+    guard in every stage,** 300·(0.95 − t)/0.95 below 0.95 on the small lawn, where the statistic
+    already fails at 200 animals. On discarded seeds 3 of 4 guarded runs held the lawn at 2a's
+    generation 60 and the fourth soon after, against 2 of 11 starts without it, and a first half
+    guarded from stage 1 reached 2a's bar at generation 120. The restarts are unchanged. The pilot runs a third time on new seeds. About 117 h at
+    the second pilot's measured rates, with every first start kept. **For W:** every arm gets the
+    same guard.
+  - *(2026-11-14, Part A amended a third time before any registered run.)* **The third pilot kept
+    its first start,** which held the lawn, and stopped at 2a's end at D_fit 3.83 against 2.5
+    (9.9 h). On discarded seeds 3 of 5 guarded 2a runs reached the bar, and the two that did not
+    lagged at generation 150. **2a now reads each start twice more,** dropping it when D_fit
+    averages above 4.25 over generations 130–150 or above 2.5 over 280–300, in every run. 2a's kill
+    rule is that last reading. Each start has its own animals for all of 2a, so every run moves to a
+    40,000,000-animal block. The pilot runs a fourth time on new seeds. About 119 h with every first
+    start kept, and about 3 h more a run on average. **For W:** every arm gets the same readings,
+    and a null wiring may stall more often; each arm reports its starts.
+  - *(2026-11-14.)* **A neural reading is declared as description beside C.2's verdict:** the
+    registered answer's in-silico stimulation responses against Creamer et al.'s measured ones (Logbook
+    134's M-a), with a paired test against the unfitted network and a wiring-only control, fixed in
+    launch record 133. Whether W's arms carry it is decided with W's design. At registered size
+    W is about 1,200–2,900 machine-hours at about 30 h a fit (the fit-first investigation's handover),
+    so W registers only after one of its cuts is chosen.
+  - *(2026-11-16, Part A amended a fourth time before any registered run.)* **The fourth pilot kept
+    its third start,** which passed 2a's bar at 1.85, and **failed its go rule:** the wild type in 0
+    of 5 populations, every mutant in 5 of 5 (36.6 h). Its 2b, carrying 2a's search state, moved the
+    mutants and never local search or chemotaxis. On discarded seeds, a fresh isotropic 2b at σ₀ 0.05
+    moved local search with and without the mutants, by a rule fixed before it ran. **2b now starts
+    its own search at 2a's answer,** with the mutants as before, and the final stage still carries
+    2b's state. The pilot runs a fifth time on new seeds. About 120 h at the fourth pilot's measured
+    rates, with every first start kept. Stated, not remedied: the flip fraction, the weathervane
+    slope, pre-exit enrichment and the on-lawn onset rate did not pass in the screen's 60
+    generations. **For W:** every arm's 2b starts its own search.
+  - *(2026-11-19, Part A amended a fifth time before any registered run.)* **The fifth pilot kept
+    its fifth start,** which passed 2a's bar at 1.97, and **failed its go rule:** the wild type in 0
+    of 5 populations, every mutant in 5 of 5 (47.1 h). The on-lawn onset rate failed in all 15
+    populations, and chemotaxis presence in 3 of the first 5, which 2b traded away unscored. On
+    discarded seeds, by rules fixed before they ran, a hinge moved the onset rate inside its bar where
+    the final stage's chance of failing is flat, and a term on presence's lower bounds then
+    restored presence. The screens' answer passed the wild type in 4 of 5 fresh populations and
+    every mutant in 5 of 5. **The final stage adds the hinge; 2b and the final stage score
+    presence;** F.0b-ii's truth must clear presence's target. The pilot runs a sixth time on new
+    seeds. About 37 h a run and 145 h for the chain, with every first start kept. Stated, not
+    remedied: the screens continued the fifth pilot's basin, and pre-exit enrichment sits near its
+    bar. **For W:** every arm takes both terms.
+  - *(2026-11-21, Part B.)* **The sixth pilot passed its go rule:** the wild type in 3 of 5
+    populations and every mutant in 5 of 5. On all 15 populations the wild type passed in 11 and every
+    mutant in 15. It kept its third start: one start was dropped at the lawn and one at the descent. The
+    on-lawn onset rate is the only statistic that failed, in 4 of 15 populations (z −3.12 to −3.18,
+    against a bar of 3.08). Its mean over all 15 is −3.04, so a registered 3 of 5 turns on it. The
+    chemotaxis flip fraction failed at every one of 2b's readouts and passed in all 15 after the final
+    stage, which adds the hinge to the failure probability and presence. The pilot took 45.2 h on the
+    clock.
+    - The maintainer overrode its stage-1 kill at the first start, whose mean time on the lawn over
+      its last three readouts fell to 0.70 (0.75) with one low readout. A registered run reports that
+      checkpoint and does not stop, so the resumed pilot ran the registered path. The start was later
+      dropped at 2a's lawn reading.
+    - A run is about 38 h with its first start kept, and the chain about 110 h from here.
+    - F.0b-ii's preflight is next. Its truth is the pilot's answer.
+  - *(2026-11-24, Part C.)* **F.0b-ii fails, and the registered fit runs once, capped.**
+    - The preflight passed all seven checks (2026-11-21).
+    - The recovery kept its fourth start and failed its gate: a gain of 0.635 at median D_rec 2.415, against 0.75 (53.7 h). Its answer's tph-1 is inert in every re-simulation. With that term zeroed, D_rec would be 1.12. Its wild type fails against the bands in 0 of 5 populations, where the truth passed in 3, and it is heavy in reversals (0.43, against the truth's 0.12).
+    - Diagnosis, as description: across four runs, how soon 2b found the tph-1 response may depend on how strong 2a left the ser-5 couple, with two runs out of order. The recovery's 2a left it near zero, and its 2b never found the response.
+    - A serotonin-off probe, with its rule fixed before it ran, read "not found": with tph-1 inert, a 60-generation wild-type refit passed the wild type in 0 of 5 populations, on the on-lawn onset rate.
+    - **The maintainer's decision** (2026-11-23, its cap approved 2026-11-24):
+      - the fit runs once, as the phase's last C.2 run;
+      - no repair of the procedure and no tax-4 leave-one-out;
+      - a pass enters C.4 in-sample only and licenses nothing for W;
+      - a fail is read against the failed control, not attributed to the model.
+    - The verdict and its rule are unchanged.
+    - **C.3** waits for the fit's reading, by the maintainer's decision with the cap: if the fit passes, a single-seed timing pilot comes first, and C.3 enters only if 16 seeds fit in about a day.
+  - *(2026-11-25; [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **The
+    registered fit fails, on tph-1 alone.**
+    - Its first start passed all three of 2a's readings, and the run took 36.75 h over its stages.
+    - **The verdict:** the wild type in 5 of 5 registered populations (15 of 15), tax-4 and pdfr-1
+      in every one, and tph-1 in none (roaming difference −0.007 to +0.008, z about −5.3).
+    - **tph-1:** 2b never found its response. One of 9,598 candidates reached a 0.05 difference,
+      a worm that left the lawn. 2a left ser-5 at 0.076 and 2b raised it to 1.28, above the fifth
+      pilot's 1.08, so ser-5's strength does not order the five runs that reached 2b, conditioning
+      Part C's diagnosis.
+    - **Beside the verdict:**
+      - the worm reverses 5.6% of the time, against 17.3%;
+      - on both held-out date sets it sits beyond the band reference's 95th percentile;
+      - the neural reading's paired class interval, 0.001 to 0.043, reads "fitting raised it"
+        (r 0.088 against 0.065).
+    - Read against the failed F.0b-ii, the fail is not attributed to the model. The C.2 risk row
+      closes on this reading.
+    - **The maintainer's decisions** (2026-11-25, after the read, not branches of the registration):
+      - C.3 is not run in Phase 10;
+      - C.2 enters C.4 as a failing in-sample row.
+  - *(2026-11-16.)* **The neural reading follows Logbook 135:** the answer's share is of the
+    readout's measured ceiling (0.423, not 0.173), the paired test resamples the stimulated
+    neurons' classes, with the neuron resample beside it, on generators clear of Logbook 135's, and
+    Logbook 135's calibrated references are quoted. A calibrated reading is left to W, as Logbook
+    135 recommends.
+  - **Held out:** Scheer's held-out dates, read beside W's minimum and band-cohort populations.
+  - **Slow noise's positive control** (owed since Logbook 123) passes on Logbook 131's answer: the
+    speed output responds, and the roaming 90th percentile rises 4.90 band scales at a 30-s
+    timescale, against a bar of 3.
+
 - [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
+
+  *(2026-11-25, the maintainer's decision after C.2's fit failed,
+  [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **C.3 is not run in Phase 10.**
+  Its entry was tied to a C.2 pass, and the fit was the phase's last C.2 run. Its status at the
+  synthesis is unreachable-with-reason. Its question, the C.2 architecture trained by reward, goes to
+  the Phase 11 plan review.
 
 - [ ] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
   fit, and with C.2 against C.1 as a secondary contrast.
+
+  *(Added 2026-11-25, the maintainer's decision after C.2's fit failed,
+  [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **C.2 enters as a failing
+  in-sample row:** its registered answer, with the wild type in 5 of 5 and tph-1 in 0 of 5, read
+  against the failed F.0b-ii. C.2 against C.1 is stated with that condition. Every C.2 mutant row is
+  fitted, and none is predicted, since the tax-4 leave-one-out was dropped. C.3 does not enter.
 
   *(Added 2026-11-05, B v4.)* **On v4, C.1's v3 answer fails the wild type** (0 of 5;
   [Logbook 124](../../../docs/experiments/logbooks/124-benchmark-v4.md)). C.1 enters the table from
@@ -1017,6 +1166,11 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     readiness restarts' convergence (checkpoints at 250, 500 and 750 of a 1,000 cap).
   - **Stage 1 is fixed.** Its 18-parameter lawn subset was chosen on the wild type. It is registered
     identical for every arm, and each arm's stage-1 result is reported as description.
+    *(Both superseded 2026-11-10 by change `fit-c2`: every arm runs C.2's registered procedure. Its
+    per-stage counts are fixed (150, 300, 200 and 50), with the plateau read on the final stage and
+    reported, and its stage 1 is the 77 sense-to-output parameters. Choices tuned on the real wiring
+    can favour it even when every arm gets them, so W states that limit and reports each arm's stage
+    1.)*
   - **F.0b-ii is sized under the staged procedure.** Each truth needs several staged fits of about
     4.8 h, so its cost is piloted before it registers.
   - **A pilot gate.** The wild type and the degree-preserving null, three fits each, before the full
@@ -1064,6 +1218,19 @@ clears per model. C.1 may be fitted once F.0b-i passes, and C.2 waits for F.0b-i
     fitted on its own has been read, and a low score for one would not separate its wiring from its
     physiology. W has no P3 beyond what every arm fixes from data, until a measurement pins a
     parameter that decides a verdict.
+
+  *(Added 2026-11-25, C.2's registered fit,
+  [Logbook 133](../../../docs/experiments/logbooks/133-c2-fit.md).)* **The measured cost of one fit
+  by C.2's procedure** on 16 workers:
+
+  - **with its first start kept:** 36.75 h over its stages (stage 1 0.94 h, 2a 7.40 h, 2b 22.83 h,
+    the final stage 5.58 h);
+  - **with three dropped starts,** as in F.0b-ii's recovery: 53.5 h over its stages (`recovery.json`;
+    53.7 h on the clock), its kept start 36.85 h and its dropped starts 16.65 h.
+
+  Phase 10 closes without W (the maintainer's decision of 2026-11-23), and W's arms do not inherit
+  this procedure (D38's note of 2026-11-24). A later W registers its own procedure and cites these
+  figures only as the cost of this one.
 
 - [ ] **W.3** The panel, read on graded distance whatever any gate says.
 

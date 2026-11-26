@@ -1,0 +1,122 @@
+"""Deliberate bugs in 2b's fresh start, the fifth pilot's seeds and the neural reading's generators,
+and the earlier amendments' bugs again: does test_c2_fit.py catch each? (run from the repository root)
+
+An earlier bug whose code this amendment changed is reported as not applicable, not as caught.
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+SOURCE = Path("scripts/analysis/c2_fit.py")
+TEST = "packages/quantum-nematode/tests/quantumnematode_tests/benchmark/test_c2_fit.py"
+TWO_B = '    Stage("2b", None, mutants=True, subset=False, sigma0=0.05, generations=200, failure=False),'
+FINAL = '    Stage("final", None, mutants=True, subset=False, sigma0=None, generations=50, failure=True),'
+PILOT = '    "pilot": Run("pilot", Layout(1_360_000_000), (9682, 9683, 9684, 9685), 9686, kill_rules=True),'
+NEW = {
+    "2b carries 2a's search state": (TWO_B, TWO_B.replace("sigma0=0.05", "sigma0=None")),
+    "2b at 2a's sigma0": (TWO_B, TWO_B.replace("sigma0=0.05", "sigma0=0.1")),
+    "2b at a wider sigma0": (TWO_B, TWO_B.replace("sigma0=0.05", "sigma0=0.2")),
+    "the final stage restarts too": (FINAL, FINAL.replace("sigma0=None", "sigma0=0.05")),
+    "a later stage with a sigma0 still carries": (
+        "            if stage.sigma0 is not None:\n                state[\"es\"] = fresh(",
+        "            if stage.sigma0 is not None and stage.name in FIRST_HALF:\n                state[\"es\"] = fresh(",
+    ),
+    "fresh ignores its sigma0": (
+        "    return cma.CMAEvolutionStrategy(x0, sigma0, options)",
+        "    return cma.CMAEvolutionStrategy(x0, 0.1, options)",
+    ),
+    "2b on the kept start's restart seed": (
+        "        if start == 0 or stage >= len(FIRST_HALF):",
+        "        if start == 0 or stage > len(FIRST_HALF):",
+    ),
+    "2b's x0 at stage 1's answer": (
+        '            x0 = [x[i] for i in idx]',
+        '            x0 = [x[i] for i in idx] if stage.name != "2b" else list(state["answers"]["1"])',
+    ),
+    "the stages left out of the resume's settings": (
+        '        "stages": [dataclasses.asdict(s) for s in STAGES],\n', ""
+    ),
+    "the pilot on the fourth pilot's base": (PILOT, PILOT.replace("1_360_000_000", "1_200_000_000")),
+    "the pilot on the screen's animals": (PILOT, PILOT.replace("1_360_000_000", "1_400_000_000")),
+    "the pilot inside the leave-one-out's block": (PILOT, PILOT.replace("1_360_000_000", "1_350_000_000")),
+    "the pilot on the fourth pilot's CMA seeds": (PILOT, PILOT.replace("(9682, 9683, 9684, 9685)", "(9661, 9662, 9663, 9664)")),
+    "the pilot's restarts on the fourth pilot's": (PILOT, PILOT.replace("9686, kill", "9671, kill")),
+    "the pilot's later stages on the screen's CMA seeds": (PILOT, PILOT.replace("9684, 9685", "9922, 9923")),
+    "the pilot's restarts on the ceiling's generators": (PILOT, PILOT.replace("9686, kill", "9770, kill")),
+    "the pilot without its kill rules": (PILOT, PILOT.replace(", kill_rules=True", "")),
+    "the class bootstrap on the ceiling's null": (
+        "NEURAL_CLASS_BOOTSTRAP_SEED = 9811", "NEURAL_CLASS_BOOTSTRAP_SEED = 9781"
+    ),
+    "both bootstraps on one generator": (
+        "NEURAL_NEURON_BOOTSTRAP_SEED = 9812", "NEURAL_NEURON_BOOTSTRAP_SEED = 9811"
+    ),
+    "a bootstrap on the ceiling's sparse supports": (
+        "NEURAL_NEURON_BOOTSTRAP_SEED = 9812", "NEURAL_NEURON_BOOTSTRAP_SEED = 9805"
+    ),
+    "a bootstrap on the screen's CMA seed": (
+        "NEURAL_CLASS_BOOTSTRAP_SEED = 9811", "NEURAL_CLASS_BOOTSTRAP_SEED = 9922"
+    ),
+    "a bootstrap on the pilot's restarts": (
+        "NEURAL_NEURON_BOOTSTRAP_SEED = 9812", "NEURAL_NEURON_BOOTSTRAP_SEED = 9690"
+    ),
+    "chance on another generator": ("NEURAL_CHANCE_SEED = 9731", "NEURAL_CHANCE_SEED = 9733"),
+    # Added after the independent review of 2026-11-16.
+    "the final stage carries 2a's search state": (
+        '        state["x"], state["previous"], state["es"] = answer, es, None',
+        '        state["x"], state["previous"], state["es"] = answer, (es if stage.name != "2b" else state["previous"]), None',
+    ),
+    # The earlier amendments' pilot-seed bugs, ported to the fifth pilot's line.
+    "[ported 4] the pilot on its first seeds": (PILOT, PILOT.replace("1_360_000_000", "900_000_000")),
+    "[ported 4] the pilot on the second pilot's animals": (PILOT, PILOT.replace("1_360_000_000", "1_100_000_000")),
+    "[ported 4] the pilot on the third pilot's animals": (PILOT, PILOT.replace("1_360_000_000", "1_140_000_000")),
+    "[ported 4] the pilot on the flip check's animals": (PILOT, PILOT.replace("1_360_000_000", "1_170_000_000")),
+    "[ported 4] the pilot on the investigation's animals": (PILOT, PILOT.replace("1_360_000_000", "1_500_000_000")),
+    "[ported 4] the pilot on the third pilot's CMA seed": (PILOT, PILOT.replace("(9682,", "(9591,")),
+    "[ported 4] the pilot on the sign calibration's CMA seed": (PILOT, PILOT.replace("(9682,", "(9610,")),
+    "[ported 4] the pilot's restarts on the second pilot's": (PILOT, PILOT.replace("9686, kill", "9541, kill")),
+    "[ported 4] the pilot's restarts on the third pilot's": (PILOT, PILOT.replace("9686, kill", "9651, kill")),
+    "[ported 4] the pilot's restarts on the investigation's": (PILOT, PILOT.replace("9686, kill", "9701, kill")),
+    "[ported 4] the pilot's later stages on the investigation's": (PILOT, PILOT.replace("9684, 9685", "9741, 9742")),
+    "[ported 4] the pilot's later stages on the recovery's": (PILOT, PILOT.replace("9684, 9685", "5803, 5804")),
+}
+
+
+def earlier(path: str) -> dict[str, tuple[str, str]]:
+    text = Path(path).read_text()
+    namespace: dict = {}
+    exec(text.split("\nonly = sys.argv[1:]")[0], namespace)  # noqa: S102 - our own harness
+    return namespace["MUTANTS"]
+
+
+MUTANTS = {
+    **{f"[fresh 2b] {k}": v for k, v in NEW.items()},
+    **{k if k.startswith("[") else f"[restart] {k}": v for k, v in earlier("build/c2-fit/mutants_restart.py").items()},
+}
+
+only = sys.argv[1:]
+original = SOURCE.read_text()
+counts = {"caught": 0, "MISSED": 0, "n/a": 0}
+try:
+    for name, (old, new) in MUTANTS.items():
+        if only and name not in only:
+            continue
+        n = original.count(old)
+        if n != 1:
+            print(f"{name:70s} n/a (pattern found {n} times)", flush=True)
+            counts["n/a"] += 1
+            continue
+        SOURCE.write_text(original.replace(old, new))
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", TEST, "-q", "-m", "not slow", "-n", "8", "--no-cov",
+             "-p", "no:cacheprovider", "-p", "no:randomly", "-x"],
+            capture_output=True, text=True, check=False,
+        )
+        caught = result.returncode != 0
+        failed = [l.split("::")[-1].split(" ")[0] for l in result.stdout.splitlines() if l.startswith("FAILED")]
+        counts["caught" if caught else "MISSED"] += 1
+        print(f"{name:70s} {'caught' if caught else 'MISSED'} {failed[:2]}", flush=True)
+finally:
+    SOURCE.write_text(original)
+assert SOURCE.read_text() == original
+print(counts, flush=True)

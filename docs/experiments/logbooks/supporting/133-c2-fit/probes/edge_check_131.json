@@ -1,0 +1,28 @@
+{
+ "position_agrees_with_on_lawn": 0.9885187500000001,
+ "simulated": {
+  "crossings_per_min": 0.0245,
+  "depth_quantiles_mm": [
+   0.629,
+   0.868,
+   1.079,
+   1.237
+  ],
+  "share_within_0.2mm": 0.011144870496433899,
+  "primitive_before_crossing": {
+   "run": 115,
+   "reversal": 75,
+   "delta": 6
+  }
+ },
+ "real": {
+  "crossings_per_min": 0.06020154701095403,
+  "depth_quantiles_mm": [
+   0.103,
+   0.153,
+   0.297,
+   0.557
+  ],
+  "share_within_0.2mm": 0.3624660461971104
+ }
+}

@@ -1,0 +1,85 @@
+"""Does the slow run from the good start arrive? The seed test continued exactly (description; discarded)
+
+The seed test (2a from B04's stage-1 answer, CMA seed 9520) held the lawn (0.984) but missed the pace
+rule on D_fit at generations 80-100 (3.95 against 3.1), still falling: 4.81, 4.34, 4.33, 3.84, 3.69
+from generation 60. The replay, the same start on CMA seed 9497, read 2.35 there. This continues the
+seed test from its saved search state, so it is an exact continuation: the same strategy, objective,
+arm and readout animals (841,000,000 + i), candidates on 1,030,000,000 + 200*(48*(g - 1) + m) + i for
+g = 101..250, 8 workers.
+
+**The rule, fixed before it runs** (2026-11-11), as the screens' continuations: it **arrives** when
+the mean of three consecutive readouts has time on the lawn at least 0.97 and D_fit at most 2.5, the
+registered bar at 2a's end, and stops there. Otherwise it is read at generation 250 on the mean of its
+last three readouts: **stuck**.
+"""
+
+import json
+import pickle
+import shutil
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-fit")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+from continue_screen import BAR, _job, reading
+
+BASE, READ, POPSIZE, WORKERS, LAST = 1_030_000_000, 841_000_000, 48, 8, 250
+SOURCE = Path("build/c2-fit/replay_seed/run/state.pkl")
+OUT = Path("build/c2-fit/continue/seed")
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    state_path = OUT / "state.pkl"
+    if not state_path.exists():
+        shutil.copy(SOURCE, state_path)
+    state = pickle.loads(state_path.read_bytes())
+    assert len(state["medians"]) >= 100
+    es = state["es"]
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    objective = fit.Objective(truth, bands, families=fit.FIT_FAMILIES, mutants=())
+    readout_seeds = list(range(READ, READ + 200))
+    t0 = time.time()
+    verdict = None
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        while len(state["medians"]) < LAST and verdict is None:
+            g = len(state["medians"]) + 1
+            points = es.ask()
+            jobs = []
+            for m, p in enumerate(points):
+                start = BASE + 200 * (POPSIZE * (g - 1) + m)
+                jobs.append((list(range(start, start + 200)), list(map(float, np.clip(p, 0, 1)))))
+            records = list(pool.map(_job, jobs))
+            scores = [objective(r) for r in records]
+            es.tell(points, scores)
+            state["medians"].append(float(np.median(scores)))
+            if g % 10 == 0:
+                r = fit.readout(pool, list(np.clip(es.result.xfavorite, 0, 1)), readout_seeds, truth)
+                state["readouts"][g] = r
+                print(f"continue seed readout {g}: D_fit {r['D_fit']:.2f} on-lawn {r['time_on_lawn']:.3f} "
+                      f"rev {r['spread']['reversal']:.2f}", flush=True)
+                three = reading(state["readouts"], (g - 20, g - 10, g))
+                if three["arrives"]:
+                    verdict = {**three, "verdict": "arrives"}
+            print(f"continue seed gen {g}: median {state['medians'][-1]:.2f} sigma {es.sigma:.4f} {time.time() - t0:.0f} s", flush=True)
+            state_path.write_bytes(pickle.dumps(state))
+    if verdict is None:
+        g = len(state["medians"])
+        verdict = {**reading(state["readouts"], (g - 20, g - 10, g)), "verdict": "stuck"}
+    record = {"description": __doc__, "bar": BAR, "reading": verdict, "medians": state["medians"],
+              "readouts": {str(k): v for k, v in state["readouts"].items()},
+              "answer": list(map(float, np.clip(es.result.xfavorite, 0, 1)))}
+    (OUT.parent / "seed.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"continue seed done: {verdict}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

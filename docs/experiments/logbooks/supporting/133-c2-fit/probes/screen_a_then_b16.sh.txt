@@ -1,0 +1,28 @@
+#!/bin/zsh
+# When the 2b screen's arm A has finished and written its record, move arm B from 8 workers to 16,
+# so the machine stays at 16 in all. B stores every candidate as it completes and its strategy after
+# every generation, so the resume continues exactly. If A exits without its record, B is left alone.
+cd "$(git rev-parse --show-toplevel)" || exit 1  # as run, the checkout's absolute path
+LOG=build/c2-fit/screen_watch.log
+A=$(cat build/c2-fit/two_b_screen_a.pid)
+while kill -0 "$A" 2>/dev/null; do sleep 60; done
+echo "$(date) arm A exited" >> $LOG
+if [[ ! -f build/c2-fit/two_b_screen_a.json ]]; then
+  echo "$(date) arm A wrote no record; B left on 8 workers" >> $LOG; exit 0
+fi
+B=$(cat build/c2-fit/two_b_screen_b.pid)
+if ! kill -0 "$B" 2>/dev/null || [[ -f build/c2-fit/two_b_screen_b.json ]]; then
+  echo "$(date) arm B already finished" >> $LOG; exit 0
+fi
+PY=$(pgrep -P "$B")
+KIDS=($(pgrep -P "$PY"))
+echo "$(date) stopping B: uv $B python $PY children ${KIDS[*]}" >> $LOG
+kill "$PY" 2>/dev/null
+sleep 10
+for k in $KIDS; do kill "$k" 2>/dev/null; done
+sleep 10
+for p in $PY $KIDS $B; do kill -0 "$p" 2>/dev/null && kill -9 "$p" 2>/dev/null; done
+sleep 5
+nohup uv run --no-sync python build/c2-fit/two_b_screen.py b 16 >> build/c2-fit/two_b_screen_b.log 2>&1 &
+echo $! > build/c2-fit/two_b_screen_b.pid
+echo "$(date) arm B resumed on 16 workers, uv $(cat build/c2-fit/two_b_screen_b.pid)" >> $LOG

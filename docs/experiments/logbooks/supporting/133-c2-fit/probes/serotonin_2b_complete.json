@@ -1,0 +1,11 @@
+{
+ "description": "Read-only: every recovery 2b candidate's tph-1 roaming difference, from the completed log.\n\nThe diagnosis of 2026-11-23 ran while 2b was at about generation 160. This reads the whole of 2b's\ncandidate log, after the recovery ended: how many candidates, their generations, and the largest\ntph-1 roaming difference among them. No simulation.\n\nUsage: serotonin_2b_complete.py.txt <out.json>   (run from the repository root)\n",
+ "log_sha256": "75b9b876d4571bcacf4e05230f165d17001e86b07ec6179eeae4785f981ece53",
+ "candidates": 9600,
+ "generations": [
+  1,
+  200
+ ],
+ "max_tph1_roaming_difference": 0.034990605936533414,
+ "at_least_0.05": 0
+}

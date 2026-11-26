@@ -1,0 +1,11 @@
+{
+ "description": "Does the amended final stage score what the presence screen scored? (description; no simulation)\n\nThe presence screen (``presence_screen.py``) scored each candidate with the final stage's objective\nat the fifth pilot's noise SDs, plus a hinge and a presence term written in the screen's script.\nThe amendment of 2026-11-19 puts both terms in ``c2_fit.Objective``. This re-scores every one of the\nscreen's 2,400 stored candidates with the amended final stage's objective (``hinge=True``,\n``presence=True``) and with the screen's own, and compares each score, each generation's best, and\nthe hinge and presence terms of each generation's best against the screen's record.\n\nThe candidate store (``build/c2-fit/presence_screen/candidates.jsonl``) is kept off the repository;\nits SHA-256 is recorded.\n\nRun from the repository root: ``objective_parity.py``.\n",
+ "store_sha256": "6ce3dd754c0fd0c11112dba761008cbe444977ee5193b3372e407338e504a168",
+ "candidates": 2400,
+ "generations": 50,
+ "scales_equal": true,
+ "max_score_difference": 1.4210854715202004e-14,
+ "best_max_difference": 1.7763568394002505e-15,
+ "hinge_best_max_difference": 0.0,
+ "presence_best_max_difference": 4.440892098500626e-16
+}

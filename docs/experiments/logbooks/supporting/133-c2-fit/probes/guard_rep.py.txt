@@ -1,0 +1,120 @@
+"""Does the lawn guard carry other stalled starts to the bar? (description; discarded seeds)
+
+The lawn-guard probe (``guard_probe.py``) ran the first pilot's 2a again with a penalty below 0.95 on
+the lawn. That start had sat at D_fit 3.1-3.3 and 0.80-0.92 on the lawn through 300 unguarded
+generations; guarded, it held the lawn from generation 60 and read D_fit 2.64 at generation 130. It
+is one run. The re-run pilot has since dropped five starts at their lawn-holding reading, and their
+stage-1 answers are on record (``pilot_starts.json``, copied from the pilot's state).
+
+Here, 2a from a dropped start's stage-1 answer, the speed noise's timescale at 1 s, sigma0 0.1,
+population 48, 200 animals, the registered arm and objective (c2_fit's), **plus the same guard**:
+300 x (0.95 - t) / 0.95 while the candidate's time on the small lawn t is below 0.95.
+
+**The rules, fixed before any runs** (2026-11-13, 01:10), for pilot starts 0, 3 and 1, in that order:
+start 0 read 0.720 on the lawn unguarded (the lowest, dopamine gain +0.95), start 3 read 0.921 (the
+one with the inhibitory dopamine sign, -1.50), start 1 read 0.880 (+1.40).
+- a run **reaches the bar** when the mean of three consecutive readouts has time on the lawn at least
+  0.97 and D_fit at most 2.5, the registered bar at 2a's end, and stops there; otherwise it is read
+  at generation 300 on the mean of its last three readouts;
+- the guard is a remedy worth registering if the first probe and at least two of these three reach
+  the bar; with one or none of the three, it is not reliable enough to replace restarts.
+
+Seeds (discarded): pilot start k on base 1,060,000,000 + 10,000,000 x k; candidates base + 2,000,000
++ 200 x (48 x (g - 1) + m) + i, readouts base + 5,000,000 + i (a generation-0 readout of the start).
+CMA 9571 + k. 8 workers. Run from the repository root: ``guard_rep.py <k>``.
+"""
+
+import json
+import os
+import pickle
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "scripts/analysis")
+sys.path.insert(0, "build/c2-fit")
+import benchmark_grade as bg
+import c2_fit as fit
+import npe_recovery as nr
+from continue_screen import BAR, _job, reading
+from guard_probe import GUARD, GUARD_BELOW, lawn_guard
+from quantumnematode.connectome import encoder as enc
+
+POPSIZE, WORKERS, LAST, STRIDE, READOUT = 48, 8, 300, 2_000_000, 5_000_000
+
+
+def save(path, state):
+    tmp = path.with_suffix(".tmp")
+    tmp.write_bytes(pickle.dumps(state))
+    os.replace(tmp, path)
+
+
+def main(k):
+    base, cma = 1_060_000_000 + 10_000_000 * k, 9571 + k
+    out = Path(f"build/c2-fit/guard_rep_{k}")
+    out.mkdir(parents=True, exist_ok=True)
+    state_path = out / "state.pkl"
+    bands = bg.load_bands_v4()
+    truth = fit.band_truth(bands)
+    names = fit.entries()
+    objective = fit.Objective(truth, bands, families=fit.FIT_FAMILIES, mutants=())
+    start = json.loads(Path("build/c2-fit/pilot_starts.json").read_text())[str(k)]
+    if state_path.exists():
+        state = pickle.loads(state_path.read_bytes())
+    else:
+        x0 = [float(v) for v in start["stage1_answer"]]
+        assert len(x0) == len(names) == 137
+        ts = names.index(next(e for e in names if e.name == enc.SPEED_NOISE_ENTRY))
+        x0[ts] = names[ts].unit(fit.TIMESCALE_AT_2A_S)
+        state = {"es": fit.fresh(x0, 0.1, cma, POPSIZE), "medians": [], "guarded": [], "readouts": {}, "verdict": None}
+    es = state["es"]
+    readout_seeds = list(range(base + READOUT, base + READOUT + 200))
+    t0 = time.time()
+
+    def read(g):
+        r = state["readouts"][g] = fit.readout(pool, list(np.clip(es.result.xfavorite, 0, 1)), readout_seeds, truth)
+        print(f"guard rep {k} readout {g}: D_fit {r['D_fit']:.2f} on-lawn {r['time_on_lawn']:.3f} "
+              f"speed {r['spread']['speed']:.2f} rev {r['spread']['reversal']:.2f}", flush=True)
+
+    with ProcessPoolExecutor(max_workers=WORKERS, initializer=nr._worker_setup) as pool:
+        if 0 not in state["readouts"]:
+            read(0)
+        while len(state["medians"]) < LAST and state["verdict"] is None:
+            g = len(state["medians"]) + 1
+            points = es.ask()
+            jobs = []
+            for m, p in enumerate(points):
+                first = base + STRIDE + 200 * (POPSIZE * (g - 1) + m)
+                jobs.append((list(range(first, first + 200)), list(map(float, np.clip(p, 0, 1)))))
+            records = list(pool.map(_job, jobs))
+            guards = [lawn_guard(r) for r in records]
+            es.tell(points, [objective(r) + q for r, q in zip(records, guards)])
+            state["medians"].append(float(np.median([objective(r) + q for r, q in zip(records, guards)])))
+            state["guarded"].append(float(np.mean([q > 0 for q in guards])))
+            if g % 10 == 0:
+                read(g)
+                if g >= 30:
+                    three = reading(state["readouts"], (g - 20, g - 10, g))
+                    if three["arrives"]:
+                        state["verdict"] = {**three, "verdict": "reaches the bar"}
+            print(f"guard rep {k} gen {g}: median {state['medians'][-1]:.2f} guarded {state['guarded'][-1]:.2f} "
+                  f"sigma {es.sigma:.4f} {time.time() - t0:.0f} s", flush=True)
+            save(state_path, state)
+    if state["verdict"] is None:
+        g = len(state["medians"])
+        state["verdict"] = {**reading(state["readouts"], (g - 20, g - 10, g)), "verdict": "does not reach the bar"}
+        save(state_path, state)
+    record = {"description": __doc__, "pilot_start": k, "unguarded_reading": start["reading"], "base": base, "cma": cma,
+              "bar": BAR, "guard": {"weight": GUARD, "below": GUARD_BELOW}, "reading": state["verdict"],
+              "medians": state["medians"], "guarded_share": state["guarded"],
+              "readouts": {str(g): v for g, v in state["readouts"].items()},
+              "answer": list(map(float, np.clip(es.result.xfavorite, 0, 1)))}
+    Path(f"build/c2-fit/guard_rep_{k}.json").write_text(json.dumps(nr._finite(record), indent=1) + "\n")
+    print(f"guard rep {k} done: {state['verdict']}", flush=True)
+
+
+if __name__ == "__main__":
+    main(int(sys.argv[1]))
