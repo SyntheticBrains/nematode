@@ -1,0 +1,42 @@
+"""Before Part A: the wild type alone, at the registered populations, reproduces its committed grades.
+
+No mutant is simulated. Restarts 0, 4 and 6 of C.1 (v3) on 525,000,000 + 200·g + i (g < 5), on
+`mlp`: each v3 D and pass against `121-c1-v3-fit/fit.json`, and restart 6's v4 D against
+`124-benchmark-v4/read.json`. It prints one line per population and the mismatch count.
+
+Run from the repository root:
+
+    uv run python docs/experiments/logbooks/supporting/137-fidelity-table/probes/reproduction_preflight.py.txt
+"""
+import json, math, sys
+from concurrent.futures import ProcessPoolExecutor
+sys.path.insert(0, "scripts/analysis")
+import benchmark_grade as bg
+import c1_v3_fit as c1v3
+import c1_v4_fit as c1v4
+import fidelity_table as ft
+import npe_recovery as nr
+
+def wild(job):
+    r, g = job
+    bands = c1v4._bands()
+    params = c1v3.parameters(ft.answer(r))
+    pops, chem = bg.simulate_v2(ft.ARM, ft._controller(params), ft.population_seeds(ft.GRADE_BASE, g), bands)
+    v4 = bg.grade_populations_v4(pops, chem, bands, presence=True)
+    v3 = bg.grade_populations_v3(pops, chem, c1v3._bands(), presence=True)
+    return r, g, v3["D"], bool(v3["wild_type_passes"]), v4["D"]
+
+if __name__ == "__main__":
+    fit = json.load(open(ft.C1_FIT_PATH)); b4 = json.load(open(ft.B4_READ_PATH))
+    committed = {x["restart"]: x for x in fit["restarts"]}
+    v4c = {p["k"]: p["D"] for p in b4["c1_v3_answer"]["populations"]}
+    jobs = [(r, g) for r in ft.RESTARTS for g in range(ft.POPULATIONS)]
+    with ProcessPoolExecutor(max_workers=15, initializer=nr._worker_setup) as pool:
+        out = list(pool.map(wild, jobs))
+    bad = 0
+    for r, g, d3, p3, d4 in out:
+        ok = abs(d3 - committed[r]["population_D"][g]) <= 1e-9 and p3 == committed[r]["population_passes"][g]
+        if r == 6: ok = ok and abs(d4 - v4c[g]) <= 1e-9
+        bad += not ok
+        print(r, g, f"{d3:.12f}", f"{committed[r]['population_D'][g]:.12f}", p3, committed[r]["population_passes"][g], ok)
+    print("mismatches", bad)

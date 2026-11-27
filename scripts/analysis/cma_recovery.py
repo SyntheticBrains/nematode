@@ -283,17 +283,24 @@ def _git(*args: str) -> subprocess.CompletedProcess[bytes]:
     )
 
 
-def launch_committed(bound: tuple[Path, ...] = (), launch_path: Path | None = None) -> bool:
+def launch_committed(
+    bound: tuple[Path, ...] = (),
+    launch_path: Path | None = None,
+    *,
+    commit: str | None = None,
+) -> bool:
     """Return whether the launch record is committed and unchanged, and its bound records with it.
 
-    Each bound record must be byte-identical to its version in the commit that last touched the
-    launch record, and unchanged in the working tree. The launch record defaults to this recovery's.
+    Each bound record must be byte-identical to its version in the pinned commit, and unchanged in
+    the working tree. The pin is ``commit`` when given, otherwise the commit that last touched the
+    launch record. The launch record defaults to this recovery's.
     """
     record = LAUNCH_PATH if launch_path is None else launch_path
     if not record.exists():
         return False
     launch = str(record.relative_to(_REPO))
-    commit = _git("log", "-1", "--format=%H", "--", launch).stdout.decode().strip()
+    if commit is None:
+        commit = _git("log", "-1", "--format=%H", "--", launch).stdout.decode().strip()
     if not commit:
         return False
     paths = [str(p.relative_to(_REPO)) for p in bound]

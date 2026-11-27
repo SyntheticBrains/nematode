@@ -1,0 +1,544 @@
+{
+ "description": "C.4, the fidelity table: Phase 10's controllers, the negatives and the real-worm controls on benchmark v4.",
+ "benchmark": "v4",
+ "bands_sha256": "355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448",
+ "sources": {
+  "docs/experiments/logbooks/supporting/121-c1-v3-fit/fit.json": "8e66efed6b64f3c5ab20af816fa762306b53b4a02ac626adc87c8878ddf12286",
+  "docs/experiments/logbooks/supporting/121-c1-v3-fit/recovery.json": "abe621a90612a3cf43682103e337209fb1b2f915928375d532d6b07f2fa0c7b9",
+  "docs/experiments/logbooks/supporting/133-c2-fit/fit.json": "e6cd923b599a5f2f55021f8a6c7b94cd3354b84063420f9253003e748b0a077c",
+  "docs/experiments/logbooks/supporting/124-benchmark-v4/read.json": "bece13586ac0e909e4fdf24d3ba9b1ff375822182e09ded8cd93058094b9d913",
+  "docs/experiments/logbooks/supporting/110-benchmark-controls/controls.json": "8e0b0299e76a2ae986c389568c6b2e48e83e70d784aa03a6634872e2b15e9184",
+  "docs/experiments/logbooks/supporting/136-c1-v4-fit/pilot.json": "1436b1dced91e9fe92aa82a9a4fc3d5f27170c9bd9ce100206bd77a9b096dabc",
+  "docs/experiments/logbooks/supporting/113-c1-fit/encodings.md": "d3aa1af865dc74fa1de33c11048fa56ca2dc004a50d40c39e50b7f35c8654ade",
+  "data/benchmark/bands_v4.json": "355177a62e3fed4d314179f6aaac8c58cac55776b2b8deef9e64422a968f2448",
+  "data/benchmark/bands_v3.json": "8af38429a692914100a87ac9ebefc2cd8a22229e970ee1d67396fa25b4bb427b",
+  "data/benchmark/classifier.json": "e4a059de3d5b826d4fa2a99e61b3ed0f0cdefb3790ccfc4c8e38eefbb23b8239",
+  "data/locomotion/primitives.json": "8356a09a1078d887b75109b1215157c0fddb93f53c4c678128e020046637a625",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_chemotaxis_chen.yml": "a3339c8bd7a5a2c87dc175a889d43983c68febbeb8d7615cd4ffa91b378c5118",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_food_removal_calhoun.yml": "db9d27911a5f87e036864bd1574eec13097978f43df8cfcf34bc492a43583bfe",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_food_removal_lopezcruz.yml": "10e67edc7e87d0c970ead8a082e5aece1ebd32358cc5a2fdfa4d59dbd80bd081",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_scheer_lawn.yml": "4520aa9f2279357263e3bee383c4b65600ce960a322c7de6c29898a08458de72",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_uniform_lawn_flavell.yml": "6e7e1cf798fdd3551f61a75d47a72c493e7a6457044813c9e40eb557faabc016",
+  "configs/scenarios/foraging/mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives_assay_uniform_lawn_scheer.yml": "d009f153ad330d7f5d6ecdfaf4e963020ce2c6e140a9b168c7d213d08514e2e1",
+  "docs/experiments/logbooks/supporting/137-fidelity-table/grade.json": "374d1e1dc05204d752350d5490a06188645122ac2257ad8ac6e8367231f369f8"
+ },
+ "controllers": [
+  {
+   "controller": "C.1 (v3)",
+   "answer": "restart 6 of docs/experiments/logbooks/supporting/121-c1-v3-fit/fit.json",
+   "body": "benchmark_grade.ARMS['mlp']: the pooled on-food reversal",
+   "fitted": "the wild type on v3's five families; no mutant",
+   "recovery": {
+    "control": "C.1 (v3)'s reduced recovery",
+    "median_gain": 0.9851746872184313,
+    "passes": true
+   },
+   "wild_type_v3": {
+    "populations": 5,
+    "passing": 3
+   },
+   "wild_type_v4": {
+    "populations": 5,
+    "passing": 0,
+    "by_population": [
+     false,
+     false,
+     false,
+     false,
+     false
+    ],
+    "family_passes": {
+     "small_lawn": 3,
+     "kinematics": 5,
+     "activity": 0,
+     "uniform_lawn": 5,
+     "local_search": 5,
+     "chemotaxis": 5
+    },
+    "D": [
+     2.0028752715348523,
+     2.049933949087942,
+     2.066026028843763,
+     2.076745034226347,
+     2.0554444311903435
+    ],
+    "D_fit": [
+     2.3773732371882708,
+     2.4227792892055464,
+     2.4702121462243314,
+     2.447968730280196,
+     2.459024942632064
+    ],
+    "reversal_share": [
+     0.03403,
+     0.03258,
+     0.03500222222222222,
+     0.03373333333333333,
+     0.033166666666666664
+    ],
+    "failing_activity": [
+     "onset_rate_per_min"
+    ]
+   },
+   "mutants": {
+    "tph-1": {
+     "kind": "predicted",
+     "passes": {
+      "0": 0,
+      "4": 0,
+      "6": 0
+     },
+     "by_population": {
+      "0": [
+       false,
+       false,
+       false,
+       false,
+       false
+      ],
+      "4": [
+       false,
+       false,
+       false,
+       false,
+       false
+      ],
+      "6": [
+       false,
+       false,
+       false,
+       false,
+       false
+      ]
+     },
+     "restart_passes": {
+      "0": false,
+      "4": false,
+      "6": false
+     },
+     "prediction": "fail"
+    },
+    "tax-4": {
+     "kind": "predicted",
+     "passes": {
+      "0": 0,
+      "4": 0,
+      "6": 0
+     },
+     "by_population": {
+      "0": [
+       false,
+       false,
+       false,
+       false,
+       false
+      ],
+      "4": [
+       false,
+       false,
+       false,
+       false,
+       false
+      ],
+      "6": [
+       false,
+       false,
+       false,
+       false,
+       false
+      ]
+     },
+     "restart_passes": {
+      "0": false,
+      "4": false,
+      "6": false
+     },
+     "prediction": "fail"
+    },
+    "pdfr-1": {
+     "kind": "not encodable",
+     "prediction": null
+    }
+   },
+   "tph1_leaving_reported": {
+    "exits_per_on_lawn_hour_delta": [
+     -0.4371708798680669,
+     -0.3999764303240665,
+     -0.29106385003118856,
+     -0.41725579477442365,
+     -0.36799238647365057
+    ],
+    "band_centre": 0.0720489574793502,
+    "held_out_value": 4.041023089672427,
+    "source": "docs/experiments/logbooks/supporting/110-benchmark-controls/controls.json"
+   },
+   "more_populations": {
+    "populations": 15,
+    "wild_type_v4": 0.0,
+    "tph-1": 0.0,
+    "tax-4": 0.0,
+    "more": {
+     "populations": 10,
+     "wild_type_v4": 0,
+     "tph-1": 0,
+     "tax-4": 0
+    }
+   },
+   "held_out": "not read"
+  },
+  {
+   "controller": "C.2",
+   "answer": "the registered answer of docs/experiments/logbooks/supporting/133-c2-fit/fit.json",
+   "body": "benchmark_grade.ARMS['connectome_c2_following']: the speed-following on-food reversal",
+   "fitted": "all six families with tph-1, pdfr-1 and tax-4 at half",
+   "recovery": {
+    "control": "F.0b-ii",
+    "gain": 0.6345461490662085,
+    "passes": false
+   },
+   "verdict": {
+    "populations": 5,
+    "wild_type_passes": 5,
+    "mutant_passes": {
+     "tph-1": 0,
+     "pdfr-1": 5,
+     "tax-4": 5
+    },
+    "passes": false,
+    "diagnosis": {
+     "statistics": {},
+     "presence_failures": {
+      "local_search_presence": 0,
+      "chemotaxis_presence": 0
+     },
+     "mutant_failures": {
+      "tph-1": 5,
+      "pdfr-1": 0,
+      "tax-4": 0
+     }
+    }
+   },
+   "wild_type_v4": {
+    "populations": 5,
+    "passing": 5,
+    "by_population": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "family_passes": {
+     "small_lawn": 5,
+     "kinematics": 5,
+     "activity": 5,
+     "uniform_lawn": 5,
+     "local_search": 5,
+     "chemotaxis": 5
+    },
+    "D": [
+     1.4470386604862127,
+     1.4732001072636758,
+     1.5317039083122037,
+     1.47081245660527,
+     1.4410577743122766
+    ],
+    "D_fit": [
+     1.5953555880736943,
+     1.6481684556908673,
+     1.689577084037064,
+     1.6279288322721126,
+     1.5709228881989652
+    ],
+    "reversal_share": [
+     0.05538333333333333,
+     0.05520888888888889,
+     0.05668111111111111,
+     0.05454111111111111,
+     0.055945555555555554
+    ]
+   },
+   "pass_rates": {
+    "populations": 15,
+    "wild_type": 1.0,
+    "tph-1": 0.0,
+    "pdfr-1": 1.0,
+    "tax-4": 1.0
+   },
+   "mutants": {
+    "tph-1": {
+     "kind": "fitted",
+     "passes": 0
+    },
+    "pdfr-1": {
+     "kind": "fitted",
+     "passes": 5
+    },
+    "tax-4": {
+     "kind": "fitted",
+     "passes": 5
+    }
+   },
+   "tph1_leaving_reported": {
+    "exits_per_on_lawn_hour_delta": [
+     0.028031130715089003,
+     0.03692309013787515,
+     -0.0002469383393968738,
+     0.06485631002056957,
+     -0.056271411019297
+    ],
+    "band_centre": 0.0720489574793502,
+    "held_out_value": 4.041023089672427,
+    "source": "docs/experiments/logbooks/supporting/110-benchmark-controls/controls.json"
+   },
+   "all_D": [
+    1.4470386604862127,
+    1.4732001072636758,
+    1.5317039083122037,
+    1.47081245660527,
+    1.4410577743122766,
+    1.4590610951025327,
+    1.4613131229429788,
+    1.5359720370326446,
+    1.489682637499792,
+    1.5161953457444082,
+    1.5596876770532175,
+    1.5095655056190722,
+    1.4774959409623951,
+    1.4888553096545545,
+    1.4902248980871193
+   ],
+   "held_out": {
+    "N2_unread": {
+     "dates": 26,
+     "answer_median": 2.713825349605597,
+     "real_halves_p95": 2.5968817246072917,
+     "band_reference_p95": 2.281226400587886
+    },
+    "PD1074_held_out": {
+     "dates": 24,
+     "answer_median": 2.003147609472755,
+     "real_halves_p95": 1.3657290817012657,
+     "band_reference_p95": 1.0779112158146158
+    }
+   }
+  },
+  {
+   "controller": "C.3",
+   "status": "not run in Phase 10"
+  }
+ ],
+ "negatives": [
+  {
+   "controller": "hmm",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 0,
+    "activity": 0,
+    "uniform_lawn": 0,
+    "local_search": 0,
+    "chemotaxis": 0
+   },
+   "D_median": 5.204595697785386,
+   "D_fit_median": 5.082827692864295
+  },
+  {
+   "controller": "poisson",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 0,
+    "activity": 0,
+    "uniform_lawn": 0,
+    "local_search": 0,
+    "chemotaxis": 0
+   },
+   "D_median": 6.857879247135203,
+   "D_fit_median": 7.328651158619379
+  },
+  {
+   "controller": "random_walk",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 0,
+    "activity": 0,
+    "uniform_lawn": 0,
+    "local_search": 0,
+    "chemotaxis": 0
+   },
+   "D_median": 7.576350362363124,
+   "D_fit_median": 8.962049576609221
+  },
+  {
+   "controller": "correlated_walk",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 0,
+    "activity": 0,
+    "uniform_lawn": 0,
+    "local_search": 0,
+    "chemotaxis": 0
+   },
+   "D_median": 7.724189059166293,
+   "D_fit_median": 8.905887283711673
+  },
+  {
+   "controller": "untrained_mlp",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 0,
+    "activity": 1,
+    "uniform_lawn": 0,
+    "local_search": 0,
+    "chemotaxis": 0
+   },
+   "D_median": 5.845930614141698,
+   "D_fit_median": 5.960764928573762
+  },
+  {
+   "controller": "untrained_connectome",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 0,
+    "activity": 0,
+    "uniform_lawn": 5,
+    "local_search": 0,
+    "chemotaxis": 0
+   },
+   "D_median": 4.301712619042837,
+   "D_fit_median": 4.711218806417766
+  },
+  {
+   "controller": "blind_v2",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 5,
+    "activity": 0,
+    "uniform_lawn": 0,
+    "local_search": 0,
+    "chemotaxis": 0
+   },
+   "D_median": 4.696286692902654,
+   "D_fit_median": 3.9035418785982063
+  },
+  {
+   "controller": "c1_v1",
+   "populations": 5,
+   "fails_wild_type_in": 5,
+   "family_passes": {
+    "small_lawn": 0,
+    "kinematics": 0,
+    "activity": 0,
+    "uniform_lawn": 0,
+    "local_search": 5,
+    "chemotaxis": 0
+   },
+   "D_median": 6.461524122249366,
+   "D_fit_median": 7.377489942022768
+  }
+ ],
+ "references": {
+  "n2_unread_dates_activity": {
+   "dates": 26,
+   "units": [
+    "activity/half0",
+    "activity/half1"
+   ],
+   "failed": [],
+   "passes": true
+  },
+  "pd1074_held_out_activity": {
+   "dates": 24,
+   "animals": 573,
+   "passes": {
+    "pause_share": true,
+    "flip_fraction": true,
+    "onset_rate_per_min": true
+   }
+  },
+  "w_minimum": {
+   "fitted": {
+    "families": [
+     "small_lawn",
+     "kinematics",
+     "activity"
+    ],
+    "source": "halves of N2's 26 unread held-out dates, on PD1074's band scales",
+    "splits": 1000,
+    "seed": 2034,
+    "median": 1.3891436799624313,
+    "minimum_95th": 2.5968817246072917,
+    "v3_minimum_95th": 2.9666951987001497
+   },
+   "held_out": {
+    "families": [
+     "local_search",
+     "chemotaxis"
+    ],
+    "source": "halves of L\u00f3pez-Cruz's 17 band batches (1000 splits) crossed with every 3-against-3 split of Chen's 6 recordings (10)",
+    "seed": 2036,
+    "pairs": 10000,
+    "median": 1.2865433101028039,
+    "minimum_95th": 2.046569770948831,
+    "reported_local_search_95th": 2.326399838992743,
+    "reported_chemotaxis_95th": 2.1395989070750447
+   }
+  }
+ },
+ "description_rows": [
+  {
+   "controller": "C.1 (v4) pilot answer (description, discarded seeds)",
+   "stop": {
+    "generation": 113,
+    "by": "plateau"
+   },
+   "passing": {
+    "wild_type": 0,
+    "tph-1": 5,
+    "tax-4": 0
+   },
+   "populations": 5,
+   "D": [
+    1.8201525041552205,
+    1.7451258821877682,
+    1.761350474261315,
+    1.7944780486528582,
+    1.7326094216908774
+   ]
+  }
+ ],
+ "contrast": {
+  "reading": "description; no verdict on which is closer",
+  "wild_type_v4_passing": {
+   "C.2": "5 of 5",
+   "C.1 (v3)": "0 of 5"
+  },
+  "median_D": {
+   "C.2": 1.47081245660527,
+   "C.1 (v3)": 2.0554444311903435
+  },
+  "median_D_fit": {
+   "C.2": 1.6279288322721126,
+   "C.1 (v3)": 2.447968730280196
+  },
+  "conditions": [
+   "C.2's recovery control, F.0b-ii, failed its gate",
+   "the bodies differ: C.2 on the speed-following on-food reversal, C.1 (v3) on the pooled",
+   "C.2's mutants are fitted and in-sample; C.1's are predicted",
+   "each is graded on its own registered populations, so the populations are not paired"
+  ]
+ }
+}
