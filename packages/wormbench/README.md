@@ -59,6 +59,22 @@ to its middle point, and `null` is a missing sample.
 Each track is resampled to 1 s and cut to its family's window: the small lawn's and the uniform
 well's last 40 minutes, and local search's 45 minutes from food removal.
 
+### Writing WCON
+
+`wormbench wcon` writes a CSV's tracks, with its sidecar, as one WCON 1.0 file in mm and s. It then
+reads the file back, and writes the output only if every sample and the metadata are unchanged, so
+the WCON file grades as the CSV does:
+
+```bash
+wormbench wcon --tracks tracks.csv --out tracks.wcon [--simulated]
+```
+
+`--simulated` carries each animal's primitive labels and seed as `@primitive` and `@seed`. WCON's
+core has no on-lawn flag, so a lawn family's file whose membership comes from an `on_lawn` column is
+refused: drop the column and give the lawn's boundary, or `"uniform"`, in the sidecar instead. From Python,
+`wormbench.track_export.write_wcon` and `write_csv` write a list of tracks as
+`wormbench.track_import` reads them.
+
 ### Simulated tracks
 
 A real tracker loses and blurs a worm's position; a simulator does not. To grade a simulated worm the

@@ -5,10 +5,12 @@ title: "wormbench: grading simulated and real C. elegans tracks against real-wor
 authors:
   - family-names: Zaharia
     given-names: Chris Julian
+    orcid: "https://orcid.org/0009-0005-6849-8081"
 repository-code: "https://github.com/SyntheticBrains/nematode"
 url: "https://github.com/SyntheticBrains/nematode/tree/main/packages/wormbench"
 license: Apache-2.0
-version: 1.0.0.dev0
+version: 1.0.0
+date-released: "2026-11-27"
 keywords:
   - C. elegans
   - behaviour
@@ -23,3 +25,18 @@ abstract: >-
   lawn, López-Cruz et al.'s local search after food removal, and Chen et al.'s
   butanone chemotaxis. Each statistic is graded against bands built from the spread
   between real recording dates, at the population's own size.
+references:
+  - type: data
+    title: "Real-worm reference data for wormbench, version 1"
+    authors:
+      - family-names: Zaharia
+        given-names: Chris Julian
+        orcid: "https://orcid.org/0009-0005-6849-8081"
+    doi: 10.5281/zenodo.24585652
+    version: "1"
+    date-published: "2026-11-27"
+    publisher:
+      name: Zenodo
+    license:
+      - CC0-1.0
+      - CC-BY-4.0

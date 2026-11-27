@@ -1,6 +1,6 @@
 [project]
 name = "wormbench"
-version = "1.0.0.dev0"
+version = "1.0.0"
 description = "Grade simulated or real C. elegans tracks against real-worm behaviour"
 readme = "README.md"
 license = "Apache-2.0 AND CC0-1.0 AND CC-BY-4.0"
@@ -18,7 +18,7 @@ keywords = [
     "simulation",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -37,6 +37,7 @@ dependencies = [
 Homepage = "https://github.com/SyntheticBrains/nematode/tree/main/packages/wormbench"
 Repository = "https://github.com/SyntheticBrains/nematode"
 Issues = "https://github.com/SyntheticBrains/nematode/issues"
+Data = "https://doi.org/10.5281/zenodo.24585652"
 
 [project.scripts]
 wormbench = "wormbench.cli:main"

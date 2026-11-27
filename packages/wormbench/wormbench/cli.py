@@ -3,6 +3,8 @@
 - ``wormbench grade --manifest <file> --out <json> [--bands v1|v2|v3|v4] [--simulated]`` grades a
   manifest of ``<family> <tracks.csv | tracks.wcon>`` lines;
 - ``wormbench example --out <dir>`` writes a 64-animal real cohort and its manifest;
+- ``wormbench wcon --tracks <tracks.csv> --out <tracks.wcon> [--simulated]`` writes a CSV's tracks
+  (with its sidecar) as WCON 1.0, and checks the WCON reads back the same;
 - ``wormbench data fetch [--dir <path>]`` downloads the tracks the band builder needs;
 - ``wormbench data verify`` checks every reference file against the package's manifest;
 - ``wormbench info`` prints the versions and where each reference file resolves.
@@ -85,6 +87,17 @@ def _example(args: argparse.Namespace) -> int:
     ]
     print(f"wrote the example to {out}; grade it with:")
     print(f"  {shlex.join(command)}")
+    return 0
+
+
+def _wcon(args: argparse.Namespace) -> int:
+    from wormbench import track_export as te
+
+    try:
+        te.csv_to_wcon(args.tracks, args.out, simulated=args.simulated)
+    except (OSError, ValueError) as error:
+        raise SystemExit(str(error)) from error
+    print(f"wrote {args.out}")
     return 0
 
 
@@ -228,6 +241,20 @@ def main(argv: list[str] | None = None) -> int:
     example = sub.add_parser("example", help="write the worked example's cohort and manifest")
     example.add_argument("--out", type=Path, required=True)
     example.set_defaults(run=_example)
+    wcon = sub.add_parser("wcon", help="write a CSV's tracks, with its sidecar, as WCON 1.0")
+    wcon.add_argument(
+        "--tracks",
+        type=Path,
+        required=True,
+        help="the CSV; its sidecar is <file>.json",
+    )
+    wcon.add_argument("--out", type=Path, required=True)
+    wcon.add_argument(
+        "--simulated",
+        action="store_true",
+        help="carry each animal's primitive labels and seed, as --simulated grading reads them",
+    )
+    wcon.set_defaults(run=_wcon)
     data_parser = sub.add_parser("data", help="fetch or verify the reference data")
     data_sub = data_parser.add_subparsers(dest="action", required=True)
     fetch = data_sub.add_parser("fetch", help="download the tracks the band builder needs")
