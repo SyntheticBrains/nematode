@@ -1,0 +1,464 @@
+{
+ "description": "C.2's identifiability ensemble: every start's mutant responses at the end of its wild-type-only stage.",
+ "band_centres_roaming_delta": {
+  "tph-1": 0.2704930014985987,
+  "pdfr-1": -0.05290278858834917,
+  "tax-4": -0.11605880685237357
+ },
+ "starts_with_a_2a_readout": 24,
+ "starts": [
+  {
+   "run": "first pilot",
+   "record": "pilot_first.json",
+   "start": 0,
+   "kept": false,
+   "generation": 300,
+   "D_fit": 3.1774260765274494,
+   "reversal_share": 0.20488111111111112,
+   "roaming_delta": {
+    "tph-1": 0.003372961148882289,
+    "pdfr-1": -0.0002916000618748138,
+    "tax-4": 0.06431913026491091
+   }
+  },
+  {
+   "run": "second pilot",
+   "record": "pilot_second/record.json",
+   "start": 0,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 5.808212597411484,
+   "reversal_share": 0.002157777777777778,
+   "roaming_delta": {
+    "tph-1": 0.004168590620688528,
+    "pdfr-1": 0.006873715114954715,
+    "tax-4": 0.006353813056900928
+   }
+  },
+  {
+   "run": "second pilot",
+   "record": "pilot_second/record.json",
+   "start": 1,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 6.773163469891634,
+   "reversal_share": 0.7855988888888888,
+   "roaming_delta": {
+    "tph-1": -0.0009777029436633944,
+    "pdfr-1": -0.000604361355121423,
+    "tax-4": -0.0036272593271974435
+   }
+  },
+  {
+   "run": "second pilot",
+   "record": "pilot_second/record.json",
+   "start": 2,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 5.047846541695103,
+   "reversal_share": 0.06649888888888889,
+   "roaming_delta": {
+    "tph-1": 0.003427730373682228,
+    "pdfr-1": -0.0021047015040038947,
+    "tax-4": 0.005507904087070359
+   }
+  },
+  {
+   "run": "second pilot",
+   "record": "pilot_second/record.json",
+   "start": 3,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 5.657452508348617,
+   "reversal_share": 0.022554444444444443,
+   "roaming_delta": {
+    "tph-1": -0.0066263613754729556,
+    "pdfr-1": 0.08192815873660772,
+    "tax-4": 0.1068613815219879
+   }
+  },
+  {
+   "run": "second pilot",
+   "record": "pilot_second/record.json",
+   "start": 4,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 6.897796024797115,
+   "reversal_share": 0.8037522222222222,
+   "roaming_delta": {
+    "tph-1": -0.0008629769744012833,
+    "pdfr-1": 0.0028881855949479326,
+    "tax-4": 0.00863793600199704
+   }
+  },
+  {
+   "run": "second pilot",
+   "record": "pilot_second/record.json",
+   "start": 5,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 7.168037689826384,
+   "reversal_share": 0.29343555555555556,
+   "roaming_delta": {
+    "tph-1": 3.370597383794277e-06,
+    "pdfr-1": -0.0009245615797375192,
+    "tax-4": 0.0003986382622080259
+   }
+  },
+  {
+   "run": "third pilot",
+   "record": "pilot_third.json",
+   "start": 0,
+   "kept": true,
+   "generation": 300,
+   "D_fit": 3.761487326249451,
+   "reversal_share": 0.6981744444444444,
+   "roaming_delta": {
+    "tph-1": -0.001221999965458409,
+    "pdfr-1": 0.008948565750729665,
+    "tax-4": 0.14976096554778007
+   }
+  },
+  {
+   "run": "fourth pilot",
+   "record": "pilot_fourth.json",
+   "start": 0,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 7.219184549032039,
+   "reversal_share": 0.02046,
+   "roaming_delta": {
+    "tph-1": 0.00027217859839633735,
+    "pdfr-1": -0.0014248809664847775,
+    "tax-4": -0.0031364861904686
+   }
+  },
+  {
+   "run": "fourth pilot",
+   "record": "pilot_fourth.json",
+   "start": 1,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 4.459698319511894,
+   "reversal_share": 0.6938133333333333,
+   "roaming_delta": {
+    "tph-1": -0.0034952301618676185,
+    "pdfr-1": -0.009473921064396817,
+    "tax-4": -0.08241428055622431
+   }
+  },
+  {
+   "run": "fourth pilot",
+   "record": "pilot_fourth.json",
+   "start": 2,
+   "kept": true,
+   "generation": 300,
+   "D_fit": 1.8411868794642423,
+   "reversal_share": 0.2004788888888889,
+   "roaming_delta": {
+    "tph-1": -0.012894689648706853,
+    "pdfr-1": -0.00978533564139264,
+    "tax-4": 0.6935615104556198
+   }
+  },
+  {
+   "run": "fifth pilot",
+   "record": "pilot_fifth.json",
+   "start": 0,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 4.169745025236241,
+   "reversal_share": 0.11015111111111112,
+   "roaming_delta": {
+    "tph-1": 0.0009024452639604663,
+    "pdfr-1": -0.001404550569100313,
+    "tax-4": 0.011341526593428186
+   }
+  },
+  {
+   "run": "fifth pilot",
+   "record": "pilot_fifth.json",
+   "start": 1,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 5.220634026741254,
+   "reversal_share": 0.8061622222222222,
+   "roaming_delta": {
+    "tph-1": 0.0004068129218652017,
+    "pdfr-1": 0.00042662354279945913,
+    "tax-4": 0.008111211919724914
+   }
+  },
+  {
+   "run": "fifth pilot",
+   "record": "pilot_fifth.json",
+   "start": 2,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 5.465031103511704,
+   "reversal_share": 0.4839411111111111,
+   "roaming_delta": {
+    "tph-1": -0.006518188937023939,
+    "pdfr-1": 0.04296520319575936,
+    "tax-4": 0.02222220422475113
+   }
+  },
+  {
+   "run": "fifth pilot",
+   "record": "pilot_fifth.json",
+   "start": 3,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 4.779220373442586,
+   "reversal_share": 0.00967,
+   "roaming_delta": {
+    "tph-1": -0.0027558911322677626,
+    "pdfr-1": -0.013861505319536505,
+    "tax-4": -0.27765854772895004
+   }
+  },
+  {
+   "run": "fifth pilot",
+   "record": "pilot_fifth.json",
+   "start": 4,
+   "kept": true,
+   "generation": 300,
+   "D_fit": 1.9108983732420686,
+   "reversal_share": 0.014848888888888889,
+   "roaming_delta": {
+    "tph-1": 0.0008284448083755447,
+    "pdfr-1": -0.005680140381838589,
+    "tax-4": -0.03791038855555309
+   }
+  },
+  {
+   "run": "sixth pilot",
+   "record": "pilot.json",
+   "start": 0,
+   "kept": false,
+   "generation": 60,
+   "D_fit": 6.6936325644527415,
+   "reversal_share": 0.43714888888888886,
+   "roaming_delta": {
+    "tph-1": -0.00403756892111027,
+    "pdfr-1": -0.003983917399123835,
+    "tax-4": -0.012454147650855833
+   }
+  },
+  {
+   "run": "sixth pilot",
+   "record": "pilot.json",
+   "start": 1,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 4.298324722400041,
+   "reversal_share": 0.8001122222222222,
+   "roaming_delta": {
+    "tph-1": -0.0027668283527129967,
+    "pdfr-1": 0.0016054573010163276,
+    "tax-4": 0.018141515152365534
+   }
+  },
+  {
+   "run": "sixth pilot",
+   "record": "pilot.json",
+   "start": 2,
+   "kept": true,
+   "generation": 300,
+   "D_fit": 1.6772505104661435,
+   "reversal_share": 0.2980788888888889,
+   "roaming_delta": {
+    "tph-1": -0.00010441946290978832,
+    "pdfr-1": -0.0040927429619004585,
+    "tax-4": -0.02963677051307212
+   }
+  },
+  {
+   "run": "F.0b-ii's recovery",
+   "record": "recovery.json",
+   "start": 0,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 4.873463306385472,
+   "reversal_share": 0.4623777777777778,
+   "roaming_delta": {
+    "tph-1": 0.0007263929573856354,
+    "pdfr-1": 0.0008015216316555329,
+    "tax-4": -0.028016779306475448
+   }
+  },
+  {
+   "run": "F.0b-ii's recovery",
+   "record": "recovery.json",
+   "start": 1,
+   "kept": false,
+   "generation": 300,
+   "D_fit": 2.9468886202767997,
+   "reversal_share": 0.6006488888888889,
+   "roaming_delta": {
+    "tph-1": -0.017087228911097707,
+    "pdfr-1": -0.0560420060479509,
+    "tax-4": 0.5812957332205021
+   }
+  },
+  {
+   "run": "F.0b-ii's recovery",
+   "record": "recovery.json",
+   "start": 2,
+   "kept": false,
+   "generation": 150,
+   "D_fit": 5.115411227776108,
+   "reversal_share": 0.13328555555555555,
+   "roaming_delta": {
+    "tph-1": 9.242306188386729e-06,
+    "pdfr-1": 0.00032981508884122324,
+    "tax-4": 0.07753814259051732
+   }
+  },
+  {
+   "run": "F.0b-ii's recovery",
+   "record": "recovery.json",
+   "start": 3,
+   "kept": true,
+   "generation": 300,
+   "D_fit": 1.9545855777172765,
+   "reversal_share": 0.7252877777777778,
+   "roaming_delta": {
+    "tph-1": 0.0064890450123189225,
+    "pdfr-1": 0.030419693173400292,
+    "tax-4": -0.04146472684257105
+   }
+  },
+  {
+   "run": "the registered fit",
+   "record": "fit.json",
+   "start": 0,
+   "kept": true,
+   "generation": 300,
+   "D_fit": 2.1738190686395784,
+   "reversal_share": 0.17828888888888889,
+   "roaming_delta": {
+    "tph-1": -0.0072681925914627465,
+    "pdfr-1": -0.010596159212252432,
+    "tax-4": -0.0691538583240037
+   }
+  }
+ ],
+ "tph1_at_2a_end": {
+  "min": -0.017087228911097707,
+  "max": 0.0064890450123189225
+ },
+ "tph1_over_every_2a_readout": {
+  "readouts": 432,
+  "min": -0.0508260129061273,
+  "max": 0.04598211781261616
+ },
+ "tax4_at_2a_end_below_D_fit_2": [
+  -0.04146472684257105,
+  -0.03791038855555309,
+  -0.02963677051307212,
+  0.6935615104556198
+ ],
+ "lineage": {
+  "fourth pilot": {
+   "2a": {
+    "generation": 300,
+    "D_fit": 1.8411868794642423,
+    "tph-1": -0.012894689648706853,
+    "tax-4": 0.6935615104556198
+   },
+   "2b": {
+    "generation": 200,
+    "D_fit": 2.145975099165177,
+    "tph-1": 0.2805441313752828,
+    "tax-4": -0.037864194339368745
+   },
+   "final": {
+    "generation": 50,
+    "D_fit": 1.948677515416314,
+    "tph-1": 0.3705248002885801,
+    "tax-4": -0.052884618759207566
+   }
+  },
+  "fifth pilot": {
+   "2a": {
+    "generation": 300,
+    "D_fit": 1.9108983732420686,
+    "tph-1": 0.0008284448083755447,
+    "tax-4": -0.03791038855555309
+   },
+   "2b": {
+    "generation": 200,
+    "D_fit": 1.9647443262383502,
+    "tph-1": 0.2323416925731379,
+    "tax-4": -0.039515298679411476
+   },
+   "final": {
+    "generation": 50,
+    "D_fit": 1.8866013381433526,
+    "tph-1": 0.2747084134423431,
+    "tax-4": -0.048066640021765666
+   }
+  },
+  "sixth pilot": {
+   "2a": {
+    "generation": 300,
+    "D_fit": 1.6772505104661435,
+    "tph-1": -0.00010441946290978832,
+    "tax-4": -0.02963677051307212
+   },
+   "2b": {
+    "generation": 200,
+    "D_fit": 1.8043784773932674,
+    "tph-1": 0.2777611229223206,
+    "tax-4": -0.10095757747368707
+   },
+   "final": {
+    "generation": 50,
+    "D_fit": 1.7747540006135112,
+    "tph-1": 0.2689458480059529,
+    "tax-4": -0.11857829795035373
+   }
+  },
+  "F.0b-ii's recovery": {
+   "2a": {
+    "generation": 300,
+    "D_fit": 1.9545855777172765,
+    "tph-1": 0.0064890450123189225,
+    "tax-4": -0.04146472684257105
+   },
+   "2b": {
+    "generation": 200,
+    "D_fit": 1.9970599670252978,
+    "tph-1": 0.0010201672613198987,
+    "tax-4": -0.06463302968860185
+   },
+   "final": {
+    "generation": 50,
+    "D_fit": 1.9828654876757268,
+    "tph-1": -0.0030134372926379216,
+    "tax-4": -0.038427192704430485
+   }
+  },
+  "the registered fit": {
+   "2a": {
+    "generation": 300,
+    "D_fit": 2.1738190686395784,
+    "tph-1": -0.0072681925914627465,
+    "tax-4": -0.0691538583240037
+   },
+   "2b": {
+    "generation": 200,
+    "D_fit": 2.5458032365388563,
+    "tph-1": 0.0006468900946737521,
+    "tax-4": -0.08861547992989938
+   },
+   "final": {
+    "generation": 50,
+    "D_fit": 1.667114728117818,
+    "tph-1": -0.0017853975300755887,
+    "tax-4": -0.09611772048427569
+   }
+  }
+ }
+}

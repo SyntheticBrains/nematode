@@ -1,0 +1,196 @@
+{
+ "description": "Does real-worm likelihood, on band cohorts, rank C.1's committed answers as the benchmark does?",
+ "sides_in_split": [
+  "bands",
+  "held_out"
+ ],
+ "tracker_noise": {
+  "library_keys": [
+   "x_um",
+   "y_um",
+   "lengths"
+  ],
+  "used": [
+   "x_um/y_um segments, 1-s displacement median (mm)",
+   0.005385164807134505
+  ],
+  "sigma_per_coordinate_mm": 0.00457373786884316
+ },
+ "cohorts": "band cohorts only: the cohorts the v2-v4 bands were built from, in-sample to every C.1 answer's fit through the bands",
+ "band_cohort_animals": {
+  "scheer_lawn": 975,
+  "uniform_lawn_scheer": 44
+ },
+ "loglik_per_scored_second": {
+  "c1_v1": -194.9325124275148,
+  "c1b_v2": -22.83951217910121,
+  "c1_v3": -14.631639447844435,
+  "c1_v4_warm_probe": -14.696443848152722
+ },
+ "loglik_detail": {
+  "c1_v1": {
+   "per_assay": {
+    "scheer_lawn": {
+     "total": -344110107.8028805,
+     "seconds": 1773397,
+     "animals": 975
+    },
+    "uniform_lawn_scheer": {
+     "total": -16964944.42670457,
+     "seconds": 78911,
+     "animals": 44
+    }
+   },
+   "per_second": -194.9325124275148,
+   "event_per_second": -0.3843697175253197,
+   "event_lawn_per_second": -0.3868244528431709,
+   "speed_per_second": -212.99748621151005,
+   "speed_lawn_per_second": -212.14714760203572
+  },
+  "c1b_v2": {
+   "per_assay": {
+    "scheer_lawn": {
+     "total": -39835891.68414295,
+     "seconds": 1773397,
+     "animals": 975
+    },
+    "uniform_lawn_scheer": {
+     "total": -2469919.441303656,
+     "seconds": 78911,
+     "animals": 44
+    }
+   },
+   "per_second": -22.83951217910121,
+   "event_per_second": -0.3644403363654623,
+   "event_lawn_per_second": -0.36552791104453675,
+   "speed_per_second": -24.399551601042877,
+   "speed_lawn_per_second": -23.999846919927492
+  },
+  "c1_v3": {
+   "per_assay": {
+    "scheer_lawn": {
+     "total": -25363648.763838075,
+     "seconds": 1773397,
+     "animals": 975
+    },
+    "uniform_lawn_scheer": {
+     "total": -1738654.0385197538,
+     "seconds": 78911,
+     "animals": 44
+    }
+   },
+   "per_second": -14.631639447844435,
+   "event_per_second": -0.33447953897629545,
+   "event_lawn_per_second": -0.3360177659080038,
+   "speed_per_second": -15.490780057204068,
+   "speed_lawn_per_second": -15.137354088408236
+  },
+  "c1_v4_warm_probe": {
+   "per_assay": {
+    "scheer_lawn": {
+     "total": -25481894.22325941,
+     "seconds": 1773397,
+     "animals": 975
+    },
+    "uniform_lawn_scheer": {
+     "total": -1740446.2882246596,
+     "seconds": 78911,
+     "animals": 44
+    }
+   },
+   "per_second": -14.696443848152722,
+   "event_per_second": -0.32788635616845413,
+   "event_lawn_per_second": -0.32929315096696604,
+   "speed_per_second": -15.718993262289882,
+   "speed_lawn_per_second": -15.368151772128815
+  }
+ },
+ "benchmark": {
+  "c1b_v2": {
+   "D_scheer3_mean": 1.5375923924183366,
+   "D_scheer3_each": [
+    1.6636086772730818,
+    1.4963733409819007,
+    1.558323582924712,
+    1.4086983429608564,
+    1.5609580179511315
+   ],
+   "populations": 5,
+   "v4_D_fit_mean": null
+  },
+  "c1_v3": {
+   "D_scheer3_mean": 1.1902411534726005,
+   "D_scheer3_each": [
+    1.1789652167234916,
+    1.2654820420557642,
+    1.175798622099019,
+    1.0770750425334514,
+    1.253884843951276
+   ],
+   "populations": 5,
+   "v4_D_fit_mean": 2.435471669106082
+  },
+  "c1_v4_warm_probe": {
+   "D_scheer3_mean": 1.3671490505565853,
+   "D_scheer3_each": [
+    1.3567737407694973,
+    1.3428241941182433,
+    1.1877829030114349,
+    1.5814959110277318,
+    1.3668685038560198
+   ],
+   "populations": 5,
+   "v4_D_fit_mean": 1.5347298130396887
+  },
+  "c1_v1": {
+   "D_scheer3_mean": null,
+   "ranked_last_because": "fails small_lawn, uniform_lawn and kinematics in every graded population (v2 and v4)",
+   "v4_family_passes": [
+    {
+     "small_lawn": false,
+     "kinematics": false,
+     "activity": false,
+     "uniform_lawn": false,
+     "local_search": true,
+     "chemotaxis": false
+    },
+    {
+     "small_lawn": false,
+     "kinematics": false,
+     "activity": false,
+     "uniform_lawn": false,
+     "local_search": true,
+     "chemotaxis": false
+    },
+    {
+     "small_lawn": false,
+     "kinematics": false,
+     "activity": false,
+     "uniform_lawn": false,
+     "local_search": true,
+     "chemotaxis": false
+    },
+    {
+     "small_lawn": false,
+     "kinematics": false,
+     "activity": false,
+     "uniform_lawn": false,
+     "local_search": true,
+     "chemotaxis": false
+    },
+    {
+     "small_lawn": false,
+     "kinematics": false,
+     "activity": false,
+     "uniform_lawn": false,
+     "local_search": true,
+     "chemotaxis": false
+    }
+   ],
+   "v4_D_fit_mean": 7.334237850493691
+  }
+ },
+ "spearman_rho": 1.0,
+ "verdict_by_fixed_rule": "tracks the benchmark",
+ "seconds": 13.67996387463063
+}

@@ -39,7 +39,7 @@ The bands are [`data/benchmark/bands_v3.json`](../../../data/benchmark/bands_v3.
 
 ## Objective
 
-C.1b's fits on v2 failed the wild type, and the addendum to [Logbook 119](119-c1b-fit.md) traced the failure to reversal-dominated locomotion. Off food the answers reverse 42–56% of the time, against real worms' 17.3% (Roberts' tracker). v2 let that through:
+C.1b's fits on v2 failed the wild type, and the addendum to [Logbook 119](119-c1b-fit.md) traced the failure to reversal-dominated locomotion. Off food the answers reverse 42–56% of the time, against real worms' 17.3% (Roberts' tracker) *(Corrected 2026-11-27, [Logbook 138](138-phase10-synthesis.md): off food, in the chemotaxis assay, the shares are 52% and 56%; the 42% is restart 4 on the small lawn, where it spends nearly all its time on food, [Logbook 119](119-c1b-fit.md)'s addendum.)* v2 let that through:
 
 - **Local search graded only the curve's shape.** Its linear early/late band (4.21 ± 1.62) accepts any ratio from −0.66 to 9.09, so a worm reorienting 9.5 times per 2-min bin, flat, passed.
 - **Backward travel is invisible from midbody positions.** A worm backing continuously draws the path of one going forward.

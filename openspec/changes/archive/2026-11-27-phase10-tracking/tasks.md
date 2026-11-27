@@ -7,6 +7,12 @@ and go/no-go. Every Phase 10 milestone PR updates this checklist as part of its 
 
 **Status legend**: `[ ]` not started; `[x]` closed (done, or given a status at the synthesis).
 
+*(Archived 2026-11-27 with the Phase 10 synthesis, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md).
+Links written while the change was active are relative to its unarchived location,
+`openspec/changes/phase10-tracking/`, and are kept as written. At archival, the three closing notes'
+links to Logbook 138 (C.3, W.3 and S10) were re-pointed to resolve from the archive, and this note was
+added.)*
+
 **Execution order** (binding where the roadmap says so):
 
 01. H.
@@ -987,7 +993,7 @@ C.2 enters C.4 as a failing in-sample row.)*
     speed output responds, and the roaming 90th percentile rises 4.90 band scales at a 30-s
     timescale, against a bar of 3.
 
-- [ ] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
+- [x] **C.3 The comparator**: the C.2 architecture trained by reward on the same primitives and lawns,
   16 seeds, γ adjusted to the 1-s step.
 
   *(2026-11-25, the maintainer's decision after C.2's fit failed,
@@ -995,6 +1001,8 @@ C.2 enters C.4 as a failing in-sample row.)*
   Its entry was tied to a C.2 pass, and the fit was the phase's last C.2 run. Its status at the
   synthesis is unreachable-with-reason. Its question, the C.2 architecture trained by reward, goes to
   the Phase 11 plan review.
+
+  *(Closed 2026-11-27, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md): **unreachable-with-reason**, as above.)*
 
 - [x] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
@@ -1069,7 +1077,7 @@ C.2 enters C.4 as a failing in-sample row.)*
 
 ## W — the wiring question on fidelity (MUST, after C.2 reads)
 
-- [ ] **W.1** The nulls: degree-preserving; gap-only on the corrected gap model; boundary-held;
+- [x] **W.1** The nulls: degree-preserving; gap-only on the corrected gap model; boundary-held;
   class-preserving left–right-symmetric; and N.3's receptor-placement nulls. Each has a fresh rewiring
   draw per fit, with parameters counted per arm.
 
@@ -1108,7 +1116,7 @@ C.2 enters C.4 as a failing in-sample row.)*
   the counts and extends the check to the null arms, each arm's robustness statistic is reported
   beside it, since a null could be more fragile through its count spread alone.
 
-- [ ] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
+- [x] **W.2** The registration: the minimum is the held-out distance between two real wild-type cohorts,
   both directions. Draws per arm are sized from F.0 and the cost pilot. Every outcome is named,
   including "the nulls pass too" and "a null beats the wild type".
 
@@ -1278,21 +1286,45 @@ C.2 enters C.4 as a failing in-sample row.)*
   this procedure (D38's note of 2026-11-24). A later W registers its own procedure and cites these
   figures only as the cost of this one.
 
-- [ ] **W.3** The panel, read on graded distance whatever any gate says.
+- [x] **W.3** The panel, read on graded distance whatever any gate says.
+
+  *(Closed 2026-11-27, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md).)* **W.1, W.2 and W.3 are deferred-with-destination** to a later phase,
+  scheduled at the Phase 11 plan review. W can run only once a fitting procedure passes its own
+  recovery control. By the maintainer's decision of 2026-11-27, no registration is written now: since
+  F.0b-ii failed, W's arms do not inherit C.2's procedure (D38's note of 2026-11-24), so a registration
+  would have no tested procedure to run. The notes above, the nulls built in Phase 9 and N.3, T.1's
+  sizing inputs and C.2's measured cost a fit stay on the record for it.
 
 ## The synthesis (MUST)
 
-- [ ] **S10** Every criterion assigned one of the five statuses. The publication decision taken (D30's
+- [x] **S10** Every criterion assigned one of the five statuses. The publication decision taken (D30's
   destination: the first fidelity result).
+
+  *(Closed 2026-11-27, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md).)* **Met.** Phase 10 is COMPLETE, between its minimum-viable and target
+  success levels; GO to the Phase 11 plan review. **D30 is taken** (the maintainer's decision of
+  2026-11-27): Phase 10's publication is the `wormbench` release, the grader on PyPI and the tracks on
+  Zenodo under a DOI. The tracks were deposited on 2026-11-27, doi:10.5281/zenodo.24585652, and the
+  PyPI release follows. Whether to write a benchmark paper goes to the Phase 11 plan review, with a
+  cross-lab check of the bands on Haley 2025's real tracks first. The literature watch's re-aim
+  (protocol principle 13) is deferred to that review, which writes the questions the brief should name.
 
 ## SHOULD
 
-- [ ] Haley 2025's patch acceptance against encounter number.
-- [ ] WCON export.
+- [x] Haley 2025's patch acceptance against encounter number. *(Closed 2026-11-27, Logbook 138:
+  deferred-with-destination, the Phase 11 plan review, as the benchmark's first extension. Haley's
+  tracks are not vendored, and the deposit's licence is checked before they are; they also serve the
+  cross-lab check.)*
+- [x] WCON export. *(Closed 2026-11-27, Logbook 138: deferred-with-destination, the `wormbench`
+  release that follows the close, from `track_import_check.py`'s writer.)*
 
 ## MAY
 
-- [ ] Thermotaxis on the new primitives (the second tier).
-- [ ] Bordering against an O₂ field, with npr-1 (an optional second-tier comparison; npr-1 is excluded
-  only as a required mutant test).
-- [ ] A Creamer-dynamics controller graded on the benchmark.
+- [x] Thermotaxis on the new primitives (the second tier). *(Closed 2026-11-27, Logbook 138:
+  unmet-with-reason, not taken. The 1-s step and the primitives are refused away from lawns, and
+  `data/thermotaxis/` holds bias curves only, no tracks to build bands from.)*
+- [x] Bordering against an O₂ field, with npr-1 (an optional second-tier comparison; npr-1 is excluded
+  only as a required mutant test). *(Closed 2026-11-27, Logbook 138: unmet-with-reason, not taken. It
+  needs an oxygen field on the 1-s worm, npr-1 bordering data and per-controller encodings.)*
+- [x] A Creamer-dynamics controller graded on the benchmark. *(Closed 2026-11-27, Logbook 138:
+  deferred-with-destination, the Phase 11 plan review, as a candidate controller fitted to neural
+  data. The weights are vendored; its readout still needs a fit.)*
