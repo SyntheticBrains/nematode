@@ -244,11 +244,21 @@ def _serve(
 BODY = bytes(range(256)) * 40  # 10,240 bytes
 
 
+@pytest.mark.parametrize(
+    "second_declared",
+    [len(BODY) - 6000, 3000],
+    ids=["range-cut-short", "range-answered-in-part"],
+)
 def test_fetch_resumes_a_transfer_the_server_cuts_short(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    second_declared: int,
 ) -> None:
-    """A transfer closed before its declared length is resumed from the byte it reached."""
+    """A file short of the manifest's size is resumed from the byte it reached.
+
+    The second response sends 3,000 bytes, either cut short of the 4,240 it declared or as a
+    complete range response of 3,000; either way the fetch asks for the remaining 1,240.
+    """
     _fake_manifest(
         monkeypatch,
         {"benchmark/tracks.npz": BODY},
@@ -258,7 +268,7 @@ def test_fetch_resumes_a_transfer_the_server_cuts_short(
         monkeypatch,
         [
             _Response(BODY[:6000], 200, len(BODY)),
-            _Response(BODY[6000:9000], 206, len(BODY) - 6000),
+            _Response(BODY[6000:9000], 206, second_declared),
             _Response(BODY[9000:], 206, len(BODY) - 9000),
         ],
     )

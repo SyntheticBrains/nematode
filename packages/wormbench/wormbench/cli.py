@@ -124,10 +124,11 @@ def _fetch(args: argparse.Namespace) -> int:
 def _download(key: str, url: str, partial: Path, size: int) -> None:
     """Download ``url`` into ``partial``, resuming whenever a transfer stops short.
 
-    A server may close the connection before the body it declared is complete. The next request
-    then asks for the rest with a byte range, and starts again if the server ignores the range. A
-    failed connection or a server error is retried after a pause; a missing or refused file is not.
-    The caller checks the finished file's SHA-256.
+    The file is complete when it reaches ``size``, the manifest's. Until then each request asks for
+    the rest with a byte range: after a server closes the connection before the body it declared is
+    complete, or answers a range with only part of the rest. A server that ignores the range is read
+    from the start. A failed connection or a server error is retried after a pause; a missing or
+    refused file is not. The caller checks the finished file's SHA-256.
     """
     partial.write_bytes(b"")
     last = "no response"
@@ -155,9 +156,18 @@ def _download(key: str, url: str, partial: Path, size: int) -> None:
             last = f"{type(error).__name__}: {error}"
             time.sleep(attempt + 1)
             continue
-        if declared is None or received >= int(declared):
+        total = partial.stat().st_size
+        cut = declared is not None and received < int(declared)
+        # Complete once the file reaches the manifest's size. A whole fresh response of another
+        # size is the server's file as it stands, which more ranges cannot change; a partial
+        # response that ends early, or a range answered with less than the rest, asks again.
+        if total >= size or (not resumed and not cut):
             return
-        last = f"the server closed the transfer after {received:,} of {int(declared):,} bytes"
+        last = (
+            f"the server closed the transfer after {received:,} of {int(declared or 0):,} bytes"
+            if cut
+            else f"a range response left the file at {total:,} of {size:,} bytes"
+        )
     got = partial.stat().st_size
     partial.unlink(missing_ok=True)
     msg = (
