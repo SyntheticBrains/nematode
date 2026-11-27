@@ -1,11 +1,11 @@
 {
-  "record": null,
+  "record": "10.5281/zenodo.24585652",
   "files": {
-    "benchmark/calhoun2014_tracks.npz": null,
-    "benchmark/chen2025_tracks.npz": null,
-    "benchmark/lopezcruz2019_reorientations.json": null,
-    "benchmark/roberts2016_tracks.npz": null,
-    "benchmark/scheer2023_split.json": null,
-    "benchmark/scheer2023_tracks.npz": null
+    "benchmark/calhoun2014_tracks.npz": "https://zenodo.org/records/24585652/files/calhoun2014_tracks.npz?download=1",
+    "benchmark/chen2025_tracks.npz": "https://zenodo.org/records/24585652/files/chen2025_tracks.npz?download=1",
+    "benchmark/lopezcruz2019_reorientations.json": "https://zenodo.org/records/24585652/files/lopezcruz2019_reorientations.json?download=1",
+    "benchmark/roberts2016_tracks.npz": "https://zenodo.org/records/24585652/files/roberts2016_tracks.npz?download=1",
+    "benchmark/scheer2023_split.json": "https://zenodo.org/records/24585652/files/scheer2023_split.json?download=1",
+    "benchmark/scheer2023_tracks.npz": "https://zenodo.org/records/24585652/files/scheer2023_tracks.npz?download=1"
   }
 }
