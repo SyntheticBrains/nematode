@@ -1,0 +1,123 @@
+"""C.2's identifiability ensemble: every start's mutant responses at the end of its wild-type-only stage.
+
+Description, not a registered reading. No simulation: every figure is read from C.2's committed
+pilot, recovery and fit records in `supporting/133-c2-fit/`.
+
+For each start of each run that reached stage 2a (all 137 parameters on the fitted families, the
+wild type only), the last 2a readout's D_fit, reversal share and each mutant's roaming difference
+from its own wild type, on the run's 200 readout animals. Then, for each run whose kept start went
+on to 2b (the mutants added at half the objective) and the final stage, its tph-1 and tax-4
+differences at the end of every stage: the lineage.
+
+What the ensemble shares, stated before reading it: every start begins from the graded box's centre
+(launch record 133, "Each start begins from the box's centre"), and stage 1 fits 77 parameters with
+the other 60, among them the neuromodulator layer's strengths, held there ("the other 60 at 0.5").
+So every start enters 2a with the same serotonin couples. 2a frees them and can move them far, so
+the starts share an origin, not an end state: they are not independent tests of identifiability.
+
+Usage, from the repository root:
+    uv run python docs/experiments/logbooks/supporting/138-phase10-synthesis/probes/identifiability.py.txt
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[5]
+C2 = REPO / "docs" / "experiments" / "logbooks" / "supporting" / "133-c2-fit"
+BANDS = REPO / "data" / "benchmark" / "bands_v4.json"
+OUT = HERE / "identifiability.json"
+MUTANTS = ("tph-1", "pdfr-1", "tax-4")
+RECORDS = (
+    ("first pilot", "pilot_first.json"),
+    ("second pilot", "pilot_second/record.json"),
+    ("third pilot", "pilot_third.json"),
+    ("fourth pilot", "pilot_fourth.json"),
+    ("fifth pilot", "pilot_fifth.json"),
+    ("sixth pilot, killed attempt", "pilot_sixth_kill.json"),
+    ("sixth pilot", "pilot.json"),
+    ("F.0b-ii's recovery", "recovery.json"),
+    ("the registered fit", "fit.json"),
+)
+
+
+def roaming(readout: dict, mutant: str) -> float:
+    return readout["mutants"][mutant]["statistics"]["roaming_fraction"]["delta"]
+
+
+def starts_of(name: str) -> list[dict]:
+    """Return a record's starts, each with its own readouts; the kept start's are the record's."""
+    record = json.loads((C2 / name).read_text())
+    starts = record.get("starts")
+    if starts is None:  # the first pilot ran a single start
+        return [{"start": 0, "kept": None, "readouts": record["readouts"]}]
+    if starts and isinstance(starts[0], str):  # split into files to keep each under the size limit
+        starts = [json.loads((C2 / Path(name).parent / s).read_text()) for s in starts]
+    out = [s for s in starts if s.get("kept") is not True]
+    if record.get("kept") is not None:
+        out.append({"start": record["kept"], "kept": True, "readouts": record["readouts"]})
+    return out
+
+
+def main() -> None:
+    bands = json.loads(BANDS.read_text())["bands"]["200"]["mutants"]
+    centres = {m: bands[m]["roaming_fraction"]["centre"] for m in MUTANTS}
+    rows, every_tph1, lineage = [], [], {}
+    for run, name in RECORDS:
+        for s in starts_of(name):
+            stage = (s.get("readouts") or {}).get("2a")
+            if not stage:
+                continue
+            generations = sorted(stage, key=int)
+            every_tph1 += [
+                roaming(stage[g], "tph-1") for g in generations if stage[g].get("mutants")
+            ]
+            last = stage[generations[-1]]
+            rows.append(
+                {
+                    "run": run,
+                    "record": name,
+                    "start": s["start"],
+                    "kept": bool(s.get("kept")),
+                    "generation": int(generations[-1]),
+                    "D_fit": last["D_fit"],
+                    "reversal_share": last["reversal_share"],
+                    "roaming_delta": {m: roaming(last, m) for m in MUTANTS},
+                },
+            )
+            readouts = s["readouts"]
+            if s.get("kept") and "final" in readouts:
+                lineage[run] = {
+                    st: {
+                        "generation": int(g),
+                        "D_fit": readouts[st][g]["D_fit"],
+                        "tph-1": roaming(readouts[st][g], "tph-1"),
+                        "tax-4": roaming(readouts[st][g], "tax-4"),
+                    }
+                    for st in ("2a", "2b", "final")
+                    for g in [max(readouts[st], key=int)]
+                }
+    tph1 = [r["roaming_delta"]["tph-1"] for r in rows]
+    near = [r for r in rows if r["D_fit"] < 2.0]
+    record = {
+        "description": __doc__.strip().splitlines()[0],
+        "band_centres_roaming_delta": centres,
+        "starts_with_a_2a_readout": len(rows),
+        "starts": rows,
+        "tph1_at_2a_end": {"min": min(tph1), "max": max(tph1)},
+        "tph1_over_every_2a_readout": {
+            "readouts": len(every_tph1),
+            "min": min(every_tph1),
+            "max": max(every_tph1),
+        },
+        "tax4_at_2a_end_below_D_fit_2": sorted(r["roaming_delta"]["tax-4"] for r in near),
+        "lineage": lineage,
+    }
+    OUT.write_text(json.dumps(record, indent=1, allow_nan=False) + "\n")
+    print(json.dumps({k: record[k] for k in list(record)[:3]} | {k: record[k] for k in list(record)[4:]}, indent=1))
+
+
+if __name__ == "__main__":
+    main()

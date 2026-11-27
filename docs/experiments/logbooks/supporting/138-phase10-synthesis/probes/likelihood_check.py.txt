@@ -1,0 +1,375 @@
+"""Does real-worm likelihood, on band cohorts, rank C.1's committed answers as the benchmark does?
+
+Description, not a registered reading. No behaviour is simulated: real Scheer & Bargmann tracks
+(PD1074, OD 2 small lawn and uniform well, band-cohort dates only) are replayed through the batched
+evaluator's own sensing, eating and satiety along their real paths, exactly as Logbook 131's
+imitation probe did (frame, heading rule, satiety started at the analysis window, first 120 s
+skipped). Each of C.1's four committed answers is then scored by the forward algorithm over its
+two hidden states (dwelling, roaming):
+
+- switching each second at exp(a0 + a_intake I + a_satiety S) and exp(b0 + b_intake I + b_satiety S),
+  the first state drawn from the chain's stationary share, as `BatchedMechanistic` does;
+- on every eligible second (the second before was a run, no missing frame): the observed reversal
+  onset, omega onset, or neither, under the primitives' competing-hazard start rule (each hazard
+  clipped to the configured range; a delta start is unflagged in real data, so it counts as
+  "neither"), with klinokinesis, the edge-loss and search terms as the controller has them;
+- on every run second: the observed 1-s midbody displacement under a Rice density (the run speed
+  plus isotropic 2-D tracker noise, sigma from the still-worm library), integrated over the
+  answer's per-state log-normal speed spread where it has one.
+
+Approximations, stated before reading: the curvature channel is left out; the speed spread is
+treated as independent each second (the controller redraws it every 10 s); satiety before the
+window decays without eating, as Logbook 131's replay did.
+
+The benchmark's ordering is each answer's committed grades on the three Scheer families whose bands
+are byte-identical from v2 to v4 (small lawn, uniform well, kinematics): the family-equal RMS of
+z capped at 10, averaged over the graded populations. Activity (v4 only) is reported beside it.
+
+DECISION RULE, fixed before the first run: with the four answers ranked by held-out log-likelihood per
+scored second (higher is better) and by that D (lower is better), Spearman rho >= 0.8 (at most one
+adjacent swap) means the likelihood route tracks the benchmark and the latent-structure ladder may
+be planned; rho <= 0.4 means it does not, and the route is dropped; anything between is unclear and
+goes to the maintainer as such.
+
+COHORTS AND SCOPE (stated when this copy was committed, 2026-11-27). The rule above was written for
+held-out cohorts. The first run read PD1074's held-out cohorts, which the benchmark's controls
+forbid; this re-run applies the same rule, unchanged, to the band cohorts only. The band cohorts
+are the ones the v2-v4 bands were built from, and every C.1 answer was fitted against those bands,
+so this is not a held-out test: it shows the likelihood agreeing with the benchmark on the data
+both were tuned to. Description only; no verdict depends on it.
+
+Usage, from the repository root:
+    uv run python docs/experiments/logbooks/supporting/138-phase10-synthesis/probes/likelihood_check.py.txt
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
+import numpy as np
+from scipy.special import i0e, roots_hermitenorm
+from scipy.stats import spearmanr
+
+REPO = Path(__file__).resolve().parents[6]
+sys.path.insert(0, str(REPO / "scripts/analysis"))
+import torch  # noqa: E402
+
+torch.set_num_threads(1)
+import benchmark_grade  # noqa: E402, F401  (imports the package in the order the scripts use)
+import primitive_kinematics_check as pk  # noqa: E402
+from quantumnematode.benchmark.references import load_scheer_tracks  # noqa: E402
+from quantumnematode.env.primitives import load_kinematics  # noqa: E402
+from quantumnematode.evaluation.batched import BatchedEvaluator  # noqa: E402
+from quantumnematode.evaluation.controllers import BatchedConstantHazards  # noqa: E402
+from quantumnematode.utils.config_loader import load_simulation_config  # noqa: E402
+
+OUT = Path(__file__).with_name("likelihood_check.json")
+SUP = REPO / "docs/experiments/logbooks/supporting"
+FORAGING = REPO / "configs/scenarios/foraging"
+ARM = "mlpppo_small_continuous2d_fick_adaptive_klinotaxis_lawns_internal_s1_primitives"
+ASSAYS = {"scheer_lawn": "PD1074_od2_Data", "uniform_lawn_scheer": "PD1074_od2_uniformlawn_Data"}
+ANALYSIS_FROM_S, SKIP_S, HEADING_FLOOR = 1200, 120, 0.02
+REPLAY_BASE = 870_000_000
+NEVER = 1e9
+SCHEER_FAMILIES = ("small_lawn", "uniform_lawn", "kinematics")
+Z_CAP = 10.0
+
+
+def _per_second(flags):
+    return flags.reshape(flags.shape[0], -1, 3).any(axis=2)
+
+
+def _bout_seconds(flags):
+    n, seconds = flags.shape[0], flags.shape[1] // 3
+    inside, onset = np.zeros((n, seconds), bool), np.zeros((n, seconds), bool)
+    for i in range(n):
+        for a, b in pk.bouts(flags[i], filtered=True):
+            inside[i, a // 3 : (b - 1) // 3 + 1] = True
+            onset[i, a // 3] = True
+    return inside, onset
+
+
+def tracks(t, assay):
+    """Band-cohort animals of one assay: frame offsets, heading, displacement and event targets."""
+    genotypes = np.array([t.genotypes[k] for k in t.genotype])
+    rows = np.flatnonzero((genotypes == ASSAYS[assay]) & (t.side == "bands"))
+    if len(rows) == 0:
+        return None
+    (rev, rev_on), (om, om_on) = _bout_seconds(t.flag("reversal")[rows]), _bout_seconds(t.flag("omega")[rows])
+    miss = _per_second(t.flag("missing")[rows])
+    x, y = t.x[rows].astype(np.float64), t.y[rows].astype(np.float64)
+    finite = np.isfinite(x) & np.isfinite(y)
+    keep = finite.mean(axis=1) >= 0.9
+    rows, x, y, finite, miss = rows[keep], x[keep], y[keep], finite[keep], miss[keep]
+    rev, rev_on, om, om_on = rev[keep], rev_on[keep], om[keep], om_on[keep]
+    steps = np.arange(x.shape[1])
+    for i in range(len(rows)):
+        x[i] = np.interp(steps, steps[finite[i]], x[i, finite[i]])
+        y[i] = np.interp(steps, steps[finite[i]], y[i, finite[i]])
+    bad = ~finite | miss
+    r, theta = np.hypot(x, y), np.arctan2(y, x)
+    if assay == "scheer_lawn":
+        angles = np.linspace(0.0, 2 * np.pi, t.boundary_radius.shape[1], endpoint=False)
+        edge = np.stack([
+            np.interp(np.mod(theta[i], 2 * np.pi), angles, t.boundary_radius[rows[i]], period=2 * np.pi)
+            for i in range(len(rows))
+        ])
+        frame = {"unit": np.stack([r / edge * np.cos(theta), r / edge * np.sin(theta)], axis=-1)}
+    else:
+        frame = {"scaled": np.stack([x, y], axis=-1) * (4.9 / float(r.max()))}
+    mx, my = np.diff(x, axis=1), np.diff(y, axis=1)
+    step = np.hypot(mx, my)
+    direction = np.arctan2(my, mx)
+    n, T = x.shape
+    body = np.zeros((n, T - 1))
+    held = np.zeros(n)
+    for s in range(T - 1):
+        fresh = step[:, s] >= HEADING_FLOOR
+        body[:, s] = np.where(fresh, direction[:, s] + np.pi * rev[:, s], held)
+        held = body[:, s]
+    heading = np.concatenate([body[:, :1], body[:, :-1]], axis=1)
+    good = ~bad[:, :-1] & ~bad[:, 1:]
+    good[:, :SKIP_S] = False
+    before_run = np.concatenate([np.zeros((n, 1), bool), ~rev[:, :-2] & ~om[:, :-2]], axis=1)
+    run = good & before_run & ~rev[:, :-1] & ~om[:, :-1]
+    eligible = good & before_run
+    event = np.where(rev_on[:, :-1], 1, np.where(om_on[:, :-1], 2, 0))
+    event = np.where(eligible, event, -1)
+    dates = np.array([t.date[k] for k in rows]) if hasattr(t, "date") else None
+    return {
+        "rows": rows, **frame, "heading": heading, "step": step,
+        "run": run, "event": event.astype(np.int8),
+        "dates": None if dates is None else [str(d) for d in dates],
+    }
+
+
+def replay(assay, d):
+    """The evaluator's senses along each real path, per second (no behaviour is simulated)."""
+    config = load_simulation_config(str(FORAGING / f"{ARM}_assay_{assay}.yml"))
+    n, T = d["heading"].shape
+    ev = BatchedEvaluator(config, BatchedConstantHazards(0.05, (0.1, 0.1, 0.1)), [REPLAY_BASE + i for i in range(n)])
+    ev._build_animals()
+    grid = ev.grid
+    offsets = d["unit"] * grid.radius if "unit" in d else d["scaled"]
+    ev.satiety = np.maximum(0.0, ev.satiety - ev.decay * ANALYSIS_FROM_S)
+    out = {k: np.zeros((n, T)) for k in ("intake", "satiety", "contact", "klino")}
+    for t in range(T):
+        ev.pos = grid.centre[None, :] + offsets[:, t]
+        ev.heading = d["heading"][:, t].copy()
+        s = ev._sense(t)
+        out["intake"][:, t] = (np.asarray(s.intake, float) / s.max_intake) if s.max_intake else 0.0
+        out["satiety"][:, t] = np.asarray(s.satiety_fraction, float)
+        out["contact"][:, t] = np.asarray(s.food_contact, float)
+        out["klino"][:, t] = np.tanh(np.asarray(s.derivative, float) * s.derivative_scale)
+        ev._eat()
+        ev.satiety = np.maximum(0.0, ev.satiety - ev.decay)
+    return out
+
+
+def tracker_sigma():
+    """Per-coordinate noise of a 1-s displacement, from the still-worm library's median."""
+    lib = np.load(REPO / "data/benchmark/scheer_tracker_noise.npz")
+    keys = list(lib.keys())
+    x, y = lib["x_um"].astype(float) / 1000.0, lib["y_um"].astype(float) / 1000.0
+    ends = np.cumsum(lib["lengths"])
+    disp = []
+    for a, b in zip(np.concatenate([[0], ends[:-1]]), ends, strict=True):
+        if b - a >= 2:
+            disp.append(np.hypot(np.diff(x[a:b]), np.diff(y[a:b])))
+    disp = np.concatenate(disp)
+    return keys, ("x_um/y_um segments, 1-s displacement median (mm)", float(np.nanmedian(disp)))
+
+
+def loglik(p, d, s, sigma_n, kin, channels="both"):
+    """Log-likelihood of one assay's band-cohort animals under answer p, by channel."""
+    hmin, hmax, vmax = kin.hazard_min_per_s, kin.hazard_max_per_s, kin.v_max_mm_per_s
+    n, T1 = d["event"].shape
+    contact, klino = s["contact"][:, :T1], s["klino"][:, :T1]
+    up = np.exp(p["a0"] + p["a_intake"] * s["intake"][:, :T1] + p["a_satiety"] * s["satiety"][:, :T1])
+    down = np.exp(p["b0"] + p["b_intake"] * s["intake"][:, :T1] + p["b_satiety"] * s["satiety"][:, :T1])
+    prev = np.concatenate([contact[:, :1], contact[:, :-1]], axis=1)
+    loss = np.maximum(0.0, prev - contact)
+    t_off = np.zeros((n, T1))
+    cur = np.where(contact[:, 0] > 0, 0.0, NEVER)
+    for t in range(T1):
+        cur = np.where(contact[:, t] > 0, 0.0, cur + (1.0 if t else 0.0))
+        t_off[:, t] = cur
+    search = np.where(contact > 0, 1.0, 1.0 + p["search_amplitude"] * np.exp(-t_off / p["search_tau_s"]))
+    nodes, weights = roots_hermitenorm(24)
+    weights = weights / weights.sum()
+    sd = None
+    if "speed_log_sd_dwell" in p:
+        sd = (p["speed_log_sd_dwell"], p["speed_log_sd_roam"])
+    log_e = np.zeros((2, n, T1))
+    parts = {"event": np.zeros(2 * 0 + 1), "speed": np.zeros(1)}
+    ev_ll, sp_ll = np.zeros((2, n, T1)), np.zeros((2, n, T1))
+    for st in (0, 1):
+        r = (p["r_roam"] if st else (np.where(contact > 0, p["r_dwell_on_food"], p["r_dwell"]) if "r_dwell_on_food" in p else p["r_dwell"]))
+        rev = r * np.exp(-p["beta_reversal"] * klino) * np.exp(p["edge"] * loss) * search
+        om = (p["o_roam"] if st else p["o_dwell"]) * np.exp(-p["beta_omega"] * klino) * search
+        rev, om, dl = np.clip(rev, hmin, hmax), np.clip(om, hmin, hmax), hmin
+        L = rev + om + dl
+        start = 1.0 - np.exp(-L)
+        p_rev, p_om, p_none = start * rev / L, start * om / L, np.exp(-L) + start * dl / L
+        e = d["event"]
+        lp = np.where(e == 1, np.log(p_rev), np.where(e == 2, np.log(p_om), np.where(e == 0, np.log(p_none), 0.0)))
+        ev_ll[st] = lp
+        v = p["v_roam"] if st else p["v_dwell"]
+        v = np.where(contact > 0, v, p["v_off_food"]) if "v_off_food" in p else np.full((n, T1), v)
+        obs = d["step"][:, :T1]
+        if sd is None:
+            V = np.minimum(v, vmax)[None]
+            w = np.ones((1, 1, 1))
+        else:
+            V = np.minimum(v[None] * np.exp(sd[st] * nodes[:, None, None]), vmax)
+            w = weights[:, None, None]
+        s2 = sigma_n**2
+        dens = (obs[None] / s2) * np.exp(-((obs[None] - V) ** 2) / (2 * s2)) * i0e(obs[None] * V / s2)
+        dens = np.maximum((w * dens).sum(axis=0), 1e-300)
+        sp_ll[st] = np.where(d["run"][:, :T1], np.log(dens), 0.0)
+        log_e[st] = (ev_ll[st] if channels != "speed" else 0.0) + (sp_ll[st] if channels != "event" else 0.0)
+    # Forward algorithm, scaled, from the first scored second.
+    t0 = SKIP_S
+    pi1 = up[:, t0] / (up[:, t0] + down[:, t0])
+    alpha = np.stack([1 - pi1, pi1], axis=1) * np.exp(log_e[:, :, t0].T)
+    total = np.log(alpha.sum(axis=1))
+    alpha = alpha / alpha.sum(axis=1, keepdims=True)
+    for t in range(t0 + 1, T1):
+        f_up, f_down = 1 - np.exp(-up[:, t]), 1 - np.exp(-down[:, t])
+        a0 = alpha[:, 0] * (1 - f_up) + alpha[:, 1] * f_down
+        a1 = alpha[:, 0] * f_up + alpha[:, 1] * (1 - f_down)
+        m = np.maximum(log_e[0, :, t], log_e[1, :, t])
+        alpha = np.stack([a0 * np.exp(log_e[0, :, t] - m), a1 * np.exp(log_e[1, :, t] - m)], axis=1)
+        z = alpha.sum(axis=1)
+        total += np.log(z) + m
+        alpha = alpha / z[:, None]
+    if channels == "event":
+        scored = d["event"][:, t0:] >= 0
+    elif channels == "speed":
+        scored = d["run"][:, t0:T1]
+    else:
+        scored = (d["event"][:, t0:] >= 0) | d["run"][:, t0:T1]
+    return {"total": float(total.sum()), "seconds": int(scored.sum()), "animals": int(n)}
+
+
+def answers():
+    def vals(pp):
+        return {k: (v["value"] if isinstance(v, dict) else float(v)) for k, v in pp.items()}
+    a = {
+        "c1_v1": vals(json.load(open(SUP / "113-c1-fit/fit.json"))["parameters"]),
+        "c1b_v2": vals(json.load(open(SUP / "119-c1b-fit/fit.json"))["parameters"]),
+        "c1_v3": vals(json.load(open(SUP / "121-c1-v3-fit/fit.json"))["parameters"]),
+        "c1_v4_warm_probe": vals(json.load(open(SUP / "125-c1-v4-fit/probes/mechanism_ondwell.json"))["parameters"]),
+    }
+    return a
+
+
+def _rms(families, names):
+    per = []
+    for f in names:
+        zs = [min(abs(r["z"]), Z_CAP) ** 2 for r in families[f].values() if r.get("z") is not None and np.isfinite(r["z"])]
+        if zs:
+            per.append(np.mean(zs))
+    return float(np.sqrt(np.mean(per))) if per else None
+
+
+def _families_from_flat(g):
+    fam = {}
+    for key, z in g["z"].items():
+        f, stat = key.split("/", 1)
+        fam.setdefault(f, {})[stat] = {"z": z}
+    return fam
+
+
+def benchmark_D():
+    """Each answer's Scheer-family distance from its committed grades.
+
+    C.1's v1 answer has no per-statistic z committed on v2-v4 (only distances and family passes);
+    it fails the small lawn, uniform well and kinematics in every graded population on v2 and v4,
+    which no other answer does, so it is ranked last on that ground. Fixed before reading the
+    likelihoods. v4's own D_fit (the Scheer families with activity) is reported beside, where
+    committed.
+    """
+    read = json.load(open(SUP / "124-benchmark-v4/read.json"))
+    warm = json.load(open(SUP / "125-c1-v4-fit/probes/mechanism_ondwell.json"))["grades"]
+    pops = {
+        "c1b_v2": [g["families"] for g in json.load(open(SUP / "119-c1b-fit/fit.json"))["grades"]],
+        "c1_v3": [p["families"] for p in read["c1_v3_answer"]["populations"]],
+        "c1_v4_warm_probe": [_families_from_flat(g) for g in warm],
+    }
+    out = {}
+    for name, fams in pops.items():
+        d3 = [_rms(f, SCHEER_FAMILIES) for f in fams]
+        out[name] = {"D_scheer3_mean": float(np.mean([x for x in d3 if x is not None])), "D_scheer3_each": d3, "populations": len(fams)}
+    v1 = read["negatives"]["c1_v1"]["populations"]
+    out["c1_v1"] = {
+        "D_scheer3_mean": float("inf"),
+        "ranked_last_because": "fails small_lawn, uniform_lawn and kinematics in every graded population (v2 and v4)",
+        "v4_family_passes": [p["family_passes"] for p in v1],
+    }
+    out["c1_v1"]["v4_D_fit_mean"] = float(np.mean([p["D_fit"] for p in v1]))
+    out["c1_v3"]["v4_D_fit_mean"] = float(np.mean([p["D_fit"] for p in read["c1_v3_answer"]["populations"]]))
+    out["c1_v4_warm_probe"]["v4_D_fit_mean"] = float(np.mean([g["D_fit"] for g in warm]))
+    out["c1b_v2"]["v4_D_fit_mean"] = None
+    return out
+
+
+def main():
+    start = time.perf_counter()
+    kin = load_kinematics()
+    keys, still = tracker_sigma()
+    sigma_n = still[1] / np.sqrt(2 * np.log(2)) if still else 0.0046
+    t = load_scheer_tracks()
+    sides = sorted({str(x) for x in t.side})
+    data, senses = {}, {}
+    for assay in ASSAYS:
+        d = tracks(t, assay)
+        if d is None:
+            continue
+        data[assay] = d
+        senses[assay] = replay(assay, d)
+    ans = answers()
+    ll = {}
+    for name, p in ans.items():
+        per = {a: loglik(p, data[a], senses[a], sigma_n, kin) for a in data}
+        tot = sum(v["total"] for v in per.values())
+        sec = sum(v["seconds"] for v in per.values())
+        ll[name] = {"per_assay": per, "per_second": tot / sec}
+        for ch in ("event", "speed"):
+            per_ch = {a: loglik(p, data[a], senses[a], sigma_n, kin, ch) for a in data}
+            ll[name][f"{ch}_per_second"] = sum(v["total"] for v in per_ch.values()) / sum(v["seconds"] for v in per_ch.values())
+            ll[name][f"{ch}_lawn_per_second"] = per_ch["scheer_lawn"]["total"] / per_ch["scheer_lawn"]["seconds"]
+    bench = benchmark_D()
+    names = list(ans)
+    rho = spearmanr([-ll[n]["per_second"] for n in names], [bench[n]["D_scheer3_mean"] for n in names]).statistic
+    verdict = "tracks the benchmark" if rho >= 0.8 else ("does not track" if rho <= 0.4 else "unclear")
+    rec = {
+        "description": __doc__.strip().splitlines()[0],
+        "sides_in_split": sides,
+        "tracker_noise": {"library_keys": keys, "used": still, "sigma_per_coordinate_mm": float(sigma_n)},
+        "cohorts": "band cohorts only: the cohorts the v2-v4 bands were built from, in-sample to every C.1 answer's fit through the bands",
+        "band_cohort_animals": {a: int(len(d["rows"])) for a, d in data.items()},
+        "loglik_per_scored_second": {n: ll[n]["per_second"] for n in names},
+        "loglik_detail": ll,
+        "benchmark": bench,
+        "spearman_rho": float(rho),
+        "verdict_by_fixed_rule": verdict,
+        "seconds": time.perf_counter() - start,
+    }
+    rec["benchmark"]["c1_v1"]["D_scheer3_mean"] = None  # ranked last (infinite) for the correlation
+    OUT.write_text(json.dumps(rec, indent=1, allow_nan=False) + "\n")
+    print(json.dumps({k: rec[k] for k in ("band_cohort_animals", "loglik_per_scored_second", "spearman_rho", "verdict_by_fixed_rule", "seconds")}, indent=1))
+    for n in names:
+        print(n, "D_scheer3", bench[n]["D_scheer3_mean"], "v4 D_fit", bench[n].get("v4_D_fit_mean"),
+              "| event/s", round(ll[n]["event_per_second"], 4), "speed/s", round(ll[n]["speed_per_second"], 3))
+
+
+if __name__ == "__main__":
+    main()
