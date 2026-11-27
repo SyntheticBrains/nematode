@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import shlex
-import shutil
 import sys
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -29,6 +31,14 @@ DEFAULT_VERSION = "v4"
 VERSIONS = ("v1", "v2", "v3", "v4")
 URLS_NAME = "urls.json"
 EXAMPLE_ARCHIVE = "example/example.zip"
+# Requests per file: a transfer the server cuts short is resumed by the next request, from the byte
+# it reached, so a few requests complete even an unreliable download.
+DOWNLOAD_ATTEMPTS = 8
+DOWNLOAD_TIMEOUT_S = 60
+HTTP_PARTIAL_CONTENT = 206
+HTTP_SERVER_ERROR = 500
+# Client errors worth retrying: a timed-out request, and a rate limit.
+RETRIED_CLIENT_ERRORS = (408, 429)
 
 
 def _grade(args: argparse.Namespace) -> int:
@@ -100,8 +110,7 @@ def _fetch(args: argparse.Namespace) -> int:
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         partial = target.with_name(target.name + ".part")
-        with urllib.request.urlopen(urls["files"][key]) as response, partial.open("wb") as handle:  # noqa: S310 - the package's own pinned addresses
-            shutil.copyfileobj(response, handle)
+        _download(key, urls["files"][key], partial, int(entry["size"]))
         found = _sha256(partial)
         if found != entry["sha256"]:
             partial.unlink()
@@ -110,6 +119,62 @@ def _fetch(args: argparse.Namespace) -> int:
         partial.replace(target)
         print(f"fetched {key}")
     return 0
+
+
+def _download(key: str, url: str, partial: Path, size: int) -> None:
+    """Download ``url`` into ``partial``, resuming whenever a transfer stops short.
+
+    The file is complete when it reaches ``size``, the manifest's. Until then each request asks for
+    the rest with a byte range: after a server closes the connection before the body it declared is
+    complete, or answers a range with only part of the rest. A server that ignores the range is read
+    from the start. A failed connection or a server error is retried after a pause; a missing or
+    refused file is not. The caller checks the finished file's SHA-256.
+    """
+    partial.write_bytes(b"")
+    last = "no response"
+    for attempt in range(DOWNLOAD_ATTEMPTS):
+        have = partial.stat().st_size
+        request = urllib.request.Request(url, headers={"Range": f"bytes={have}-"} if have else {})  # noqa: S310 - the package's own pinned addresses
+        try:
+            with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_S) as response:  # noqa: S310 - the package's own pinned addresses
+                resumed = have > 0 and getattr(response, "status", None) == HTTP_PARTIAL_CONTENT
+                declared = response.headers.get("Content-Length")
+                received = 0
+                with partial.open("ab" if resumed else "wb") as handle:
+                    for block in iter(lambda: response.read(1 << 16), b""):
+                        handle.write(block)
+                        received += len(block)
+        except urllib.error.HTTPError as error:
+            if error.code < HTTP_SERVER_ERROR and error.code not in RETRIED_CLIENT_ERRORS:
+                partial.unlink(missing_ok=True)
+                msg = f"{key}: {url} answered HTTP {error.code} ({error.reason})"
+                raise SystemExit(msg) from error
+            last = f"HTTP {error.code}"
+            time.sleep(attempt + 1)
+            continue
+        except (OSError, http.client.HTTPException) as error:
+            last = f"{type(error).__name__}: {error}"
+            time.sleep(attempt + 1)
+            continue
+        total = partial.stat().st_size
+        cut = declared is not None and received < int(declared)
+        # Complete once the file reaches the manifest's size. A whole fresh response of another
+        # size is the server's file as it stands, which more ranges cannot change; a partial
+        # response that ends early, or a range answered with less than the rest, asks again.
+        if total >= size or (not resumed and not cut):
+            return
+        last = (
+            f"the server closed the transfer after {received:,} of {int(declared or 0):,} bytes"
+            if cut
+            else f"a range response left the file at {total:,} of {size:,} bytes"
+        )
+    got = partial.stat().st_size
+    partial.unlink(missing_ok=True)
+    msg = (
+        f"{key}: the download from {url} stopped at {got:,} of {size:,} bytes after "
+        f"{DOWNLOAD_ATTEMPTS} attempts ({last}); run `{data.FETCH_COMMAND}` again"
+    )
+    raise SystemExit(msg)
 
 
 def _sha256(path: Path) -> str:
