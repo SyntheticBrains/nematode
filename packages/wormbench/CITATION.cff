@@ -10,7 +10,7 @@ repository-code: "https://github.com/SyntheticBrains/nematode"
 url: "https://github.com/SyntheticBrains/nematode/tree/main/packages/wormbench"
 license: Apache-2.0
 version: 1.0.0
-date-released: "2026-11-27"
+date-released: "2026-11-28"
 keywords:
   - C. elegans
   - behaviour
