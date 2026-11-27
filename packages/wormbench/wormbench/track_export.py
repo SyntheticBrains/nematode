@@ -22,6 +22,9 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -30,7 +33,6 @@ from wormbench import track_import as ti
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from pathlib import Path
 
 WCON_UNITS = {"t": "s", "x": "mm", "y": "mm"}
 
@@ -154,12 +156,17 @@ def write_csv(
     tracks: Sequence[ti.ImportedTrack | ti.SimulatedTrack],
     metadata: ti.AssayMetadata,
 ) -> Path:
-    """Write the tracks as one CSV, in mm and s, with the metadata in ``<file>.json``."""
+    """Write the tracks as one CSV, in mm and s, with the metadata in ``<file>.json``.
+
+    The tracks and the metadata are checked, and the sidecar serialised, before either file is
+    opened, so a refusal changes neither.
+    """
     plain, simulated = _split(tracks)
     flagged = [t.on_lawn is not None for t in plain]
     if any(flagged) and not all(flagged):
         msg = "an on_lawn column covers every animal or none"
         raise ValueError(msg)
+    sidecar = json.dumps({"units": "mm", **metadata_object(metadata)}, allow_nan=False)
     columns = ["animal", "t_s", "x", "y"] + (["on_lawn"] if all(flagged) else [])
     columns += ["primitive", "seed"] if simulated else []
     with path.open("w", newline="") as handle:
@@ -179,8 +186,7 @@ def write_csv(
                     seed = simulated[i].seed
                     row += [simulated[i].primitives[j], "" if seed is None else str(seed)]
                 writer.writerow(row)
-    sidecar = {"units": "mm", **metadata_object(metadata)}
-    path.with_name(path.name + ".json").write_text(json.dumps(sidecar, allow_nan=False))
+    path.with_name(path.name + ".json").write_text(sidecar)
     return path
 
 
@@ -266,9 +272,14 @@ def csv_to_wcon(source: Path, out: Path, *, simulated: bool = False) -> Path:
         tracks, metadata = ti.read_csv(source)
     document = wcon_document(tracks, metadata)
     out.parent.mkdir(parents=True, exist_ok=True)
-    staged = out.with_name(out.name + ".part")
+    text = json.dumps(document, allow_nan=False) + "\n"
+    # A new file of a unique name, created exclusively, so no existing file or link is opened.
+    handle, name = tempfile.mkstemp(prefix=f".{out.name}.", suffix=".part", dir=out.parent)
+    staged = Path(name)
     try:
-        staged.write_text(json.dumps(document, allow_nan=False) + "\n")
+        with os.fdopen(handle, "w") as stream:
+            stream.write(text)
+        staged.chmod(_default_mode())
         back: list[Any]
         if simulated:
             back, back_metadata = ti.read_simulated_wcon(staged)
@@ -286,6 +297,13 @@ def csv_to_wcon(source: Path, out: Path, *, simulated: bool = False) -> Path:
     finally:
         staged.unlink(missing_ok=True)
     return out
+
+
+def _default_mode() -> int:
+    """Return the mode a newly created file gets under the process's umask."""
+    umask = os.umask(0)
+    os.umask(umask)
+    return 0o666 & ~umask
 
 
 def _difference(

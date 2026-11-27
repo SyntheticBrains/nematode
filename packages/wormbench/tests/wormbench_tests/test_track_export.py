@@ -289,7 +289,7 @@ def test_a_metadata_change_on_reading_back_is_refused(
     with pytest.raises(ValueError, match="metadata read back"):
         te.csv_to_wcon(source, out)
     assert out.read_text() == "an earlier file"
-    assert not (tmp_path / "t.wcon.part").exists()
+    assert not [p for p in tmp_path.iterdir() if p.name.endswith(".part")]
 
 
 def test_a_simulated_csv_reads_back_as_written(tmp_path: Path) -> None:
@@ -400,3 +400,30 @@ def test_a_missing_source_is_named(tmp_path: Path) -> None:
     with pytest.raises(SystemExit, match=r"absent\.csv: no such file"):
         cli.main(["wcon", "--tracks", str(source), "--out", str(tmp_path / "out" / "a.wcon")])
     assert not (tmp_path / "out").exists()
+
+
+def test_a_refused_csv_leaves_both_files_as_they_were(tmp_path: Path) -> None:
+    """Metadata are checked before the CSV is opened, so a refusal changes neither file."""
+    path = te.write_csv(tmp_path / "t.csv", _tracks(200), _metadata("uniform_lawn"))
+    sidecar = tmp_path / "t.csv.json"
+    before = (path.read_bytes(), sidecar.read_bytes())
+    with pytest.raises(ValueError, match="uniform well"):
+        te.write_csv(path, _tracks(150), ti.AssayMetadata("uniform_lawn", 0.0, None))
+    assert (path.read_bytes(), sidecar.read_bytes()) == before
+
+
+def test_the_staged_file_never_opens_an_existing_file(tmp_path: Path) -> None:
+    """A file or link already named like a staging file is neither written nor removed."""
+    source = te.write_csv(tmp_path / "t.csv", _tracks(200), _metadata("uniform_lawn"))
+    plain = tmp_path / "t.wcon.part"
+    plain.write_text("mine")
+    target = tmp_path / "target.txt"
+    target.write_text("kept")
+    (tmp_path / ".t.wcon.part").symlink_to(target)
+    out = te.csv_to_wcon(source, tmp_path / "t.wcon")
+    assert plain.read_text() == "mine"
+    assert target.read_text() == "kept"
+    assert (tmp_path / ".t.wcon.part").is_symlink()
+    left = sorted(p.name for p in tmp_path.iterdir())
+    assert left == [".t.wcon.part", "t.csv", "t.csv.json", "t.wcon", "t.wcon.part", "target.txt"]
+    assert out.stat().st_mode & 0o777 == target.stat().st_mode & 0o777

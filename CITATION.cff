@@ -40,6 +40,8 @@ references:
     date-published: "2026-11-27"
     publisher:
       name: Zenodo
-    license:
-      - CC0-1.0
-      - CC-BY-4.0
+    notes: >-
+      Each file keeps the licence of the deposit it is derived from: CC0-1.0 for the
+      files from Scheer and Bargmann 2023, Calhoun et al. 2014 and Roberts et al. 2016,
+      and CC BY 4.0, which requires attribution, for the files from López-Cruz et al.
+      2019 and Chen et al. 2025. The deposit's README lists each file's licence.
