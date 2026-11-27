@@ -96,10 +96,11 @@ wormbench data fetch
 wormbench data verify
 ```
 
-**Not yet available in this revision.** The tracks' data deposit is not published, so the package
-records no download addresses, and `wormbench data fetch` refuses with a message saying so. Until it
-is, grade populations of 64 or 200 animals, or point `WORMBENCH_DATA` at a directory holding the
-tracks, laid out as `benchmark/<file>`. The example in *A first grading* needs no download.
+The tracks are deposited on Zenodo as the package's reference data, version 1
+([doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652), about 37 MB). `wormbench data fetch`
+downloads them from that record, resuming a transfer the server cuts short, and checks each file
+against its SHA-256. `WORMBENCH_DATA` can instead point at a directory holding the files, laid out
+as `benchmark/<file>`. The example in *A first grading* needs no download.
 
 Nothing is downloaded otherwise. Every file read from `WORMBENCH_DATA`, the package or the fetched
 cache is checked against the SHA-256 the package records. A program that sets its own data root
@@ -114,6 +115,8 @@ Cite the package (see `CITATION.cff`) and the data it grades against:
 - López-Cruz, A., et al. (2019). *Neuron* 102:407–419. Mendeley Data doi:10.17632/prdtw5jgcd.1.
 - Chen, K. S., et al. (2025). *PLoS Biology*, doi:10.1371/journal.pbio.3003005.
 - Calhoun, A. J., et al. (2014). *eLife* 3:e04220; Roberts, W. M., et al. (2016). *eLife* 5:e12572.
+- The derived files as this package fetches them: Zaharia, C. J. (2026). *Real-worm reference data
+  for wormbench, version 1*. Zenodo. doi:10.5281/zenodo.24585652.
 
 ## Licence
 

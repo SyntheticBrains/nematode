@@ -202,3 +202,133 @@ def test_fetch_refuses_a_download_that_differs(
     with pytest.raises(SystemExit, match="SHA-256"):
         cli.main(["data", "fetch", "--dir", str(cache)])
     assert not (cache / "benchmark" / "tracks.npz").exists()
+
+
+class _Response:
+    """A stand-in HTTP response: a status, a declared length, and a body that may stop short."""
+
+    def __init__(self, body: bytes, status: int, declared: int) -> None:
+        self._body, self.status = body, status
+        self.headers = {"Content-Length": str(declared)}
+
+    def __enter__(self) -> _Response:  # noqa: PYI034 - Python 3.10 has no typing.Self
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+    def read(self, amount: int = -1) -> bytes:
+        out, self._body = self._body[:amount], self._body[amount:]
+        return out
+
+
+def _serve(
+    monkeypatch: pytest.MonkeyPatch,
+    replies: list[Any],
+) -> list[str | None]:
+    """Answer each request with the next reply, and record each request's Range header."""
+    ranges: list[str | None] = []
+
+    def urlopen(request: Any, timeout: float) -> _Response:
+        ranges.append(request.get_header("Range"))
+        reply = replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+    monkeypatch.setattr(cli.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(cli.time, "sleep", lambda _s: None)
+    return ranges
+
+
+BODY = bytes(range(256)) * 40  # 10,240 bytes
+
+
+def test_fetch_resumes_a_transfer_the_server_cuts_short(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A transfer closed before its declared length is resumed from the byte it reached."""
+    _fake_manifest(
+        monkeypatch,
+        {"benchmark/tracks.npz": BODY},
+        {"benchmark/tracks.npz": "https://x"},
+    )
+    ranges = _serve(
+        monkeypatch,
+        [
+            _Response(BODY[:6000], 200, len(BODY)),
+            _Response(BODY[6000:9000], 206, len(BODY) - 6000),
+            _Response(BODY[9000:], 206, len(BODY) - 9000),
+        ],
+    )
+    cache = tmp_path / "cache"
+    assert cli.main(["data", "fetch", "--dir", str(cache)]) == 0
+    assert (cache / "benchmark" / "tracks.npz").read_bytes() == BODY
+    assert ranges == [None, "bytes=6000-", "bytes=9000-"]
+
+
+def test_fetch_starts_again_when_the_server_ignores_the_range(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A server that answers a range request with the whole file is read from the start."""
+    _fake_manifest(
+        monkeypatch,
+        {"benchmark/tracks.npz": BODY},
+        {"benchmark/tracks.npz": "https://x"},
+    )
+    _serve(
+        monkeypatch,
+        [_Response(BODY[:6000], 200, len(BODY)), _Response(BODY, 200, len(BODY))],
+    )
+    cache = tmp_path / "cache"
+    assert cli.main(["data", "fetch", "--dir", str(cache)]) == 0
+    assert (cache / "benchmark" / "tracks.npz").read_bytes() == BODY
+
+
+def test_fetch_gives_up_on_a_transfer_that_never_completes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After its attempts, a download that never completes is refused and nothing is kept."""
+    _fake_manifest(
+        monkeypatch,
+        {"benchmark/tracks.npz": BODY},
+        {"benchmark/tracks.npz": "https://x"},
+    )
+    _serve(monkeypatch, [ConnectionResetError("reset")] * cli.DOWNLOAD_ATTEMPTS)
+    cache = tmp_path / "cache"
+    with pytest.raises(SystemExit, match=r"stopped at 0 of 10,240 bytes after 8 attempts"):
+        cli.main(["data", "fetch", "--dir", str(cache)])
+    assert not list((cache / "benchmark").iterdir())
+
+
+def test_fetch_stops_at_once_on_a_missing_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A missing file is not retried: the refusal names the HTTP status."""
+    _fake_manifest(
+        monkeypatch,
+        {"benchmark/tracks.npz": BODY},
+        {"benchmark/tracks.npz": "https://x"},
+    )
+    missing = cli.urllib.error.HTTPError("https://x", 404, "NOT FOUND", None, None)  # type: ignore[arg-type]
+    ranges = _serve(monkeypatch, [missing])
+    with pytest.raises(SystemExit, match=r"HTTP 404"):
+        cli.main(["data", "fetch", "--dir", str(tmp_path / "cache")])
+    assert len(ranges) == 1
+
+
+def test_the_shipped_addresses_name_every_fetched_file_in_one_record() -> None:
+    """Every fetched file has an address, pinned to the one versioned record the package names."""
+    urls = data.package_record(cli.URLS_NAME)
+    record = urls["record"]
+    assert record.startswith("10.5281/zenodo.")
+    recid = record.rsplit(".", 1)[1]
+    fetched = sorted(k for k, v in data.manifest()["files"].items() if not v["in_package"])
+    assert sorted(urls["files"]) == fetched
+    for key, url in urls["files"].items():
+        name = key.split("/", 1)[1]
+        assert url == f"https://zenodo.org/records/{recid}/files/{name}?download=1"
