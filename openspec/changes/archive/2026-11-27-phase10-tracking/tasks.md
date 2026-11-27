@@ -7,6 +7,12 @@ and go/no-go. Every Phase 10 milestone PR updates this checklist as part of its 
 
 **Status legend**: `[ ]` not started; `[x]` closed (done, or given a status at the synthesis).
 
+*(Archived 2026-11-27 with the Phase 10 synthesis, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md).
+Links written while the change was active are relative to its unarchived location,
+`openspec/changes/phase10-tracking/`, and are kept as written. At archival, the three closing notes'
+links to Logbook 138 (C.3, W.3 and S10) were re-pointed to resolve from the archive, and this note was
+added.)*
+
 **Execution order** (binding where the roadmap says so):
 
 01. H.
@@ -996,7 +1002,7 @@ C.2 enters C.4 as a failing in-sample row.)*
   synthesis is unreachable-with-reason. Its question, the C.2 architecture trained by reward, goes to
   the Phase 11 plan review.
 
-  *(Closed 2026-11-27, [Logbook 138](../../../docs/experiments/logbooks/138-phase10-synthesis.md): **unreachable-with-reason**, as above.)*
+  *(Closed 2026-11-27, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md): **unreachable-with-reason**, as above.)*
 
 - [x] **C.4 The fidelity table**: C.1–C.3 and the negatives on held-out assays and the mutant set
   (tph-1 on Scheer only, pdfr-1, tax-4), under a per-controller encoding table registered before any
@@ -1282,7 +1288,7 @@ C.2 enters C.4 as a failing in-sample row.)*
 
 - [x] **W.3** The panel, read on graded distance whatever any gate says.
 
-  *(Closed 2026-11-27, [Logbook 138](../../../docs/experiments/logbooks/138-phase10-synthesis.md).)* **W.1, W.2 and W.3 are deferred-with-destination** to a later phase,
+  *(Closed 2026-11-27, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md).)* **W.1, W.2 and W.3 are deferred-with-destination** to a later phase,
   scheduled at the Phase 11 plan review. W can run only once a fitting procedure passes its own
   recovery control. By the maintainer's decision of 2026-11-27, no registration is written now: since
   F.0b-ii failed, W's arms do not inherit C.2's procedure (D38's note of 2026-11-24), so a registration
@@ -1294,7 +1300,7 @@ C.2 enters C.4 as a failing in-sample row.)*
 - [x] **S10** Every criterion assigned one of the five statuses. The publication decision taken (D30's
   destination: the first fidelity result).
 
-  *(Closed 2026-11-27, [Logbook 138](../../../docs/experiments/logbooks/138-phase10-synthesis.md).)* **Met.** Phase 10 is COMPLETE, between its minimum-viable and target
+  *(Closed 2026-11-27, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md).)* **Met.** Phase 10 is COMPLETE, between its minimum-viable and target
   success levels; GO to the Phase 11 plan review. **D30 is taken** (the maintainer's decision of
   2026-11-27): Phase 10's publication is the `wormbench` release, the grader on PyPI and the tracks on
   Zenodo under a DOI. Whether to write a benchmark paper goes to the Phase 11 plan review, with a

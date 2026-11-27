@@ -11,11 +11,13 @@ a mutant, C.3 not run and W deferred. Archived at the Phase 10 close, 2026-11-27
 
 ### Requirement: Phase 10 Living Shipment Checklist
 
-The repository SHALL maintain a single living checklist at `openspec/changes/phase10-tracking/tasks.md`
-covering Phase 10's blocks (H, E + T, B, N, F.0, C, W and the synthesis) and the SHOULD and MAY items,
-with the seed band reserved for every registration recorded in the change's `design.md`. Every Phase
-10 milestone PR SHALL update this file as part of its diff. This change SHALL remain unarchived until
-the Phase 10 synthesis publishes.
+While Phase 10 is active, the repository SHALL maintain a single living checklist at
+`openspec/changes/phase10-tracking/tasks.md` covering Phase 10's blocks (H, E + T, B, N, F.0, C, W and
+the synthesis) and the SHOULD and MAY items, with the seed band reserved for every registration
+recorded in the change's `design.md`. Every Phase 10 milestone PR SHALL update this file as part of its
+diff. The change SHALL remain unarchived until the Phase 10 synthesis publishes. It was archived with
+the synthesis on 2026-11-27 (Logbook 138), and the checklist is now at
+`openspec/changes/archive/2026-11-27-phase10-tracking/tasks.md`.
 
 #### Scenario: A milestone PR omits the checklist
 
