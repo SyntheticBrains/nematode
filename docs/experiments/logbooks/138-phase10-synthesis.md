@@ -110,7 +110,7 @@ The vocabulary is the protocol's: met, unmet-with-reason, deferred-with-destinat
 | criterion | status | record |
 |---|---|---|
 | S10 every criterion assigned a status | **met** | this logbook |
-| D30 the publication decision | **met** | Taken on 2026-11-27. Phase 10's publication is the `wormbench` release, citable alone: the grader on PyPI and the real tracks on Zenodo under a DOI. The release follows this close. Whether to write a benchmark paper goes to the Phase 11 plan review, with a cross-lab check of the bands on Haley 2025's real tracks as its first step |
+| D30 the publication decision | **met** | Taken on 2026-11-27. Phase 10's publication is the `wormbench` release, citable alone: the grader on PyPI and the real tracks on Zenodo under a DOI. The tracks were deposited on 2026-11-27, [doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652), and the PyPI release follows this close. Whether to write a benchmark paper goes to the Phase 11 plan review, with a cross-lab check of the bands on Haley 2025's real tracks as its first step |
 | the watch re-aimed at the close (principle 13) | **deferred-with-destination** | the Phase 11 plan review, as at Phase 9's close. The brief should name the next phase's open questions, which that review writes |
 
 ### SHOULD
@@ -376,7 +376,7 @@ Phase 10 is COMPLETE. Its deliverable is the benchmark, with the controls that m
 5. **The speed emission,** before any likelihood route.
 6. **The literature watch,** re-aimed at the review's open questions.
 
-The `wormbench` release, with WCON export, follows this close.
+The real tracks were deposited on Zenodo on 2026-11-27, [doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652). The `wormbench` release on PyPI, with WCON export, follows this close.
 
 ## Artefacts
 

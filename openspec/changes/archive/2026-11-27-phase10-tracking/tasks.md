@@ -1303,7 +1303,8 @@ C.2 enters C.4 as a failing in-sample row.)*
   *(Closed 2026-11-27, [Logbook 138](../../../../docs/experiments/logbooks/138-phase10-synthesis.md).)* **Met.** Phase 10 is COMPLETE, between its minimum-viable and target
   success levels; GO to the Phase 11 plan review. **D30 is taken** (the maintainer's decision of
   2026-11-27): Phase 10's publication is the `wormbench` release, the grader on PyPI and the tracks on
-  Zenodo under a DOI. Whether to write a benchmark paper goes to the Phase 11 plan review, with a
+  Zenodo under a DOI. The tracks were deposited on 2026-11-27, doi:10.5281/zenodo.24585652, and the
+  PyPI release follows. Whether to write a benchmark paper goes to the Phase 11 plan review, with a
   cross-lab check of the bands on Haley 2025's real tracks first. The literature watch's re-aim
   (protocol principle 13) is deferred to that review, which writes the questions the brief should name.
 
