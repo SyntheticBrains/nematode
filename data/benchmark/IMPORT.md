@@ -13,6 +13,8 @@ The command adds a `wormbench` block naming the package version and the bands' S
 
 Each manifest line is `<family> <file>`. A file is a CSV with its metadata sidecar, or a WCON file. Each animal in a file is one member of the family's population, and the population is graded at its own size.
 
+`wormbench wcon --tracks <tracks.csv> --out <tracks.wcon> [--simulated]` writes a CSV's tracks as WCON with the package's writers (`wormbench.track_export`), and refuses the file unless it reads back unchanged. A lawn family's track whose membership comes from an `on_lawn` column is refused, since WCON's core carries no such flag.
+
 ## The benchmark's versions
 
 `benchmark_grade.py --bands v1|v2|v3|v4` picks the rule. v1 (`bands.json`) and v2 (`bands_v2.json`) are frozen for every verdict read on them. v3 (`bands_v3.json`) is frozen too. The default is the newest version whose controls find it VALID: v4 (`bands_v4.json`) since 2026-11-05 (`docs/experiments/logbooks/supporting/124-benchmark-v4/controls_v4.json`).

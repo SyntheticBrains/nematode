@@ -242,10 +242,19 @@ Releases are tags on `main` plus a GitHub Release; there is no PyPI publication.
 `wormbench` (`packages/wormbench/`) is released on its own, as `wormbench-vX.Y.Z` tags, and published to PyPI with its fetched data on Zenodo. Each publishing step is confirmed with the maintainer before anything is uploaded.
 
 1. Run `uv run python scripts/analysis/wormbench_records.py check` and `wormbench_example.py check`; both must pass, so the package's records, copies, manifest and example match the committed sources.
+
 2. Set the version in `packages/wormbench/pyproject.toml`, `wormbench/__init__.py` and `packages/wormbench/CITATION.cff`. A change of the default benchmark version is a major release.
+
 3. If the data deposit has changed, then with the maintainer's confirmation, publish a new Zenodo version first. Write each file's address in that version into `wormbench/_data/urls.json` before building, since the wheel ships that file. `wormbench_records.py sync` never touches it. Check the addresses with `wormbench data fetch` and `wormbench data verify` from a clean cache.
+
 4. Build with `uv build --package wormbench`, install the wheel alone into a fresh Python 3.10 environment at the declared minimums, and run the package's tests with `-o addopts=""` (the CI job `wormbench alone` does the same).
-5. With the maintainer's confirmation: a TestPyPI upload, installed and graded on the example; then the PyPI upload, and the tag on the merge commit.
+
+5. With the maintainer's confirmation at each upload, publish through `.github/workflows/release-wormbench.yml`. It uses PyPI's trusted publishing, so no token is stored. It builds the distributions, tests the wheel alone at the declared minimums, and uploads them:
+
+   - **TestPyPI:** after the release PR merges, run the workflow on `main` (`gh workflow run release-wormbench.yml --ref main`). Install the release from TestPyPI into a clean Python 3.10 environment (`pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ wormbench==X.Y.Z`), grade `wormbench example`, and run `wormbench data fetch` and `wormbench data verify`. An index never takes the same version twice, so a failed check means a new version.
+   - **PyPI:** tag the merge commit, `git tag -a wormbench-vX.Y.Z -m wormbench-vX.Y.Z && git push origin wormbench-vX.Y.Z`. The workflow refuses a tag that does not name the package's version, or that is not on `main`.
+
+   **Once, before the first release:** on pypi.org and on test.pypi.org, add a trusted publisher (a pending one, while the project does not exist) for the project `wormbench`: owner `SyntheticBrains`, repository `nematode`, workflow `release-wormbench.yml`, and environment `pypi` or `testpypi` respectively. In the repository's settings, give both environments a required reviewer, so each upload waits for approval.
 
 ## Where help is wanted
 

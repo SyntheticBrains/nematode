@@ -5,6 +5,7 @@ title: "Quantum Nematode: a closed-loop brain-architecture comparison platform o
 authors:
   - family-names: Zaharia
     given-names: Chris Julian
+    orcid: "https://orcid.org/0009-0005-6849-8081"
 repository-code: "https://github.com/SyntheticBrains/nematode"
 url: "https://github.com/SyntheticBrains/nematode"
 license: Apache-2.0
@@ -27,3 +28,20 @@ abstract: >-
   connectome — is trained by learning or evolution. Architectures are ranked on
   the same behaviours under a paired-seed statistical protocol, and the learned
   behaviour is validated against published C. elegans behavioural data.
+references:
+  - type: data
+    title: "Real-worm reference data for wormbench, version 1"
+    authors:
+      - family-names: Zaharia
+        given-names: Chris Julian
+        orcid: "https://orcid.org/0009-0005-6849-8081"
+    doi: 10.5281/zenodo.24585652
+    version: "1"
+    date-published: "2026-11-27"
+    publisher:
+      name: Zenodo
+    notes: >-
+      Each file keeps the licence of the deposit it is derived from: CC0-1.0 for the
+      files from Scheer and Bargmann 2023, Calhoun et al. 2014 and Roberts et al. 2016,
+      and CC BY 4.0, which requires attribution, for the files from López-Cruz et al.
+      2019 and Chen et al. 2025. The deposit's README lists each file's licence.

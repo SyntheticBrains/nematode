@@ -22,7 +22,6 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import sys
 import tempfile
@@ -34,6 +33,7 @@ from quantumnematode.benchmark import grading as g
 from quantumnematode.benchmark import readouts as ro
 from quantumnematode.benchmark import references as refs
 from quantumnematode.benchmark import track_import as ti
+from wormbench import track_export as te
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import benchmark_grade as bg
@@ -63,10 +63,6 @@ def calibration_cohorts() -> list[str]:
     return order[:3]
 
 
-def _null(value: float) -> float | None:
-    return None if not np.isfinite(value) else float(value)
-
-
 def write_track(  # noqa: PLR0913 - one animal's file: where, what and its metadata
     directory: Path,
     name: str,
@@ -76,31 +72,12 @@ def write_track(  # noqa: PLR0913 - one animal's file: where, what and its metad
     y: np.ndarray,
     metadata: dict[str, Any],
 ) -> Path:
-    """Write one animal as a CSV with its sidecar, or as WCON with the benchmark's metadata."""
+    """Write one animal as a CSV with its sidecar, or as WCON, with the package's writers."""
+    track = ti.ImportedTrack(animal=name, t_s=t, x_mm=x, y_mm=y)
+    assay = ti.parse_metadata(metadata)
     if fmt == "csv":
-        path = directory / f"{name}.csv"
-        with path.open("w", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(["animal", "t_s", "x", "y"])
-            for ti_, xi, yi in zip(t, x, y, strict=True):
-                writer.writerow([name, repr(float(ti_)), repr(float(xi)), repr(float(yi))])
-        path.with_name(path.name + ".json").write_text(json.dumps({"units": "mm", **metadata}))
-        return path
-    path = directory / f"{name}.wcon"
-    document = {
-        "units": {"t": "s", "x": "mm", "y": "mm"},
-        "data": [
-            {
-                "id": name,
-                "t": [float(v) for v in t],
-                "x": [_null(v) for v in x],
-                "y": [_null(v) for v in y],
-            },
-        ],
-        ti.METADATA_KEY: metadata,
-    }
-    path.write_text(json.dumps(document))
-    return path
+        return te.write_csv(directory / f"{name}.csv", [track], assay)
+    return te.write_wcon(directory / f"{name}.wcon", [track], assay)
 
 
 def _lawn_metadata(family: str, radii: np.ndarray) -> dict[str, Any]:

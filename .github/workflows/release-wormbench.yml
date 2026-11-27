@@ -1,0 +1,119 @@
+name: Release wormbench
+
+# Publishes the wormbench package by PyPI's trusted publishing, so no token is stored anywhere.
+# A manual run on main uploads to TestPyPI; pushing a wormbench-vX.Y.Z tag on a commit in main
+# uploads to PyPI. Each index names this workflow file and the job's environment as the package's
+# trusted publisher, and each environment can require a reviewer's approval before its upload.
+# Every action is pinned to a commit, since the upload jobs hold an OIDC token.
+
+on:
+  push:
+    tags: ["wormbench-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-wormbench-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and test the distributions
+    runs-on: ubuntu-latest
+    env:
+      OMP_NUM_THREADS: '1'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          lfs: false
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d  # v10.4.0
+        with:
+          enable-cache: false
+
+      - name: Check what is being released
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' packages/wormbench/pyproject.toml)
+          if [ "$EVENT" = "push" ]; then
+            if [ "$GITHUB_REF_NAME" != "wormbench-v$version" ]; then
+              echo "the tag $GITHUB_REF_NAME does not name the package's version, $version" >&2
+              exit 1
+            fi
+            git fetch --no-tags origin main
+            if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+              echo "the tag $GITHUB_REF_NAME is not on main" >&2
+              exit 1
+            fi
+          elif [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "a TestPyPI upload is built from main, not $GITHUB_REF" >&2
+            exit 1
+          fi
+          echo "releasing wormbench $version from $GITHUB_SHA"
+
+      - name: Build the wheel from its sdist
+        run: uv build --package wormbench --out-dir dist
+
+      - name: Test the wheel alone at the declared minimums
+        run: |
+          uv venv --python 3.10 "$RUNNER_TEMP/alone"
+          uv pip install --python "$RUNNER_TEMP/alone/bin/python" pytest numpy==1.24.4 scipy==1.10.1 dist/wormbench-*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/alone/bin/python" -m pytest "$GITHUB_WORKSPACE/packages/wormbench/tests" \
+            -o addopts="" -p no:cacheprovider -q
+
+      - name: Keep the distributions
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: wormbench-dist
+          path: dist/wormbench-*
+          if-no-files-found: error
+
+  testpypi:
+    name: Upload to TestPyPI
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/wormbench
+    permissions:
+      id-token: write
+    steps:
+      - name: Fetch the distributions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: wormbench-dist
+          path: dist
+
+      - name: Upload
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    name: Upload to PyPI
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/wormbench
+    permissions:
+      id-token: write
+    steps:
+      - name: Fetch the distributions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: wormbench-dist
+          path: dist
+
+      - name: Upload
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3

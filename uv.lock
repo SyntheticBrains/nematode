@@ -2971,7 +2971,7 @@ wheels = [
 
 [[package]]
 name = "wormbench"
-version = "1.0.0.dev0"
+version = "1.0.0"
 source = { editable = "packages/wormbench" }
 dependencies = [
     { name = "numpy" },
