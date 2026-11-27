@@ -706,6 +706,19 @@ def _held_cell(held: dict[str, Any]) -> str:
     )
 
 
+def _description_line(row: dict[str, Any]) -> str:
+    stop = row["stop"]
+    passing = ", ".join(
+        f"{'the wild type' if name == 'wild_type' else name} in {n} of {row['populations']}"
+        for name, n in row["passing"].items()
+    )
+    d = ", ".join(f"{v:.2f}" for v in row["D"])
+    return (
+        f"- {row['controller']}: stopped at generation {stop['generation']} by {stop['by']}; "
+        f"passes {passing}; D by population {d}."
+    )
+
+
 def markdown(table: dict[str, Any]) -> str:
     """Return the table rendered as Markdown, every figure from the JSON."""
     c1, c2, c3 = table["controllers"]
@@ -797,9 +810,11 @@ def markdown(table: dict[str, Any]) -> str:
             f"{w['held_out']['minimum_95th']:.2f} on local search and chemotaxis."
         ),
         "",
-        "## C.2 against C.1 (description)",
+        "## Description rows",
         "",
     ]
+    lines += [_description_line(row) for row in table["description_rows"]]
+    lines += ["", "## C.2 against C.1 (description)", ""]
     lines += [f"- {c}." for c in table["contrast"]["conditions"]]
     lines.append("")
     return "\n".join(lines)
@@ -842,9 +857,17 @@ def code_unchanged() -> bool:
     return status.returncode == 0 and not status.stdout.strip()
 
 
+def records_unchanged() -> bool:
+    """Return whether Part A is committed with every bound record as it was at Part A's commit."""
+    if not LAUNCH_PATH.exists():
+        return False
+    commit = part_a_commit()
+    return commit is not None and cr.launch_committed(BOUND, launch_path=LAUNCH_PATH, commit=commit)
+
+
 def part_a() -> bool:
-    """Return whether Part A is committed with its bound records and code unchanged."""
-    return cr.launch_committed(BOUND, launch_path=LAUNCH_PATH) and code_unchanged()
+    """Return whether Part A is committed, its bound records and code as at Part A's commit."""
+    return records_unchanged() and code_unchanged()
 
 
 def _write_once(path: Path, text: str) -> None:
@@ -884,7 +907,7 @@ def _table() -> int:
     if TABLE_PATH.exists() or TABLE_MD_PATH.exists():
         print("the table exists: it is written once", file=sys.stderr)
         return 1
-    if not cr.launch_committed(BOUND, launch_path=LAUNCH_PATH) or not GRADE_PATH.exists():
+    if not records_unchanged() or not GRADE_PATH.exists():
         print("refusing: Part A's records changed, or the grade has not run", file=sys.stderr)
         return 1
     grade = _read(GRADE_PATH)

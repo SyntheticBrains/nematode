@@ -1007,7 +1007,7 @@ C.2 enters C.4 as a failing in-sample row.)*
   - **C.1 (v3)'s predicted mutants,** the one new registered reading, both fail at restarts 0, 4 and 6,
     0 of 5 each, on a wild type that reproduces its committed grades exactly. tph-1 lowers roaming,
     the wrong way, and tax-4 leaves the lawn.
-  - **C.1 (v3)'s wild type** fails v4 in 0 of 5 at all three restarts, on activity.
+  - **C.1 (v3)'s wild type** fails v4 in all 5 populations at each of the three restarts, on activity.
   - **C.2** passes the wild type and its fitted tax-4 and pdfr-1 in 5 of 5. Its tph-1 fails, and its
     recovery control failed.
   - **B v4's eight negatives** each fail in 5 of 5, and the real-worm controls pass.
@@ -1023,7 +1023,7 @@ C.2 enters C.4 as a failing in-sample row.)*
 
   *(Added 2026-11-27, the maintainer's decision after C.1's refit pilot,
   [Logbook 136](../../../docs/experiments/logbooks/136-c1-v4-fit.md).)* **C.1 enters as a failing
-  row through its v3 answer**, which fails v4's wild type in 0 of 5. Its refit on v4 closed at its
+  row through its v3 answer**, which fails v4's wild type in all 5 populations. Its refit on v4 closed at its
   pilot, so it has no v4 answer.
 
   - **Its mutant rows are predictions,** not fits: the v3 answer was fitted to the wild type alone.

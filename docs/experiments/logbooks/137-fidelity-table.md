@@ -6,7 +6,7 @@
   - **tph-1** goes the wrong way: removing serotonin's intake signal lowers roaming, where real worms roam more.
   - **tax-4** leaves the small lawn 5.7 to 15.8 more times an hour than its wild type, where real worms leave 0.31 more.
 - **C.2:** passes the wild type in 5 of 5 registered populations, and tax-4 and pdfr-1 in 5 of 5. Every one of those mutants was fitted, its tph-1 fails, and its recovery control failed ([Logbook 133](133-c2-fit.md)).
-- **The rest of the table:** C.1 (v3)'s wild type fails v4 in 0 of 5, on the on-lawn activity family. Every negative fails, and the real-worm controls pass.
+- **The rest of the table:** C.1 (v3)'s wild type fails v4 in all 5 populations at each of the three restarts, on the on-lawn activity family. Every negative fails, and the real-worm controls pass.
 - **Unresolved:** with C.2's control failed and the two controllers on different bodies, the table cannot say which controller is closer to the worm. By the maintainer's decision, that contrast is description only.
 
 > | | C.1 (v3) | C.2 |
@@ -75,7 +75,7 @@ The bands' centres are +0.27 for tph-1's roaming difference, and −0.12 and +0.
   - This is the mechanism [Logbook 136](136-c1-v4-fit.md)'s probe found at restart 6 on the speed-following body: C.1's worm holds the lawn by weathervane steering, which tax-4's encoding removes.
 - **Restart 6 on 10 more populations** (description): the wild type, tph-1 and tax-4 each pass in 0 of 10, so 0 of 15 overall ([grade.json](supporting/137-fidelity-table/grade.json), `more_populations`).
 - **tph-1's leaving** (reported, not graded): restart 6's Δ exits per on-lawn hour is −0.29 to −0.44. That is against the band centre of +0.07 and B.4's single held-out reading of +4.04.
-- **Restarts 0 and 4 on v4** (description): both fail v4's wild type in 0 of 5. Like restart 6, each fails the on-lawn activity family in every population, though restart 4 passed v3 in 5 of 5.
+- **Restarts 0 and 4 on v4** (description): both fail v4's wild type in all 5 populations. Like restart 6, each fails the on-lawn activity family in every population, though restart 4 passed v3 in 5 of 5.
 
 ### The fidelity table
 
@@ -133,6 +133,10 @@ On the mutants the two fail differently. C.2 cannot move tph-1 even when fitted 
     - two data files are bound;
     - the preflight's output is committed.
 - **The first smoke printed mutant outcomes** on its two discarded populations, both failing. Part A discloses it. The revised smoke prints only whether the wild type repeats.
+- **After the PR review** (no figure changed):
+  - **The Markdown table omitted the description row.** `fidelity_table.json` holds C.1 (v4)'s pilot answer, but `markdown()` did not render it. It now does, and `fidelity_table.md` was re-rendered from the unchanged JSON. The re-render adds only that section.
+  - **The two guards used different pins.** The bound-record check pinned to the last commit touching `launch.md`, and the code check to the last commit changing Part A's text. Both now use Part A's commit. When `grade` and `table` ran, `a584fdad` was the only commit touching `launch.md`, so the two pins were the same commit.
+  - **This logbook and the index said the wild type "fails v4 in 0 of 5",** which inverts the reading: it passes in 0 of 5, failing all 5 populations at each restart. The wording is corrected here, in the index, the tracker and [Logbook 136](136-c1-v4-fit.md).
 - **A correction to the roadmap:** the D37 note of 2026-11-27 said that C.1's tax-4 row "carries no prediction" without the leave-one-out. C.1's rows are its v3 answer's predictions, so the note now says there is no leave-one-out prediction from a v4 answer.
 
 ## What this establishes, and what it does not

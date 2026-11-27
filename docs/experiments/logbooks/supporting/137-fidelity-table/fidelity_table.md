@@ -45,6 +45,10 @@ C.3: not run in Phase 10.
 - PD1074's 24 held-out dates, on activity: pause_share passes, flip_fraction passes, onset_rate_per_min passes.
 - W's minimum, the distance between two halves of real dates (95th percentile): 2.60 on the fitted families, 2.05 on local search and chemotaxis.
 
+## Description rows
+
+- C.1 (v4) pilot answer (description, discarded seeds): stopped at generation 113 by plateau; passes the wild type in 0 of 5, tph-1 in 5 of 5, tax-4 in 0 of 5; D by population 1.82, 1.75, 1.76, 1.79, 1.73.
+
 ## C.2 against C.1 (description)
 
 - C.2's recovery control, F.0b-ii, failed its gate.

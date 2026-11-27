@@ -435,6 +435,7 @@ def test_c1s_held_out_cell_is_not_read(monkeypatch: pytest.MonkeyPatch, tmp_path
     _table_paths(monkeypatch, tmp_path)
     (tmp_path / "grade.json").write_text(json.dumps(_grade_with_predictions()))
     monkeypatch.setattr(ft.cr, "launch_committed", lambda *_a, **_k: True)
+    monkeypatch.setattr(ft, "part_a_commit", lambda: "a1")
     assert ft.main(["table"]) == 0
     table = json.loads((tmp_path / "table.json").read_text())
     c1, c2, c3 = table["controllers"]
@@ -474,6 +475,15 @@ def test_the_table_rows_and_kinds() -> None:
     text = ft.markdown(table)
     cell = "| tph-1 | predicted: **fail** (r0 0, r4 0, r6 1 of 5); the wild type passes v4 in 0"
     assert cell in text
+    pilot = table["description_rows"][0]
+    line = (
+        f"- {pilot['controller']}: stopped at generation {pilot['stop']['generation']} by "
+        f"{pilot['stop']['by']}; passes the wild type in 0 of 5, tph-1 in 5 of 5, tax-4 in 0 of 5; "
+        f"D by population {', '.join(f'{v:.2f}' for v in pilot['D'])}."
+    )
+    assert line in text
+    assert text.index("## Description rows") < text.index(line)
+    assert text.index(line) < text.index("## C.2 against C.1 (description)")
 
 
 def test_the_table_copies_each_recorded_cell() -> None:
@@ -552,6 +562,7 @@ def test_the_grade_refuses_changed_code(monkeypatch: pytest.MonkeyPatch, tmp_pat
     """Scenario: The grade runs before Part A (changed code refuses like an uncommitted record)."""
     monkeypatch.setattr(ft, "GRADE_PATH", tmp_path / "grade.json")
     monkeypatch.setattr(ft.cr, "launch_committed", lambda *_a, **_k: True)
+    monkeypatch.setattr(ft, "part_a_commit", lambda: "a1")
     monkeypatch.setattr(ft, "code_unchanged", lambda: False)
     monkeypatch.setattr(ft, "run_jobs", lambda *_a, **_k: pytest.fail("the grade simulated"))
     assert ft.main(["grade"]) == 1
@@ -573,6 +584,7 @@ def test_a_bound_record_changed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path)
     _table_paths(monkeypatch, tmp_path)
     (tmp_path / "grade.json").write_text(json.dumps(_grade_with_predictions()))
     monkeypatch.setattr(ft.cr, "launch_committed", lambda *_a, **_k: False)
+    monkeypatch.setattr(ft, "part_a_commit", lambda: "a1")
     monkeypatch.setattr(ft, "code_unchanged", lambda: True)
     monkeypatch.setattr(ft, "build_table", lambda _g: pytest.fail("the table was built"))
     assert ft.main(["table"]) == 1
@@ -591,6 +603,7 @@ def test_the_table_refuses_a_grade_without_predictions(
     _table_paths(monkeypatch, tmp_path)
     (tmp_path / "grade.json").write_text(json.dumps(grade))
     monkeypatch.setattr(ft.cr, "launch_committed", lambda *_a, **_k: True)
+    monkeypatch.setattr(ft, "part_a_commit", lambda: "a1")
     assert ft.main(["table"]) == 1
     assert not (tmp_path / "table.json").exists()
     assert not (tmp_path / "table.md").exists()
@@ -602,6 +615,7 @@ def test_the_table_is_written_once(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     (tmp_path / "grade.json").write_text(json.dumps(_grade_with_predictions()))
     (tmp_path / "table.md").write_text("earlier")
     monkeypatch.setattr(ft.cr, "launch_committed", lambda *_a, **_k: True)
+    monkeypatch.setattr(ft, "part_a_commit", lambda: "a1")
     assert ft.main(["table"]) == 1
     assert not (tmp_path / "table.json").exists()
     assert (tmp_path / "table.md").read_text() == "earlier"
@@ -646,6 +660,29 @@ def test_the_code_is_checked_at_part_as_commit(monkeypatch: pytest.MonkeyPatch) 
     assert git.diffed == ["a1"]
     monkeypatch.setattr(ft.cr, "_git", _Git([("a1", "# Part A"), ("c3", "# Part A, amended")]))
     assert ft.part_a_commit() == "c3"
+
+
+def test_the_bound_records_are_checked_at_part_as_commit(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Scenario: A bound record changed (the records are compared at the code check's pin)."""
+    pins: list[str | None] = []
+
+    def committed(*_a: object, commit: str | None = None, **_k: object) -> bool:
+        pins.append(commit)
+        return True
+
+    monkeypatch.setattr(ft.cr, "launch_committed", committed)
+    monkeypatch.setattr(ft, "part_a_commit", lambda: "a1")
+    monkeypatch.setattr(ft, "code_unchanged", lambda: True)
+    assert ft.part_a()
+    _table_paths(monkeypatch, tmp_path)
+    assert ft.main(["table"]) == 1  # no grade record yet
+    assert pins == ["a1", "a1"]
+    monkeypatch.setattr(ft, "part_a_commit", lambda: None)
+    assert not ft.records_unchanged()
+    assert pins == ["a1", "a1"]
 
 
 @pytest.mark.parametrize(("diff", "status"), [(1, ""), (0, "?? scripts/analysis/extra.py\n")])

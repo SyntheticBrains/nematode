@@ -162,6 +162,39 @@ def test_the_read_is_guarded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert not cr.part_b_committed()
 
 
+def test_an_explicit_pin_compares_the_bound_records_at_that_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With ``commit``, the bound records are compared at it, not at the launch record's last."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    launch, record = repo / "launch.md", repo / "record.json"
+    monkeypatch.setattr(cr, "_REPO", repo)
+    launch.write_text("# Part A\n")
+    record.write_text("{}\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "part a")
+    pin = (
+        subprocess.run(
+            ["git", "rev-parse", "HEAD"],  # noqa: S607 - git on the PATH
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+        .stdout.decode()
+        .strip()
+    )
+    # A later commit touches the launch record and changes the bound record with it.
+    launch.write_text("# Part A\n\n## Part B\n")
+    record.write_text('{"later": true}\n')
+    _git(repo, "commit", "-q", "-am", "part b")
+    assert cr.launch_committed((record,), launch_path=launch)
+    assert not cr.launch_committed((record,), launch_path=launch, commit=pin)
+    assert not cr.launch_committed((record,), launch_path=launch, commit="0" * 40)
+
+
 def test_a_resume_with_mismatched_markers_is_refused(tmp_path: Path) -> None:
     """A checkpoint a generation ahead of its history is refused, not continued."""
     (tmp_path / "fit0.json").write_text(
