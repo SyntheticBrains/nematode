@@ -179,7 +179,7 @@ Phase 7 closed 2026-09-19 as **SPLIT** ([Logbook 069](experiments/logbooks/069-p
 
 ### Phase 8 — Ground, then Embody
 
-Phase 8 closed 2026-10-14 ([Logbook 094](experiments/logbooks/094-phase8-synthesis.md)). Shipment 8a ran the initialisation control on block V, the operating-point surface and measured synaptic signs and strengths on the Cook edges ([Logbook 076](experiments/logbooks/076-8a-synthesis.md)). Shipment 8b decomposed block V and embodied the connectome in a 12-segment kinematic body, where the worm learns to weathervane but never to modulate its turning rate, and on patchy lawns learns to dwell. Gap-junction placement was the wiring effect that held, and it survived the body ([Logbook 092](experiments/logbooks/092-thermal-body.md)). *(Withdrawn 2026-10-22, [Logbook 102](experiments/logbooks/102-decomposition-restated.md): that advantage was the gap model's degree normaliser.)*
+Phase 8 closed 2026-10-14 ([Logbook 094](experiments/logbooks/094-phase8-synthesis.md)). Shipment 8a put three controls under block V: an initialisation control, an operating-point surface and a measured-weight rung ([Logbook 076](experiments/logbooks/076-8a-synthesis.md)). Shipment 8b decomposed block V and embodied the connectome in a 12-segment kinematic body, where the worm learns to weathervane but never to modulate its turning rate, and on patchy lawns learns to dwell. Gap-junction placement was the wiring effect that held, and it survived the body ([Logbook 092](experiments/logbooks/092-thermal-body.md)). *(Withdrawn 2026-10-22, [Logbook 102](experiments/logbooks/102-decomposition-restated.md): that advantage was the gap model's degree normaliser.)*
 
 ### Phase 9 — Screen, then Mechanism
 

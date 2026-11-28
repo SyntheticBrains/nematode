@@ -9,8 +9,9 @@ the project, and the Python files are kept as `.py.txt`.
   `BRIEF.md`, its conclusion `RECOMMENDATION.md`, and its handover to the Phase 10 work
   `HANDOVER_PHASE10.md`. The readings are [Logbook 134](../docs/experiments/logbooks/134-fit-first-neural-readings.md):
   unfitted, C.2's encoder on the true wiring predicts Creamer et al.'s measured responses to
-  single-neuron stimulation better than all 19 degree-preserving rewirings, and behaviour fitting
-  does not detectably add to it. The spike's code is in `spike/`.
+  single-neuron stimulation better than all 19 degree-preserving rewirings. Behaviour fitting's part
+  is unsettled: at Logbook 131's answer it does not detectably add, and at C.2's registered answer
+  it raised r by 0.023, on one answer, as description (Logbook 138). The spike's code is in `spike/`.
 - **The neural-readout ceiling spike** (closed 2026-11-16). It measured how far that readout can
   reach. [Logbook 135](../docs/experiments/logbooks/135-neural-readout-ceiling.md) records it: the
   ceiling is about 0.42, and a linear model learned on the anatomical support does not beat the
