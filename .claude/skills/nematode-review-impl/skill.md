@@ -70,11 +70,20 @@ Comprehensive review of implementation before evaluation or merge.
 07. **Instrument identity check** (any change to the simulation, grading or connectome code path
     that claims to leave outputs unchanged)
 
-    - `uv run python scripts/analysis/speedup_identity_check.py baseline` on the code before the
-      change, then `... check` after;
-    - `scripts/analysis/connectome_identity_check.py baseline|check` for the connectome brain;
-    - `scripts/analysis/wormbench_identity_check.py baseline|check` for grading code moved or
-      edited in `packages/wormbench/`;
+    - C.1's simulation path, with `scripts/analysis/speedup_identity_check.py`: on the code before
+      the change, `baseline`, then `check` on that same code, so a stored record that no longer
+      reproduces is not blamed on the change; then `check` again after the change. Give every run
+      this review's own `--build <dir>` and `--out <json>`: the defaults are Logbook 118's
+      baseline directory and its committed `identity.json`, which a review must not overwrite;
+    - the connectome brain, with `scripts/analysis/connectome_identity_check.py baseline --build <dir>`
+      on the code before the change and `... check --build <dir> --out <json>` after it, with the
+      same `<dir>` (the script's own example is `build/c2-encoder/identity`);
+    - grading code moved or edited in `packages/wormbench/`, with
+      `scripts/analysis/wormbench_identity_check.py`: `baseline` in a tree at the code before the
+      change, then `check` in a different tree at the changed commit (it refuses the baseline's
+      commit). Run each stage from its own tree with that tree's interpreter,
+      `cd <tree> && .venv/bin/python -I <script> <stage> --tree . --build <shared dir>`, with one
+      shared build directory outside both trees;
     - after changing a file the package copies, `scripts/analysis/wormbench_records.py check` (and
       `wormbench_example.py check`).
 

@@ -85,7 +85,9 @@ Review an OpenSpec change to ensure it is ready for implementation.
      target (such as the bands' centres) and a match on one term alone — against the bar. Are the
      recovery's keep and drop rules scored against the same reference as its objective?
    - **Runs behind the procedure:** if the procedure was amended across failed pilots, has it met its
-     go rule on at least two fresh runs, or does the registration say the go rule is one draw?
+     go rule on at least two fresh runs? If not, the registration must say the go rule is one draw
+     **and** register a recovery control, run by the same procedure, as the second run; saying it
+     is one draw without that control does not pass.
    - **Fitted or predicted:** does the registration say, for each perturbation, whether it is fitted
      or predicted, and does nothing read a fitted response as a prediction?
    - **Benchmark version:** is the benchmark version the fit and any table read fixed before the
