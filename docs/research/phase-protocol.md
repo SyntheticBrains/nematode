@@ -9,6 +9,12 @@ controllers to real-worm data and grades them against it, and the principles car
 additions dated 2026-10-25 come from that work: a benchmark built from data, its controls, and the
 fitting methods' positive controls.*
 
+*(Added 2026-11-28, at Phase 10's close.)* The corollaries dated 2026-11-28 come from fitting models
+to data: what a search's objective can see, what a model can represent, what a recovery gate can
+fail, how many runs a procedure rests on, and what a test is shown to catch. Three are the lessons
+the synthesis proposed ([Logbook 138](../experiments/logbooks/138-phase10-synthesis.md)); the rest
+come from a sweep of Logbooks 104–137 for lessons the principles did not yet state.
+
 ## The pattern that worked
 
 Phase 6 ran a positive control ([Logbook 030](../experiments/logbooks/030-bit-memory-positive-control.md))
@@ -61,6 +67,18 @@ down.
    was motivated by the wild type sitting at 0.154 against rewirings at 0.01–0.04, and registered
    across 96 rewirings whose whole spread is 0.014–0.027 — a valid test of a narrower question
    than the one it was meant to license, [Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md).*
+   *(Added 2026-11-28.)* **And check what the model can represent before fitting it.** Before a fit,
+   a screen or a control is designed around a model, ask whether the model can produce the target
+   at all: from its starting point or from existing answers, by forward passes, output ranges and
+   hand-set changes, with no fitting. *A 7.8-h probe's mgl-1 half was answerable at generation 0
+   and by a 20-minute structural check
+   ([Logbook 127](../experiments/logbooks/127-c2-readability.md)). Both of the encoder's box
+   defects showed in seconds of forward passes, after hours of fitting had not found them
+   ([Logbook 122](../experiments/logbooks/122-c2-encoder.md)). A positive control was registered on
+   an answer whose speed output was pinned at zero, which a two-minute range check shows
+   ([Logbook 123](../experiments/logbooks/123-c2-speed-noise.md)). C.1's model was never checked
+   against what the benchmark grades, which cost C.1b's fit and two benchmark revisions to surface
+   ([Logbook 121](../experiments/logbooks/121-c1-v3-fit.md)).*
 
 3. **Establish that the task is solvable with the strongest available method.** Know what "learned"
    looks like before asking a constrained method to produce it. *The phase learned that PPO solves
@@ -116,6 +134,46 @@ down.
      ([Logbook 110](../experiments/logbooks/110-benchmark-controls.md); the 49% is in the change's
      [proposal](../../openspec/changes/archive/2026-10-25-add-benchmark-controls/proposal.md)).*
 
+   *(Added 2026-11-28.)* Three more.
+
+   - **A recovery gate must fail a fit that did not recover the truth.** Before it registers, score
+     the records a non-recovery would leave: the fit's default target, such as the bands' centres,
+     and a match on one term alone. Every keep or drop rule inside the recovery is scored against
+     the same reference as the recovery's objective. *In F.0b-ii's preflight the wild-type
+     reference, which a fit reaches without identifying anything, gained 0.863 against the gate's
+     0.75 ([recovery_preflight.json](../experiments/logbooks/supporting/133-c2-fit/recovery_preflight.json)),
+     and the launch record had said in advance that the gate "cannot tell recovering it from
+     fitting the wild type"
+     ([launch.md](../experiments/logbooks/supporting/133-c2-fit/launch.md)). Its keep rules read
+     D_fit against the bands, the recovery's included, and three of its four starts were dropped,
+     16.65 h of its 53.5 h ([Logbook 133](../experiments/logbooks/133-c2-fit.md)). C.1's refit gate
+     could have passed on the mutant terms alone until review caught it
+     ([Logbook 136](../experiments/logbooks/136-c1-v4-fit.md)).*
+   - **Tests and guards are shown to catch planted defects, and a reviewer without the author's
+     reading checks the code and the record before launch.** Run every guard, parity test and stage
+     test against deliberate bugs in the code it covers, with inputs that exercise the feature's
+     range. A test that passes on broken code is not evidence. *The first parity test of the
+     speed-following reversal missed four of five planted bugs, because its test worms never varied
+     the speed the feature reads
+     ([Logbook 132](../experiments/logbooks/132-speed-following-reversals.md)). 21 of 40 planted
+     bugs survived the fidelity table's first tests
+     ([Logbook 137](../experiments/logbooks/137-fidelity-table.md)). In C.2's fit, an independent
+     review named seven bugs its first tests passed; removing the pilot's kill rules passed the
+     suite, and so did a wrong σ hand-off between stages
+     ([launch.md](../experiments/logbooks/supporting/133-c2-fit/launch.md)). A guard would have
+     opened by itself, because the launch record quoted its marker phrase
+     ([Logbook 136](../experiments/logbooks/136-c1-v4-fit.md)). No run was lost to any of these,
+     because each was found first.*
+   - **A benchmark is revised against the fits that pass through it.** Register each revision
+     before the next fit, read every earlier pass as conditioned rather than overturned, and freeze
+     the version a registered table reads. The model is revised against the benchmark in the same
+     way: a mechanism chosen on the benchmark's families makes those families in-sample for it.
+     *C.1's v1 pass fails v2, and its v3 pass fails v4. Each earlier verdict stands at its version,
+     with dated notes, and every reading in the fidelity table is on v4, fixed before the table was
+     registered ([Logbook 138](../experiments/logbooks/138-phase10-synthesis.md)). C.1's fourth
+     mechanism was chosen on the benchmark's families
+     ([Logbook 125](../experiments/logbooks/125-c1-v4-diagnosis.md)).*
+
 5. **A task ladder from the control to the real task**, the method cleared at each rung before the
    next. Easy to hard: foraging, then foraging with predators, then with thermotaxis. Never jump
    orders of magnitude. *All 31 plastic configs sit on the hardest task. The only intermediate rung
@@ -168,6 +226,18 @@ down.
    oracle (principle 4). A bar on a statistic compared between two simulations is set against the
    simulator's own same-parameter noise, measured first
    ([Logbook 111](../experiments/logbooks/111-npe-recovery.md)).
+   *(Added 2026-11-28.)* **The preflight runs the gate itself**: the stage's own function, criterion
+   by criterion, on pilot seeds, not a summary of it. *Before benchmark v2 registered, its
+   reachability check read only the four speeds' RMS z. Part A's per-statistic gate, which the RMS
+   hid, already averaged −0.97 against [−1, 1] on the roaming speed's 90th percentile; it missed at
+   −1.07, and an amendment and a refit followed
+   ([launch.md](../experiments/logbooks/supporting/115-benchmark-v2/launch.md)).* **A speed-up or
+   refactor of the instrument's code path claims to change nothing, so it is shown byte-identical on
+   stored records**, with the check first run on the code before the change, so that a record which
+   no longer reproduces is not blamed on it. *All 55 stored records reproduced before Logbook 118's
+   edits ([Logbook 118](../experiments/logbooks/118-v2-speedup.md)).
+   `speedup_identity_check.py`, `connectome_identity_check.py` and `wormbench_identity_check.py`
+   are that check for their paths.*
 
 ### Parameters
 
@@ -189,6 +259,13 @@ down.
    costs, because every arm reads alike at the floor — which is why an instrument block's own knob
    sweep had to move platforms before it could measure anything,
    [Logbook 056](../experiments/logbooks/056-l4-ladder-reread.md).
+   *(Added 2026-11-28.)* **The same holds for a whole procedure.** A fitting procedure amended across
+   failed pilots until one passes rests on that one run. Before it registers, it meets its go rule
+   on at least two fresh runs, or the registration says that the go rule is one draw and the
+   recovery control the second. *C.2's procedure went through six readiness pilots and five
+   amendments before its registered fit; the fifth pilot alone took 47.1 h. Under the final rules
+   its wild type passed in two runs of three, and tph-1's response appeared in one of three: "Three
+   runs give no rate for either" ([Logbook 133](../experiments/logbooks/133-c2-fit.md)).*
 
 8. **Pilots on disjoint seeds.** Registered seeds stay untouched until the protocol is fixed. *Held
    throughout Phase 7, and it is why the pilots could inform registrations without contaminating
@@ -205,6 +282,25 @@ down.
      6001–7132, three of them inside W's reserved band, and the band was moved when the table was
      audited.*
 
+   *(Added 2026-11-28.)* Two more.
+
+   - **A smoke or probe that exercises a held-out reading's code passes band-cohort stand-ins,
+     never the defaults.** The defaults are the held-out cohorts, so a smoke run on them reads
+     held-out data outside the registered reading. *It happened twice: the likelihood check's first
+     run, since re-run on band cohorts
+     ([Logbook 138](../experiments/logbooks/138-phase10-synthesis.md)), and C.1's refit smoke,
+     which read N2's unread and PD1074's held-out dates through another fit's default sets
+     ([launch.md](../experiments/logbooks/supporting/136-c1-v4-fit/launch.md)).*
+   - **Each seed block is recorded by its full span, base plus stride times the largest index, and
+     a test checks that every pair is disjoint.** A table of bases does not show two blocks running
+     into each other. *Five overlaps were found despite the seed table
+     ([Logbook 113](../experiments/logbooks/113-c1-fit.md),
+     [116](../experiments/logbooks/116-cma-recovery-v2.md),
+     [120](../experiments/logbooks/120-benchmark-v3.md),
+     [124](../experiments/logbooks/124-benchmark-v4.md),
+     [131](../experiments/logbooks/131-c2-clean-start.md)). Each cost an erratum, a re-read on
+     disjoint seeds or a move before registration.*
+
 ### Running
 
 09. **Cheapest platform first; the expensive one only when the cheap one moves.** Estimate cost from
@@ -216,6 +312,14 @@ down.
     simulation at 20 s and projected 4.05 h; the run sustained 29–31 s and took 4.9 h
     ([Logbook 111](../experiments/logbooks/111-npe-recovery.md)). Run the pilot for several
     minutes at full load, or scale its estimate by a measured sustained-load factor.*
+    *(Added 2026-11-28.)* **And the cheapest check first.** Explore in stages: representability in
+    minutes (principle 2); then short screens, several in parallel, each with a stop rule written
+    before it runs and timed after the search's early transient; a full-scale run only to confirm
+    an idea that passed a screen; then registration. Each decision's branches are approved
+    beforehand, so the machine does not wait on a reply. *Three of Logbook 127's screens stopped
+    inside the search's transient and did not test their questions. The staging is that logbook's
+    § How the probes are run from here
+    ([Logbook 127](../experiments/logbooks/127-c2-readability.md)).*
 
 10. **Register a minimum effect beside significance**, name the outcome that means stop, and
     **match the statistic and the metric to the outcome's shape**. *A
@@ -272,6 +376,24 @@ down.
       ([Logbook 107](../experiments/logbooks/107-benchmark-readouts.md),
       [Logbook 109](../experiments/logbooks/109-benchmark-grading.md)).*
 
+    *(Added 2026-11-28.)* **Match a fit's objective to the verdict it will be read by.** Before a fit
+    registers, break its objective down term by term, at its start and on pilot candidates. Every
+    graded statistic must have slope there: no term capped or flat, none cheaper to leave undefined
+    than to miss, and a statistic leaving its bar must cost more than the score's noise between
+    candidates. *F.0b-i's capped distance gave the search no signal beyond the cap, and its uncapped
+    replacement made an undefined statistic cheaper than a far one, so two fits escaped into
+    parameters where whole families are undefined. The gate failed, and the recovery was run again
+    under a new ranking score, for 25.4 h
+    ([Logbook 116](../experiments/logbooks/116-cma-recovery-v2.md),
+    [Logbook 117](../experiments/logbooks/117-cma-recovery-v2b.md)). With every other statistic at
+    the truth, C.2's on-lawn onset rate at z −3.3 added 0.54 to its distance, about the noise
+    between candidates, "so the search cannot see the bar"
+    ([Logbook 131](../experiments/logbooks/131-c2-clean-start.md)); its fifth readiness pilot, 47.1 h,
+    then failed the onset rate in all 15 populations
+    ([launch.md](../experiments/logbooks/supporting/133-c2-fit/launch.md)). C.1's refit started with
+    tax-4's term at the z cap, and it stayed flat throughout
+    ([Logbook 136](../experiments/logbooks/136-c1-v4-fit.md)).*
+
 11. **A mechanism must predict, not describe.** A proposed explanation earns its place by a test
     that could have refuted it. *The horizon was a description of the one-step-success /
     multi-step-failure pattern until I.3b tested it on a multi-step task, where it did not
@@ -286,6 +408,15 @@ down.
     direction, and a minimum effect — before its correlation with the outcome is computed**, with a
     positive licensing a hypothesis rather than settling one
     ([Logbook 067](../experiments/logbooks/067-l4-feature-ablations.md)).
+    *(Added 2026-11-28.)* **A fit to the wild type does not identify its perturbation responses.**
+    Fit the perturbations or predict them, say which, and never read a fitted response as a
+    prediction. A fitted response is a property of the procedure only once it recurs across runs.
+    *In every fit of C.2 to the wild type, the knockouts' effects faded as the wild type's fit
+    improved ([Logbook 128](../experiments/logbooks/128-c2-identifiability.md)). C.2 passes its
+    mutants only in-sample, fitted to them, while C.1's predicted mutants fail
+    ([Logbook 137](../experiments/logbooks/137-fidelity-table.md)), and under the final rules C.2's
+    procedure found tph-1's response in one run of three
+    ([Logbook 133](../experiments/logbooks/133-c2-fit.md)).*
 
 ### Closing
 

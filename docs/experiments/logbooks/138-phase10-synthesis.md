@@ -325,7 +325,7 @@ Against the novelty map:
    - a held-out read happens only inside a registered fit;
    - a mutant's prediction follows the encoding table's `unidentified` rule.
 
-**Three lessons are proposed for the protocol at the plan review.** Each has a committed record, and none is written into the protocol here:
+**Three lessons are proposed for the protocol at the plan review.** Each has a committed record, and none is written into the protocol here *(2026-11-28: written into the [protocol](../../research/phase-protocol.md) before the plan review, by the maintainer's decision, with six more lessons and three sharpenings from Logbooks 104–137)*:
 
 - **A fit to the wild type does not identify its perturbation responses.** Fit the perturbations or predict them, say which, and never read a fitted one as a prediction ([128](128-c2-identifiability.md); D37's amendment; the ensemble above).
 - **A benchmark is revised against the fits that pass through it.** Register each revision before the next fit. Read every earlier pass as conditioned, not overturned. Freeze the version a registered table reads.
