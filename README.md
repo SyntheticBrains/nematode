@@ -13,7 +13,7 @@
 
 **A closed-loop simulation platform for asking how faithfully a simulated nematode can reproduce the real worm's standard behaviours — graded against real-worm data — and what the real *C. elegans* connectome contributes to that fidelity.** *(Re-framed in October 2026; until then the project asked which brain architecture best learns a nematode's behaviours.)*
 
-A simulated worm senses a continuous 2-D world — chemical gradients, temperature, oxygen, predators, other worms — a pluggable *brain* turns those senses into motor drive, and learning or evolution shapes the brain across episodes. Twenty-six brain architectures plug into the same loop: feed-forward, recurrent, liquid, attention, spiking, reservoir, quantum, hybrid, GA-evolved, and one constrained to the real 302-neuron *C. elegans* wiring diagram. Because every brain sees the same environment, reward and statistical protocol, they can be ranked on the same behaviours — and the behaviour they learn can be graded against published *C. elegans* data.
+A simulated worm senses a continuous 2-D world — chemical gradients, temperature, oxygen, predators, other worms — a pluggable *brain* turns those senses into motor drive, and learning, evolution or fitting to real-worm data shapes the brain. Twenty-six brain architectures plug into the same loop: feed-forward, recurrent, liquid, attention, spiking, reservoir, quantum, hybrid, GA-evolved, and one constrained to the real 302-neuron *C. elegans* wiring diagram. Every brain sees the same environment and statistical protocol, so the architecture families are controllers compared on one measure: how closely the behaviour they produce matches real worms on standard assays, graded by the project's benchmark.
 
 > The project started, and is still named, as a quantum-machine-learning experiment. A 300-session campaign across 11 quantum and hybrid architectures (and their variants) found no quantum advantage on these tasks under controlled attribution ([Logbook 008](docs/experiments/logbooks/008-quantum-brain-evaluation.md), [Logbook 025](docs/experiments/logbooks/025-weight-search-architecture-ranking.md)), so quantum circuits are now one architecture family in the comparison rather than the organising principle. The [roadmap](docs/roadmap.md) records that pivot and everything since.
 
@@ -21,6 +21,7 @@ A simulated worm senses a continuous 2-D world — chemical gradients, temperatu
 
 Each result links to the logbook that holds the evidence. Negative results carry the same weight as positive ones.
 
+- **A valid benchmark, and no controller that predicts a mutant** ([Logbook 138](docs/experiments/logbooks/138-phase10-synthesis.md)). Phase 10 graded simulated worms on standard on-lawn assays against real-worm tracks. The benchmark, v4, grades 24 statistics in six families: Scheer & Bargmann's small lawn and uniform well, kinematics and activity on the lawn, López-Cruz's local search after food removal, and Chen's butanone chemotaxis. Real worms pass it and all eight negative controllers fail it ([Logbooks 124](docs/experiments/logbooks/124-benchmark-v4.md), [137](docs/experiments/logbooks/137-fidelity-table.md)). The connectome brain, as a function of named parameters, can be fitted to pass v4's wild type, and a mechanistic model passed v3's ([Logbooks 133](docs/experiments/logbooks/133-c2-fit.md), [121](docs/experiments/logbooks/121-c1-v3-fit.md)). No controller passes the wild type with every mutant it can encode: the mechanistic model's two predicted mutants both fail, and the connectome's fitted serotonin mutant fails. In probes, wild-type behaviour does not identify the connectome's knockout responses. The wiring question was deferred, so what the connectome contributes to behavioural fidelity is unread. The grader ships as [`wormbench`](packages/wormbench/README.md) on [PyPI](https://pypi.org/project/wormbench/) (`pip install wormbench`), with the real tracks on Zenodo ([doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652)).
 - **Architecture ranking on the continuous substrate** ([Logbook 029](docs/experiments/logbooks/029-continuous-architecture-ranking.md)). On one integrated cell — chemotaxis foraging, predator evasion and thermotaxis all active, klinotaxis sensing, n = 8 paired seeds — the six pre-registered Phase 6 arms rank **MLP 89.0 ≫ {CfC 75.8 ≈ Transformer 74.0} > LSTM 60.1 > connectome 52.2 ≫ GA 15.0** (plateau-tail full-clear success %, three tiers separated at Benjamini–Hochberg FDR). A plain MLP wins on all three behaviours.
 - **The connectome, honestly** ([Logbook 034](docs/experiments/logbooks/034-connectome-structure-controls.md), [037](docs/experiments/logbooks/037-phase6a-synthesis.md)). The wild-type *C. elegans* wiring learns the cell (8/8 seeds converge) but ranks 5th of 6 under PPO weight search — and a degree-preserving rewired-null control is statistically indistinguishable from it (52.8% vs 56.1%, q = 0.77). Under gradient-descent weight search the specific wiring confers no advantage over degree-matched alternatives: a degree-statistics result, not a wiring result, and the motivating hypothesis for Phase 7 — *is PPO simply the wrong learning rule for the connectome?*
 - **What the wiring advantage was made of** ([Logbooks 079](docs/experiments/logbooks/079-boundary-null.md), [095](docs/experiments/logbooks/095-gap-operating-point.md), [101](docs/experiments/logbooks/101-gap-model-question.md), [102](docs/experiments/logbooks/102-decomposition-restated.md), [103](docs/experiments/logbooks/103-phase9-synthesis.md)). Phase 8 traced the connectome's learning-speed advantage over rewired nulls to the null's rewired gap junctions and sensory–motor boundary, and found gap-junction placement held, even through a 12-segment kinematic body. Phase 9 screened the gap model before building on it: the advantage came from how the model normalised gap junctions (by partner count, letting a few high-count pairs couple near 90). Under unit weights, log-compressed counts or a strength normaliser it is gone, on the point worm and through the body (128 seeds). What stands is the chemical wiring at the sensory–motor boundary on one cell. Measured weights and real synapse signs moved no wiring reading.
@@ -34,13 +35,13 @@ Each result links to the logbook that holds the evidence. Negative results carry
 
 - **Actively developed research software, single maintainer.** Phases 0–5, Phase 6**a** and Phases 7–10 of the [roadmap](docs/roadmap.md) are complete ([Phase 6a synthesis](docs/experiments/logbooks/037-phase6a-synthesis.md), [Phase 7 synthesis](docs/experiments/logbooks/069-phase7-synthesis.md), [Phase 8 synthesis](docs/experiments/logbooks/094-phase8-synthesis.md), [Phase 9 synthesis](docs/experiments/logbooks/103-phase9-synthesis.md), [Phase 10 synthesis](docs/experiments/logbooks/138-phase10-synthesis.md)); **Phase 6b remains pending**. **Phase 9 closed on 2026-10-22 on its STOP branch**: the connectome's learning-speed advantage over its nulls, which Phase 8 had traced to gap-junction placement and carried through the body, came from how the model normalised gap junctions, and Phase 8's gap-placement result is withdrawn ([Logbook 102](docs/experiments/logbooks/102-decomposition-restated.md)). **Phase 10, *fidelity on the plate*, closed on 2026-11-27** ([Logbook 138](docs/experiments/logbooks/138-phase10-synthesis.md)). Its benchmark of standard on-lawn assays, graded against real worms, is valid: real worms pass it and every negative fails. A connectome controller can be fitted to pass its wild type, but no controller predicts a mutant, and the wiring question was deferred, so what the connectome contributes to behavioural fidelity is unread. The benchmark ships as the `wormbench` package on PyPI (`pip install wormbench`). The body and posture open Phase 11, whose plan review comes next. *Historical, for context:* Phase 7 closed as a SPLIT, finding no biologically plausible learning rule that writes this connectome to any benefit; Phase 8 decomposed block V and embodied the connectome in a 12-segment kinematic body, where the worm learns to weathervane but never to modulate its turning rate, and on patchy lawns learns to dwell. Cross-species transfer to *P. pacificus* is deferred with 7b; Phase 6b (NEAT topology search) is deferred behind environment vectorisation.
 - **Evidence discipline.** Every experiment series is a numbered [logbook](docs/experiments/README.md) with its hypothesis, method, results and decision, plus the configs, seeds and artifacts needed to reproduce it. Phase 5's pilots (Logbooks 012–018) ran n ≥ 4 seeds against pre-declared decision gates; from Logbook 019 comparisons use paired-seed Wilcoxon tests with bootstrap CIs, and the Phase 6 rankings (025 onward) add BH-FDR correction at n = 8. Earlier logbooks report session-level results. Negative results and STOP verdicts are first-class. Changes go through [OpenSpec](https://github.com/Fission-AI/OpenSpec) proposals under [`openspec/`](openspec/).
-- **Engineering.** Python 3.13 only; 4,000+ tests in four tiers (unit, slow integration, CLI smoke, nightly end-to-end benchmarks); Pyright-typed and Ruff-linted (`select = ALL`). Tagged releases are on [GitHub Releases](https://github.com/SyntheticBrains/nematode/releases) and summarised in [CHANGELOG.md](CHANGELOG.md); internals change between them.
+- **Engineering.** Python 3.13 only (the `wormbench` package alone runs on 3.10 or later); about 9,000 tests in four tiers (unit, slow integration, CLI smoke, nightly end-to-end benchmarks); Pyright-typed and Ruff-linted (`select = ALL`). Tagged releases are on [GitHub Releases](https://github.com/SyntheticBrains/nematode/releases) and summarised in [CHANGELOG.md](CHANGELOG.md); internals change between them.
 
 ## Quick start
 
 ### Install
 
-[uv](https://github.com/astral-sh/uv) manages the environment; [Git LFS](https://git-lfs.com) stores weights, checkpoints and connectome data. A fresh clone fetches only the connectome data the code needs (~4 MB); the ~620 MB of curated logbook artifacts stay as LFS pointers until you ask for them with `git lfs pull --include='artifacts/**'`.
+[uv](https://github.com/astral-sh/uv) manages the environment; [Git LFS](https://git-lfs.com) stores weights, checkpoints and connectome data. A fresh clone fetches only the data the code needs (`data/**`, about 20 MB: the connectome spreadsheets, the posture data and the roaming/dwelling windows); the ~620 MB of curated logbook artifacts stay as LFS pointers until you ask for them with `git lfs pull --include='artifacts/**'`.
 
 ```bash
 # macOS
@@ -61,7 +62,7 @@ uv sync --extra cpu --extra torch --extra pixel
 | `pixel` | Pygame — the `pixel` and `pixel_continuous` renderers and the realistic replay viewer |
 | `gpu` | Qiskit Aer on CUDA 11 (conflicts with `cpu`) |
 | `qpu` | IBM Quantum runtime for real hardware (`--device qpu`; put your key in `.env`, see `.env.template`) |
-| `analysis` | scikit-learn and SciPy for the analysis scripts |
+| `analysis` | scikit-learn, SciPy and `sbi` (simulation-based inference) for the analysis scripts |
 
 ### Run
 
@@ -77,7 +78,7 @@ uv run ./scripts/run_simulation.py \
   --theme headless --runs 200 --seed 1
 ```
 
-Each `--config` is a self-contained YAML scenario — the brain and its hyperparameters, the environment, the sensing mode and the reward. The 260+ scenarios under [`configs/scenarios/`](configs/README.md) are named `{brain}_{size}[_{variant}]_{sensing}.yml`.
+Each `--config` is a self-contained YAML scenario — the brain and its hyperparameters, the environment, the sensing mode and the reward. The 780+ scenarios under [`configs/scenarios/`](configs/README.md) are named `{brain}_{size}[_{variant}]_{sensing}.yml`.
 
 More to try:
 
@@ -97,6 +98,9 @@ uv run python scripts/replay_viewer.py recordings/<session>-run0001.npz
 
 # Evolve a feed-forward network's weights with a genetic algorithm
 uv run python scripts/run_evolution.py --config configs/evolution/feedforwardga_foraging_small.yml --algorithm ga --generations 20 --parallel 4
+
+# Grade 64 real wild-type worms on the small lawn with the benchmark (no download needed)
+uv run wormbench example --out ex && uv run wormbench grade --manifest ex/manifest.txt --out ex/grade.json
 ```
 
 The [usage guide](docs/usage.md) covers the full CLI, experiment tracking, evolution and inheritance, the analysis scripts, quantum hardware and the GPU container.
@@ -106,11 +110,11 @@ The [usage guide](docs/usage.md) covers the full CLI, experiment tracking, evolu
 1. **Sense.** The worm reads its world through biologically-motivated channels: chemical concentration (oracle gradients, scalar-only temporal sensing, the temporal derivative dC/dt, or klinotaxis head-sweeps), temperature (AFD-like thermosensation), oxygen (URX/BAG-like aerotaxis), contact and distal predator cues (ASH/ALM/PVD-style mechano- and chemosensation), pheromones and neighbours in multi-agent runs, plus proprioception and a short-term associative memory (STAM) buffer. On the continuous substrate an adaptive, Weber-law chemosensor sits between the field and the brain.
 2. **Decide.** The brain maps the sensory vector to motor drive. On the continuous-2D substrate that is a `(speed, turn)` command from a tanh-squashed Gaussian head; on the grid it is one of `{forward, left, right, stay}`. The environment owns the physical scale and integrates the kinematics, so the same brain works in any arena.
 3. **Act and learn.** Moving costs satiety, food restores it, predators damage health, and thermal or oxygen zones range from comfortable to lethal. Reward, satiety and health feed back to the learner — PPO for most arms, REINFORCE, DQN, surrogate-gradient rules for spiking networks — or to an evolutionary outer loop: CMA-ES, genetic algorithms, TPE hyperparameter search, Lamarckian warm-starts across generations, predator–prey co-evolution.
-4. **Measure.** Every run logs success, foods, steps, reward, distance efficiency, survival and comfort; `--track-experiment` captures the config hash, git state and results for reproducibility; bias-curve analysis grades the worm's own turning behaviour against the *C. elegans* literature; paired-seed statistics rank the architectures.
+4. **Measure.** Every run logs success, foods, steps, reward, distance efficiency, survival and comfort; `--track-experiment` captures the config hash, git state and results for reproducibility; bias-curve analysis grades the worm's own turning behaviour against the *C. elegans* literature; the benchmark grades a worm's 1-s tracks on standard assays against real worms' tracks; paired-seed statistics compare the architectures.
 
-**Two substrates.** The discrete grid (Phases 0–5) is where most historical results live and remains fully supported. The continuous-2D substrate (Phase 6) adds float kinematics, Euclidean geometry, Fick-shaped diffusion fields and the adaptive sensor, and is where the current ranking and the real-worm validation were run. The two are deliberately non-commensurable; results are never mixed across them.
+**Two substrates.** The discrete grid (Phases 0–5) is where most historical results live and remains fully supported. The continuous-2D substrate (Phase 6) adds float kinematics, Euclidean geometry, Fick-shaped diffusion fields and the adaptive sensor, and is where the Phase 6 ranking, the real-worm validation and the Phase 10 benchmark were run. The two are deliberately non-commensurable; results are never mixed across them.
 
-**Behaviours.** Chemotaxis foraging, predator evasion (stationary traps and pursuit predators), thermotaxis, aerotaxis, multi-agent foraging with pheromones and social feeding, and two engineered working-memory probes (delayed match-to-cue and chemosensory associative update). The Phase 6 ranking runs the first three together on one cell. The biology behind every channel, with references, is in [docs/nematode_biology.md](docs/nematode_biology.md).
+**Behaviours.** Chemotaxis foraging, predator evasion (stationary traps and pursuit predators), thermotaxis, aerotaxis, multi-agent foraging with pheromones and social feeding, and two engineered working-memory probes (delayed match-to-cue and chemosensory associative update). The Phase 6 ranking runs the first three together on one cell. Phase 10's benchmark grades a 1-s point worm on standard assays: roaming and dwelling on bacterial lawns, lawn leaving, local search after food removal and butanone chemotaxis. The thermal, predator, multi-agent and oxygen scenarios are frozen: kept and tested, not extended. The biology behind every channel, with references, is in [docs/nematode_biology.md](docs/nematode_biology.md).
 
 ## Brain architectures
 
@@ -149,7 +153,7 @@ Sprites, overlays, recording options and keyboard controls are documented in [do
 
 | Document | What it is for |
 |---|---|
-| [docs/roadmap.md](docs/roadmap.md) | Vision, phase history, exit criteria, decision gates and the Phase 10 plan |
+| [docs/roadmap.md](docs/roadmap.md) | Vision, phase history, exit criteria and decision gates; the Phase 11 plan review is pending |
 | [docs/experiments/README.md](docs/experiments/README.md) | Index of all experiment logbooks — the evidence base |
 | [docs/usage.md](docs/usage.md) | CLI reference, experiment tracking, evolution, analysis scripts, hardware |
 | [docs/architectures.md](docs/architectures.md) | All 26 brains, their roles and optimiser guidance |
@@ -160,15 +164,18 @@ Sprites, overlays, recording options and keyboard controls are documented in [do
 | [docs/research/](docs/research/) | Design notes and surveys: the quantum-architecture campaign, policy-architecture candidates, memory probes |
 | [docs/STANDARDIZATION.md](docs/STANDARDIZATION.md) | Why there is no Gymnasium or Hydra layer, and what happened to the benchmark system |
 | [AGENTS.md](AGENTS.md) | Instructions for AI coding assistants: commands, layout, conventions |
-| [data/](data/) | Vendored connectome data with provenance; published chemotaxis and thermotaxis reference values |
+| [packages/wormbench/README.md](packages/wormbench/README.md) | The `wormbench` grader: install, grading your own tracks, benchmark versions and data |
+| [data/](data/) | Vendored data, each namespace with its provenance: the connectome, the benchmark's real-worm tracks and bands, the neuromodulator layer, locomotor kinematics, posture and roaming/dwelling references; published chemotaxis and thermotaxis reference values |
 
 ## Contributing
 
 Contributions are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the four test tiers, code style and the pull-request process. Good places to start, aligned with the roadmap:
 
-- **Phase 8 substrate and body**: reversal in the continuous environment; the body generator's curvature-and-phase interface; the anatomical motor-to-muscle readout into a kinematic 2D body (a rod-chain body behind a measured cost pilot); ingesting measured synaptic weights on the Cook edges with provenance.
+- **The body and posture**: Phase 11 opens on them, once its plan review is written. The review also weighs the items below ([Logbook 138](docs/experiments/logbooks/138-phase10-synthesis.md), § The shipment decision).
+- **A cross-lab check of the bands**: grade another lab's real worms, first Haley 2025's tracks, against the bands built from Scheer & Bargmann's. If they fail, the bands are specific to one rig.
+- **What a controller needs to predict a mutant**: fitting the wild type does not identify the knockout responses. The candidates are neural constraints, a controller fitted to neural data, and mechanism ablations that say which statistic needs which mechanism.
+- **Chemotaxis for imported tracks in `wormbench`**: an imported track carries no odour field, so its chemotaxis family is not graded ([data/benchmark/IMPORT.md](data/benchmark/IMPORT.md)).
 - **Environment vectorisation**: the binding constraint on Phase 6b's NEAT topology search.
-- **Validation arms**: a predator/mechanosensation behavioural validation; named-neuron grounding for the connectome brain.
 - **Docs, tutorials and reproductions**: rerun any logbook on your own hardware — a discrepancy is a finding.
 
 Questions and ideas go to [Discussions](https://github.com/SyntheticBrains/nematode/discussions); bugs to [Issues](https://github.com/SyntheticBrains/nematode/issues); suspected vulnerabilities to the private channel in [SECURITY.md](SECURITY.md).
@@ -180,12 +187,14 @@ If you use the platform or its results, please cite it ([CITATION.cff](CITATION.
 ```bibtex
 @software{zaharia_quantum_nematode,
   author  = {Zaharia, Chris Julian},
-  title   = {Quantum Nematode: a closed-loop brain-architecture comparison platform on the C. elegans connectome},
+  title   = {Quantum Nematode: simulated C. elegans graded against real-worm behaviour, and what the connectome contributes},
   year    = {2026},
   url     = {https://github.com/SyntheticBrains/nematode},
   license = {Apache-2.0}
 }
 ```
+
+If you use the benchmark alone, cite `wormbench` as its [CITATION.cff](packages/wormbench/CITATION.cff) gives it, and the real-worm reference data it grades against: Zaharia, C. J. (2026), *Real-worm reference data for wormbench, version 1*, Zenodo, [doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652), with the source studies its [README](packages/wormbench/README.md#citation) lists.
 
 ## License
 

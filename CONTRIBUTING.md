@@ -8,7 +8,7 @@ Thank you for your interest in contributing. This guide covers development setup
 
 - **Python 3.13** — exactly (`>=3.13,<3.14`); `uv` fetches it if it is not installed
 - [**uv**](https://github.com/astral-sh/uv) for dependency management
-- [**Git LFS**](https://git-lfs.com) — model weights, evolution checkpoints, curated artifacts and the connectome spreadsheets live in LFS. The committed `.lfsconfig` limits a fresh clone to `data/**` (~4 MB); the curated artifacts (~620 MB) are fetched only on request
+- [**Git LFS**](https://git-lfs.com) — model weights, evolution checkpoints, curated artifacts and the connectome spreadsheets live in LFS. The committed `.lfsconfig` limits a fresh clone to `data/**` (about 20 MB); the curated artifacts (~620 MB) are fetched only on request
 
 ```bash
 # macOS
@@ -37,7 +37,7 @@ Pick the extras you need — only `cpu` and `gpu` conflict:
 | `torch` | PyTorch | Every classical, recurrent, spiking, hybrid and connectome brain |
 | `qpu` | `qiskit-ibm-runtime`, `qiskit-ibm-catalog` | Real IBM Quantum hardware (`--device qpu`) |
 | `pixel` | Pygame | The `pixel` and `pixel_continuous` renderers |
-| `analysis` | scikit-learn, SciPy | The analysis scripts under `scripts/analysis/` |
+| `analysis` | scikit-learn, SciPy, `sbi` | The analysis scripts under `scripts/analysis/` (`sbi` for the neural posterior estimation recovery) |
 
 ```bash
 # Typical development install
@@ -117,6 +117,8 @@ packages/quantum-nematode/quantumnematode/
   env/             grid and continuous-2D environments, sensing, predators, pheromones, themes
   agent/           agent orchestration, rewards, metrics, multi-agent simulation
   connectome/      Cook et al. 2019 connectome loader and neuron metadata
+  benchmark/       the benchmark's grading modules, aliases of the same modules in wormbench
+  evaluation/      the batched evaluator: N frozen animals of one config in lockstep
   evolution/       CMA-ES / GA / TPE loops, inheritance strategies, co-evolution
   optimizers/      parameter-shift rule, CMA-ES and GA optimisers, learning-rate schedules
   executors/       CPU / GPU / QPU backends
@@ -126,6 +128,7 @@ packages/quantum-nematode/quantumnematode/
   utils/           config loader, brain factory, interrupt handling
   logging_config.py  structured logging (logs/simulation_<session-id>.log)
 packages/quantum-nematode/tests/   the test suite (all tiers)
+packages/wormbench/                the benchmark's grader as a standalone package (Python 3.10+, numpy and scipy only)
 scripts/           CLI entry points, analysis scripts, Phase 5 campaign drivers
 configs/           scenario, evolution and special configs (see configs/README.md)
 docs/              roadmap, logbooks, biology, guides (see docs/README.md)
@@ -214,11 +217,11 @@ PR checklist:
 
 ## Releasing
 
-Releases are tags on `main` plus a GitHub Release; there is no PyPI publication. To cut one:
+Releases of the main project (`quantum-nematode`) are tags on `main` plus a GitHub Release; it is not published to PyPI. `wormbench` is, and is released on its own (below). To cut a release of the main project:
 
 1. In `CHANGELOG.md`, turn *Unreleased* into the new version with the date, breaking changes first, and update the compare links at the bottom.
 
-2. Set the version in both `pyproject.toml` files and in `CITATION.cff` (with `date-released`), then run `uv lock` so the lock file records it.
+2. Set the version in the root `pyproject.toml`, in `packages/quantum-nematode/pyproject.toml` and in the root `CITATION.cff` (with `date-released`), then run `uv lock` so the lock file records it. `wormbench` keeps its own version, set as in § Releasing wormbench.
 
 3. Run `uv run pytest -m "not nightly"`, `uv run pre-commit run -a` and `uv build --package quantum-nematode` (the workspace root is private and has no build system of its own, so a bare `uv build` fails on its package discovery), then audit the locked third-party dependencies — export them to a file and point `pip-audit` at it:
 
@@ -251,8 +254,11 @@ Releases are tags on `main` plus a GitHub Release; there is no PyPI publication.
 
 5. With the maintainer's confirmation at each upload, publish through `.github/workflows/release-wormbench.yml`. It uses PyPI's trusted publishing, so no token is stored. It builds the distributions, tests the wheel alone at the declared minimums, and uploads them:
 
-   - **TestPyPI:** after the release PR merges, run the workflow on `main` (`gh workflow run release-wormbench.yml --ref main`). Install the release from TestPyPI into a clean Python 3.10 environment (`pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ wormbench==X.Y.Z`), grade `wormbench example`, and run `wormbench data fetch` and `wormbench data verify`. An index never takes the same version twice, so a failed check means a new version.
-   - **PyPI:** tag the merge commit, `git tag -a wormbench-vX.Y.Z -m wormbench-vX.Y.Z && git push origin wormbench-vX.Y.Z`. The workflow refuses a tag that does not name the package's version, or that is not on `main`.
+   - **In the release PR:** set `date-released` in `packages/wormbench/CITATION.cff`, which the sdist ships, to the UTC day of the PyPI upload, not the local day.
+   - **Before either run:** read both environments' protection rules back (`gh api repos/SyntheticBrains/nematode/environments/<name>`, for `testpypi` and `pypi`). A required reviewer that was not saved lets an upload through unapproved.
+   - **TestPyPI:** after the release PR merges, run the workflow on `main` (`gh workflow run release-wormbench.yml --ref main`). Install the release into a clean Python 3.10 environment, its dependencies from PyPI and the package alone from TestPyPI: `pip install numpy scipy`, then `pip install --no-deps --index-url https://test.pypi.org/simple/ wormbench==X.Y.Z`. With both indexes in one install, a same-named package on TestPyPI can win. An index page can lag the upload by a minute. Grade `wormbench example`, and run `wormbench data fetch` and `wormbench data verify`. An index never takes the same version twice, so a failed check means a new version.
+   - **PyPI:** tag the merge commit, `git tag -a wormbench-vX.Y.Z -m wormbench-vX.Y.Z && git push origin wormbench-vX.Y.Z`. The workflow refuses a tag that does not name the package's version, or that is not on `main`. Before approving the `pypi` deployment, check that the SHA-256 of each distribution the tag's run built (its `wormbench-dist` artifact) equals the TestPyPI file's.
+   - **After the upload:** create the GitHub release with `gh release create wormbench-vX.Y.Z --title "wormbench X.Y.Z" --notes-file <notes> --latest=false`, so the project's own release stays Latest.
 
    **Once, before the first release:** on pypi.org and on test.pypi.org, add a trusted publisher (a pending one, while the project does not exist) for the project `wormbench`: owner `SyntheticBrains`, repository `nematode`, workflow `release-wormbench.yml`, and environment `pypi` or `testpypi` respectively. In the repository's settings, give both environments a required reviewer, so each upload waits for approval.
 
@@ -260,10 +266,12 @@ Releases are tags on `main` plus a GitHub Release; there is no PyPI publication.
 
 Aligned with the [roadmap](docs/roadmap.md):
 
-- **Phase 7 plasticity** — STDP/Hebbian and neuromodulator-gated three-factor rules on the connectome substrate; receptor-class metadata from CeNGEN; a minimal metabolic-state model.
+- **The body and posture** — Phase 11 opens on them once its plan review is written; the review also weighs the items below ([Logbook 138](docs/experiments/logbooks/138-phase10-synthesis.md), § The shipment decision).
+- **A cross-lab check of the bands** — grade another lab's real worms, first Haley 2025's tracks, against the bands built from Scheer & Bargmann's; if they fail, the bands are specific to one rig.
+- **What a controller needs to predict a mutant** — fitting the wild type does not identify the knockout responses; the candidates are neural constraints, a controller fitted to neural data, and mechanism ablations on mechanistic models.
+- **Chemotaxis for imported tracks in `wormbench`** — an imported track carries no odour field, so its chemotaxis family is not graded ([data/benchmark/IMPORT.md](data/benchmark/IMPORT.md)).
 - **Environment vectorisation** — a vmappable `Continuous2DEnvironment` is the binding constraint on Phase 6b's NEAT topology search.
-- ***P. pacificus* connectome import** — Cook et al. 2025 data through the existing L0/L1 pipeline.
-- **Validation** — a predator/mechanosensation behavioural validation arm; named-neuron grounding (NeuroPAL/WormID) for the connectome brain.
+- **Validation** — named-neuron grounding (NeuroPAL/WormID) for the connectome brain.
 - **Reproductions** — rerun a logbook on your hardware and report what you get; discrepancies are findings.
 - **Documentation and tutorials**, and test coverage for the scripts under `scripts/`.
 
