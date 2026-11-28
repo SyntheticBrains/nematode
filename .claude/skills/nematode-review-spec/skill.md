@@ -61,13 +61,47 @@ Review an OpenSpec change to ensure it is ready for implementation.
    - Was a gate carried over from another cell or learner re-checked on this one?
    - Is the cost estimated from a pilot configured the way the campaign will be (same episodes, same
      arm mix), not from a lighter run or another panel's average?
-   - Did every pilot and smoke run use seeds disjoint from the registered band?
+   - Did every pilot and smoke run use seeds disjoint from the registered band? Is every seed block
+     recorded by its full span (base + stride × largest index), with a test that every pair is
+     disjoint?
+   - Was each gate preflighted **itself** — the stage's own function, criterion by criterion — not a
+     summary such as an RMS? Was a positive control's bar met by its oracle (the generating
+     parameters re-simulated with fresh noise), and is a bar between simulations set against the
+     simulator's own same-parameter noise?
+   - Does a smoke or probe that reaches held-out code pass band-cohort stand-ins rather than the
+     defaults?
+
+   **Fitting Readiness** (any change that fits a model to data; principles 2, 4, 7, 10 and 11 of
+   `docs/research/phase-protocol.md`)
+
+   - **Representability:** has the model been shown able to produce the target at all — by forward
+     passes, output ranges or hand-set changes from its start or existing answers — before the fit,
+     screen or control is designed? Does a control's answer actually express what it controls?
+   - **The objective against the verdict:** is the objective broken down term by term at its start
+     and on pilot candidates? Does every graded statistic have slope there (no term capped or flat,
+     none cheaper to leave undefined than to miss), and does a statistic leaving its bar cost more
+     than the score's noise between candidates?
+   - **The recovery gate:** can it fail? Score what a non-recovery would leave — the fit's default
+     target (such as the bands' centres) and a match on one term alone — against the bar. Are the
+     recovery's keep and drop rules scored against the same reference as its objective?
+   - **Runs behind the procedure:** if the procedure was amended across failed pilots, has it met its
+     go rule on at least two fresh runs? If not, the registration must say the go rule is one draw
+     **and** register a recovery control, run by the same procedure, as the second run; saying it
+     is one draw without that control does not pass.
+   - **Fitted or predicted:** does the registration say, for each perturbation, whether it is fitted
+     or predicted, and does nothing read a fitted response as a prediction?
+   - **Benchmark version:** is the benchmark version the fit and any table read fixed before the
+     fit registers, and are earlier passes on older versions read as conditioned?
 
    **Code Quality Concerns**
 
    - Will the proposed implementation integrate cleanly with existing code?
    - Are there potential circular imports, type issues, or API mismatches?
-   - Is the test coverage plan sufficient?
+   - Is the test coverage plan sufficient? Does it plan to run the tests and guards against
+     deliberately planted defects, with inputs that exercise the feature's range?
+   - Does a change to the instrument's code path (a speed-up or a refactor that claims to change
+     nothing) plan a byte-identity check, run first on the code before the change
+     (`speedup_identity_check.py`, `connectome_identity_check.py`, `wormbench_identity_check.py`)?
 
    **Missing Items**
 
