@@ -12,7 +12,10 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import shlex
+import subprocess
+import sys
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -120,7 +123,7 @@ def test_the_default_is_refused_when_its_record_is_not_valid(
 
 def test_measured_grading_on_v1_is_refused(example: Path, tmp_path: Path) -> None:
     """v1's bands carry no measurement model, so ``--simulated --bands v1`` is refused."""
-    with pytest.raises(ValueError, match="no measurement model"):
+    with pytest.raises(SystemExit, match="no measurement model"):
         cli.main(
             [
                 "grade",
@@ -133,6 +136,87 @@ def test_measured_grading_on_v1_is_refused(example: Path, tmp_path: Path) -> Non
                 "--simulated",
             ],
         )
+
+
+def _manifest(example: Path, name: str, lines: list[str]) -> Path:
+    """Write a manifest beside the example's tracks."""
+    manifest = example / name
+    manifest.write_text("\n".join(lines) + "\n")
+    return manifest
+
+
+def _first_track(example: Path) -> str:
+    return (example / "manifest.txt").read_text().split()[1]
+
+
+@pytest.mark.parametrize(
+    ("case", "message"),
+    [
+        ("no manifest", "No such file"),
+        ("no track", "missing.csv"),
+        ("wrong family", "declares family 'small_lawn'"),
+        ("no fetched tracks", "wormbench data fetch"),
+    ],
+)
+def test_a_grading_that_cannot_run_is_refused_in_one_line(
+    example: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+    message: str,
+) -> None:
+    """A missing or misread input ends the command with its message, not a traceback."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "empty-cache"))
+    manifest = {
+        "no manifest": example / "none.txt",
+        "no track": _manifest(example, "no_track.txt", ["small_lawn missing.csv"]),
+        "wrong family": _manifest(
+            example,
+            "wrong_family.txt",
+            [f"uniform_lawn {_first_track(example)}"],
+        ),
+        # 32 animals have no vendored bands, so grading them needs the fetched tracks.
+        "no fetched tracks": _manifest(
+            example,
+            "subset.txt",
+            (example / "manifest.txt").read_text().splitlines()[:32],
+        ),
+    }[case]
+    out = tmp_path / "grade.json"
+    with pytest.raises(SystemExit, match=message) as refused:
+        cli.main(["grade", "--manifest", str(manifest), "--out", str(out)])
+    assert isinstance(refused.value.code, str)
+    assert "\n" not in refused.value.code
+    assert not out.exists()
+
+
+def test_the_example_is_refused_in_one_line_over_a_file(tmp_path: Path) -> None:
+    """An example directory that is already a file is refused with the system's message."""
+    data.set_root(None)
+    out = tmp_path / "taken"
+    out.write_text("")
+    with pytest.raises(SystemExit, match="File exists"):
+        cli.main(["example", "--out", str(out)])
+
+
+def test_a_refused_grading_prints_no_traceback(tmp_path: Path) -> None:
+    """Run as a command, a refused grading writes its message alone and exits with status 1."""
+    env = {k: v for k, v in os.environ.items() if k != data.ENVIRONMENT_VARIABLE}
+    env["XDG_CACHE_HOME"] = str(tmp_path / "empty-cache")
+    missing = tmp_path / "none.txt"
+    done = subprocess.run(  # noqa: S603 - this interpreter, running the package's own command
+        [sys.executable, "-m", "wormbench.cli", "grade", "--manifest", str(missing), "--out", "g"],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=tmp_path,
+        check=False,
+    )
+    assert done.returncode == 1
+    assert "Traceback" not in done.stderr
+    assert done.stderr.strip().splitlines() == [
+        f"[Errno 2] No such file or directory: '{missing.resolve()}'",
+    ]
 
 
 def _fake_manifest(

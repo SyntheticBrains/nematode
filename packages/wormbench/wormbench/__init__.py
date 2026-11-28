@@ -10,4 +10,4 @@ The package depends on numpy and scipy only, and imports nothing outside itself.
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
