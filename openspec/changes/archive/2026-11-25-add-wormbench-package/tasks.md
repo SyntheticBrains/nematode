@@ -196,12 +196,12 @@ The merge waits for the maintainer.
 
 ## 8. Publishing (after the merge; each step confirmed with the maintainer first)
 
-- [ ] 8.1 A Zenodo deposit of the fetched files and `PROVENANCE.md`, with each file's licence. Its
-  per-file URLs, pinned to the versioned record, are written into `urls.json` (Decision O).
-- [ ] 8.2 A TestPyPI release, installed into a clean Python 3.10 environment, with the example
-  graded.
-- [ ] 8.3 The PyPI release, tagged `wormbench-v1.0.0`, with the DOI added to the README and both
-  `CITATION.cff` files.
+- [x] 8.1 A Zenodo deposit of the fetched files and `PROVENANCE.md`, with each file's licence. Its
+  per-file URLs, pinned to the versioned record, are written into `urls.json` (Decision O). *(2026-11-27: record 24585652, doi:10.5281/zenodo.24585652; `urls.json` in PR #548.)*
+- [x] 8.2 A TestPyPI release, installed into a clean Python 3.10 environment, with the example
+  graded. *(2026-11-28: 1.0.0, then 1.0.1; each also fetched and verified the data from Zenodo.)*
+- [x] 8.3 The PyPI release, tagged `wormbench-v1.0.0`, with the DOI added to the README and both
+  `CITATION.cff` files. *(2026-11-28: released as 1.0.1, tagged `wormbench-v1.0.1`. 1.0.0's TestPyPI check found that a refused grading printed a traceback, and an index never takes the same version twice. The DOI was added to the README and both `CITATION.cff` files in PR #549.)*
 
 ## 9. Follow-up change
 

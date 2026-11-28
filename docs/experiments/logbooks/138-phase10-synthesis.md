@@ -110,7 +110,7 @@ The vocabulary is the protocol's: met, unmet-with-reason, deferred-with-destinat
 | criterion | status | record |
 |---|---|---|
 | S10 every criterion assigned a status | **met** | this logbook |
-| D30 the publication decision | **met** | Taken on 2026-11-27. Phase 10's publication is the `wormbench` release, citable alone: the grader on PyPI and the real tracks on Zenodo under a DOI. The tracks were deposited on 2026-11-27, [doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652), and the PyPI release follows this close. Whether to write a benchmark paper goes to the Phase 11 plan review, with a cross-lab check of the bands on Haley 2025's real tracks as its first step |
+| D30 the publication decision | **met** | Taken on 2026-11-27. Phase 10's publication is the `wormbench` release, citable alone: the grader on PyPI and the real tracks on Zenodo under a DOI. The tracks were deposited on 2026-11-27, [doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652), and the PyPI release follows this close *(2026-11-28: released as `wormbench` 1.0.1, [PyPI](https://pypi.org/project/wormbench/1.0.1/))*. Whether to write a benchmark paper goes to the Phase 11 plan review, with a cross-lab check of the bands on Haley 2025's real tracks as its first step |
 | the watch re-aimed at the close (principle 13) | **deferred-with-destination** | the Phase 11 plan review, as at Phase 9's close. The brief should name the next phase's open questions, which that review writes |
 
 ### SHOULD
@@ -118,7 +118,7 @@ The vocabulary is the protocol's: met, unmet-with-reason, deferred-with-destinat
 | criterion | status | record |
 |---|---|---|
 | Haley 2025's patch acceptance against encounter number | **deferred-with-destination** | the Phase 11 plan review, as the benchmark's first extension, a new family. Haley's tracks are not vendored. The plan review recorded them as CC BY, and the deposit's own licence is checked before they are vendored. The same tracks serve the cross-lab check above |
-| WCON export | **deferred-with-destination** | the `wormbench` release that follows this close: the writer in `scripts/analysis/track_import_check.py` moves into the package, with a command and a test |
+| WCON export | **deferred-with-destination** | the `wormbench` release that follows this close: the writer in `scripts/analysis/track_import_check.py` moves into the package, with a command and a test *(2026-11-28: met in `wormbench` 1.0.1, as `wormbench wcon` and `wormbench.track_export`)* |
 | the novelty spot-checks owed at B's registration | **met** | [109](109-benchmark-grading.md): NeuroSparkSNT, PGOB and Morrison & Young 2025 do not occupy the claim. The search of 2026-10-30 covered 2023 to October 2026 ([its note](../../research/novelty-and-external-models-2026-10-30.md)) |
 
 ### MAY
@@ -376,7 +376,7 @@ Phase 10 is COMPLETE. Its deliverable is the benchmark, with the controls that m
 5. **The speed emission,** before any likelihood route.
 6. **The literature watch,** re-aimed at the review's open questions.
 
-The real tracks were deposited on Zenodo on 2026-11-27, [doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652). The `wormbench` release on PyPI, with WCON export, follows this close.
+The real tracks were deposited on Zenodo on 2026-11-27, [doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652). The `wormbench` release on PyPI, with WCON export, follows this close. *(2026-11-28: released as `wormbench` 1.0.1, [PyPI](https://pypi.org/project/wormbench/1.0.1/). 1.0.0 went to TestPyPI only, because its check there found that a refused grading printed a traceback, and an index never takes the same version twice.)*
 
 ## Artefacts
 
