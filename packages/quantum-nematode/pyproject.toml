@@ -1,22 +1,23 @@
 [project]
 name = "quantum-nematode"
 version = "0.7.0"
-description = "Quantum brain simulation of a nematode (C. elegans) using variational quantum circuits"
+description = "Closed-loop simulation of C. elegans with pluggable brains, from the real connectome to quantum circuits, graded against real-worm behaviour"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Chris Julian Zaharia" }]
 maintainers = [{ name = "Chris Julian Zaharia" }]
 requires-python = ">=3.13,<3.14"
 keywords = [
-    "quantum",
-    "machine-learning",
-    "nematode",
     "c-elegans",
+    "nematode",
+    "connectome",
+    "behaviour",
     "simulation",
+    "computational-neuroscience",
+    "reinforcement-learning",
+    "evolutionary-optimisation",
+    "machine-learning",
+    "quantum",
     "qiskit",
-    "quantum-circuits",
-    "variational-quantum-eigensolver",
-    "quantum-reinforcement-learning",
-    "parameter-shift-rule",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

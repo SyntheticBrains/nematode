@@ -6,8 +6,8 @@ Start with the [project README](../README.md) — it states the research questio
 
 | Document | What it is |
 |---|---|
-| [roadmap.md](roadmap.md) | The research programme: vision, phase history with exit criteria and decision gates, research questions, the Phase 8 plan, relationship to OpenWorm and other projects |
-| [experiments/README.md](experiments/README.md) | Index of every numbered experiment logbook — the evidence base behind each claim. Phase syntheses: [021](experiments/logbooks/021-phase5-synthesis.md) (Phase 5), [037](experiments/logbooks/037-phase6a-synthesis.md) (Phase 6a) |
+| [roadmap.md](roadmap.md) | The research programme: vision, phase history with exit criteria and decision gates, research questions, every phase's plan and close through Phase 10 (the Phase 11 plan review is pending), relationship to OpenWorm and other projects |
+| [experiments/README.md](experiments/README.md) | Index of every numbered experiment logbook — the evidence base behind each claim. Phase syntheses: [021](experiments/logbooks/021-phase5-synthesis.md) (Phase 5), [037](experiments/logbooks/037-phase6a-synthesis.md) (Phase 6a), [069](experiments/logbooks/069-phase7-synthesis.md) (Phase 7), [094](experiments/logbooks/094-phase8-synthesis.md) (Phase 8), [103](experiments/logbooks/103-phase9-synthesis.md) (Phase 9), [138](experiments/logbooks/138-phase10-synthesis.md) (Phase 10) |
 | [nematode_biology.md](nematode_biology.md) | *C. elegans* sensory systems, navigation strategies, predators, learning, social behaviour and evolution, with references — the biology each simulation channel is modelled on |
 | [research/quantum-architectures.md](research/quantum-architectures.md) | Specifications and the strategic assessment from the Phase 2 quantum-architecture campaign (closed) |
 | [research/policy-architecture-candidates.md](research/policy-architecture-candidates.md) | Survey of candidate policy architectures for the continuous substrate and the memory axis |
@@ -44,3 +44,10 @@ Start with the [project README](../README.md) — it states the research questio
 |---|---|
 | [../data/connectome/PROVENANCE.md](../data/connectome/PROVENANCE.md) | Source, licence and parsing notes for the vendored Cook et al. 2019 and Witvliet et al. 2021 connectome files |
 | [../data/chemotaxis/README.md](../data/chemotaxis/README.md) | Published chemotaxis-index values and behavioural bias signatures used by the real-worm validation |
+| [../data/benchmark/PROVENANCE.md](../data/benchmark/PROVENANCE.md) | The benchmark's derived real-worm sets (Scheer & Bargmann 2023, Calhoun 2014, Roberts 2016, López-Cruz 2019, Chen 2025) and its bands: sources, licences, checksums and units |
+| [../data/benchmark/IMPORT.md](../data/benchmark/IMPORT.md) | How to grade external tracks, real or simulated, through the benchmark: the CSV and WCON formats and what each version grades |
+| [../packages/wormbench/README.md](../packages/wormbench/README.md) | The `wormbench` grader as a standalone package: install, a first grading, your own tracks, versions and data |
+| [../data/roaming_dwelling/PROVENANCE.md](../data/roaming_dwelling/PROVENANCE.md) | Scheer & Bargmann 2023's roaming/dwelling model and windows, and the classifier's calibration |
+| [../data/neuromodulators/PROVENANCE.md](../data/neuromodulators/PROVENANCE.md) | The serotonin and PDF circuit, and the neuromodulator layer placed from Bentley 2016 and Ripoll-Sánchez 2023 |
+| [../data/locomotion/PROVENANCE.md](../data/locomotion/PROVENANCE.md) | The locomotor primitives' kinematics, from published values |
+| [../data/posture/PROVENANCE.md](../data/posture/PROVENANCE.md) | The eigenworm basis and real postures behind the body's posture validation |

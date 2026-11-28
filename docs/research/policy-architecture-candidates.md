@@ -6,6 +6,10 @@ rating across four factors and a recommendation tied to the existing memory-sepa
 **Status**: Research & Planning (informs T7-subsequent / Phase-7 arm selection; nothing built yet)
 **Last Updated**: 2026-06-29
 
+*(2026-11-28: minGRU and minLSTM were built as `mingruppo` and `minlstmppo`. [Logbook 031](../experiments/logbooks/031-minimal-rnn-candidates.md)
+records them: both are working-memory arms on the memory cell, and both beat the plain LSTM on the
+reactive C3 cell. The survey below is kept as written on 2026-06-29.)*
+
 ______________________________________________________________________
 
 ## Table of Contents

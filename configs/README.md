@@ -30,7 +30,8 @@ configs/
 
 ### Scope in Phase 10
 
-Phase 10 grades the point worm on standard on-lawn assays (roadmap v5.0, D41). Its work lives in
+Phase 10 graded the point worm on standard on-lawn assays (roadmap v5.0, D41), and closed on
+2026-11-27 ([Logbook 138](../docs/experiments/logbooks/138-phase10-synthesis.md)). Its work lives in
 `foraging/`, on the lawn food model: the 1-s point worm (`*_lawns_*_s1.yml`), its locomotor
 primitives (`*_s1_primitives.yml`) and the assay protocols (`*_s1_primitives_assay_*.yml`). Under
 primitives a reversal that starts on a lawn takes the on-food kinematics. No config sets
@@ -46,10 +47,13 @@ pooled speed. Of the assay protocols, the benchmark grades `scheer_lawn`,
 
 - **Frozen:** the thermal, predator, multi-agent and oxygen scenarios (`pursuit/`, `stationary/`, the
   `thermal_*`, `oxygen_*` and `multi_agent_*` directories, and `foraging_predator_thermal/`). They are
-  kept and tested, but not extended by Phase 10's required work.
-- **The second tier:** thermotaxis. It is deferred, not dropped.
-- **Still allowed, as optional second-tier comparisons:** thermotaxis on the new primitives, and
-  bordering against an O₂ field with npr-1 (the phase's MAY items).
+  kept and tested, and Phase 10's required work did not extend them. They stay frozen.
+- **The second tier:** thermotaxis. It was deferred, not dropped.
+- **Allowed, as optional second-tier comparisons:** thermotaxis on the new primitives, and
+  bordering against an O₂ field with npr-1 (the phase's MAY items). Neither was taken (Logbook 138).
+  Thermotaxis needs a track dataset first, and the loader refuses the 1-s step and the primitives
+  away from lawns. Bordering needs an oxygen field on the 1-s worm, npr-1 bordering data and an
+  npr-1 encoding for each controller.
 - **Kept and tested, not extended:** the two non-spatial memory families, `bit_memory/` and
   `associative_memory/`. They are positive controls from earlier phases and lie outside D41's
   point-worm assays.

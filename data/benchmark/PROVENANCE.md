@@ -1,9 +1,16 @@
 # Benchmark reference data
 
 Derived files only: each is produced from its public deposit by
-`scripts/analysis/extract_benchmark_references.py`, and read back by
-`quantumnematode.benchmark.references`. The deposits are not vendored. Positions are stored as
-integers, a stated unit times a fixed factor, with the integer type's minimum marking a missing value.
+`scripts/analysis/extract_benchmark_references.py`, and read back by `wormbench.references`
+(`quantumnematode.benchmark.references` is the same module). The deposits are not vendored. Positions
+are stored as integers, a stated unit times a fixed factor, with the integer type's minimum marking a
+missing value.
+
+The six files `wormbench data fetch` downloads (`scheer2023_tracks.npz`, `scheer2023_split.json`,
+`calhoun2014_tracks.npz`, `roberts2016_tracks.npz`, `chen2025_tracks.npz` and
+`lopezcruz2019_reorientations.json`) are deposited on Zenodo as *Real-worm reference data for
+wormbench, version 1* ([doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652)). Each
+keeps the licence given below for its source.
 
 ## `scheer2023_tracks.npz` and `scheer2023_split.json`
 
