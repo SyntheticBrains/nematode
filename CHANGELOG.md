@@ -6,6 +6,8 @@ Releases before 0.5.0 are documented on [GitHub Releases](https://github.com/Syn
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-28
+
 The Phase 9 and Phase 10 release, and the first release of the `wormbench` grader. Phase 9 took the connectome's one surviving wiring advantage, gap-junction placement, back to its gap model, and found that it was the model's degree normaliser: on corrected gap models the wild type learns no faster than its gap-only null, on the point worm or through the body, and the architecture ranking stopped there ([Phase 9 synthesis](docs/experiments/logbooks/103-phase9-synthesis.md)). Roadmap v5.0 then re-framed the project's question: how faithfully a simulated worm reproduces standard *C. elegans* behaviour, graded against real-worm data, and what the connectome contributes to that fidelity. Phase 10 built that benchmark from real worms' tracks and found it valid: at v4 it grades 24 statistics over Scheer & Bargmann's small lawn and uniform well, kinematics and activity on the lawn, López-Cruz et al.'s local search after food removal and Chen et al.'s butanone chemotaxis, and every negative fails it. The encoded connectome was fitted to pass the wild type on v4, and a mechanistic model passed on v3, but no controller predicts a mutant, and the wiring question is deferred ([Phase 10 synthesis](docs/experiments/logbooks/138-phase10-synthesis.md)). The grader ships on its own as [`wormbench`](packages/wormbench/README.md) 1.0.1 on PyPI, with the real-worm tracks on Zenodo.
 
 *Entries are short; the logbooks are the record.*
@@ -298,4 +300,5 @@ The pre-Phase-7 housekeeping release. It takes the platform that closed Phase 6a
 [0.5.0]: https://github.com/SyntheticBrains/nematode/compare/v0.4.0...v0.5.0
 [0.6.0]: https://github.com/SyntheticBrains/nematode/compare/v0.5.0...v0.6.0
 [0.7.0]: https://github.com/SyntheticBrains/nematode/compare/v0.6.0...v0.7.0
-[unreleased]: https://github.com/SyntheticBrains/nematode/compare/v0.7.0...HEAD
+[0.8.0]: https://github.com/SyntheticBrains/nematode/compare/v0.7.0...v0.8.0
+[unreleased]: https://github.com/SyntheticBrains/nematode/compare/v0.8.0...HEAD

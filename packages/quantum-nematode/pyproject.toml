@@ -1,6 +1,6 @@
 [project]
 name = "quantum-nematode"
-version = "0.7.0"
+version = "0.8.0"
 description = "Closed-loop simulation of C. elegans with pluggable brains, from the real connectome to quantum circuits, graded against real-worm behaviour"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Chris Julian Zaharia" }]

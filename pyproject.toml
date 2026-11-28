@@ -1,6 +1,6 @@
 [project]
 name = "quantum-nematode-workspace"
-version = "0.7.0"
+version = "0.8.0"
 description = "Workspace for Quantum Nematode: simulated C. elegans graded against real-worm behaviour, with pluggable brains from the real connectome to quantum circuits"
 readme = "README.md"
 license = { text = "Apache-2.0" }
