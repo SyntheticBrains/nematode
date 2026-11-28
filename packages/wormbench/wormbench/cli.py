@@ -54,19 +54,24 @@ def _grade(args: argparse.Namespace) -> int:
             "record; pass --bands to choose a version"
         )
         raise SystemExit(msg)
-    result: dict[str, Any] = wg.grade_track_manifest(
-        args.manifest.resolve(),
-        version,
-        simulated=args.simulated,
-    )
-    bands_name = wg.BANDS_FILES[version]
-    result["wormbench"] = {
-        "package": __version__,
-        "bands": version,
-        "bands_sha256": file_sha256(data.path("benchmark", bands_name)),
-    }
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
+    # A manifest, track or reference file that cannot be read, and a grading the inputs do not
+    # allow, are reported as one line, as `wcon` reports them.
+    try:
+        result: dict[str, Any] = wg.grade_track_manifest(
+            args.manifest.resolve(),
+            version,
+            simulated=args.simulated,
+        )
+        bands_name = wg.BANDS_FILES[version]
+        result["wormbench"] = {
+            "package": __version__,
+            "bands": version,
+            "bands_sha256": file_sha256(data.path("benchmark", bands_name)),
+        }
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
+    except (OSError, ValueError) as error:
+        raise SystemExit(str(error)) from error
     print(json.dumps({k: result[k] for k in ("family_passes", "wild_type_passes", "D", "D_fit")}))
     return 0
 
@@ -74,9 +79,12 @@ def _grade(args: argparse.Namespace) -> int:
 def _example(args: argparse.Namespace) -> int:
     archive = data.package_directory() / EXAMPLE_ARCHIVE
     out: Path = args.out
-    out.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive) as bundle:
-        bundle.extractall(out)
+    try:
+        out.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive) as bundle:
+            bundle.extractall(out)
+    except OSError as error:
+        raise SystemExit(str(error)) from error
     command = [
         "wormbench",
         "grade",

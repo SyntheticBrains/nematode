@@ -1,6 +1,6 @@
 [project]
 name = "wormbench"
-version = "1.0.0"
+version = "1.0.1"
 description = "Grade simulated or real C. elegans tracks against real-worm behaviour"
 readme = "README.md"
 license = "Apache-2.0 AND CC0-1.0 AND CC-BY-4.0"
