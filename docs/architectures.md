@@ -4,6 +4,8 @@ Every brain in Quantum Nematode is a plugin: it implements the `Brain` interface
 
 ## Which brain should I start with?
 
+*(2026-11-28: the recommendations and roles on this page come from Phase 6's ranking, when the project asked which architecture learns these tasks best. Since roadmap v5.0 (D33) the question is how faithfully a simulated worm reproduces real worms, graded by the benchmark, and the architecture families are controllers compared on that fidelity. Phase 10's controllers were C.1, a mechanistic model (`BatchedMechanistic` in `quantumnematode.evaluation.controllers`, not a registered brain), and C.2, `connectomeppo` with `encoder: compact`, both fitted to real-worm data by sep-CMA. [Logbook 137](experiments/logbooks/137-fidelity-table.md) grades them and [Logbook 138](experiments/logbooks/138-phase10-synthesis.md) closes the phase.)*
+
 | You want… | Use | Why |
 |---|---|---|
 | The strongest, fastest-training baseline | `mlpppo` | Wins the Phase 6 ranking on all three behaviours ([Logbook 029](experiments/logbooks/029-continuous-architecture-ranking.md)); plateaus in ~3,000 episodes on the integrated cell. `activation` selects the hidden non-linearity: `relu` (default, byte-identical) or `tanh`, whose bounded units the plastic yardstick arm needs under a local Hebbian rule |

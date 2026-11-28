@@ -4,7 +4,7 @@
 
 **Version**: 5.0
 
-**Last Updated**: 2026-10-23
+**Last Updated**: 2026-11-28
 
 **Horizon**: Milestone-based (aspirational timeline ~2025-2028+, phases advance when exit criteria are met)
 
@@ -34,6 +34,7 @@ ______________________________________________________________________
     - [Phase 7: Deepen — Plasticity & Cross-Species Transfer](#phase-7-deepen--plasticity--cross-species-transfer)
     - [Phase 8: Ground, then Embody — Measured Substrate & Body](#phase-8-ground-then-embody--measured-substrate--body)
     - [Phase 9: Screen, then Mechanism — the Gap Junctions, and the Ranking Under a Trigger](#phase-9-screen-then-mechanism--the-gap-junctions-and-the-ranking-under-a-trigger)
+    - [Phase 10: Fidelity on the Plate — Standard Lawn Assays, Graded Against the Worm](#phase-10-fidelity-on-the-plate--standard-lawn-assays-graded-against-the-worm)
 05. [Architecture-Comparison Protocol](#architecture-comparison-protocol)
 06. [Complexity Dashboard](#complexity-dashboard)
 07. [Biological Fidelity](#biological-fidelity)
@@ -110,7 +111,7 @@ ______________________________________________________________________
 
 ## Current State
 
-Phases 0–5, Phase 6a, Phase 7 and Phase 8 are complete (Phase 6b — NEAT topology search — is deferred unscheduled; Phase 8 closed 2026-10-14, [Logbook 094](experiments/logbooks/094-phase8-synthesis.md), and **Phase 9 was planned 2026-10-15** — v4.5, [§ Phase 9](#phase-9-screen-then-mechanism--the-gap-junctions-and-the-ranking-under-a-trigger)). The platform now supports: 26 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6; the persistent-trace substrate, the three-factor and e-prop rule seams, the per-neuron motor readout, the degree-preserving rewiring control and the parallel campaign runner are the work of Phase 7.
+Phases 0–5, Phase 6a and Phases 7–10 are complete (Phase 6b — NEAT topology search — is deferred unscheduled, as recorded in § Phase 6; Phase 10 closed 2026-11-27, [Logbook 138](experiments/logbooks/138-phase10-synthesis.md)). **The Phase 11 plan review is next**: D41 opens Phase 11 on the body and posture, and the review writes it. *(2026-11-28: brought up to date from Phase 9's planning, which this paragraph last recorded.)* The platform now supports: 26 brain architectures spanning quantum, classical, recurrent, spiking, reservoir, hybrid, GA-evolved, and connectome-constrained families; thermotaxis, mechanosensation, aerotaxis, klinotaxis, and pheromone-based sensing; multi-agent dynamics at 5-10 agent scales; CMA-ES and TPE hyperparameter evolution; Lamarckian weight inheritance across generations. The connectome layer, the pluggable architecture interface, and continuous-2D physics are the work of Phase 6; the persistent-trace substrate, the three-factor and e-prop rule seams, the per-neuron motor readout, the degree-preserving rewiring control and the parallel campaign runner are the work of Phase 7. Measured synaptic signs and strengths on the Cook edges and a 12-segment kinematic body are the work of Phase 8. The 1-s point worm with locomotor primitives, assay protocols, the batched evaluator, a neuromodulator layer placed from data, the compact encoder that makes the connectome brain a function of named parameters, and the benchmark, released as the `wormbench` package, are the work of Phase 10.
 
 ### Phase 0 — Foundation & Baselines
 
@@ -175,6 +176,18 @@ Phase 6a closed 2026-07-07 with a Gate 3 GO ([Logbook 037](experiments/logbooks/
 ### Phase 7 — Deepen: Plasticity
 
 Phase 7 closed 2026-09-19 as **SPLIT** ([Logbook 069](experiments/logbooks/069-phase7-synthesis.md)): the registered 2×2 (rule × wiring) could not be answered because no biologically plausible rule that *writes* the connectome learns the substrate to any benefit — a diagnosed negative (the three-factor rule failed its positive control; node perturbation is near its theoretical worst case at 302 units; e-prop reaches competence only with the chemical matrix frozen, [Logbook 063](experiments/logbooks/063-l4-eprop.md)). What shipped instead is three citable results: **under PPO the wild-type wiring reaches competence 23–55% sooner than its degree-preserving rewired null** on two cells and fresh rewirings (block V, [057](experiments/logbooks/057-wiring-premise-contrast.md)/[058](experiments/logbooks/058-wiring-premise-difficulty.md)/[065](experiments/logbooks/065-wiring-fresh-rewiring.md)) — carrying the standing condition that rewiring and initialisation vary together *(**Restated 2026-09-21**, [Logbook 070](experiments/logbooks/070-init-sharing-control.md): A.1 partially discharges the pairing half of this condition — no dissolution was detected under either definition of a shared initialisation, survival was **established on five of eight readings**, and three remain **unresolved at that panel's sensitivity**. The across-seed half is untested. And the magnitude is less stable than the direction: on fresh seeds the thermal effect came in at **35%** of its committed size while hard350 came in at 105%.)* *(**Conditioned 2026-09-23**, [Logbook 071](experiments/logbooks/071-operating-point-surface.md): the advantage holds at a settling depth of at least four hops with a pooled motor readout under PPO — abolished at depth 3, reversed at depth 2 — and the reading learner puts the rewired null ahead at the same point. A.1's shared-initialisation survival is consistent at depth 6 on 32 seeds.)*; the wiring is **not** legible as fixed features through a four-class readout, rate-robustly ([064](experiments/logbooks/064-l4-frozen-features.md)); and widening the readout to one weight per motor neuron makes it legible **at one learning rate only** ([066](experiments/logbooks/066-l4-readout-width.md)/[068](experiments/logbooks/068-l1b-rate-calibration.md)). 7b (cross-species) was deferred (D14). The phase paid for the [phase protocol](research/phase-protocol.md).
+
+### Phase 8 — Ground, then Embody
+
+Phase 8 closed 2026-10-14 ([Logbook 094](experiments/logbooks/094-phase8-synthesis.md)). Shipment 8a ran the initialisation control on block V, the operating-point surface and measured synaptic signs and strengths on the Cook edges ([Logbook 076](experiments/logbooks/076-8a-synthesis.md)). Shipment 8b decomposed block V and embodied the connectome in a 12-segment kinematic body, where the worm learns to weathervane but never to modulate its turning rate, and on patchy lawns learns to dwell. Gap-junction placement was the wiring effect that held, and it survived the body ([Logbook 092](experiments/logbooks/092-thermal-body.md)). *(Withdrawn 2026-10-22, [Logbook 102](experiments/logbooks/102-decomposition-restated.md): that advantage was the gap model's degree normaliser.)*
+
+### Phase 9 — Screen, then Mechanism
+
+Phase 9 closed 2026-10-22 on its STOP branch ([Logbook 103](experiments/logbooks/103-phase9-synthesis.md)). The screen of the gap model came first, and it found the effect was the model's: the lead came from normalising each gap junction by its neurons' partner counts, which let a few high-count pairs couple far above 1. Under unit weights, log-compressed counts or a strength normaliser it is gone, on the point worm and through the body. What stands of block V is the chemical wiring at the sensory–motor boundary on one cell. The architecture ranking through the body was halted, and the project's question was re-framed (v5.0, D33).
+
+### Phase 10 — Fidelity on the Plate
+
+Phase 10 closed 2026-11-27 between its minimum-viable and target success levels ([Logbook 138](experiments/logbooks/138-phase10-synthesis.md)). The benchmark is valid: v4, the default, grades 24 statistics at z\* 3.0781 in six families, real worms pass it and every negative fails ([Logbook 124](experiments/logbooks/124-benchmark-v4.md), [Logbook 137](experiments/logbooks/137-fidelity-table.md)). C.2, the encoded connectome, was fitted to pass v4's wild type in 5 of 5 registered populations, and C.1, the mechanistic baseline, passed v3's ([Logbook 133](experiments/logbooks/133-c2-fit.md), [Logbook 121](experiments/logbooks/121-c1-v3-fit.md)). No controller predicts a mutant: C.1 (v3)'s two predicted mutants fail, and C.2's registered fit fails tph-1 though tph-1 was in its objective. C.3 was not run. W, the wiring question on fidelity, is deferred to a later phase with no registration written, so what the connectome contributes to behavioural fidelity is unread. The benchmark ships as `wormbench` 1.0.1 on PyPI (2026-11-28), with the real tracks on Zenodo ([doi:10.5281/zenodo.24585652](https://doi.org/10.5281/zenodo.24585652)).
 
 ### Known Gaps Carried into Phase 6+
 
@@ -1732,7 +1745,7 @@ authoritative plan; amendments are dated in both places.
 #### Recommended deliverables (SHOULD)
 
 - Haley 2025's patch-acceptance assay against encounter number. *(2026-11-27, Logbook 138: deferred-with-destination, the Phase 11 plan review, as the benchmark's first extension.)*
-- WCON track export. *(2026-11-27, Logbook 138: deferred-with-destination, the `wormbench` release that follows the close.)*
+- WCON track export. *(2026-11-27, Logbook 138: deferred-with-destination, the `wormbench` release that follows the close.)* *(2026-11-28: met in `wormbench` 1.0.1, as `wormbench wcon`.)*
 - The novelty spot-checks owed at B's registration (NeuroSparkSNT; a search window wider than
   2024–2026). *(Met: [Logbook 109](experiments/logbooks/109-benchmark-grading.md) and the search of 2026-10-30, 2023 to October 2026.)*
 
@@ -2470,7 +2483,7 @@ ______________________________________________________________________
 
 ## Scoping Changes from v3
 
-This roadmap is v4. v3 was framed around two co-equal goals — "biological simulation + quantum architecture analysis" — with a Phase 6 major quantum re-evaluation gate and a Phase 7/8 publication-and-community arc. v4 reframes the project around an optimal-primary, connectome-as-control architecture comparison; quantum becomes one architecture family in the comparison sweep rather than a project-organising principle. The Phase 5 evidence base (logbooks 012-021), the post-Phase-5 platform data, and 2024-2026 external research (Cook et al. 2025 pacificus connectome; Resendez Prado architecture-asymmetry corroboration; OpenWorm c302 trajectory) together support the reframe.
+This roadmap is v5.0. This appendix was written at v4, and records what v4 changed from v3. *(2026-11-28: it read "This roadmap is v4", true when written. v5.0's re-framing, D33, is recorded in § Executive Summary and § Phase 10.)* v3 was framed around two co-equal goals — "biological simulation + quantum architecture analysis" — with a Phase 6 major quantum re-evaluation gate and a Phase 7/8 publication-and-community arc. v4 reframes the project around an optimal-primary, connectome-as-control architecture comparison; quantum becomes one architecture family in the comparison sweep rather than a project-organising principle. The Phase 5 evidence base (logbooks 012-021), the post-Phase-5 platform data, and 2024-2026 external research (Cook et al. 2025 pacificus connectome; Resendez Prado architecture-asymmetry corroboration; OpenWorm c302 trajectory) together support the reframe.
 
 For reviewers reading v4 who recall v3 commitments: the full pre-rewrite v3 text is recoverable from git history at commit `3d48e04f` via `git show 3d48e04f:docs/roadmap.md`. This appendix documents which v3 promises v4 does **not** carry forward, with the reframe rationale for each.
 
