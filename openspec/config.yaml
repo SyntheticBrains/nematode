@@ -14,18 +14,20 @@ context: |
   faithfully a simulated worm reproduces standard C. elegans behaviour, graded
   against real-worm data, and what the connectome contributes to that fidelity
   (docs/roadmap.md). Architecture families are the comparison's controllers;
-  quantum circuits are one family, not the organising principle. Focus areas
-  (Phase 10, fidelity on the plate, point worm only): a graded benchmark of
-  standard on-lawn assays (roaming/dwelling, lawn leaving, local search after
-  food removal, chemotaxis components) from public real-worm data with
-  real-track positive controls and matched negatives; a 1-s point worm with
-  locomotor primitives; a data-derived neuromodulator layer; controllers fitted
-  to match the animal; and the wiring question, synaptic and neuromodulatory,
-  asked on held-out behavioural fidelity and mutant phenocopy. Thermal,
+  quantum circuits are one family, not the organising principle. Phase 10
+  (fidelity on the plate, point worm only) closed on 2026-11-27 (Logbook 138):
+  its benchmark of standard on-lawn assays, graded against real-worm data, is
+  valid (v4, the default: 24 statistics in six families) and ships as the
+  wormbench package; a connectome controller can be fitted to pass the wild
+  type; no controller predicts a mutant; and the wiring question was deferred
+  to a later phase with no registration written. Phase 11 opens on the body
+  and posture after its plan review, which has not yet been held. Thermal,
   predator, multi-agent and oxygen scenarios are frozen.
 
   ## Architecture
-  - UV workspace: packages/quantum-nematode is the core package
+  - UV workspace: packages/quantum-nematode is the core package; packages/wormbench
+    is the benchmark's grader as a standalone package (Python 3.10+, numpy and
+    scipy only), on which the core package depends
   - 26 pluggable brain architectures in brain/arch/: qvarcircuit, qrc, qrh, qef, crh, qrhqlstm,
     crhqlstm, qsnnreinforce, qsnnppo, qliflstm, hybridquantum, hybridclassical,
     hybridquantumcortex, mlpreinforce, mlpdqn, mlpppo, lstmppo, spikingreinforce, connectomeppo,

@@ -6,6 +6,10 @@ metadata:
   version: '1.0'
 ---
 
+*Scope: the learning-era scenarios (Phases 0–9), whose runs report success rates. From Phase 10 on,
+a controller is graded against real-worm data with `scripts/analysis/benchmark_grade.py` or
+`wormbench grade`, and its record is written with the nematode-logbook skill.*
+
 Analyse experiment results from completed simulation sessions.
 
 **Input**: Optionally specify experiment session IDs, config names, or a description of which experiments to analyse. If omitted, find the most recent experiments.

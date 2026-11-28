@@ -3,6 +3,10 @@
 **Status**: proposed (design sketch). Tracked as `T7.separation.associative_memory` in the Phase-6
 tracker. Non-gating, own OpenSpec change when scoped.
 
+*(2026-11-28: the probe was built and ran. [Logbook 033](../experiments/logbooks/033-associative-memory-probe.md)
+records it: all five memory arms clear the update threshold and beat the memoryless MLP, which sits
+at chance. The design below is kept as written before the run.)*
+
 **Motivation.** The bit-memory positive control ([Logbook 030](../experiments/logbooks/030-bit-memory-positive-control.md))
 proved the architecture comparison **can** resolve working memory, but bit-memory is a deliberately
 *artificial* cue. ARS-via-depletion — the intended *biological* twin — came back **null**

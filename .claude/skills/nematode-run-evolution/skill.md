@@ -6,7 +6,7 @@ metadata:
   version: '1.0'
 ---
 
-Run brain-agnostic evolutionary optimisation via [scripts/run_evolution.py](../../scripts/run_evolution.py).
+Run brain-agnostic evolutionary optimisation via [scripts/run_evolution.py](../../../scripts/run_evolution.py).
 
 **Input**: A YAML config (typically under `configs/evolution/`) specifying `brain` and `evolution` blocks. Optionally specify `--generations`, `--population`, `--episodes`, `--seed`, `--parallel`, `--algorithm` (cmaes|ga|tpe), `--resume`, or `--output-dir` to override the YAML. TPE (Optuna's Tree-structured Parzen Estimator) is for hyperparameter evolution only — it requires the encoder to expose `genome_bounds`, which `HyperparameterEncoder` does but the weight encoders do not.
 
@@ -125,4 +125,4 @@ Earlier sessions ran `pgrep -f run_evolution | xargs kill` to clean up zombies a
 
 - For seeded reproducibility, always pass `--seed`; the per-evaluation seed is derived from this. Two runs with the same seed produce byte-identical lineage CSVs and best_params.
 - The MLPPPO config uses `feature_gating: False`. There is no shipped fixture for `feature_gating: true` evolution.
-- The smoke test [test_run_evolution_smoke_mlpppo](../../packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py) is the canonical "did I break the framework" check. Runs in ~2.5 s (its `_resume` sibling takes ~4.5 s).
+- The smoke test [test_run_evolution_smoke_mlpppo](../../../packages/quantum-nematode/tests/quantumnematode_tests/test_smoke.py) is the canonical "did I break the framework" check. Runs in ~2.5 s (its `_resume` sibling takes ~4.5 s).
