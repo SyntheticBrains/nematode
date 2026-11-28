@@ -243,7 +243,7 @@ Releases are tags on `main` plus a GitHub Release; there is no PyPI publication.
 
 1. Run `uv run python scripts/analysis/wormbench_records.py check` and `wormbench_example.py check`; both must pass, so the package's records, copies, manifest and example match the committed sources.
 
-2. Set the version in `packages/wormbench/pyproject.toml`, `wormbench/__init__.py` and `packages/wormbench/CITATION.cff`. A change of the default benchmark version is a major release.
+2. Set the version in `packages/wormbench/pyproject.toml`, `wormbench/__init__.py` and `packages/wormbench/CITATION.cff`, and turn *Unreleased* in `packages/wormbench/CHANGELOG.md` into the new version with its date. A change of the default benchmark version is a major release.
 
 3. If the data deposit has changed, then with the maintainer's confirmation, publish a new Zenodo version first. Write each file's address in that version into `wormbench/_data/urls.json` before building, since the wheel ships that file. `wormbench_records.py sync` never touches it. Check the addresses with `wormbench data fetch` and `wormbench data verify` from a clean cache.
 
