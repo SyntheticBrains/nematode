@@ -38,6 +38,7 @@ Homepage = "https://github.com/SyntheticBrains/nematode/tree/main/packages/wormb
 Repository = "https://github.com/SyntheticBrains/nematode"
 Issues = "https://github.com/SyntheticBrains/nematode/issues"
 Data = "https://doi.org/10.5281/zenodo.24585652"
+Changelog = "https://github.com/SyntheticBrains/nematode/blob/main/packages/wormbench/CHANGELOG.md"
 
 [project.scripts]
 wormbench = "wormbench.cli:main"

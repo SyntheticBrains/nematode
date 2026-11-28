@@ -6,6 +6,10 @@ metadata:
   version: '1.0'
 ---
 
+*Scope: the learning-era scenarios (Phases 0–9), whose runs report success rates. From Phase 10 on,
+a controller is graded against real-worm data with `scripts/analysis/benchmark_grade.py` or
+`wormbench grade`, and its record is written with the nematode-logbook skill.*
+
 Update the evaluation scratchpad with latest experiment results.
 
 **Input**: Specify which evaluation round/results to record. Optionally provide a scratchpad path (default: the active study scratchpad in `tmp/evaluations/`).

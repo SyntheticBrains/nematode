@@ -9,9 +9,11 @@ metadata:
 Create or update an experiment logbook and everything a result obliges elsewhere in the repo.
 
 **Reference logbooks.** Model new work on the most recent ones, not the early ones:
-[070](../../../docs/experiments/logbooks/070-init-sharing-control.md) and
-[071](../../../docs/experiments/logbooks/071-operating-point-surface.md) for a registered campaign,
-[069](../../../docs/experiments/logbooks/069-phase7-synthesis.md) for a phase synthesis. Logbooks
+[124](../../../docs/experiments/logbooks/124-benchmark-v4.md) for an instrument revision with its
+controls, [133](../../../docs/experiments/logbooks/133-c2-fit.md) for a registered fit with
+amendments, [138](../../../docs/experiments/logbooks/138-phase10-synthesis.md) for a phase
+synthesis, and [070](../../../docs/experiments/logbooks/070-init-sharing-control.md) and
+[071](../../../docs/experiments/logbooks/071-operating-point-surface.md) for a seed-panel campaign. Logbooks
 before about 040 predate the pre-registration and retention discipline and are the wrong model.
 
 **Input**: create or update; optionally a number, a title, or the campaign it records.
@@ -32,7 +34,9 @@ before about 040 predate the pre-registration and retention discipline and are t
    - `launch.md` — the pre-registration, **written before any panel seed ran**. If it is not there,
      the logbook says so rather than implying one existed.
    - the **per-seed CSV** carrying every field the analysis reads (write it with
-     `lineterminator="\n"`; `csv` defaults to CRLF);
+     `lineterminator="\n"`; `csv` defaults to CRLF), or, for a fit or a benchmark reading, the
+     JSON records each stage writes (every statistic's value and z, not only failures) and any
+     probe script as a `.py.txt`;
    - the **analysis JSON** the headline figures come from.
 
    **Retention**: those three are committed; raw campaign logs and step-level exports are archived
@@ -85,5 +89,7 @@ before about 040 predate the pre-registration and retention discipline and are t
   between drafts is less trustworthy than one that shows the correction.
 - **Keep the main logbook readable**: long per-seed detail belongs in the committed CSV, and a
   `details.md` appendix is optional rather than required.
-- **Match the metric to the question.** Time-to-competence and `auc_success` carry the wiring work;
-  L100 is a single-configuration plateau summary from the early logbooks and is not required.
+- **Match the metric to the question.** For grading against real-worm data, the benchmark's
+  statistics, z's and distances (D, D_fit) at the registered version; for the learning-era work,
+  time-to-competence and `auc_success`. L100 is a single-configuration plateau summary from the
+  early logbooks and is not required.

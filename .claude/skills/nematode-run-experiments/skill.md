@@ -12,7 +12,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
 
 **Constraints**
 
-- **16 concurrent sessions** (4 groups × 4 seeds) is the throughput sweet spot — measured, not assumed. Going wider still finishes more work, it just costs wall-clock per session: 16 sessions run at ~1.8 sessions/s, 24 at ~1.77/s, 32 at ~1.68/s. So **24 is fine** when a round genuinely needs six groups or six seeds; past 32 the returns flatten.
+- **At most 16 concurrent sessions in total** (4 groups × 4 seeds), counting anything else already running: the machine's cores are the budget, and wider rounds only make each session slower (16 sessions run at ~1.8 sessions/s, 24 at ~1.77/s, 32 at ~1.68/s). A round that needs six groups or six seeds runs in two batches.
 - **CPU cores are the binding constraint, not memory.** A session peaks around 0.5 GB, so even 32 at once is a small fraction of what this machine has — never reduce a matrix out of memory worry. Reduce it because sessions are competing for cores.
 - **Pin threads when running many sessions**: prefix with `OMP_NUM_THREADS=1 MKL_NUM_THREADS=1`. Each session otherwise spawns a full BLAS thread pool and they oversubscribe each other. Worth ~6% throughput at 24 sessions, more the wider you go.
 - **4 experiment groups** per round by default — the limit is interpretive, not machine capacity: more arms make a comparison harder to read, and the machine will happily run six
@@ -44,7 +44,7 @@ Run parallel experiment groups with multiple seeds for evaluation.
 
 3. **Launch all sessions in parallel**
 
-   Use a single background bash command with `&` for parallelism:
+   A registered campaign, or anything over a few dozen runs, goes through `scripts/run_campaign.py` instead, with the output controls AGENTS.md gives. For a small exploratory round, use a single background bash command with `&` for parallelism. Always pass `--no-detailed-export --no-file-log`: without them each session writes about 0.7 GB outside the repository. Never switch branches while sessions run, since each reads configs and package code from the working tree.
 
    ```bash
    for cfg in expA expB expC expD; do
@@ -52,7 +52,8 @@ Run parallel experiment groups with multiple seeds for evaluation.
        OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
        uv run ./scripts/run_simulation.py --log-level INFO --show-last-frame-only \
          --runs {NUM_RUNS} --config /tmp/{cfg}.yml \
-         --theme headless --track-experiment --seed $seed 2>&1 | tail -25 &
+         --theme headless --track-experiment --no-detailed-export --no-file-log \
+         --seed $seed 2>&1 | tail -25 &
      done
    done
    echo "All sessions launched. Waiting..."
