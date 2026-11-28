@@ -6,6 +6,10 @@ All notable changes to `wormbench` are documented here. The format follows [Keep
 
 ## [Unreleased]
 
+### Changed
+
+- The shipped `benchmark/PROVENANCE.md` names `wormbench.references` as the reader and the Zenodo deposit as the fetched files' home. No checksum, licence or file list changed.
+
 ## [1.0.1] - 2026-11-28
 
 The first release on PyPI (`pip install wormbench`).
